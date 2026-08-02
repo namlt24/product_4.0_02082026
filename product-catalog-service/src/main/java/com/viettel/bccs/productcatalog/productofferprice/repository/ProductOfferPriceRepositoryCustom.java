@@ -6,8 +6,5 @@ import java.util.List;
 
 public interface ProductOfferPriceRepositoryCustom {
 
-    List<ProductOfferPriceEntity> findForPccc(Long productPackageId, String productPackageCode,
-            Long productOfferType, Long productOfferId, Long pricePolicy);
-
     List<ProductOfferPriceEntity> getPriceInServices(Long productPackageId, Long productOfferType, Long productOfferId, Long pricePolicy);
 }

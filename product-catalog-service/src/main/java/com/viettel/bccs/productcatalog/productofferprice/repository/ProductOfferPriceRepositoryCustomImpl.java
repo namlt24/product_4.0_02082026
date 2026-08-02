@@ -18,58 +18,6 @@ public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceR
     private final EntityManager entityManager;
 
     @Override
-    public List<ProductOfferPriceEntity> findForPccc(Long productPackageId, String productPackageCode,
-            Long productOfferType, Long productOfferId, Long pricePolicy) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("""
-            SELECT DISTINCT pp.* FROM %sproduct_offer_price pp
-            INNER JOIN %sproduct_offering po ON pp.PRODUCT_OFFERING_ID = po.PRODUCT_OFFERING_ID
-            INNER JOIN %sproduct_package pkg ON pkg.CODE = po.CODE AND pkg.STATUS = '1'
-            WHERE pp.STATUS = '1'
-              AND po.STATUS = '1'
-              AND (pp.EXPIRE_DATETIME IS NULL OR pp.EXPIRE_DATETIME >= SYSDATE)
-              AND (pp.EFFECT_DATETIME IS NULL OR pp.EFFECT_DATETIME <= SYSDATE)
-            """.formatted(
-                Const.DEFAULT_PRODUCT_SCHEMA,
-                Const.DEFAULT_PRODUCT_SCHEMA,
-                Const.DEFAULT_PRODUCT_SCHEMA));
-
-        List<Object> params = new ArrayList<>();
-
-        if (DataUtil.notNullOrEmpty(productPackageId)) {
-            sql.append(" AND pkg.PRODUCT_PACKAGE_ID = ?").append(params.size() + 1);
-            params.add(productPackageId);
-        }
-        if (DataUtil.notNullOrEmpty(productPackageCode)) {
-            sql.append(" AND pkg.CODE = ?").append(params.size() + 1);
-            params.add(productPackageCode);
-        }
-        if (DataUtil.notNullOrEmpty(productOfferType)) {
-            sql.append(" AND po.PRODUCT_OFFER_TYPE_ID = ?").append(params.size() + 1);
-            params.add(productOfferType);
-        }
-        if (DataUtil.notNullOrEmpty(productOfferId)) {
-            sql.append(" AND pp.PRODUCT_OFFERING_ID = ?").append(params.size() + 1);
-            params.add(productOfferId);
-        }
-        if (DataUtil.notNullOrEmpty(pricePolicy)) {
-            sql.append(" AND pp.PRICE_POLICY_ID = ?").append(params.size() + 1);
-            params.add(pricePolicy);
-        }
-
-        sql.append(" ORDER BY pp.PRIORITY ASC NULLS LAST, pp.EFFECT_DATETIME DESC");
-
-        Query query = entityManager.createNativeQuery(sql.toString(), ProductOfferPriceEntity.class);
-        for (int i = 0; i < params.size(); i++) {
-            query.setParameter(i + 1, params.get(i));
-        }
-
-        @SuppressWarnings("unchecked")
-        List<ProductOfferPriceEntity> results = query.getResultList();
-        return results;
-    }
-
-    @Override
     public List<ProductOfferPriceEntity> getPriceInServices(Long productPackageId, Long productOfferType, Long productOfferId, Long pricePolicy) {
         String sql = """
             SELECT a.*

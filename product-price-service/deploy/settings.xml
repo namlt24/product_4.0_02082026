@@ -1,0 +1,57 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                  http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <proxies>
+        <proxy>
+            <id>http</id>
+            <active>true</active>
+            <protocol>http</protocol>
+            <host>10.207.156.52</host>
+            <port>3128</port>
+            <nonProxyHosts>nexus.kcntt.net|10.60.108.23|10.240.184.84|10.207.252.200</nonProxyHosts>
+        </proxy>
+        <proxy>
+            <id>https</id>
+            <active>true</active>
+            <protocol>https</protocol>
+            <host>10.207.156.52</host>
+            <port>3128</port>
+            <nonProxyHosts>nexus.kcntt.net|10.60.108.23:9001</nonProxyHosts>
+        </proxy>
+    </proxies>
+
+    <mirrors>
+        <mirror>
+            <id>central</id>
+            <mirrorOf>!vtt-maven-mirror</mirrorOf>
+            <name>Global Maven Mirror</name>
+            <url>https://repo1.maven.org/maven2/</url>
+        </mirror>
+    </mirrors>
+    <profiles>
+        <profile>
+            <id>maven-https</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>maven-releases</id>
+                    <url>https://nexus.kcntt.net/repository/maven-group/</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>https://nexus.kcntt.net/repository/maven-group/</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+</settings>

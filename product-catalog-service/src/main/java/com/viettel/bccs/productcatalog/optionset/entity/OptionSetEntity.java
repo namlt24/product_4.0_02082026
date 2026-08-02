@@ -1,0 +1,46 @@
+package com.viettel.bccs.productcatalog.optionset.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.Date;
+
+@Entity
+@Table(name = "OPTION_SET")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class OptionSetEntity {
+
+    @Id
+    @Column(name = "OPTION_SET_ID", precision = 10)
+    private Long optionSetId;
+
+    @Column(name = "CODE", length = 100)
+    private String code;
+
+    @Column(name = "NAME", length = 512)
+    private String name;
+
+    @Column(name = "STATUS", length = 1)
+    private String status;
+
+    @Column(name = "CREATE_USER", length = 50)
+    private String createUser;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "CREATE_DATETIME")
+    private Date createDatetime;
+
+    @Column(name = "UPDATE_USER", length = 50)
+    private String updateUser;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "UPDATE_DATETIME")
+    private Date updateDatetime;
+
+    @Column(name = "DESCRIPTION", length = 512)
+    private String description;
+}

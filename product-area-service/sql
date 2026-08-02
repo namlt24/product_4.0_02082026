@@ -1,0 +1,55 @@
+-- auto-generated definition
+create table AREA
+(
+    AREA_CODE       VARCHAR2(200) not null
+        constraint AREA_PK
+            primary key,
+    PARENT_CODE     VARCHAR2(200),
+    AREA_GROUP      VARCHAR2(5),
+    PROVINCE        VARCHAR2(50),
+    DISTRICT        VARCHAR2(50),
+    PRECINCT        VARCHAR2(50),
+    STREET_BLOCK    VARCHAR2(50),
+    NAME            VARCHAR2(100),
+    FULL_NAME       VARCHAR2(400),
+    CENTER          VARCHAR2(1),
+    PSTN_CODE       VARCHAR2(20),
+    PROVINCE_CODE   VARCHAR2(50),
+    STATUS          VARCHAR2(1),
+    CREATE_USER     VARCHAR2(50),
+    UPDATE_USER     VARCHAR2(50),
+    CREATE_DATETIME DATE,
+    UPDATE_DATETIME DATE,
+    REGION_ID       NUMBER(20),
+    VT_MAP_CODE     VARCHAR2(20),
+    SQUARE          NUMBER,
+    POPULATION      NUMBER,
+    HOUSEHOLDS      NUMBER,
+    AREA_TYPE       VARCHAR2(10),
+    VN_CODE         VARCHAR2(50),
+    VN_NAME         VARCHAR2(100),
+    IS_NEW          VARCHAR2(1)
+)
+/
+
+create index IDX_AREA_PARENT_STATUS
+    on AREA (PARENT_CODE, STATUS)
+/
+
+create index IDX_AREA_PROVINCE
+    on AREA (PROVINCE)
+/
+
+create index IDX_AREA_NAME_CLEAN
+    on AREA ("BCCS_PRODUCT"."FN_CLEAN_AREA_NAME"("FULL_NAME"))
+/
+
+create index IDX_AREA_FULL_NAME_TEXT
+    on AREA (FULL_NAME)
+    indextype is CTXSYS.CONTEXT
+/
+
+create index IDX_AREA_MAIN
+    on AREA (PROVINCE, IS_NEW, STREET_BLOCK)
+/
+

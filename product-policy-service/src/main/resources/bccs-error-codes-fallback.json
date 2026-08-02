@@ -1,0 +1,209 @@
+{
+  "BCCS-SYS-TECH-0001": {
+    "code": "BCCS-SYS-TECH-0001",
+    "message": "System error",
+    "httpStatus": 500,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-VAL-0001": {
+    "code": "BCCS-SYS-VAL-0001",
+    "message": "validation error",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-SYS-VAL-0002": {
+    "code": "BCCS-SYS-VAL-0002",
+    "message": "Resource not found",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-AUTH-SEC-0001": {
+    "code": "BCCS-AUTH-SEC-0001",
+    "message": "Authentication failed",
+    "httpStatus": 401,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-AUTH-SEC-0002": {
+    "code": "BCCS-AUTH-SEC-0002",
+    "message": "Access denied",
+    "httpStatus": 403,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-SYS-INT-0001": {
+    "code": "BCCS-SYS-INT-0001",
+    "message": "Integration error",
+    "httpStatus": 502,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-INT-0002": {
+    "code": "BCCS-SYS-INT-0002",
+    "message": "Integration timeout",
+    "httpStatus": 504,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-RATE-0001": {
+    "code": "BCCS-SYS-RATE-0001",
+    "message": "Rate limit exceeded",
+    "httpStatus": 429,
+    "category": "SYSTEM",
+    "severity": "WARNING",
+    "retryable": true,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-001": {
+    "code": "BCCS-POLICY-MAPACTIVE-001",
+    "message": "Gói cước/Hình thức hòa mạng không được khai báo đấu nối với số giấy tờ {0} đang thực hiện",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-002": {
+    "code": "BCCS-POLICY-MAPACTIVE-002",
+    "message": "Không tìm thấy thông tin kích hoạt cho offer: {0}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-003": {
+    "code": "BCCS-POLICY-MAPACTIVE-003",
+    "message": "Không tìm thấy thông tin kích hoạt cho khu vực {0}, lý do {1}, mã khuyến mãi {2}, sản phẩm {3}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-004": {
+    "code": "BCCS-POLICY-MAPACTIVE-004",
+    "message": "Không tìm thấy thông tin kích hoạt cho khu vực {0}, lý do {1}, sản phẩm {2}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-005": {
+    "code": "BCCS-POLICY-MAPACTIVE-005",
+    "message": "Không tìm thấy thông tin kích hoạt cho mã trạm",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-006": {
+    "code": "BCCS-POLICY-MAPACTIVE-006",
+    "message": "Tham số staffCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-007": {
+    "code": "BCCS-POLICY-MAPACTIVE-007",
+    "message": "Tham số payType không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-008": {
+    "code": "BCCS-POLICY-MAPACTIVE-008",
+    "message": "Tham số actionCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-009": {
+    "code": "BCCS-POLICY-MAPACTIVE-009",
+    "message": "Tham số telecomServiceId không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-010": {
+    "code": "BCCS-POLICY-MAPACTIVE-010",
+    "message": "Tham số roleMap không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-011": {
+    "code": "BCCS-POLICY-MAPACTIVE-011",
+    "message": "Tham số staffCode vượt quá độ dài cho phép (40 ký tự)",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-012": {
+    "code": "BCCS-POLICY-MAPACTIVE-012",
+    "message": "Tham số payType vượt quá độ dài cho phép (1 ký tự)",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-013": {
+    "code": "BCCS-POLICY-MAPACTIVE-013",
+    "message": "Tham số actionCode vượt quá độ dài cho phép (10 ký tự)",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-014": {
+    "code": "BCCS-POLICY-MAPACTIVE-014",
+    "message": "Tham số telecomServiceId vượt quá độ dài cho phép (10 ký tự)",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-015": {
+    "code": "BCCS-POLICY-MAPACTIVE-015",
+    "message": "Tham số businessNo vượt quá độ dài cho phép (3500 ký tự)",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  }
+}

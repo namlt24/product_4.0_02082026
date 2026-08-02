@@ -1,0 +1,19 @@
+create table PRODUCT_PACKAGE_CHAR_USE
+(
+    PRODUCT_PACKAGE_CHAR_USE_ID NUMBER(10) not null
+        constraint PRODUCT_PACKAGE_CHAR_USE_PK
+            primary key,
+    PRODUCT_PACKAGE_ID          NUMBER(10) not null,
+    PRODUCT_SPEC_CHAR_ID        NUMBER(10) not null,
+    PRODUCT_SPEC_CHAR_VALUE_ID  NUMBER(10),
+    STATUS                      VARCHAR2(1),
+    CREATE_USER                 VARCHAR2(50 char),
+    CREATE_DATETIME             DATE,
+    UPDATE_USER                 VARCHAR2(50 char),
+    UPDATE_DATETIME             DATE,
+    SPECIFIC_VALUE              VARCHAR2(50),
+    LIMITED                     NUMBER(1),
+    EFFECT_DATETIME             DATE,
+    EXPIRE_DATETIME             DATE,
+    DESCRIPTION                 VARCHAR2(100)
+)

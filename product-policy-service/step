@@ -1,0 +1,43 @@
+ private void validateMapActiveInfo(String actionCode,
+                                       String promotionCode,
+                                       Long regReasonId,
+                                       Long telServiceId,
+                                       List<ReasonDTO> lstReason, List<DiscountPromotionDTO> lstPromotions) throws LogicException, Exception {
+        boolean wrongReason = true;
+        for (ReasonDTO reason : lstReason) {
+            if (regReasonId.equals(reason.getReasonId())) {
+                wrongReason = false;
+                break;
+            }
+        }
+        if (wrongReason) {
+            throw new LogicException(SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION, SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION);
+        }
+        boolean isActiveCD = (!Const.TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
+                && !Const.TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
+                && !Const.TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
+                && !Const.TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId));
+        boolean wrongPromotions = true;
+        if (isActiveCD && !DataUtil.isNullOrEmpty(promotionCode)
+                && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
+            if (lstPromotions == null || lstPromotions.isEmpty()) {
+            } else {
+                for (DiscountPromotionDTO promotionType : lstPromotions) {
+                    if (promotionType.getCode().equals(promotionCode)) {
+                        wrongPromotions = false;
+                        break;
+                    }
+                }
+            }
+        } else {
+            wrongPromotions = false;
+        }
+        if (wrongPromotions) {
+            throw new LogicException("sale.wired.connect.custOrderDetail.promotion.not.map.action", "sale.wired.connect.custOrderDetail.promotion.not.map.action");
+        }
+    }
+
+
+->Viết 1 hàm trong mapactiveinfocontroller với đầu vào thay thế:
+List<ReasonDTO> lstReason -> List<ReasonResponse> lstReason
+List<DiscountPromotionDTO> lstPromotions -> List<DiscountPromotionResponse> lstPromotions

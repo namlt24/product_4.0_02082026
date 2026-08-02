@@ -1,0 +1,119 @@
+{
+  "BCCS-SYS-TECH-0001": {
+    "code": "BCCS-SYS-TECH-0001",
+    "message": "Lỗi hệ thống",
+    "httpStatus": 500,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-VAL-0001": {
+    "code": "BCCS-SYS-VAL-0001",
+    "message": "Lỗi xác thực dữ liệu",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-SYS-VAL-0002": {
+    "code": "BCCS-SYS-VAL-0002",
+    "message": "Không tìm thấy tài nguyên",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-AUTH-SEC-0001": {
+    "code": "BCCS-AUTH-SEC-0001",
+    "message": "Xác thực thất bại",
+    "httpStatus": 401,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-AUTH-SEC-0002": {
+    "code": "BCCS-AUTH-SEC-0002",
+    "message": "Từ chối truy cập",
+    "httpStatus": 403,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-SYS-INT-0001": {
+    "code": "BCCS-SYS-INT-0001",
+    "message": "Lỗi tích hợp",
+    "httpStatus": 502,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-INT-0002": {
+    "code": "BCCS-SYS-INT-0002",
+    "message": "Hết thời gian chờ tích hợp",
+    "httpStatus": 504,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-RATE-0001": {
+    "code": "BCCS-SYS-RATE-0001",
+    "message": "Vượt giới hạn tần suất yêu cầu",
+    "httpStatus": 429,
+    "category": "SYSTEM",
+    "severity": "WARNING",
+    "retryable": true,
+    "logLevel": "WARN"
+  },
+  "ORGANIZATION-SHOP-002": {
+    "code": "ORGANIZATION-SHOP-002",
+    "message": "Không tìm thấy cửa hàng với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "ORGANIZATION-SHOP-002_CODE": {
+    "code": "ORGANIZATION-SHOP-002_CODE",
+    "message": "Không tìm thấy cửa hàng với mã: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "ORGANIZATION-SHOP-003": {
+    "code": "ORGANIZATION-SHOP-003",
+    "message": "Loại chủ sở hữu không hợp lệ: {0}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "ORGANIZATION-STAFF-002": {
+    "code": "ORGANIZATION-STAFF-002",
+    "message": "Không tìm thấy nhân viên với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "ORGANIZATION-STAFF-002_CODE": {
+    "code": "ORGANIZATION-STAFF-002_CODE",
+    "message": "Không tìm thấy nhân viên với mã: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  }
+}

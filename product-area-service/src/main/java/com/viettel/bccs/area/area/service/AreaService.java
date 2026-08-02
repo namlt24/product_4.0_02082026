@@ -1,0 +1,47 @@
+package com.viettel.bccs.area.area.service;
+
+import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.area.area.dto.response.AreaResponse;
+import com.viettel.bccs.area.area.mapper.AreaMapper;
+import com.viettel.bccs.area.area.repository.AreaRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class AreaService {
+
+    private final AreaRepository areaRepository;
+    private final AreaMapper areaMapper;
+
+    @Transactional(readOnly = true)
+    public List<AreaResponse> getAll() {
+        return areaRepository.findAll().stream()
+                .map(areaMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AreaResponse getByAreaCode(String areaCode) {
+        return areaRepository.findByAreaCode(areaCode)
+                .map(areaMapper::toResponse)
+                .orElseThrow(() -> new BusinessException("AREA-001", "Area not found with code: " + areaCode));
+    }
+
+    @Transactional(readOnly = true)
+    public List<AreaResponse> getByParentCode(String parentCode) {
+        return areaRepository.findByParentCode(parentCode).stream()
+                .map(areaMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AreaResponse> getByProvince(String province) {
+        return areaRepository.findByProvince(province).stream()
+                .map(areaMapper::toResponse)
+                .toList();
+    }
+}

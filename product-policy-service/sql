@@ -1,0 +1,96 @@
+-- auto-generated definition
+create table MAPPING
+(
+    ID                NUMBER      not null
+        constraint MAPPING_PK
+            primary key,
+    VAS               VARCHAR2(10),
+    VAS_NAME          VARCHAR2(100),
+    PRODUCT_NAME      VARCHAR2(100),
+    PRODUCT_CODE      VARCHAR2(15),
+    ACTION_NAME       VARCHAR2(100),
+    ACTION_CODE       VARCHAR2(30),
+    REASON_ID         NUMBER(10),
+    REASON_NAME       VARCHAR2(100),
+    TEL_SERVICE_ID    NUMBER(10),
+    SALE_SERVICE_ID   NUMBER(10),
+    SALE_SERVICE_NAME VARCHAR2(100),
+    SALE_SERVICE_CODE VARCHAR2(20),
+    CHANNEL           VARCHAR2(1),
+    STATUS            VARCHAR2(1) not null,
+    USER_CREATE       VARCHAR2(30),
+    USER_UPDATE       VARCHAR2(30),
+    CREATE_DATETIME   DATE,
+    CHANGE_DATETIME   DATE,
+    IP                VARCHAR2(50),
+    END_EFFECT_DATE   DATE,
+    TYPE_MAPPING      VARCHAR2(1),
+    ACTION_ID         VARCHAR2(30)
+)
+/
+
+comment on column MAPPING.ID is 'ID tu tang'
+/
+
+comment on column MAPPING.VAS is 'code cua vas'
+/
+
+comment on column MAPPING.VAS_NAME is 'ten vas cua san pham co so'
+/
+
+comment on column MAPPING.PRODUCT_NAME is 'ten san pham co so'
+/
+
+comment on column MAPPING.PRODUCT_CODE is 'Ma san pham'
+/
+
+comment on column MAPPING.ACTION_NAME is 'ten tac dong'
+/
+
+comment on column MAPPING.ACTION_CODE is 'Ma nhom ly do tac dong'
+/
+
+comment on column MAPPING.REASON_ID is 'Ma cua ly do'
+/
+
+comment on column MAPPING.REASON_NAME is 'ten ly do'
+/
+
+comment on column MAPPING.TEL_SERVICE_ID is 'ma dich vu ban hang'
+/
+
+comment on column MAPPING.SALE_SERVICE_ID is 'Id cua dich vu ban hang'
+/
+
+comment on column MAPPING.SALE_SERVICE_NAME is 'ten dich vu ban hang'
+/
+
+comment on column MAPPING.SALE_SERVICE_CODE is 'Ma dich vu ban hang'
+/
+
+comment on column MAPPING.CHANNEL is 'Kenh ban hang'
+/
+
+comment on column MAPPING.STATUS is '0 het hieu luc, 1 hieu luc'
+/
+
+create index MAPPING_I2
+    on MAPPING (PRODUCT_CODE)
+/
+
+create index MAPPING_I1
+    on MAPPING (REASON_ID)
+/
+
+create index MAPPING_SALESERVICECODE_IDX
+    on MAPPING (SALE_SERVICE_CODE)
+/
+
+create index MAPPING_TEL_SERVICE_ID_IDX
+    on MAPPING (TEL_SERVICE_ID)
+/
+
+create index MAPPING_SSV_UPPER_CODE_IDX1
+    on MAPPING (UPPER("SALE_SERVICE_CODE"))
+/
+

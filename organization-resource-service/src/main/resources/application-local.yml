@@ -1,0 +1,304 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/FREEPDB1
+    username: BCCS_PRODUCT
+    password: BCCS_PRODUCT123
+    hikari:
+      maximum-pool-size: 20        # Khuyến nghị cho máy Dev (Mặc định là 10)
+      minimum-idle: 5              # Duy trì sẵn 5 connection
+      connection-timeout: 20000    # Chờ connection tối đa 20s
+      idle-timeout: 300000         # 5 phút
+      max-lifetime: 1200000        # 20 phút
+  data:
+    redis:
+      # --- Redis Enterprise Standalone Endpoint ---
+      # host: ${REDIS_HOST:localhost}
+      # port: ${REDIS_PORT:6379}
+      # ----------------------------------------------------
+
+      # --- Redis Enterprise Cluster Endpoint ------
+      cluster:
+        nodes:
+          - 10.58.71.184:8385
+          - 10.58.71.185:8385
+          - 10.58.71.240:8385
+          - 10.58.71.184:8386
+          - 10.58.71.185:8386
+          - 10.58.71.240:8386
+          - 10.58.71.184:8387
+          - 10.58.71.185:8387
+          - 10.58.71.240:8387
+        max-redirects: 3
+      # ----------------------------------------------------
+
+      # ACL Authentication
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:Mbccs@2025}
+      # TLS Configuration
+      # ssl:
+      #   enabled: true
+
+      timeout: 3000ms
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 32
+          max-idle: 16
+          min-idle: 4
+          max-wait: 3000ms
+        shutdown-timeout: 100ms
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:10.207.252.169:8859}
+    consumer:
+      group-id: ${BCCS_KAFKA_CONSUMER_GROUP_ID:${spring.application.name}}
+
+server:
+  port: ${APP_PORT:8004}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,caches
+  endpoint:
+    health:
+      show-details: always
+
+bccs:
+  web:
+    include-stacktrace: true
+  config:
+    enabled: true
+    team-code: CATALOG
+    service-name: organization-resource-service
+    client:
+      base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://localhost:8084}
+      connect-timeout-ms: 3000
+      read-timeout-ms: 5000
+    kafka:
+      enabled: true
+      topic: bccs.config-events.v1
+      consumer-group-mode: instance
+    sync:
+      enabled: true
+      interval-seconds: 300
+      retry:
+        max-attempts: 3
+        backoff-ms: 1000
+    response-code:
+      enabled: true
+      startup:
+        load-latest: true
+        fail-fast: false
+      missing-code:
+        response-mode: code-as-message
+        trigger-refresh: true
+        log-level: WARN
+    client-config:
+      enabled: true
+      startup:
+        load-latest: true
+        fail-fast: ${BCCS_CLIENT_CONFIG_FAIL_FAST:false}
+      missing-client:
+#        mode: use-file-config
+        mode: fail
+
+    option-set:
+      enabled: true
+      team-code: TEMPLATE
+      service-name: organization-resource-service
+      server-base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://localhost:8084}
+      preload:
+        - ORDER_STATUS
+        - CHANNEL_CODE
+        - FEATURE_FLAGS
+        - ORDER_NUMBER_PARAMS
+        - ORDER_STRING_PARAMS
+        - ORDER_BOOLEAN_PARAMS
+        - PARTNER_STATUS_MAPPING
+      sync-interval: 60s
+      fail-fast: false
+      kafka-enabled: true
+  response:
+    defaults:
+      success-code: SUCCESS
+      system-error-code: SYSTEM_ERROR
+      validation-error-code: VALIDATION_ERROR
+      unauthorized-error-code: UNAUTHORIZED
+      forbidden-error-code: FORBIDDEN
+      integration-error-code: INTEGRATION_ERROR
+      rate-limit-error-code: RATE_LIMIT_EXCEEDED
+
+  message:
+    formatter: message-format
+    missing-arg-mode: keep-template
+    format-failed-mode: keep-template
+  logging:
+    enabled: true
+    mdc:
+      enabled: true
+    masking:
+      enabled: true
+    request:
+      enabled: true
+      exclude-paths:
+        - /actuator/**
+        - /swagger-ui/**
+        - /v3/api-docs/**
+    payload:
+      enabled: true
+      max-body-size: 102400
+      max-field-length: 4096
+      inbound:
+        enabled: true
+        log-request-body: true
+        log-response-body: true
+        log-headers: true
+        allowed-content-types:
+          - application/json
+          - application/xml
+          - text/plain
+          - text/xml
+        sampling-rate: 1.0
+      outbound:
+        enabled: true
+        log-request-body: true
+        log-response-body: true
+        log-headers: true
+        allowed-target-systems: []
+        sampling-rate: 1.0
+    execution:
+      enabled: true
+      default-log-args: true
+      default-log-result: true
+      slow-threshold-ms: 200
+
+  observability:
+    environment: local
+    tracing:
+      enabled: ${BCCS_OBSERVABILITY_TRACING_ENABLED:false}
+
+  security:
+    enabled: ${BCCS_SECURITY_ENABLED:false}
+    jwt:
+      enabled: ${BCCS_SECURITY_JWT_ENABLED:false}
+
+  redis:
+    # Set to true to enable BCCS Redis Operations (bccs-starter-redis)
+    enabled: true
+    type: ${BCCS_REDIS_TYPE:cluster}
+    key-prefix: ${BCCS_REDIS_KEY_PREFIX:bccs:${spring.application.name}:}
+    default-ttl: 10m
+    require-ttl: false
+    fail-fast: false
+    log-startup-info: true
+    cluster:
+      nodes: 10.58.71.184:8385,10.58.71.185:8385,10.58.71.240:8385,10.58.71.184:8386,10.58.71.185:8386,10.58.71.240:8386,10.58.71.184:8387,10.58.71.185:8387,10.58.71.240:8387
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:Mbccs@2025}
+
+  cache:
+    enabled: true
+    # Supported modes: memory-only, redis-only, two-level.
+    # Set BCCS_CACHE_ENABLED=false only after removing sample cache components that inject BccsCacheService.
+    # redis-only and two-level require a running Redis instance.
+    mode: ${BCCS_CACHE_MODE:redis-only}
+    l1:
+      default-ttl: 5m
+      max-size: 5000
+    l2:
+      default-ttl: 1h
+      cache-null-values: false
+    invalidation:
+      # Keep invalidation off by default for local runs because it uses Redis Pub/Sub.
+      # Enable only when the Redis user has channel subscribe/publish permissions.
+      enabled: ${BCCS_CACHE_INVALIDATION_ENABLED:false}
+      provider: redis
+      topic: ${BCCS_CACHE_INVALIDATION_TOPIC:${spring.application.name}.cache.invalidation}
+    caches:
+      customerProfile:
+        ttl-l1: 30s
+        ttl-l2: 5m
+      accountProfile:
+        ttl-l1: 30s
+        ttl-l2: 5m
+      shopCache:
+        ttl-l1: 5m
+        ttl-l2: 30m
+      staffCache:
+        ttl-l2: 30m
+      getListStockByStaffCode:
+        ttl-l2: 168h
+
+  kafka:
+    # Set to false to completely disable Kafka auto-configuration and listener containers.
+    # When false, the application uses a NoOp publisher and ignores KAFKA_BOOTSTRAP_SERVERS.
+    enabled: ${BCCS_KAFKA_ENABLED:true}
+    consumer:
+      group-id: ${BCCS_KAFKA_CONSUMER_GROUP_ID:${spring.application.name}-local}
+
+  data:
+    enabled: ${BCCS_DATA_ENABLED:true}
+    database-type: ORACLE
+    audit:
+      enabled: ${BCCS_DATA_AUDIT_ENABLED:false}
+    migration:
+      enabled: false
+
+  client:
+    enabled: true
+    clients:
+      product-catalog-service:
+        enabled: true
+        base-url: ${PRODUCT_CATALOG_SERVICE_URL:http://localhost:8001/product-catalog-service}
+        auth-mode: NONE
+        connect-timeout: 3000
+        read-timeout: 10000
+        response-timeout: 10000
+#
+#      sms-vas:
+#        enabled: true
+#        base-url: ${SMS_VAS_BASE_URL:http://10.207.58.201:9696}
+#        auth-mode: BASIC
+#        username: ${SMS_VAS_BASIC_USERNAME:vtp}
+#        password: ${SMS_VAS_BASIC_PASSWORD:password}
+#        default-headers:
+#          username: ${SMS_VAS_HEADER_USERNAME:vtshop_myvt}
+#          password: ${SMS_VAS_HEADER_PASSWORD:$2y$10$0VAVRPNzlVBFChbaB6micOZJiDLxe3nY0K0asnM5svmI94qL1e6h6_67bc2b5c043f2}
+#        connect-timeout: 3000
+#        read-timeout: 10000
+#        response-timeout: 10000
+#
+#      push-transaction:
+#        enabled: true
+#        base-url: ${PUSH_TRANSACTION_BASE_URL:http://10.60.96.234:8889}
+#        auth-mode: BASIC
+#        username: ${PUSH_TRANSACTION_BASIC_USERNAME:web_portal}
+#        password: ${PUSH_TRANSACTION_BASIC_PASSWORD:Web_portal2021}
+#        connect-timeout: 3000
+#        read-timeout: 10000
+#        response-timeout: 10000
+#
+#      bccs-soap:
+#        enabled: true
+#        base-url: ${BCCS_SOAP_BASE_URL:http://10.207.58.201:9696}
+#        auth-mode: BASIC
+#        username: ${BCCS_SOAP_BASIC_USERNAME:vtp}
+#        password: ${BCCS_SOAP_BASIC_PASSWORD:password}
+#        connect-timeout: 3000
+#        read-timeout: 10000
+#        response-timeout: 10000
+
+springdoc:
+  api-docs:
+    enabled: ${BCCS_SPRINGDOC_ENABLED:true}
+#    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${BCCS_SPRINGDOC_UI_ENABLED:true}
+#    path: /swagger-ui.html
+  packages-to-scan: com.viettel.bccs.organization
+paths-to-exclude: /actuator/**,/error
+

@@ -1,0 +1,110 @@
+{
+  "BCCS-SYS-TECH-0001": {
+    "code": "BCCS-SYS-TECH-0001",
+    "message": "System error",
+    "httpStatus": 500,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-VAL-0001": {
+    "code": "BCCS-SYS-VAL-0001",
+    "message": "validation error",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-SYS-VAL-0002": {
+    "code": "BCCS-SYS-VAL-0002",
+    "message": "Resource not found",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-AUTH-SEC-0001": {
+    "code": "BCCS-AUTH-SEC-0001",
+    "message": "Authentication failed",
+    "httpStatus": 401,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-AUTH-SEC-0002": {
+    "code": "BCCS-AUTH-SEC-0002",
+    "message": "Access denied",
+    "httpStatus": 403,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-SYS-INT-0001": {
+    "code": "BCCS-SYS-INT-0001",
+    "message": "Integration error",
+    "httpStatus": 502,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-INT-0002": {
+    "code": "BCCS-SYS-INT-0002",
+    "message": "Integration timeout",
+    "httpStatus": 504,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
+  "BCCS-SYS-RATE-0001": {
+    "code": "BCCS-SYS-RATE-0001",
+    "message": "Rate limit exceeded",
+    "httpStatus": 429,
+    "category": "SYSTEM",
+    "severity": "WARNING",
+    "retryable": true,
+    "logLevel": "WARN"
+  },
+  "CATALOG-SPEC-CHAR-VAL-001": {
+    "code": "CATALOG-SPEC-CHAR-VAL-001",
+    "message": "Product spec char value not found",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "CATALOG-OFFER-REL-001": {
+    "code": "CATALOG-OFFER-REL-001",
+    "message": "Product offer relation not found",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "CATALOG-OFFER-REL-DET-001": {
+    "code": "CATALOG-OFFER-REL-DET-001",
+    "message": "Product offer relation detail not found",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "CATALOG-PRODUCT-002": {
+    "code": "CATALOG-PRODUCT-002",
+    "message": "payType and productOfferTypeId are required",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  }
+}

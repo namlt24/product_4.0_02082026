@@ -1,0 +1,41 @@
+{
+  "info": {
+    "name": "Product Catalog Service",
+    "description": "APIs for Product Offering management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8001/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Product",
+      "item": [
+        {
+          "name": "Get Product by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?productCode=CODE",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "productCode",
+                  "value": "CODE",
+                  "description": "Mã sản phẩm (CODE trong bảng PRODUCT_OFFERING)"
+                }
+              ]
+            },
+            "description": "Lấy thông tin đầy đủ PRODUCT_OFFERING theo productCode"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

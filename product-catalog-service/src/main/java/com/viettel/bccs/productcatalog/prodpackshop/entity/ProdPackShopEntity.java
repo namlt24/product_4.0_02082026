@@ -1,0 +1,41 @@
+package com.viettel.bccs.productcatalog.prodpackshop.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.Date;
+
+@Entity
+@Table(name = "PROD_PACK_SHOP")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ProdPackShopEntity {
+
+    @Id
+    @Column(name = "PROD_PACK_SHOP_ID", precision = 10)
+    private Long prodPackShopId;
+
+    @Column(name = "SHOP_ID", precision = 10)
+    private Long shopId;
+
+    @Column(name = "PROD_PACK_TYPE_ID", precision = 10)
+    private Long prodPackTypeId;
+
+    @Column(name = "STATUS", length = 1)
+    private String status;
+
+    @Column(name = "CREATE_USER", length = 50)
+    private String createUser;
+
+    @Column(name = "CREATE_DATETIME")
+    private Date createDatetime;
+
+    @Column(name = "UPDATE_USER", length = 50)
+    private String updateUser;
+
+    @Column(name = "UPDATE_DATETIME")
+    private Date updateDatetime;
+}

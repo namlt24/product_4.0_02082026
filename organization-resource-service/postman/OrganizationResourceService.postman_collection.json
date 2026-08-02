@@ -1,0 +1,93 @@
+{
+  "info": {
+    "name": "Organization Resource Service",
+    "description": "APIs for Shop and Staff management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8004/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Shop",
+      "item": [
+        {
+          "name": "Get Shop by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{shopId}",
+              "host": ["{{baseUrl}}"],
+              "path": ["shops", "{shopId}"],
+              "variable": [
+                {
+                  "key": "shopId",
+                  "value": "1",
+                  "description": "Shop ID"
+                }
+              ]
+            },
+            "description": "Lấy thông tin shop theo shopId, chỉ trả bản ghi có status = 1"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Stock Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/stock-code?ownerId=1&ownerType=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["shops", "stock-code"],
+              "query": [
+                {
+                  "key": "ownerId",
+                  "value": "1",
+                  "description": "ID của Shop (ownerType=1) hoặc Staff (ownerType=2)"
+                },
+                {
+                  "key": "ownerType",
+                  "value": "1",
+                  "description": "1 = Shop, 2 = Staff"
+                }
+              ]
+            },
+            "description": "Lấy mã kho dựa vào ownerId và ownerType. ownerType=1 → shopCode, ownerType=2 → staffCode"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {
+          "name": "Get Staff by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/staffs/{staffId}",
+              "host": ["{{baseUrl}}"],
+              "path": ["staffs", "{staffId}"],
+              "variable": [
+                {
+                  "key": "staffId",
+                  "value": "1",
+                  "description": "Staff ID"
+                }
+              ]
+            },
+            "description": "Lấy thông tin staff theo staffId, chỉ trả bản ghi có status = 1"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+package com.viettel.bccs.policy.action.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.Date;
+
+@Entity
+@Table(name = "ACTION")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ActionEntity {
+
+    @Id
+    @Column(name = "ACTION_CODE", length = 10)
+    private String actionCode;
+
+    @Column(name = "NAME", length = 512)
+    private String name;
+
+    @Column(name = "DESCRIPTION", length = 512)
+    private String description;
+
+    @Column(name = "STATUS", length = 1)
+    private String status;
+
+    @Column(name = "CREATE_USER", length = 50)
+    private String createUser;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "CREATE_DATETIME")
+    private Date createDatetime;
+
+    @Column(name = "UPADTE_USER", length = 50)
+    private String updateUser;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "UPDATE_DATETIME")
+    private Date updateDatetime;
+
+    @Column(name = "TYPE", length = 2)
+    private String type;
+
+    @Column(name = "REASON_TYPE", length = 20)
+    private String reasonType;
+}

@@ -1,0 +1,88 @@
+name: ${APP_NAME:-bccs-service}-local
+
+services:
+  database:
+    image: gvenzl/oracle-free:23-slim
+    container_name: ${APP_NAME:-bccs-service}-oracle
+    environment:
+      ORACLE_PASSWORD: ${DB_ROOT_PASSWORD:-bccs_root}
+      APP_USER: ${DB_USERNAME:-bccs}
+      APP_USER_PASSWORD: ${DB_PASSWORD:-bccs}
+    ports:
+      - "${DB_PORT:-1521}:1521"
+    volumes:
+      - bccs_oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - bccs-local
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${APP_NAME:-bccs-service}-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - bccs_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - bccs-local
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: ${APP_NAME:-bccs-service}-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_PORT:-9092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "${KAFKA_PORT:-9092}:9094"
+    volumes:
+      - bccs_kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+    networks:
+      - bccs-local
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: ${APP_NAME:-bccs-service}-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "${KAFKA_UI_PORT:-8085}:8080"
+    networks:
+      - bccs-local
+
+volumes:
+  bccs_oracle_data:
+  bccs_redis_data:
+  bccs_kafka_data:
+
+networks:
+  bccs-local:
+    driver: bridge

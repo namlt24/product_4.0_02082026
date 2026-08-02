@@ -1,0 +1,25 @@
+name: redis-local
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: bccs-redis-local
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - bccs_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - redis-local
+
+volumes:
+  bccs_redis_data:
+
+networks:
+  redis-local:
+    driver: bridge

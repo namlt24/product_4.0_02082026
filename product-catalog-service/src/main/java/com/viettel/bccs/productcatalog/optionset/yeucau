@@ -1,0 +1,53 @@
+ @RequestMapping(value = "/mDealer/getSubObject", method = RequestMethod.POST)
+    @Operation(operationId = "API_PRODUCT_014",
+            summary = "API lấy danh sách đối tượng",
+            description = "API lấy danh sách đối tượng")
+    public ResponseEntity getSubObject(@RequestParam @Schema(description = "Loại khách hàng", maxLength = 10) String custType,
+                                       @RequestParam(required = false)
+                                       @Schema(description = "Ngày sinh KH", maxLength = 8)
+                                       @Pattern(regexp = "^(0[1-9]|[12][0-9]|3[01])(0[1-9]|1[0-2])\\d{4}$",
+                                               message = "Date must be in the format ddMMyyyy") String birthDate) {
+        ResponseMDealer responseMDealer = new ResponseMDealer();
+        try {
+            //tu loai khach hang custType => Lay ra nhom loai khach hang groupType
+            CustTypeDTO custTypeDTO = custTypeService.findActiveByCustType(custType, Const.STATUS.ACTIVE);
+            if (DataUtil.isNullObject(custTypeDTO)) {
+                throw new LogicException(Const.ERROR_CODE.PRODUCT1246, getTextParam("sale.mobile.prePaid.message.error.nocusttype", custType));
+            }
+            String groupType = custTypeDTO.getGroupType();
+
+            if (DataUtil.safeEqual(groupType, "1") || DataUtil.safeEqual(groupType, "3")) {
+                int age = DateUtil.calculateAge(DateUtil.string2LocalDate(birthDate, "ddMMyyyy"), LocalDate.now());
+                if (age < 6) {
+                    throw new LogicException(ErrorCode.ERROR_NOT_DEFINE, getText("sale.mobile.prePaid.message.error.age.6"));
+                }
+                if (age >= 16) {
+                    responseMDealer.setLstOptionSetValue(optionSetValueService.findByCode("SUB_OBJECT_OVER_16_INDIVIDUAL"));
+                    responseMDealer.setNeedGuardianName(false);
+                } else if (age >= 6 && age < 15) {
+                    responseMDealer.setLstOptionSetValue(optionSetValueService.findByCode("SUB_OBJECT_LESS_15_INDIVIDUAL"));
+                    responseMDealer.setNeedGuardianName(true);
+                } else if (age >= 15 && age < 16) {
+                    responseMDealer.setLstOptionSetValue(optionSetValueService.findByCode("SUB_OBJECT_LESS_16_INDIVIDUAL"));
+                    responseMDealer.setNeedGuardianName(false);
+                }
+            } else if (DataUtil.safeEqual(groupType, "2")) {
+                responseMDealer.setLstOptionSetValue(optionSetValueService.findByCode("SUB_OBJECT_BY_AGE_BUSINESS"));
+            }
+            responseMDealer.setCode(Const.REST_RESPONSE_CODE.SUCCESS);
+            return ResponseEntity.ok().headers(httpHeaders).body(responseMDealer);
+        } catch (Exception e) {
+            return commonResponseException(responseMDealer, e);
+        }
+    }
+
+    -> Viết cho tôi hàm nh thế này trong OptionSetController.
+
+Yêu cầu bắt buộc:
++ Code đúng không lỗi
++ Không được phép thay đổi nghiệp vụ
++ Code theo đúng style, kiến trúc dự án
++ Có swagger, mô tả các trường
++ Làm xong thì refactor lại code
++ Đánh cache cho hàm theo kiến trúc dự án
++ Tái sự dụng lại hàm cũ nếu tương ương

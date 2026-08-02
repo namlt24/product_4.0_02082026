@@ -1,0 +1,60 @@
+image: maven:3.9-eclipse-temurin-25
+
+variables:
+  # This configures Maven to use a local directory for caching dependencies
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository
+
+stages:
+  - build
+  - test
+  - package
+
+# Define a hidden job for Maven settings setup
+.maven-setup: &maven-setup
+  before_script:
+    - mkdir -p ~/.m2
+    # Ensure CI variables are injected or assume Nexus does not require auth for reads
+    # A standard settings.xml should be mounted or generated in the CI environment
+    - |
+      if [ -f "$MAVEN_SETTINGS_XML" ]; then
+        cp "$MAVEN_SETTINGS_XML" ~/.m2/settings.xml
+      else
+        echo '<?xml version="1.0" encoding="UTF-8"?>
+        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+          <mirrors>
+            <mirror>
+              <id>vtt-maven-mirror</id>
+              <mirrorOf>*</mirrorOf>
+              <url>https://nexus.kcntt.net/repository/maven-group/</url>
+            </mirror>
+          </mirrors>
+        </settings>' > ~/.m2/settings.xml
+      fi
+
+build_job:
+  stage: build
+  <<: *maven-setup
+  script:
+    - mvn clean compile
+
+test_job:
+  stage: test
+  <<: *maven-setup
+  script:
+    - mvn test
+
+package_job:
+  stage: package
+  <<: *maven-setup
+  script:
+    - mvn package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week

@@ -1,0 +1,40 @@
+public List<ProductOfferingDTO> findByCodeOrId(Long proOfferId, String prodOfferCode, String status) throws LogicException, Exception {
+        if(DataUtil.isAnyNull(proOfferId, prodOfferCode){
+            return null;
+        }
+        return mapper.toDtoBean(repository.findByCodeOrId(proOfferId, prodOfferCode, status));
+    }
+
+ public List<ProductOffering> findByCodeOrId(Long proOfferId, String prodOfferCode, String status) {
+        StringBuilder strQuery = new StringBuilder();
+        strQuery.append(" select a.* from product_offering a");
+        strQuery.append(" where 1=1 ");
+        if (!DataUtil.isNullOrEmpty(status)) {
+            strQuery.append(" and a.status= :status ");
+        }
+        java.util.concurrent.ConcurrentHashMap<String, Object> params = new java.util.concurrent.ConcurrentHashMap<>();
+        if (!DataUtil.isNullOrZero(proOfferId)) {
+            strQuery.append(" and a.product_offering_id = :proOfferId ");
+            params.put("proOfferId", proOfferId);
+        }
+        if (!DataUtil.isNullOrEmpty(prodOfferCode)) {
+            strQuery.append(" and a.code = :prodOfferCode ");
+            params.put("prodOfferCode", prodOfferCode);
+        }
+        strQuery.append(" order by a.code ");
+        Query query = em.createNativeQuery(strQuery.toString(), ProductOffering.class);
+        for (Map.Entry<String, Object> param : params.entrySet()) {
+            query.setParameter(param.getKey(), param.getValue());
+        }
+        return query.getResultList();
+    }
+
+
+ Viết cho tôi hàm này chìa ra ProductOfferingController.
+ Yêu cầu bắt buộc:
+ + Code đúng không lỗi
+ + Không được phép thay đổi nghiệp vụ
+ + Code theo đúng style, kiến trúc dự án
+ + Có swagger, mô tả các trường
++ Làm xong thì refactor lại code
++ Đánh cache cho hàm theo kiến trúc dự án

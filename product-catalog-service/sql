@@ -1,0 +1,25 @@
+-- auto-generated definition
+create table ACTION
+(
+    ACTION_CODE     VARCHAR2(10) not null
+        constraint ACTION_PK
+            primary key,
+    NAME            NVARCHAR2(512),
+    DESCRIPTION     NVARCHAR2(512),
+    STATUS          VARCHAR2(1),
+    CREATE_USER     VARCHAR2(50),
+    CREATE_DATETIME DATE,
+    UPADTE_USER     VARCHAR2(50),
+    UPDATE_DATETIME DATE,
+    TYPE            VARCHAR2(2),
+    REASON_TYPE     VARCHAR2(20)
+)
+/
+
+comment on column ACTION.TYPE is '1- cho nghiep vu cm cu, 2 cho hoa don, 3 cho ban hang'
+/
+
+create index ACTION_TYPE_IDX
+    on ACTION (REASON_TYPE)
+/
+

@@ -77,4 +77,22 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
             return Collections.emptyList();
         }
     }
+
+    @Override
+    public List<ProductOfferingDTO> findByIds(List<Long> offerIds) {
+        try {
+            var response = bccsHttpClient.post(
+                    "product-catalog-service",
+                    "/product-catalog-service/v1/product/findByIds",
+                    offerIds,
+                    StandardClientResponse.class);
+            if (response != null && response.getData() != null) {
+                return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductOfferingDTO>>() {});
+            }
+            return Collections.emptyList();
+        } catch (RuntimeException e) {
+            log.error("Error calling findByIds: offerIds={}", offerIds, e);
+            return Collections.emptyList();
+        }
+    }
 }

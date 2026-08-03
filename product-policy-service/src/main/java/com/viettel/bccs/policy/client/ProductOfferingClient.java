@@ -11,4 +11,6 @@ public interface ProductOfferingClient {
     List<ProductOfferingDTO> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId, String subType, Long offerTypeId, boolean getActiveProduct);
 
     List<ProductOfferingDTO> findByCodesAndProductOfferType(List<String> codes, Long productOfferTypeId);
+
+    List<ProductOfferingDTO> findByIds(List<Long> offerIds);
 }

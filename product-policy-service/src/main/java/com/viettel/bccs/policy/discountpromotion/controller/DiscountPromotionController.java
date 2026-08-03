@@ -2,6 +2,7 @@ package com.viettel.bccs.policy.discountpromotion.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionResponse;
 import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class DiscountPromotionController {
     }
 
     @GetMapping("/getPromotionList")
-    public StandardResponse<List<DiscountPromotionResponse>> getPromotionList(
+    public StandardResponse<List<DiscountPromotionDTO>> getPromotionList(
             @RequestParam(required = false) Long telecomServiceId,
             @RequestParam(defaultValue = "false") boolean checkStatus,
             @RequestParam(defaultValue = "false") boolean checkEffectDate,

@@ -2,6 +2,7 @@ package com.viettel.bccs.policy.mapactiveinfo.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.exception.LogicException;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ValidateInputMapActiveInfoRequest;
@@ -9,6 +10,8 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateMapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoValidateService;
+import com.viettel.bccs.policy.utils.Const;
+import com.viettel.bccs.policy.utils.DataUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,6 +20,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
@@ -31,73 +40,52 @@ public class MapActiveInfoValidateController {
         return StandardResponses.success(service.validateInputMapActiveInfo(request));
     }
 
-    @PostMapping("/validateMapActiveInfo")
-    public StandardResponse<ValidateMapActiveInfoResponse> validateMapActiveInfo(
-            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) throws LogicException {
-        try {
-            service.validateMapActiveInfo(request);
-        } catch (LogicException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return StandardResponses.success(new ValidateMapActiveInfoResponse(true));
-    }
-
-    @PostMapping("/validateWithoutMapActiveInfo")
-    public StandardResponse<ValidateMapActiveInfoResponse> validateWithoutMapActiveInfo(
-            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) {
-        service.validateWithOutMapActiveInfo(request);
-        return StandardResponses.success(new ValidateMapActiveInfoResponse(true));
-    }
-
     @Operation(summary = "Validate theo thông tin mapping mới - trả về MapActiveInfoDTO")
     @PostMapping("/validateFollowMapActiveInfoNew")
     public StandardResponse<MapActiveInfoDTO> validateFollowMapActiveInfoNew(
-            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) {
-        MapActiveInfoDTO mapActiveInfoDTO = MapActiveInfoDTO.builder()
-                .actionCode("537")
-                .businessNo(";-1;")
-                .captcharRequire((short) 1)
-                .changeTechnology(false)
-                .channelTypeId(-1L)
-                .checkVasCode(false)
-                .createUser("PRODUCT")
-                .customerGroup("-1")
-                .customerType("-1")
-                .deleteEndDate(false)
-                .districtCode("-1")
-                .districtName("Tất cả")
-                .effectDate(java.time.LocalDateTime.of(2025, 10, 25, 0, 0, 0))
-                .isError(false)
-                .fileAction(0)
-                .hasValidateArea(true)
-                .id(1006743977000L)
-                .issueDatetime(java.time.LocalDateTime.of(2025, 10, 25, 0, 0, 0))
-                .nodeCode("-1;")
-                .offerId(400000607L)
-                .payMonthly(false)
-                .payType("1")
-                .precinctCode("-1")
-                .productCode("POBAS")
-                .productName("POBAS")
-                .promCode("KM014")
-                .provinceCode("-1")
-                .provinceName("Tất cả")
-                .reasonName("Auto_DoiKM1")
-                .regReasonId(9903991084L)
-                .shopCode("-1")
-                .shopId(-1L)
-                .staffCode("-1")
-                .stationCodes("-1;")
-                .stationId(-1L)
-                .status("1")
-                .subGroup("-1")
-                .subType("-1")
-                .technology("-1")
-                .telServiceId(1L)
-                .warnMappingAll(false)
-                .build();
+            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) throws LogicException {
+        MapActiveInfoDTO mapActiveInfoDTO = new MapActiveInfoDTO();
+
+        List<String> lstBusinessNo = request.getLstBusinessNo();
+
+        if (DataUtil.notNullOrEmpty(lstBusinessNo)) {
+            lstBusinessNo = new ArrayList<>(lstBusinessNo.size());
+            for (String item : lstBusinessNo) {
+                if (item != null) {
+                    String trimmed = item.trim();
+                    if (trimmed.length() > 3500) {
+                        throw new BusinessException("", "product.identityType.length.3500");
+                    }
+                    lstBusinessNo.add(trimmed);
+                }
+            }
+        } else {
+            lstBusinessNo = Collections.singletonList(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
+        }
+
+        List<MapActiveInfoDTO> mapActiveInfoDTOs = service.validateMapActiveInfo(request.getStaffDTO(),
+                request.getActionCode(),
+                request.getOfferIds() == null ? new ArrayList<Long>() : request.getOfferIds(),
+                request.getPromotionCode(),
+                request.getRegReasonId(),
+                request.getCaptchaAnswer(),
+                request.getTelServiceId(),
+                request.getNowDate(),
+                request.isNeedCheckCaptcha(),
+                request.getProvince(),
+                request.getDistrict(),
+                request.getPrecinct(),
+                request.getCustomerGroup(),
+                request.getCustomerType(),
+                request.getSubType(),
+                request.getSubGroup(),
+                request.getStationCodes(),
+                request.getPayType(),
+                request.getTechnology(),
+                request.getMode(), null, lstBusinessNo);
+        if (!DataUtil.isNullOrEmpty(mapActiveInfoDTOs)) {
+            mapActiveInfoDTO = mapActiveInfoDTOs.get(0);
+        }
         return StandardResponses.success(mapActiveInfoDTO);
     }
 

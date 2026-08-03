@@ -2,6 +2,7 @@ package com.viettel.bccs.policy.reason.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.service.ReasonService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class ReasonController {
     }
 
     @GetMapping("/getListReasonByActionCodeAndTelServiceForAudit")
-    public StandardResponse<List<ReasonResponse>> getListReasonByActionCodeAndTelServiceForAudit(
+    public StandardResponse<List<ReasonDTO>> getListReasonByActionCodeAndTelServiceForAudit(
             @RequestParam String actionCode,
             @RequestParam Long telServiceId,
             @RequestParam String payType) {

@@ -67,4 +67,13 @@ public class ProductOfferingService {
                 .map(productOfferingMapper::toDto)
                 .toList();
     }
+
+    public List<ProductOfferingDTO> findByIds(List<Long> offerIds) {
+        if (DataUtil.isNullOrEmpty(offerIds)) {
+            return List.of();
+        }
+        return productOfferingRepository.findAllById(offerIds).stream()
+                .map(productOfferingMapper::toDto)
+                .toList();
+    }
 }

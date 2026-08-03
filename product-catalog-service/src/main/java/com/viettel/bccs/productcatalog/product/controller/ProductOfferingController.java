@@ -116,4 +116,16 @@ public class ProductOfferingController {
             @RequestParam Long productOfferTypeId) {
         return StandardResponses.success(productOfferingService.findByCodesAndProductOfferType(codes, productOfferTypeId));
     }
+
+    @PostMapping("/findByIds")
+    @Operation(
+            operationId = "findByIds",
+            summary = "Tìm kiếm sản phẩm theo danh sách ID",
+            description = "Tìm kiếm sản phẩm gói cước theo danh sách productOfferingId. Trả về danh sách rỗng nếu không truyền id nào."
+    )
+    public StandardResponse<List<ProductOfferingDTO>> findByIds(
+            @Parameter(description = "Danh sách ID sản phẩm cần tìm", example = "[12345, 67890]")
+            @RequestBody List<Long> offerIds) {
+        return StandardResponses.success(productOfferingService.findByIds(offerIds));
+    }
 }

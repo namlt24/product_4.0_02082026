@@ -1,21 +1,33 @@
 package com.viettel.bccs.policy.discountpromotion.repository;
 
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.entity.DiscountPromotionEntity;
+import com.viettel.bccs.policy.discountpromotion.mapper.DiscountPromotionMapper;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
+import com.viettel.bccs.policy.utils.Const;
+import com.viettel.bccs.policy.utils.DataUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Repository
 public class DiscountPromotionRepositoryCustomImpl implements DiscountPromotionRepositoryCustom {
 
     @PersistenceContext
     private EntityManager em;
+
+    @Autowired
+    private DiscountPromotionMapper mapper;
 
     @Override
     public List<DiscountPromotionEntity> getPromotionList(
@@ -60,5 +72,111 @@ public class DiscountPromotionRepositoryCustomImpl implements DiscountPromotionR
         }
 
         return query.getResultList();
+    }
+
+    @Override
+    public List<DiscountPromotionDTO> getPromFromMapActiveInfosCheckDuplicate(List<MapActiveInfoDTO> mapActiveInfos, boolean getDulicateProm) {
+        if (DataUtil.isNullOrEmpty(mapActiveInfos)) return null;
+//        List<String> lstPromCode = mapActiveInfos.stream().map(MapActiveInfoDTO::getPromCode).collect(Collectors.toList());
+        String telService = DataUtil.safeToString(mapActiveInfos.get(0).getByProperty("telServiceId"));
+
+        String queryStr = "select a.* from Discount_Promotion a where a.status = 1 "
+                + " and a.type ='1'  "//khuyen mai
+                + " and a.system_Type ='2'  "//Dau noi
+                + " and ( a.effect_Datetime <= trunc(sysdate + 1) ) "
+                + " and ( a.expire_Datetime is null or a.expire_Datetime >=  trunc(sysdate) ) "
+                + " and ',' || a.telecom_service_id || ',' LIKE '%,' || :telService || ',%'"
+                + " order by a.code";
+        Query query = em.createNativeQuery(queryStr.toString(), DiscountPromotionEntity.class);
+        query.setParameter("telService", telService);
+        @SuppressWarnings("unchecked")
+        List<DiscountPromotionEntity> resultEntities = query.getResultList();
+        List<DiscountPromotionDTO> lstPromotions = mapper.toDTOList(resultEntities);
+        List<DiscountPromotionDTO> lstResult = new ArrayList<>();
+
+        if (!DataUtil.isNullOrEmpty(lstPromotions)) {
+            String promotionCode;
+            String telecomServiceId;
+
+            Long regReasonId;
+            String reasonName;
+            String productCode;
+
+            boolean isContainMapAllAll = false;
+            int counter = 0;
+
+            Long reasonIdMapAll = null;
+            String reasonNameMapAll = null;
+
+            String subGroupCode = null;
+            for (DiscountPromotionDTO discountPromotionDTO : lstPromotions) {
+                if (isContainMapAllAll) {
+                    for (DiscountPromotionDTO obj : lstPromotions) {
+                        obj.setRegReasonId(reasonIdMapAll);
+                        obj.setReasonName(reasonNameMapAll);
+                        obj.setSubGroupCode(subGroupCode);
+                    }
+                    return lstPromotions;
+                }
+
+                for (MapActiveInfoDTO mapActiveInfo : mapActiveInfos) {
+                    promotionCode = DataUtil.safeToString(mapActiveInfo.getByProperty("promCode"));
+                    telecomServiceId = DataUtil.safeToString(mapActiveInfo.getByProperty("telServiceId"));
+                    regReasonId = DataUtil.safeToLong(mapActiveInfo.getByProperty("regReasonId"));
+                    reasonName = DataUtil.safeToString(mapActiveInfo.getByProperty("reasonName"));
+                    productCode = DataUtil.safeToString(mapActiveInfo.getByProperty("productCode"));
+
+                    if (DataUtil.safeEqual(promotionCode, Const.DEFAULT_VALUE_MAP_SELECT_ALL)
+                            && DataUtil.safeEqual(telecomServiceId, Const.DEFAULT_VALUE_MAP_SELECT_ALL)) {
+
+                        isContainMapAllAll = true;
+                        subGroupCode = mapActiveInfo.getSubGroupCode();
+                        reasonIdMapAll = regReasonId;
+                        reasonNameMapAll = reasonName;
+                        break;
+                    } else if (("," + discountPromotionDTO.getTelecomServiceId() + ",").contains("," + telecomServiceId + ",")
+                            && DataUtil.safeEqual(discountPromotionDTO.getCode(), promotionCode)) {
+
+                        DiscountPromotionDTO cloneBean = discountPromotionDTO.toBuilder().build();
+                        cloneBean.setProductCode(productCode);
+                        cloneBean.setRegReasonId(regReasonId);
+                        cloneBean.setReasonName(reasonName);
+                        if(!DataUtil.isNullOrEmpty(mapActiveInfo.getSubGroupCode())){
+                            cloneBean.setSubGroupCode(mapActiveInfo.getSubGroupCode());
+                        }
+
+                        lstResult.add(cloneBean);
+                        if (!getDulicateProm) {
+                            break;
+                        }
+
+                    } else if (DataUtil.safeEqual(promotionCode, Const.DEFAULT_VALUE_MAP_SELECT_ALL)
+                            && ("," + discountPromotionDTO.getTelecomServiceId() + ",").contains("," + telecomServiceId + ",")) {
+
+                        isContainMapAllAll = true;
+                        subGroupCode = mapActiveInfo.getSubGroupCode();
+                        reasonIdMapAll = regReasonId;
+                        reasonNameMapAll = reasonName;
+                        break;
+                    } else if (DataUtil.safeEqual(telecomServiceId, Const.DEFAULT_VALUE_MAP_SELECT_ALL)
+                            && DataUtil.safeEqual(discountPromotionDTO.getCode(), promotionCode)) {
+
+                        DiscountPromotionDTO cloneBean = discountPromotionDTO.toBuilder().build();
+                        cloneBean.setRegReasonId(regReasonId);
+                        cloneBean.setReasonName(reasonName);
+                        cloneBean.setProductCode(productCode);
+                        if(!DataUtil.isNullOrEmpty(mapActiveInfo.getSubGroupCode())){
+                            cloneBean.setSubGroupCode(mapActiveInfo.getSubGroupCode());
+                        }
+                        lstResult.add(cloneBean);
+                        if (!getDulicateProm) {
+                            break;
+                        }
+                    }
+                }
+            }
+            log.info("CHECKPOINT_2");
+        }
+        return lstResult;
     }
 }

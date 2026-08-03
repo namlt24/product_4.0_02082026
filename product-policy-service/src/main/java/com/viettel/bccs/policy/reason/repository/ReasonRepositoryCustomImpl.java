@@ -122,4 +122,9 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
         List<ReasonEntity> listResult = query.getResultList();
         return listResult;
     }
+
+    @Override
+    public List<ReasonEntity> getByActionCodeOrderByIdWithMappingChecking(String actionCode, Long telServiceId, Long numProduct, String productOfferType) {
+        return null;
+    }
 }

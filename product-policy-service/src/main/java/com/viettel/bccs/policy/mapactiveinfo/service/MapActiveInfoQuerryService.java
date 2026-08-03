@@ -104,7 +104,7 @@ public class MapActiveInfoQuerryService {
             }
         }
         Long duration = System.currentTimeMillis() - startTime;
-        log.info("Thuannx: duration = " + duration);
+        log.info("Namlt: duration = " + duration);
         log.info("Lay dc " + mapActiveInfos.size() + " ban ghi map active info sau khi query ElasticSearch");
         if (!exampleMapActiveInfo.isCheckVasCode() && !DataUtil.isNullOrEmpty(mapActiveInfos)) {
             mapActiveInfos = mapActiveInfos.stream().filter(x ->
@@ -313,7 +313,7 @@ public class MapActiveInfoQuerryService {
         return actionCodeList.contains(actionCode) || telecomServiceIds.contains(telServiceId) || checkCustomActionWithService;
     }
 
-    private boolean checkMapActiveInfoForVas(String actionCode, Long telServiceId) {
+    public boolean checkMapActiveInfoForVas(String actionCode, Long telServiceId) {
         List<String> actionCodeList = getActionCodeList(Const.OPTION_SET.ACTION_REQUIRE_MAP_ACTIVE_INFO_FOR_VAS);
         List<Long> telecomServiceIds = getTelecomServiceIds();
         return actionCodeList.contains(actionCode) || telecomServiceIds.contains(telServiceId);

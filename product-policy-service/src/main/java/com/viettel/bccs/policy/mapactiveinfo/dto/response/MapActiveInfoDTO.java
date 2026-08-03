@@ -1,7 +1,7 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.response;
 
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.DiscountPromotionDTO;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.ReasonDTO;
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
+import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import io.swagger.v3.oas.annotations.media.Schema;

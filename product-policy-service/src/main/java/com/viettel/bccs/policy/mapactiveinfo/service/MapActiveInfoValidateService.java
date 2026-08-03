@@ -3,23 +3,21 @@ package com.viettel.bccs.policy.mapactiveinfo.service;
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.common.error.exception.SystemException;
 import com.viettel.bccs.policy.client.StaffExtClient;
-import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
-import com.viettel.bccs.policy.client.dto.StaffExtResponse;
-import com.viettel.bccs.policy.client.dto.StaffResponse;
+import com.viettel.bccs.policy.client.dto.*;
 import com.viettel.bccs.policy.client.OptionSetClient;
 import com.viettel.bccs.policy.client.ProductOfferingClient;
 import com.viettel.bccs.policy.client.ProductOfferCharUseClient;
 import com.viettel.bccs.policy.client.StaffShopClient;
-import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionResponse;
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
 import com.viettel.bccs.policy.exception.LogicException;
-import com.viettel.bccs.policy.client.dto.StaffDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.*;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
+import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.service.ReasonService;
 import com.viettel.bccs.policy.utils.Const;
@@ -60,6 +58,10 @@ public class MapActiveInfoValidateService {
     private final Executor asyncExecutor;
     private final MessageUtil messageUtil;
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
+
+    public static final String VAS_NOT_FOUND_ERROR_CODE = "VAS_NOT_FOUND_ERROR_CODE";
+    public static final String VAS_MAPPING_INVALID = "VAS_MAPPING_INVALID";
+    public static final String SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION = "SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION";
 
     public MapActiveInfoValidateService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                         OptionSetClient optionSetClient, StaffShopClient staffShopClient,
@@ -147,96 +149,146 @@ public class MapActiveInfoValidateService {
         return mapActiveInfoQuerryService.isCheckMapActiveInfo(request);
     }
 
-    public void validateWithOutMapActiveInfo(ValidateInputMapActiveInfoRequest request) {
-        log.info("[validateWithOutMapActiveInfo] START - actionCode={}, telServiceId={}, payType={}",
-                request.getActionCode(), request.getTelServiceId(), request.getPayType());
+    public List<MapActiveInfoDTO> validateMapActiveInfo(StaffDTO staffDTO, String actionCode, List<Long> offerIds,
+                                                        String promotionCode, Long regReasonId, String captchaAnswer, Long telServiceId, Date nowDate,
+                                                        boolean isNeedCheckCaptcha, String province, String district, String precinct, String customerGroup,
+                                                        String customerType, String subType, String subGroup, String stationCodes, String payType,
+                                                        String technology, int mode, String productOfferType, List<String> lstBusinessNo) throws LogicException {
+        List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
+        MapActiveInfoDTO mapActiveInfo;
+        List<ReasonDTO> lstReason ;
+        List<DiscountPromotionDTO> lstPromotions;
+        if (regReasonId == null) {
+            log.info("regReasonId=null");
+            throw new BusinessException("BCCS-POLICY-008");
+        }
+        boolean isCheckMapActiveInfo;
+        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
+            isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfoForVas(actionCode, telServiceId);
+        } else {
+            isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, telServiceId);
+        }
 
-        // 1. Task lấy Reason
-        CompletableFuture<List<ReasonResponse>> futureReason = CompletableFuture
-                .supplyAsync(() -> {
-                    log.debug("[AsyncTask] getListReason START - actionCode={}, telServiceId={}",
-                            request.getActionCode(), request.getTelServiceId());
-                    try {
-                        List<ReasonResponse> result = transactionTemplate.execute(status ->
-                                reasonService.getListReasonByActionCodeAndTelServiceForAudit(
-                                        request.getActionCode(), request.getTelServiceId(), request.getPayType()));
-                        log.debug("[AsyncTask] getListReason END - {} results", result != null ? result.size() : 0);
-                        return result;
-                    } catch (Exception ex) {
-                        log.error("[AsyncTask] getListReason EXCEPTION: {}", ex.getClass().getName() + ": " + ex.getMessage(), ex);
-                        throw ex;
-                    }
-                }, asyncExecutor)
-                .orTimeout(taskTimeoutMs, TimeUnit.MILLISECONDS);
+        if (!isCheckMapActiveInfo) {
+            // 1. Task lấy Reason
+            CompletableFuture<List<ReasonDTO>> futureReason = CompletableFuture
+                    .supplyAsync(() -> {
+                        log.debug("[AsyncTask] getListReason START - actionCode={}, telServiceId={}",
+                                actionCode, telServiceId);
+                        try {
+                            List<ReasonDTO> result = transactionTemplate.execute(status ->
+                                    reasonService.getListReasonByActionCodeAndTelServiceForAudit(
+                                            actionCode, telServiceId, payType));
+                            log.debug("[AsyncTask] getListReason END - {} results", result != null ? result.size() : 0);
+                            return result;
+                        } catch (Exception ex) {
+                            log.error("[AsyncTask] getListReason EXCEPTION: {}", ex.getClass().getName() + ": " + ex.getMessage(), ex);
+                            throw ex;
+                        }
+                    }, asyncExecutor)
+                    .orTimeout(taskTimeoutMs, TimeUnit.MILLISECONDS);
 
-        // 2. Task lấy Discount Promotion
-        CompletableFuture<List<DiscountPromotionResponse>> futurePromotion = CompletableFuture
-                .supplyAsync(() -> {
-                    log.debug("[AsyncTask] getPromotionList START - telServiceId={}", request.getTelServiceId());
-                    try {
-                        List<DiscountPromotionResponse> result = transactionTemplate.execute(status ->
-                                discountPromotionService.getPromotionList(request.getTelServiceId(), true, true, null));
-                        log.debug("[AsyncTask] getPromotionList END - {} results", result != null ? result.size() : 0);
-                        return result;
-                    } catch (Exception ex) {
-                        log.error("[AsyncTask] getPromotionList EXCEPTION: {}", ex.getClass().getName() + ": " + ex.getMessage(), ex);
-                        throw ex;
-                    }
-                }, asyncExecutor)
-                .orTimeout(taskTimeoutMs, TimeUnit.MILLISECONDS);
+            // 2. Task lấy Discount Promotion
+            CompletableFuture<List<DiscountPromotionDTO>> futurePromotion = CompletableFuture
+                    .supplyAsync(() -> {
+                        log.debug("[AsyncTask] getPromotionList START - telServiceId={}", telServiceId);
+                        try {
+                            List<DiscountPromotionDTO> result = transactionTemplate.execute(status ->
+                                    discountPromotionService.getPromotionList(telServiceId, true, true, null));
+                            log.debug("[AsyncTask] getPromotionList END - {} results", result != null ? result.size() : 0);
+                            return result;
+                        } catch (Exception ex) {
+                            log.error("[AsyncTask] getPromotionList EXCEPTION: {}", ex.getClass().getName() + ": " + ex.getMessage(), ex);
+                            throw ex;
+                        }
+                    }, asyncExecutor)
+                    .orTimeout(taskTimeoutMs, TimeUnit.MILLISECONDS);
 
-        // 3. Chờ cả 2 task hoàn thành với Timeout tổng
-        try {
+            // 3. Chờ cả 2 task hoàn thành với Timeout tổng
             CompletableFuture.allOf(futureReason, futurePromotion).join();
 
-            List<ReasonResponse> reasons = futureReason.join();
-            List<DiscountPromotionResponse> promotions = futurePromotion.join();
+            lstReason = futureReason.join();
+            lstPromotions = futurePromotion.join();
 
             log.info("[validateWithOutMapActiveInfo] Both tasks completed - reasons={}, promotions={}",
-                    reasons != null ? reasons.size() : 0, promotions != null ? promotions.size() : 0);
+                    lstReason != null ? lstReason.size() : 0, lstPromotions != null ? lstPromotions.size() : 0);
 
-            validateMapActiveInfoCommon(request, reasons, promotions);
-            log.info("[validateWithOutMapActiveInfo] END OK");
-
-        } catch (java.util.concurrent.CompletionException e) {
-            Throwable cause = e.getCause();
-            log.error("[validateWithOutMapActiveInfo] CompletionException - cause={}: {}",
-                    cause != null ? cause.getClass().getName() : "null", cause != null ? cause.getMessage() : "null", e);
-            throw new SystemException("Lỗi hệ thống trong quá trình kiểm tra thông tin", e);
-
-        } catch (Exception e) {
-            log.error("[validateWithOutMapActiveInfo] Unexpected exception: {}: {}",
-                    e.getClass().getName(), e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    public void validateMapActiveInfo(ValidateInputMapActiveInfoRequest request) throws LogicException, Exception{
-        log.info("[validateMapActiveInfo] START - actionCode={}, telServiceId={}, payType={}",
-                request.getActionCode(), request.getTelServiceId(), request.getPayType());
-
-        MapActiveInfoDTO mapActiveInfo = new MapActiveInfoDTO();
-
-        if (!DataUtil.isNullOrEmpty(request.getOfferIds())) {
-            List<ReasonDTO> lstReason = new ArrayList<>();
-            List<DiscountPromotionDTO> lstPromotions = new ArrayList<>();
-            String custTypeId = convertCustTypeCode2Id(request.getCustomerType());
-            StringBuilder errMsgNonMapField = new StringBuilder();
-            mapActiveInfo = getUniqueMapActiveInfo(request.getStaffDTO(), request.getActionCode(),
-                    request.getOfferIds() != null && !request.getOfferIds().isEmpty() ? request.getOfferIds().get(0) : null,
-                    DataUtil.isNullOrEmpty(request.getPromotionCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : request.getPromotionCode(),
-                    request.getRegReasonId(), request.getTelServiceId(),
-                    request.getProvince(), request.getDistrict(), request.getPrecinct(),
-                    request.getCustomerGroup(), custTypeId, request.getSubType(),
-                    request.getSubGroup(), request.getStationCodes(), errMsgNonMapField,
-                    request.getPayType(), request.getTechnology(), request.getMode(), request.getProductOfferType(),
-                    request.getLstBusinessNo());
+            validateMapActiveInfoCommon(actionCode, promotionCode, regReasonId,
+                    telServiceId, lstReason, lstPromotions);
         } else {
-            log.info("offerId=null");
-            throw new BusinessException("BCCS-POLICY-006",
-                    "sale.wired.connect.mapActiveInfo.reason.not.map.offerId");
+            /*
+            Từ offerIds lấy ra List<ProductOfferingDTO> gọi cross service sang productcatalog
+             */
+            if (!DataUtil.isNullOrEmpty(offerIds)) {
+                List<ProductOfferingDTO> lstProductOffering = productOfferingClient.findByIds(offerIds);
+                Map<Long, ProductOfferingDTO> mapProductOfferingById = lstProductOffering.stream()
+                        .collect(Collectors.toMap(ProductOfferingDTO::getProductOfferingId, p -> p, (a, b) -> a));
+                for (Long offerId : offerIds) {
+                    lstReason = new ArrayList<>();
+                    lstPromotions = new ArrayList<>();
+                    String custTypeId = convertCustTypeCode2Id(customerType);
+                    StringBuilder errMsgNonMapField = new StringBuilder();
+                    boolean skipValidateVas = false;
+                    String errMsg = null;
+                    try {
+                        mapActiveInfo = getUniqueMapActiveInfo(staffDTO, actionCode, offerId,
+                                DataUtil.isNullOrEmpty(promotionCode) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : promotionCode,
+                                regReasonId, telServiceId, province, district, precinct,
+                                customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField, payType, technology, mode, productOfferType,
+                                lstBusinessNo,mapProductOfferingById.get(offerId));
+                    } catch (LogicException e) {
+                        if (VAS_NOT_FOUND_ERROR_CODE.equals(e.getErrorCode())) {
+                            mapActiveInfo = null;
+                            skipValidateVas = true;
+                        } else if (VAS_MAPPING_INVALID.equals(e.getErrorCode())) {
+                            mapActiveInfo = null;
+                            errMsg = e.getKeyMsg();
+                        } else {
+                            throw e;
+                        }
+                    }
+                    if (mapActiveInfo != null) {
+                        List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
+                        lstMapActiveInfo.add(mapActiveInfo);
+                        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
+                            lstReason.addAll(reasonService.getReasonFromMapActiveInfosForVas(lstMapActiveInfo, mode, null));
+
+                        } else {
+                            lstReason.addAll(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
+                        }
+                        lstPromotions.addAll(discountPromotionService.getPromFromMapActiveInfos(lstMapActiveInfo, mode, false));
+                        mapActiveInfoDTOs.add(mapActiveInfo);
+
+                    } else {
+                        if (!skipValidateVas) {
+                            if (!errMsgNonMapField.toString().isEmpty()) {
+                                throw new LogicException("sale.wired.connect.mapActiveInfo.reason.not.map.stationCode", "sale.wired.connect.mapActiveInfo.reason.not.map.stationCode");
+                            }
+                            if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
+                                throw new LogicException(SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION, errMsg);
+                            } else {
+                                ProductOfferingDTO productOfferingDTO = mapProductOfferingById.get(offerId);
+                                String textParam = messageUtil.getTextParam("sale.wired.connect.mapActiveInfo.reason.not.map.actionWithOffer", productOfferingDTO != null ? productOfferingDTO.getCode() : offerId);
+                                throw new LogicException(SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION, textParam);
+                            }
+                        }
+                    }
+                    if (mapActiveInfo != null) {
+                        validateMapActiveInfoCommon(actionCode,
+                                promotionCode,
+                                regReasonId,
+                                telServiceId, lstReason, lstPromotions);
+                    }
+                }
+            }else {
+                log.info("offerId=null");
+                throw new BusinessException("BCCS-POLICY-006",
+                        "sale.wired.connect.mapActiveInfo.reason.not.map.offerId");
+            }
         }
+        return Collections.emptyList();
     }
+
 
     private MapActiveInfoDTO getUniqueMapActiveInfo(StaffDTO staffDTO, String actionCode, Long offerId,
                                                     String promotionCode, Long regReasonId, Long telServiceId,
@@ -244,7 +296,22 @@ public class MapActiveInfoValidateService {
                                                     String customerGroup, String custTypeId, String subType,
                                                     String subGroup, String stationCodes, StringBuilder errMsgNonMapField,
                                                     String payType, String technology, int mode,
-                                                    String productOfferType, List<String> lstBusinessNo) throws LogicException {
+                                                    String productOfferType, List<String> lstBusinessNo, ProductOfferingDTO productOfferingDTO) throws LogicException {
+        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
+        if (staffResponse != null) {
+            if (staffResponse.getShop() != null) {
+                ShopResponse shop = staffResponse.getShop();
+                staffDTO.setShopId(shop.getShopId());
+                staffDTO.setShopName(shop.getName());
+                staffDTO.setShopCode(shop.getShopCode());
+                staffDTO.setShopChanelTypeId(shop.getChannelTypeId());
+                staffDTO.setShopProvince(shop.getProvince());
+                staffDTO.setShopDistrict(shop.getDistrict());
+                staffDTO.setShopPrecinct(shop.getPrecinct());
+                staffDTO.setShopPath(shop.getShopPath());
+                staffDTO.setAreaCode(shop.getAreaCode());
+            }
+        }
         var optionSetMap = optionSetClient.findByOptionSetCodes(
                 Arrays.asList(
                         OPTION_SET.CHECK_MAP_BUSINESS_PRODUCT,
@@ -297,11 +364,11 @@ public class MapActiveInfoValidateService {
             mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
         }
 
-        mapActiveInfoExample.setOfferId(offerId);
         mapActiveInfoExample.setChannelTypeId(chanelTypeId);
         mapActiveInfoExample.setRegReasonId(regReasonId);
         mapActiveInfoExample.setTelServiceId(telServiceId);
         mapActiveInfoExample.setPromCode(promotionCode);
+        mapActiveInfoExample.setOfferId(offerId);
 
         mapActiveInfoExample.setCustomerGroup(customerGroup);
         mapActiveInfoExample.setCustomerType(custTypeId);
@@ -373,22 +440,17 @@ public class MapActiveInfoValidateService {
             }
             if (!DataUtil.isNullOrEmpty(mapActiveInfos)) {
                 log.info("vas co khai bao thong tin, nhung khong phu hop voi dieu kien gui len, khong cho phep thuc hien");
-//                ProductOfferingDTO productOfferingDTO = null;
-//                try {
-//                    productOfferingDTO = productOfferingService.findOne(offerId);
-//                } catch (Exception e) {
-//                    log.error(e.getMessage(), e);
-//                    throw new LogicException(SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION, messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-002", offerId));
-//                }
-                //kiem tra lai cac thong tin truoc khi tra thong bao ve cho nguoi dung
+
                 //lay thong tin ly do
-//                String reasonCode = "";
-//                if (regReasonId != null && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(String.valueOf(regReasonId))) {
-//                    ReasonDTO reasonDTO = reasonService.findOne(regReasonId);
-//                    if (reasonDTO != null) {
-//                        reasonCode = reasonDTO.getReasonCode();
-//                    }
-//                }
+                String reasonCode = "";
+                if (regReasonId != null && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(String.valueOf(regReasonId))) {
+                    try {
+                        ReasonResponse reasonResponse = reasonService.findById(regReasonId);
+                        reasonCode = reasonResponse.reasonCode();
+                    } catch (BusinessException e) {
+                        log.warn("Khong tim thay reason voi regReasonId={}", regReasonId);
+                    }
+                }
                 //lay thong tin dia ban
                 String areaName = "";
                 StringBuilder areaCode = new StringBuilder();
@@ -401,19 +463,13 @@ public class MapActiveInfoValidateService {
                         }
                     }
                 }
-//                if (areaCode.length() > 0) {
-//                    AreaDTO areaDTO = areaService.findByAreaCode(areaCode.toString());
-//                    if (areaDTO != null) {
-//                        areaName = areaDTO.getName();
-//                    }
-//                }
-//                String textParam;
-//                if (!DataUtil.isNullOrEmpty(promotionCode) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
-//                    textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-003", areaName, reasonCode, promotionCode, productOfferingDTO.getCode());
-//                } else {
-//                    textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-004", areaName, reasonCode, productOfferingDTO.getCode());
-//                }
-//                throw new LogicException(VAS_MAPPING_INVALID, textParam);
+                String textParam;
+                if (!DataUtil.isNullOrEmpty(promotionCode) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
+                    textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-003", areaName, reasonCode, promotionCode, productOfferingDTO.getCode());
+                } else {
+                    textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-004", areaName, reasonCode, productOfferingDTO.getCode());
+                }
+                throw new LogicException("", textParam);
             } else {
                 log.info("vas khong khai bao thong tin, cho phep thuc hien");
                 throw new LogicException("", null);
@@ -422,41 +478,41 @@ public class MapActiveInfoValidateService {
         return null;
     }
 
-    public void validateMapActiveInfoCommon(ValidateInputMapActiveInfoRequest request,
-                                            List<ReasonResponse> lstReason,
-                                            List<DiscountPromotionResponse> lstPromotions) {
+    public void validateMapActiveInfoCommon(String actionCode, String promotionCode, Long regReasonId,
+                                            Long telServiceId, List<ReasonDTO> lstReason,
+                                            List<DiscountPromotionDTO> lstPromotions){
         log.debug("[validateMapActiveInfoCommon] regReasonId={}, isActiveCD={}, promotionCode={}",
-                request.getRegReasonId(), !TELECOM_SERVICE_ID.MOBILE.equals(request.getTelServiceId())
-                        && !TELECOM_SERVICE_ID.HOMEPHONE.equals(request.getTelServiceId())
-                        && !TELECOM_SERVICE_ID.SMAS.equals(request.getTelServiceId())
-                        && !TELECOM_SERVICE_ID.SMSPARENT.equals(request.getTelServiceId()),
-                request.getPromotionCode());
+                regReasonId, !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
+                        && !TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
+                        && !TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
+                        && !TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId),
+                promotionCode);
 
         if (lstReason == null || lstReason.isEmpty()) {
             throw new BusinessException("BCCS-POLICY-004",
                     "regReasonId is not mapped with action");
         }
         boolean wrongReason = lstReason.stream()
-                .noneMatch(r -> Objects.equals(request.getRegReasonId(), r.reasonId()));
+                .noneMatch(r -> Objects.equals(regReasonId, r.getReasonId()));
         if (wrongReason) {
             throw new BusinessException("BCCS-POLICY-004",
                     "regReasonId is not mapped with action");
         }
 
-        boolean isActiveCD = !TELECOM_SERVICE_ID.MOBILE.equals(request.getTelServiceId())
-                && !TELECOM_SERVICE_ID.HOMEPHONE.equals(request.getTelServiceId())
-                && !TELECOM_SERVICE_ID.SMAS.equals(request.getTelServiceId())
-                && !TELECOM_SERVICE_ID.SMSPARENT.equals(request.getTelServiceId());
+        boolean isActiveCD = !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
+                && !TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
+                && !TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
+                && !TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId);
 
         boolean wrongPromotions;
-        if (isActiveCD && request.getPromotionCode() != null
-                && !request.getPromotionCode().isBlank()
-                && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(request.getPromotionCode())) {
+        if (isActiveCD && promotionCode != null
+                && !promotionCode.isBlank()
+                && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
             if (lstPromotions == null || lstPromotions.isEmpty()) {
                 wrongPromotions = true;
             } else {
                 wrongPromotions = lstPromotions.stream()
-                        .noneMatch(p -> request.getPromotionCode().equals(p.code()));
+                        .noneMatch(p -> promotionCode.equals(p.getCode()));
             }
         } else {
             wrongPromotions = false;

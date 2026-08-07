@@ -632,17 +632,11 @@ public class MapActiveInfoQuerryService {
 
         MapActiveInfoDTO mapActiveInfoExample;
 
-        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
-        if (DataUtil.isNullObject(staffResponse)) {
+        // staffDTO đã được caller (ReasonService.getReasonFull) resolve đầy đủ thông tin
+        // shop trước khi gọi tới đây -> không cần gọi lại staffShopClient (tránh 1 lần
+        // cross-service call thừa cho mỗi request).
+        if (DataUtil.isNullObject(staffDTO)) {
             throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
-        }
-        staffDTO = staffResponse.toDTO();
-        if (!DataUtil.isNullOrEmpty(staffResponse.getShop())) {
-            staffDTO.setShopCode(staffResponse.getShop().getShopCode());
-            staffDTO.setShopProvince(staffResponse.getShop().getProvince());
-            staffDTO.setShopDistrict(staffResponse.getShop().getDistrict());
-            staffDTO.setShopPrecinct(staffResponse.getShop().getPrecinct());
-            staffDTO.setShopChanelTypeId(staffResponse.getShop().getChannelTypeId());
         }
 
         Long channelTypeId = getChanelTypeIdMapActiveInfo(staffDTO);

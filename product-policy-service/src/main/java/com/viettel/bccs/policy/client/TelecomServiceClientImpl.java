@@ -6,6 +6,7 @@ import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import com.viettel.bccs.policy.client.dto.TelecomServiceDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,6 +18,7 @@ public class TelecomServiceClientImpl implements TelecomServiceClient {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Cacheable(value = "telecomServiceClientCache", key = "#alias")
     public Long getServiceIdByAlias(String alias) {
         try {
             var response = bccsHttpClient.get(

@@ -190,6 +190,29 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
         return query.getResultList();
     }
 
+    @Override
+    public boolean checkAttProductOrVasByCode(String productCode, Long productType, String attributeCode) {
+        String sql = "SELECT COUNT(1) FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offering a, " +
+                Const.DEFAULT_PRODUCT_SCHEMA + "product_offer_char_use b, " +
+                Const.DEFAULT_PRODUCT_SCHEMA + "product_spec_char c, " +
+                Const.DEFAULT_PRODUCT_SCHEMA + "product_spec_char_value d" +
+                " WHERE a.product_offering_id = b.product_offering_id" +
+                " AND b.product_spec_char_id = c.product_spec_char_id" +
+                " AND d.product_spec_char_value_id = b.product_spec_char_value_id" +
+                " AND a.code = :productCode" +
+                " AND a.product_offer_type_id = :productType" +
+                " AND c.code = :attributeCode" +
+                " AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1'";
+
+        Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("productCode", productCode);
+        query.setParameter("productType", productType);
+        query.setParameter("attributeCode", attributeCode);
+
+        Number count = (Number) query.getSingleResult();
+        return count.longValue() > 0;
+    }
+
     public static String operatorToOracle(FilterRequest filter) {
         FilterRequest.Operator operator = filter.getOperator();
         if (operator == null) {

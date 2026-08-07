@@ -6,6 +6,7 @@ import com.viettel.bccs.policy.client.dto.StaffResponse;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -17,6 +18,7 @@ public class StaffShopClientImpl implements StaffShopClient {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Cacheable(value = "staffShopClientCache", key = "#staffCode")
     public StaffResponse getStaffShopFullInfo(String staffCode) {
         try {
             var response = bccsHttpClient.get(

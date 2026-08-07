@@ -3,7 +3,6 @@ package com.viettel.bccs.policy.mapactiveinfo.controller;
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.policy.exception.LogicException;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ValidateInputMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
@@ -34,31 +33,27 @@ import java.util.stream.Collectors;
 public class MapActiveInfoValidateController {
     private final MapActiveInfoValidateService service;
 
-    @PostMapping("/validateInputMapActiveInfo")
-    public StandardResponse<ValidateInputMapActiveInfoResponse> validateInputMapActiveInfo(
-            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) {
-        return StandardResponses.success(service.validateInputMapActiveInfo(request));
-    }
 
     @Operation(summary = "Validate theo thông tin mapping mới - trả về MapActiveInfoDTO")
     @PostMapping("/validateFollowMapActiveInfoNew")
     public StandardResponse<MapActiveInfoDTO> validateFollowMapActiveInfoNew(
-            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) throws LogicException {
+            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) {
         MapActiveInfoDTO mapActiveInfoDTO = new MapActiveInfoDTO();
 
         List<String> lstBusinessNo = request.getLstBusinessNo();
 
         if (DataUtil.notNullOrEmpty(lstBusinessNo)) {
-            lstBusinessNo = new ArrayList<>(lstBusinessNo.size());
+            List<String> trimmedBusinessNo = new ArrayList<>(lstBusinessNo.size());
             for (String item : lstBusinessNo) {
                 if (item != null) {
                     String trimmed = item.trim();
                     if (trimmed.length() > 3500) {
-                        throw new BusinessException("", "product.identityType.length.3500");
+                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-015");
                     }
-                    lstBusinessNo.add(trimmed);
+                    trimmedBusinessNo.add(trimmed);
                 }
             }
+            lstBusinessNo = trimmedBusinessNo;
         } else {
             lstBusinessNo = Collections.singletonList(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
         }

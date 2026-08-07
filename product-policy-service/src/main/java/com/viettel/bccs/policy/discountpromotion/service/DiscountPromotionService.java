@@ -27,7 +27,7 @@ public class DiscountPromotionService {
     private final DiscountPromotionRepository repository;
     private final DiscountPromotionMapper mapper;
 
-    private MapActiveInfoQuerryService mapActiveInfoQuerryService;
+    private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
 
     public DiscountPromotionResponse findById(Long id) {
         Optional<DiscountPromotionEntity> entity = repository.findById(id);

@@ -1,6 +1,6 @@
 package com.viettel.bccs.policy.reason.dto.response;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 public record ReasonResponse(
         Long reasonId,
@@ -12,14 +12,14 @@ public record ReasonResponse(
         String description,
         String status,
         String createUser,
-        LocalDateTime createDatetime,
+        Date createDatetime,
         String updateUser,
-        LocalDateTime updateDatetime,
+        Date updateDatetime,
         Long limitNumberIsdn,
         Long limitNumberUser,
         String type,
-        LocalDateTime effectDatetime,
-        LocalDateTime expireDatetime,
+        Date effectDatetime,
+        Date expireDatetime,
         Long priority,
         String note
 ) {}

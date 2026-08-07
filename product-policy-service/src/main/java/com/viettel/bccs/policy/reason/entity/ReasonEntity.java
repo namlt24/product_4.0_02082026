@@ -1,7 +1,7 @@
 package com.viettel.bccs.policy.reason.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "REASON")
@@ -36,13 +36,13 @@ public class ReasonEntity {
     private String createUser;
 
     @Column(name = "CREATE_DATETIME")
-    private LocalDateTime createDatetime;
+    private Date createDatetime;
 
     @Column(name = "UPDATE_USER", length = 50)
     private String updateUser;
 
     @Column(name = "UPDATE_DATETIME")
-    private LocalDateTime updateDatetime;
+    private Date updateDatetime;
 
     @Column(name = "LIMIT_NUMBER_ISDN", precision = 10)
     private Long limitNumberIsdn;
@@ -54,10 +54,10 @@ public class ReasonEntity {
     private String type;
 
     @Column(name = "EFFECT_DATETIME")
-    private LocalDateTime effectDatetime;
+    private Date effectDatetime;
 
     @Column(name = "EXPIRE_DATETIME")
-    private LocalDateTime expireDatetime;
+    private Date expireDatetime;
 
     @Column(name = "PRIORITY", precision = 10)
     private Long priority;
@@ -75,14 +75,14 @@ public class ReasonEntity {
     public String getDescription() { return description; }
     public String getStatus() { return status; }
     public String getCreateUser() { return createUser; }
-    public LocalDateTime getCreateDatetime() { return createDatetime; }
+    public Date getCreateDatetime() { return createDatetime; }
     public String getUpdateUser() { return updateUser; }
-    public LocalDateTime getUpdateDatetime() { return updateDatetime; }
+    public Date getUpdateDatetime() { return updateDatetime; }
     public Long getLimitNumberIsdn() { return limitNumberIsdn; }
     public Long getLimitNumberUser() { return limitNumberUser; }
     public String getType() { return type; }
-    public LocalDateTime getEffectDatetime() { return effectDatetime; }
-    public LocalDateTime getExpireDatetime() { return expireDatetime; }
+    public Date getEffectDatetime() { return effectDatetime; }
+    public Date getExpireDatetime() { return expireDatetime; }
     public Long getPriority() { return priority; }
     public String getNote() { return note; }
 
@@ -96,14 +96,14 @@ public class ReasonEntity {
     public void setDescription(String description) { this.description = description; }
     public void setStatus(String status) { this.status = status; }
     public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setCreateDatetime(LocalDateTime createDatetime) { this.createDatetime = createDatetime; }
+    public void setCreateDatetime(Date createDatetime) { this.createDatetime = createDatetime; }
     public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
-    public void setUpdateDatetime(LocalDateTime updateDatetime) { this.updateDatetime = updateDatetime; }
+    public void setUpdateDatetime(Date updateDatetime) { this.updateDatetime = updateDatetime; }
     public void setLimitNumberIsdn(Long limitNumberIsdn) { this.limitNumberIsdn = limitNumberIsdn; }
     public void setLimitNumberUser(Long limitNumberUser) { this.limitNumberUser = limitNumberUser; }
     public void setType(String type) { this.type = type; }
-    public void setEffectDatetime(LocalDateTime effectDatetime) { this.effectDatetime = effectDatetime; }
-    public void setExpireDatetime(LocalDateTime expireDatetime) { this.expireDatetime = expireDatetime; }
+    public void setEffectDatetime(Date effectDatetime) { this.effectDatetime = effectDatetime; }
+    public void setExpireDatetime(Date expireDatetime) { this.expireDatetime = expireDatetime; }
     public void setPriority(Long priority) { this.priority = priority; }
     public void setNote(String note) { this.note = note; }
 }

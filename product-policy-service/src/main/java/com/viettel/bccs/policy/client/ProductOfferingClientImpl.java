@@ -79,6 +79,7 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
     }
 
     @Override
+    @Cacheable(value = "productOfferingClientCache", key = "'IDS:' + T(String).join(',', #offerIds.stream().sorted().toList().![toString()])")
     public List<ProductOfferingDTO> findByIds(List<Long> offerIds) {
         try {
             var response = bccsHttpClient.post(

@@ -205,5 +205,41 @@
     "severity": "ERROR",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-016": {
+    "code": "BCCS-POLICY-MAPACTIVE-016",
+    "message": "Tham số regReasonId không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-017": {
+    "code": "BCCS-POLICY-MAPACTIVE-017",
+    "message": "Tham số offerIds không được để trống khi actionCode yêu cầu kiểm tra thông tin kích hoạt",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-018": {
+    "code": "BCCS-POLICY-MAPACTIVE-018",
+    "message": "Lý do đăng ký (regReasonId) không được cấu hình cho hành động/dịch vụ hiện tại",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-019": {
+    "code": "BCCS-POLICY-MAPACTIVE-019",
+    "message": "Mã khuyến mãi (promotionCode) không được cấu hình cho hành động/dịch vụ hiện tại",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

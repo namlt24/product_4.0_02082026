@@ -1,6 +1,6 @@
 package com.viettel.bccs.policy.discountpromotioncharuse.dto.response;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 public record DiscountPromotionCharUseResponse(
         Long discountPromotionCharUseId,
@@ -8,13 +8,13 @@ public record DiscountPromotionCharUseResponse(
         Long productSpecCharValueId,
         Long productSpecCharId,
         String createUser,
-        LocalDateTime createDatetime,
+        Date createDatetime,
         String updateUser,
-        LocalDateTime updateDatetime,
+        Date updateDatetime,
         String status,
         String specificValue,
-        LocalDateTime effectDatetime,
-        LocalDateTime expireDatetime,
+        Date effectDatetime,
+        Date expireDatetime,
         Long limited,
         String note
 ) {}

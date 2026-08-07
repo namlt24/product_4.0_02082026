@@ -53,6 +53,11 @@ public class FilterRequest implements Serializable {
     private ListFilterRequest listFilterRequest;
 
     private String valueText;
+    private String valueType;
+    private boolean notEqual;
+    private boolean extract;
+    private boolean valueInRange;
+    private List<String> lstValue;
 
     @Override
     public int hashCode() {

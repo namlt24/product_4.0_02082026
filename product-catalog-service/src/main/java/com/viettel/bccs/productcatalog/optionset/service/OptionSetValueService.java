@@ -140,4 +140,10 @@ public class OptionSetValueService {
             return 0;
         }
     }
+    @Transactional(readOnly = true)
+    public OptionSetValueResponse findOneByCodeAndValue(String code, String value) {
+        return optionSetValueRepository.findOneByCodeAndValue(code, value)
+                .map(optionSetValueMapper::toResponse)
+                .orElse(null);
+    }
 }

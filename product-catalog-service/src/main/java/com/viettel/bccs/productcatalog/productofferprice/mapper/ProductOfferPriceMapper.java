@@ -1,6 +1,7 @@
 package com.viettel.bccs.productcatalog.productofferprice.mapper;
 
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
+import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
 import org.springframework.stereotype.Component;
 
@@ -47,5 +48,50 @@ public class ProductOfferPriceMapper {
             return List.of();
         }
         return entities.stream().map(this::toDto).toList();
+    }
+
+    public ProductOfferPriceResponse toResponse(ProductOfferPriceEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return new ProductOfferPriceResponse(
+                entity.getProductOfferPriceId(),
+                entity.getProductOfferingId(),
+                entity.getPricePolicyId(),
+                entity.getPriceTypeId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getPrice(),
+                entity.getVat(),
+                entity.getPledgeAmount(),
+                entity.getPledgeTime(),
+                entity.getPriorPay(),
+                entity.getStatus(),
+                entity.getEffectDatetime() != null ? entity.getEffectDatetime(): null,
+                entity.getExpireDatetime() != null ? entity.getExpireDatetime(): null,
+                entity.getPriority(),
+                entity.getEffectType(),
+                entity.getCronExpression(),
+                entity.getCreateUser(),
+                entity.getCreateDatetime(),
+                entity.getUpdateUser(),
+                entity.getUpdateDatetime(),
+                entity.getProgramCode(),
+                entity.getProgramMonth(),
+                entity.getIsSelectAllShop(),
+                entity.getLimited(),
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+
+    public List<ProductOfferPriceResponse> toResponseList(List<ProductOfferPriceEntity> entities) {
+        if (entities == null) {
+            return List.of();
+        }
+        return new java.util.ArrayList<>(entities.stream().map(this::toResponse).toList());
     }
 }

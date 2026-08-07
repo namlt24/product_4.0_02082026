@@ -1,7 +1,7 @@
 package com.viettel.bccs.policy.discountpromotioncharuse.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "DISCOUNT_PROMOTION_CHAR_USE")
@@ -24,13 +24,13 @@ public class DiscountPromotionCharUseEntity {
     private String createUser;
 
     @Column(name = "CREATE_DATETIME")
-    private LocalDateTime createDatetime;
+    private Date createDatetime;
 
     @Column(name = "UPDATE_USER", length = 50)
     private String updateUser;
 
     @Column(name = "UPDATE_DATETIME")
-    private LocalDateTime updateDatetime;
+    private Date updateDatetime;
 
     @Column(name = "STATUS", length = 1)
     private String status;
@@ -39,10 +39,10 @@ public class DiscountPromotionCharUseEntity {
     private String specificValue;
 
     @Column(name = "EFFECT_DATETIME")
-    private LocalDateTime effectDatetime;
+    private Date effectDatetime;
 
     @Column(name = "EXPIRE_DATETIME")
-    private LocalDateTime expireDatetime;
+    private Date expireDatetime;
 
     @Column(name = "LIMITED", precision = 1)
     private Long limited;
@@ -56,13 +56,13 @@ public class DiscountPromotionCharUseEntity {
     public Long getProductSpecCharValueId() { return productSpecCharValueId; }
     public Long getProductSpecCharId() { return productSpecCharId; }
     public String getCreateUser() { return createUser; }
-    public LocalDateTime getCreateDatetime() { return createDatetime; }
+    public Date getCreateDatetime() { return createDatetime; }
     public String getUpdateUser() { return updateUser; }
-    public LocalDateTime getUpdateDatetime() { return updateDatetime; }
+    public Date getUpdateDatetime() { return updateDatetime; }
     public String getStatus() { return status; }
     public String getSpecificValue() { return specificValue; }
-    public LocalDateTime getEffectDatetime() { return effectDatetime; }
-    public LocalDateTime getExpireDatetime() { return expireDatetime; }
+    public Date getEffectDatetime() { return effectDatetime; }
+    public Date getExpireDatetime() { return expireDatetime; }
     public Long getLimited() { return limited; }
     public String getNote() { return note; }
 
@@ -72,13 +72,13 @@ public class DiscountPromotionCharUseEntity {
     public void setProductSpecCharValueId(Long productSpecCharValueId) { this.productSpecCharValueId = productSpecCharValueId; }
     public void setProductSpecCharId(Long productSpecCharId) { this.productSpecCharId = productSpecCharId; }
     public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setCreateDatetime(LocalDateTime createDatetime) { this.createDatetime = createDatetime; }
-    public void setUpdateDatetime(LocalDateTime updateDatetime) { this.updateDatetime = updateDatetime; }
+    public void setCreateDatetime(Date createDatetime) { this.createDatetime = createDatetime; }
+    public void setUpdateDatetime(Date updateDatetime) { this.updateDatetime = updateDatetime; }
     public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
     public void setStatus(String status) { this.status = status; }
     public void setSpecificValue(String specificValue) { this.specificValue = specificValue; }
-    public void setEffectDatetime(LocalDateTime effectDatetime) { this.effectDatetime = effectDatetime; }
-    public void setExpireDatetime(LocalDateTime expireDatetime) { this.expireDatetime = expireDatetime; }
+    public void setEffectDatetime(Date effectDatetime) { this.effectDatetime = effectDatetime; }
+    public void setExpireDatetime(Date expireDatetime) { this.expireDatetime = expireDatetime; }
     public void setLimited(Long limited) { this.limited = limited; }
     public void setNote(String note) { this.note = note; }
 }

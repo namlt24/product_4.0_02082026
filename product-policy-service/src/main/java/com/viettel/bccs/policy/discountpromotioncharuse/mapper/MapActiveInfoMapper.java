@@ -5,18 +5,11 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 public class MapActiveInfoMapper {
-
-    private static LocalDateTime toLocalDateTime(Date date) {
-        return date == null ? null : date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-    }
 
     public List<MapActiveInfoDTO> toDtoBean(List<MapActiveInfoEntity> entities) {
         if (entities == null) {
@@ -42,8 +35,8 @@ public class MapActiveInfoMapper {
                 .channelName(entity.getChannelName())
                 .provinceCode(entity.getProvinceCode())
                 .districtCode(entity.getDistrictCode())
-                .effectDate(toLocalDateTime(entity.getEffectDate()))
-                .endDate(toLocalDateTime(entity.getEndDate()))
+                .effectDate(entity.getEffectDate())
+                .endDate(entity.getEndDate())
                 .provinceName(entity.getProvinceName())
                 .districtName(entity.getDistrictName())
                 .offerId(entity.getOfferId())
@@ -69,11 +62,11 @@ public class MapActiveInfoMapper {
                 .stationId(entity.getStationId())
                 .shopId(entity.getShopId())
                 .createUser(entity.getCreateUser())
-                .issueDatetime(toLocalDateTime(entity.getIssueDatetime()))
+                .issueDatetime(entity.getIssueDatetime())
                 .stationCodes(entity.getStationCodes())
                 .payType(entity.getPayType())
                 .technology(entity.getTechnology())
-                .updateDatetime(toLocalDateTime(entity.getUpdateDatetime()))
+                .updateDatetime(entity.getUpdateDatetime())
                 .updateUser(entity.getUpdateUser())
                 .areaGroupCode(entity.getAreaGroupCode())
                 .vasCode(entity.getVasCode())

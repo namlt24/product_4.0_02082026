@@ -1,17 +1,33 @@
 package com.viettel.bccs.policy.reason.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.policy.client.OptionSetClient;
 import com.viettel.bccs.policy.client.ProductPackageClient;
+import com.viettel.bccs.policy.client.ProductSpecCharClient;
+import com.viettel.bccs.policy.client.StaffShopClient;
+import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
+import com.viettel.bccs.policy.client.dto.ProductSpecCharLookupDTO;
+import com.viettel.bccs.policy.client.dto.ProductSpecCharValueLookupDTO;
+import com.viettel.bccs.policy.client.dto.StaffDTO;
+import com.viettel.bccs.policy.client.dto.StaffResponse;
+import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
+import com.viettel.bccs.policy.reason.dto.response.ReasonCharUseDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
+import com.viettel.bccs.policy.reasoncharuse.entity.ReasonCharUseEntity;
+import com.viettel.bccs.policy.reasoncharuse.repository.ReasonCharUseRepository;
+import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
+import com.viettel.bccs.policy.reasonpause.service.ReasonPauseService;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.reason.entity.ReasonEntity;
 import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
 import com.viettel.bccs.policy.reason.repository.ReasonRepository;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,14 +37,36 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ReasonService {
 
     private final ReasonRepository repository;
     private final ReasonMapper mapper;
     private final ProductPackageClient productPackageClient;
-    private MapActiveInfoQuerryService mapActiveInfoQuerryService;
+    private final StaffShopClient staffShopClient;
+    private final ReasonCharUseRepository reasonCharUseRepository;
+    private final ProductSpecCharClient productSpecCharClient;
+    private final OptionSetClient optionSetClient;
+    private final ReasonPauseService reasonPauseService;
+    @Lazy
+    private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
+
+    public ReasonService(ReasonRepository repository, ReasonMapper mapper,
+                          ProductPackageClient productPackageClient, StaffShopClient staffShopClient,
+                          ReasonCharUseRepository reasonCharUseRepository,
+                          ProductSpecCharClient productSpecCharClient, OptionSetClient optionSetClient,
+                          ReasonPauseService reasonPauseService,
+                          @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService) {
+        this.repository = repository;
+        this.mapper = mapper;
+        this.productPackageClient = productPackageClient;
+        this.staffShopClient = staffShopClient;
+        this.reasonCharUseRepository = reasonCharUseRepository;
+        this.productSpecCharClient = productSpecCharClient;
+        this.optionSetClient = optionSetClient;
+        this.reasonPauseService = reasonPauseService;
+        this.mapActiveInfoQuerryService = mapActiveInfoQuerryService;
+    }
 
     public ReasonResponse findById(Long id) {
         Optional<ReasonEntity> entity = repository.findById(id);
@@ -40,7 +78,7 @@ public class ReasonService {
 
     public List<ReasonDTO> getListReasonByActionCodeAndTelServiceForAudit(
             String actionCode, Long telServiceId, String payType) {
-        List<ReasonEntity> entities = repository.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode, telServiceId, payType, null, true);
+        List<ReasonEntity> entities = repository.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode, telServiceId, payType, null, true, List.of());
         return entities.stream()
                 .map(mapper::toDTO)
                 .toList();
@@ -54,6 +92,15 @@ public class ReasonService {
         return getListReasonByMapActiveInfoWithMappingChecking(tempMapActiveInfos, numOffer, null);
     }
 
+    private List<String> resolveExcludeProdOfferTypeIds(Long numProduct) {
+        if (numProduct == null) {
+            return List.of();
+        }
+        return optionSetClient.findValueByOptionSetCode(Const.PRODUCT_PACKAGE.EXCLUDE_PROD_OFFER_TYPE_ID).stream()
+                .map(OptionSetValueResponse::getValue)
+                .toList();
+    }
+
     private List<ReasonDTO> getListReasonByMapActiveInfoWithMappingChecking(List<MapActiveInfoDTO> mapActiveInfosDTO, Long numProduct, String productOfferType) {
 
         List<ReasonDTO> lstResult = new ArrayList<>();
@@ -63,7 +110,8 @@ public class ReasonService {
             String actionCode = mapActiveInfosDTO.get(0).getActionCode();
             List<ReasonDTO> lstReasonDTOs;
             log.info("getListReasonByMapActiveInfoWithMappingChecking. list reasonId from MapActiveInfo sau khi loc: " + mapActiveInfosDTO.stream().map(MapActiveInfoDTO::getRegReasonId).collect(Collectors.toList()));
-            lstReasonDTOs = mapper.toDTO(repository.getByActionCodeOrderByIdWithMappingChecking(actionCode, mapActiveInfosDTO.get(0).getTelServiceId(), numProduct, productOfferType));
+            List<String> excludeProdOfferTypeIds = resolveExcludeProdOfferTypeIds(numProduct);
+            lstReasonDTOs = mapper.toDTO(repository.getByActionCodeOrderByIdWithMappingChecking(actionCode, mapActiveInfosDTO.get(0).getTelServiceId(), numProduct, productOfferType, excludeProdOfferTypeIds));
             log.info("list reasonId after select DB : " + lstReasonDTOs.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()));
             for (MapActiveInfoDTO mapActiveInfoDTO : mapActiveInfosDTO) {
                 if (DataUtil.safeEqual(-1, mapActiveInfoDTO.getRegReasonId())) {
@@ -125,5 +173,115 @@ public class ReasonService {
         List<MapActiveInfoDTO> tempMapActiveInfos = mapActiveInfoQuerryService.getMapActiveInfosByLevel(mapActiveInfosDTO, "regReasonId", mode);
         //tach thanh ham goi sang ReasonService
         return getListReasonByMapActiveInfoWithMappingChecking(tempMapActiveInfos, numOffer, Const.PRODUCT_OFFER_TYPE.VAS);
+    }
+
+    public List<ReasonDTO> getReasonFull(String staffCode, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, List<String> lstBusinessNo) {
+        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffCode);
+        if (DataUtil.isNullObject(staffResponse)) {
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
+        }
+        StaffDTO staffDTO = staffResponse.toDTO();
+        if (!DataUtil.isNullOrEmpty(staffResponse.getShop())) {
+            staffDTO.setShopCode(staffResponse.getShop().getShopCode());
+            staffDTO.setShopProvince(staffResponse.getShop().getProvince());
+            staffDTO.setShopDistrict(staffResponse.getShop().getDistrict());
+            staffDTO.setShopPrecinct(staffResponse.getShop().getPrecinct());
+            staffDTO.setShopChanelTypeId(staffResponse.getShop().getChannelTypeId());
+        }
+
+        List<ReasonDTO> lstResult = mapActiveInfoQuerryService.getReasonFullWithBusinessNo(staffDTO, payType, offerId, actionCode, serviceType, province, district, precint, customerGroup, customerType, subType, subGroup, stationCodes, promotionCode, technology, mode, getReasonCharUse, roleMap, nodeCode, singleOrCombo, listProductSpec, false, lstBusinessNo);
+        if (!DataUtil.isNullOrEmpty(lstResult)) {
+            Collections.sort(lstResult, new Comparator<ReasonDTO>() {
+                @Override
+                public int compare(ReasonDTO o1, ReasonDTO o2) {
+                    return o1.getReasonCode().compareTo(o2.getReasonCode());
+                }
+            });
+        }
+
+        return lstResult;
+    }
+
+    public List<ReasonDTO> getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(String actionCode, Long telecomServiceId,
+                                                                                             String payType, Long numProduct, boolean checkStatus) {
+        List<ReasonEntity> entities = repository.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode, telecomServiceId,
+                payType, numProduct, checkStatus, resolveExcludeProdOfferTypeIds(numProduct)
+        );
+        return mapper.toDTO(entities);
+    }
+
+    public List<ReasonDTO> findByLstIdWithSpec(List<Long> lstReasonId, List<FilterRequest> listProductSpec, String productCode) {
+        return repository.findByLstIdWithSpec(lstReasonId, listProductSpec, productCode);
+    }
+
+    public List<ReasonDTO> getReasonCharUse(List<ReasonDTO> lstReason) {
+        if (DataUtil.isNullOrEmpty(lstReason)) {
+            return lstReason;
+        }
+        List<Long> reasonIds = lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList());
+        List<ReasonCharUseEntity> charUses = reasonCharUseRepository.findByReasonIdInAndStatus(reasonIds, Const.STATUS.ACTIVE);
+        if (DataUtil.isNullOrEmpty(charUses)) {
+            return lstReason;
+        }
+
+        List<Long> specCharIds = charUses.stream()
+                .map(ReasonCharUseEntity::getProductSpecCharId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        List<Long> specCharValueIds = charUses.stream()
+                .map(ReasonCharUseEntity::getProductSpecCharValueId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, String> codeBySpecCharId = productSpecCharClient.findByIds(specCharIds).stream()
+                .collect(Collectors.toMap(ProductSpecCharLookupDTO::getProductSpecCharId, ProductSpecCharLookupDTO::getCode, (a, b) -> a));
+        Map<Long, String> valueBySpecCharValueId = productSpecCharClient.findValuesByIds(specCharValueIds).stream()
+                .collect(Collectors.toMap(ProductSpecCharValueLookupDTO::getProductSpecCharValueId, ProductSpecCharValueLookupDTO::getValue, (a, b) -> a));
+
+        Map<Long, List<ReasonCharUseDTO>> charUseByReasonId = new HashMap<>();
+        for (ReasonCharUseEntity charUse : charUses) {
+            String code = codeBySpecCharId.get(charUse.getProductSpecCharId());
+            if (code == null) {
+                continue;
+            }
+            String value = charUse.getProductSpecCharValueId() != null
+                    ? valueBySpecCharValueId.get(charUse.getProductSpecCharValueId())
+                    : null;
+            charUseByReasonId.computeIfAbsent(charUse.getReasonId(), k -> new ArrayList<>())
+                    .add(ReasonCharUseDTO.builder().code(code).value(value).build());
+        }
+
+        for (ReasonDTO reason : lstReason) {
+            reason.setLstCharUse(charUseByReasonId.getOrDefault(reason.getReasonId(), Collections.emptyList()));
+        }
+        return lstReason;
+    }
+
+    public Map<Long, List<ReasonPauseDTO>> getReasonPauseByReasonIds(List<Long> reasonIds) {
+        return reasonPauseService.getReasonPauseByReasonIds(reasonIds);
+    }
+
+    public boolean checkAttReason(Long reasonId, String attributeCode) {
+        if (DataUtil.isAnyNull(reasonId, attributeCode)) {
+            throw new BusinessException("BCCS-POLICY-010", "reasonId and attributeCode are required");
+        }
+        List<ReasonCharUseEntity> charUses = reasonCharUseRepository.findByReasonIdInAndStatus(List.of(reasonId), Const.STATUS.ACTIVE);
+        if (DataUtil.isNullOrEmpty(charUses)) {
+            return false;
+        }
+
+        List<Long> specCharIds = charUses.stream()
+                .map(ReasonCharUseEntity::getProductSpecCharId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (specCharIds.isEmpty()) {
+            return false;
+        }
+
+        return productSpecCharClient.findByIds(specCharIds).stream()
+                .anyMatch(dto -> attributeCode.equals(dto.getCode()));
     }
 }

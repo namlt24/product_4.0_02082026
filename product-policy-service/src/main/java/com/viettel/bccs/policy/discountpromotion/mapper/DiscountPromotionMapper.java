@@ -5,8 +5,6 @@ import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionR
 import com.viettel.bccs.policy.discountpromotion.entity.DiscountPromotionEntity;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
 
 @Component
@@ -33,21 +31,17 @@ public class DiscountPromotionMapper {
                 .description(entity.getDescription())
                 .content(entity.getContent())
                 .areaCode(entity.getAreaCode())
-                .effectDatetime(toDate(entity.getEffectDatetime()))
-                .expireDatetime(toDate(entity.getExpireDatetime()))
+                .effectDatetime(entity.getEffectDatetime())
+                .expireDatetime(entity.getExpireDatetime())
                 .createUser(entity.getCreateUser())
-                .createDatetime(toDate(entity.getCreateDatetime()))
+                .createDatetime(entity.getCreateDatetime())
                 .updateUser(entity.getUpdateUser())
-                .updateDatetime(toDate(entity.getUpdateDatetime()))
+                .updateDatetime(entity.getUpdateDatetime())
                 .cycle(entity.getCycle())
                 .listType(entity.getListType())
                 .subListId(entity.getSubListId())
                 .note(entity.getNote())
                 .build();
-    }
-
-    private static Date toDate(java.time.LocalDateTime localDateTime) {
-        return localDateTime == null ? null : Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     public List<DiscountPromotionDTO> toDTOList(List<DiscountPromotionEntity> entities) {

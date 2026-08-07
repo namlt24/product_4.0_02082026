@@ -1,6 +1,7 @@
 package com.viettel.bccs.policy.utils;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.policy.common.dto.FilterRequest;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -424,6 +425,39 @@ public class DataUtil {
     public void validateMaxLengthParam(String input, int maxLength, String errorCode) {
         if (!DataUtil.isNullOrEmpty(input) && input.length() > maxLength) {
             throw new BusinessException(errorCode);
+        }
+    }
+
+    public static String operatorToOracle(FilterRequest filter) {
+        FilterRequest.Operator operator = filter.getOperator();
+        if (operator == null) {
+            operator = FilterRequest.Operator.EQ;
+        }
+        switch (operator) {
+            case GT:
+            case GT_DATE:
+                return ">";
+            case LT:
+            case LT_DATE:
+                return "<";
+            case NE:
+                return "<>";
+            case GOE:
+                return ">=";
+            case LOE:
+            case TRUNC_DAY_LOE:
+                return "<=";
+            case IN:
+                return "IN";
+            case NOTIN:
+                return "NOT IN";
+            case LIKE:
+            case LIKE_BEGIN:
+            case LIKE_END:
+            case LIKE_CONCAT:
+                return "LIKE";
+            default:
+                return "=";
         }
     }
 

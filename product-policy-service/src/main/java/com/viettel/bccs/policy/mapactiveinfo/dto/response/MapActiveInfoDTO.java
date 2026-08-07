@@ -10,7 +10,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -69,10 +68,10 @@ public class MapActiveInfoDTO {
     private String districtName;
 
     @Schema(description = "Ngày hiệu lực", example = "2024-01-01")
-    private LocalDateTime effectDate;
+    private Date effectDate;
 
     @Schema(description = "Ngày hết hiệu lực", example = "2025-12-31")
-    private LocalDateTime endDate;
+    private Date endDate;
 
     @Schema(description = "Ngày hết hiệu lực dạng chuỗi", example = "2025-12-31")
     private String endDateString;
@@ -86,7 +85,7 @@ public class MapActiveInfoDTO {
     private Long id;
 
     @Schema(description = "Ngày phát hành", example = "2024-01-01")
-    private LocalDateTime issueDatetime;
+    private Date issueDatetime;
 
     @Schema(description = "Số lượng giới hạn", example = "100")
     private String limitNumber;
@@ -172,7 +171,7 @@ public class MapActiveInfoDTO {
     private String updateUser;
 
     @Schema(description = "Ngày cập nhật", example = "2024-01-01")
-    private LocalDateTime updateDatetime;
+    private Date updateDatetime;
 
     @Schema(description = "Mã VAS", example = "VAS001")
     private String vasCode;
@@ -207,10 +206,10 @@ public class MapActiveInfoDTO {
     private List<String> reasonIDs;
 
     @Schema(description = "Ngày bắt đầu", example = "2024-01-01")
-    private LocalDateTime fromDate;
+    private Date fromDate;
 
     @Schema(description = "Ngày kết thúc", example = "2025-12-31")
-    private LocalDateTime toDate;
+    private Date toDate;
 
     @Schema(description = "Ngày lịch sử", example = "2024-01-01")
     private Date historyDate;
@@ -365,28 +364,28 @@ public class MapActiveInfoDTO {
     private String saleService;
 
     @Schema(description = "Ngày hết hiệu lực lý do", example = "2025-12-31")
-    private LocalDateTime expireDatetimeReason;
+    private Date expireDatetimeReason;
 
     @Schema(description = "Ngày hết hiệu lực dịch vụ bán hàng", example = "2025-12-31")
-    private LocalDateTime expireDatetimeSaleService;
+    private Date expireDatetimeSaleService;
 
     @Schema(description = "Ngày hết hiệu lực khuyến mãi giảm giá", example = "2025-12-31")
-    private LocalDateTime expireDatetimeDiscountPromotion;
+    private Date expireDatetimeDiscountPromotion;
 
     @Schema(description = "Ngày hiệu lực dịch vụ bán hàng", example = "2024-01-01")
-    private LocalDateTime effectDatetimeSaleService;
+    private Date effectDatetimeSaleService;
 
     @Schema(description = "Ngày hiệu lực khuyến mãi giảm giá", example = "2024-01-01")
-    private LocalDateTime effectDatetimeDiscountPromotion;
+    private Date effectDatetimeDiscountPromotion;
 
     @Schema(description = "Ngày hiệu lực lý do", example = "2024-01-01")
-    private LocalDateTime effectDatetimeReason;
+    private Date effectDatetimeReason;
 
     @Schema(description = "Ngày hiệu lực phí gói sản phẩm", example = "2024-01-01")
-    private LocalDateTime effectDatetimePackageFee;
+    private Date effectDatetimePackageFee;
 
     @Schema(description = "Ngày hết hiệu lực phí gói sản phẩm", example = "2025-12-31")
-    private LocalDateTime expireDatetimePackageFee;
+    private Date expireDatetimePackageFee;
 
     private List<String> lstStaffType;
 
@@ -421,16 +420,16 @@ public class MapActiveInfoDTO {
     private Long numDayPrepaid;
 
     @Schema(description = "Ngày hiệu lực từ", example = "2024-01-01")
-    private LocalDateTime effectDateFrom;
+    private Date effectDateFrom;
 
     @Schema(description = "Ngày hiệu lực đến", example = "2025-12-31")
-    private LocalDateTime effectDateTo;
+    private Date effectDateTo;
 
     @Schema(description = "Ngày cập nhật từ", example = "2024-01-01")
-    private LocalDateTime updateDatetimeFrom;
+    private Date updateDatetimeFrom;
 
     @Schema(description = "Ngày cập nhật đến", example = "2025-12-31")
-    private LocalDateTime updateDatetimeTo;
+    private Date updateDatetimeTo;
 
     @Schema(description = "Mã nhóm nhân viên cửa hàng", example = "SHOP_STAFF_GRP")
     private String groupShopStaffCode;
@@ -474,8 +473,8 @@ public class MapActiveInfoDTO {
     private String infraType;
     private String lstBill;
     private Long newChannelTypeId;
-    private LocalDateTime newEffectDate;
-    private LocalDateTime newEndDate;
+    private Date newEffectDate;
+    private Date newEndDate;
     private String staffType;
 
     @Schema(description = "Mã nhóm phụ", example = "SUB_GRP_CODE")

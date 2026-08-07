@@ -1,0 +1,13 @@
+create table REASON_PAUSE
+(
+    REASON_PAUSE_ID NUMBER(10) not null
+        primary key,
+    NUM_MONTH       NUMBER(10),
+    PRICE           NUMBER(10),
+    REASON_ID       NUMBER(10),
+    STATUS          VARCHAR2(1),
+    CREATE_DATETIME DATE,
+    CREATE_USER     VARCHAR2(50),
+    UPDATE_DATETIME DATE,
+    UPDATE_USER     VARCHAR2(50)
+)

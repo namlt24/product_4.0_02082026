@@ -75,7 +75,7 @@ public class ProductPackageService {
     }
 
     public List<ProductPackageResponse> findByCode(String code) {
-        List<ProductPackageDTO> dtos = repository.getProductPackageExtra(code, null, false, true, true);
+        List<ProductPackageDTO> dtos = repository.getProductPackageExtra(code, null, true, true, true);
         if (dtos == null) {
             return List.of();
         }

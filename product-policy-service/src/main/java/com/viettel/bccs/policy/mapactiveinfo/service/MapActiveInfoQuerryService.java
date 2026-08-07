@@ -2,18 +2,29 @@ package com.viettel.bccs.policy.mapactiveinfo.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.client.OptionSetClient;
+import com.viettel.bccs.policy.client.StaffExtClient;
+import com.viettel.bccs.policy.client.StaffShopClient;
+import com.viettel.bccs.policy.client.TelecomServiceClient;
 import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.policy.client.dto.StaffDTO;
+import com.viettel.bccs.policy.client.dto.StaffExtResponse;
+import com.viettel.bccs.policy.client.dto.StaffResponse;
+import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
+import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
+import com.viettel.bccs.policy.reason.service.ReasonService;
+import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,13 +33,36 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MapActiveInfoQuerryService {
 
     private final MapActiveInfoRepository repository;
     private final MapActiveInfoMapper mapper;
     private final OptionSetClient optionSetClient;
+    private final TelecomServiceClient telecomServiceClient;
+    private final StaffShopClient staffShopClient;
+    @Lazy
+    private final MapActiveInfoValidateService mapActiveInfoValidateService;
+    private final StaffExtClient staffExtClient;
+    @Lazy
+    private final ReasonService reasonService;
+
+    public MapActiveInfoQuerryService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
+                                     OptionSetClient optionSetClient, TelecomServiceClient telecomServiceClient,
+                                     StaffShopClient staffShopClient,
+                                     @Lazy MapActiveInfoValidateService mapActiveInfoValidateService,
+                                     StaffExtClient staffExtClient,
+                                     @Lazy ReasonService reasonService) {
+        this.repository = repository;
+        this.mapper = mapper;
+        this.optionSetClient = optionSetClient;
+        this.telecomServiceClient = telecomServiceClient;
+        this.staffShopClient = staffShopClient;
+        this.mapActiveInfoValidateService = mapActiveInfoValidateService;
+        this.staffExtClient = staffExtClient;
+        this.reasonService = reasonService;
+    }
+
 
     public MapActiveInfoResponse findById(Long id) {
         Optional<MapActiveInfoEntity> entity = repository.findById(id);
@@ -429,5 +463,217 @@ public class MapActiveInfoQuerryService {
             }
         }
         return subMapActiveInfos;
+    }
+
+    public List<ReasonDTO> getReasonFullWithBusinessNo(StaffDTO staffDTO, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, boolean isTdd, List<String> lstBusinessNo) {
+        return getReasonFullCheckOfferAndHistory(staffDTO,
+                payType,
+                offerId,
+                actionCode,
+                serviceType,
+                province,
+                district,
+                precint,
+                customerGroup,
+                customerType,
+                subType,
+                subGroup,
+                stationCodes,
+                promotionCode,
+                technology,
+                mode,
+                getReasonCharUse,
+                roleMap,
+                null,
+                null,
+                true,
+                nodeCode,
+                singleOrCombo,
+                listProductSpec,
+                isTdd,
+                lstBusinessNo
+        );
+    }
+
+    private List<ReasonDTO> getReasonFullCheckOfferAndHistory(StaffDTO staffDTO, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, Long numOffer, Date historyDate, boolean checkStatus, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, boolean isTgdd, List<String> lstBusinessNo) {
+        var optionSetMap = optionSetClient.findByOptionSetCodes(
+                Arrays.asList(
+                        Const.OPTION_SET.CHECK_MAPPING_BY_USER_AREA,
+                        "SERVICE_CHECK_PRECINT_REASON",
+                        "CHECK_MAP_BUSINESS",
+                        "CONFIG_MAPPING_BY_USER_AREA"
+                )
+        );
+
+        if (DataUtil.notNullOrEmpty(lstBusinessNo)) {
+            lstBusinessNo = lstBusinessNo.stream().map(x -> x.trim()).collect(Collectors.toList());
+            for (String businessNo : lstBusinessNo) {
+                if (businessNo.length() > 3500) {
+                    throw new BusinessException("");
+                }
+            }
+        }
+        String tPromotionCode = DataUtil.defaultIfNull(promotionCode, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
+        Long telServiceId = DataUtil.defaultIfNull(telecomServiceClient.getServiceIdByAlias(serviceType), Long.valueOf(Const.DEFAULT_VALUE_MAP_SELECT_ALL));
+
+        List<ReasonDTO> lstReason;
+        MapActiveInfoDTO mapActiveInfoExample;
+
+        if (!checkMapActiveInfo(actionCode, telServiceId)) {
+            lstReason = reasonService.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode, telServiceId, payType, numOffer, checkStatus);
+        } else {
+            String custTypeId = convertCustTypeCode2Id(customerType);
+            mapActiveInfoExample = getMapActiveInfoExample(staffDTO, payType, offerId, actionCode, telServiceId,
+                    Long.valueOf(Const.DEFAULT_VALUE_MAP_SELECT_ALL), tPromotionCode,
+                    customerGroup, custTypeId, subType, subGroup, stationCodes, technology, historyDate, nodeCode, isTgdd);
+
+            boolean isActiveCD = (!Const.TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
+                    && !Const.TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
+                    && !Const.TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
+                    && !Const.TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId));
+
+            if (isActiveCD) {
+                mapActiveInfoExample.setProvinceCode(DataUtil.toUpper(province));
+                mapActiveInfoExample.setDistrictCode(DataUtil.toUpper(district));
+
+                List<OptionSetValueResponse> lstOption = optionSetMap.getOrDefault("SERVICE_CHECK_PRECINT_REASON", Collections.emptyList());
+                if (!DataUtil.isNullOrEmpty(lstOption)) {
+                    List<String> lstValidService = lstOption.stream().map(OptionSetValueResponse::getValue).collect(Collectors.toList());
+                    if (lstValidService.contains(DataUtil.safeToString(telServiceId))) {
+                        mapActiveInfoExample.setPrecinctCode(DataUtil.toUpper(precint));
+                    } else {
+                        mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
+                    }
+                } else {
+                    if (Const.TELECOM_SERVICE_ID.CABLE_TV.equals(telServiceId)) {
+                        mapActiveInfoExample.setPrecinctCode(DataUtil.toUpper(precint));
+                    } else {
+                        mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
+                    }
+                }
+
+            }
+
+            List<OptionSetValueResponse> checkMapBusinessOptions = optionSetMap.getOrDefault("CHECK_MAP_BUSINESS", Collections.emptyList());
+            if (!DataUtil.isNullOrEmpty(checkMapBusinessOptions) && DataUtil.safeEqual(checkMapBusinessOptions.get(0).getValue(), Const.STATUS.ACTIVE)) {
+                if (!DataUtil.isNullOrEmpty(lstBusinessNo)) {
+                    mapActiveInfoExample.setLstBusinessNo(lstBusinessNo);
+                } else {
+                    mapActiveInfoExample.setLstBusinessNo(Arrays.asList("-1"));
+                }
+
+            }
+            //techasians: dau noi dia ban theo user
+            List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(Const.OPTION_SET.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
+
+            if (DataUtil.safeEqual(mapActiveInfoExample.getChannelTypeId(), Const.CHANNEL_TYPE.CHUOI_TOAN_QUOC) && !DataUtil.isNullObject(staffDTO.getStaffId())) {
+                List<OptionSetValueResponse> checkMappingByUserAreaOptions = optionSetMap.getOrDefault(Const.OPTION_SET.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
+                if (!DataUtil.isNullOrEmpty(checkMappingByUserAreaOptions) && DataUtil.safeEqual(checkMappingByUserAreaOptions.get(0).getValue(), Const.STATUS.ACTIVE)) {
+                    if (mapActiveInfoValidateService.checkMappingByUser(mapActiveInfoExample, configMappingUserArea)) {
+                        StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(staffDTO.getStaffId(), Const.STAFF_EXT_KEY.MAP_AREA_CHAIN_CHANNEL);
+                        if (!DataUtil.isNullObject(staffExtResponse)) {
+                            //voi shop chuoi toan quoc chi tim theo dia ban tinh
+                            mapActiveInfoExample.setProvinceCode(staffExtResponse.getValue());
+                            mapActiveInfoExample.setDistrictCode(null);
+                            mapActiveInfoExample.setPrecinctCode(null);
+                        }
+                    }
+                }
+            }
+
+            List<MapActiveInfoDTO> mapActiveInfos = findByExample(mapActiveInfoExample, mode, false, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE, false);
+
+            List<MapActiveInfoDTO> lstMapRemoveCheckBusinessNo = new ArrayList<>();
+            List<Long> lstRemoveReasonId = new ArrayList<>();
+
+            log.info("list reasonId from MapActiveInfo: " + mapActiveInfos.stream().map(MapActiveInfoDTO::getRegReasonId).collect(Collectors.toList()));
+
+
+            lstReason = reasonService.getReasonFromMapActiveInfos(mapActiveInfos, mode, numOffer);
+
+            if (!DataUtil.isNullOrEmpty(lstRemoveReasonId) && !DataUtil.isNullOrEmpty(lstReason)) {
+                List<Long> finalLstRemoveReasonId = lstRemoveReasonId;
+                lstReason = lstReason.stream().filter(x -> !finalLstRemoveReasonId.contains(x.getReasonId())).collect(Collectors.toList());
+            }
+
+        }
+        log.info("list reasonId before check spec : " + lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()));
+        // Loc thuoc tinh single_or_combo
+        if (DataUtil.isNullObject(listProductSpec)) {
+            listProductSpec = new ArrayList<>();
+        }
+        if (!DataUtil.isNullObject(singleOrCombo)) {
+            listProductSpec.add(FilterRequest.builder()
+                    .property(Const.PRODUCT_SPEC_CHAR.SINGLE_OR_COMBO)
+                    .operator(FilterRequest.Operator.EQ)
+                    .valueText(DataUtil.safeToString(singleOrCombo))
+                    .build());
+        }
+        if (!DataUtil.isNullOrEmpty(listProductSpec)) {
+            lstReason = reasonService.findByLstIdWithSpec(lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()), listProductSpec, null);
+        }
+        if (getReasonCharUse) {
+            lstReason = reasonService.getReasonCharUse(lstReason);
+        }
+        log.info("list reasonId before return : " + lstReason.stream().map(ReasonDTO::getReasonId).toList());
+        Map<Long, List<ReasonPauseDTO>> reasonPauseByReasonId = reasonService.getReasonPauseByReasonIds(
+                lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()));
+        for (ReasonDTO dto : lstReason) {
+            List<ReasonPauseDTO> reasonPauseDTOS = reasonPauseByReasonId.getOrDefault(dto.getReasonId(), Collections.emptyList());
+            dto.setListReasonPause(reasonPauseDTOS);
+        }
+
+        return lstReason;
+    }
+
+    public MapActiveInfoDTO getMapActiveInfoExample(StaffDTO staffDTO, String payType, Long offerId, String actionCode,
+                                                    Long telServiceId, Long regReasonId, String promotionCode, String customerGroup, String custTypeId,
+                                                    String subType, String subGroup, String stationCodes, String technology, Date historyDate, String nodeCode, boolean isTgdd) {
+
+        MapActiveInfoDTO mapActiveInfoExample;
+
+        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
+        if (DataUtil.isNullObject(staffResponse)) {
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
+        }
+        staffDTO = staffResponse.toDTO();
+        if (!DataUtil.isNullOrEmpty(staffResponse.getShop())) {
+            staffDTO.setShopCode(staffResponse.getShop().getShopCode());
+            staffDTO.setShopProvince(staffResponse.getShop().getProvince());
+            staffDTO.setShopDistrict(staffResponse.getShop().getDistrict());
+            staffDTO.setShopPrecinct(staffResponse.getShop().getPrecinct());
+            staffDTO.setShopChanelTypeId(staffResponse.getShop().getChannelTypeId());
+        }
+
+        Long channelTypeId = getChanelTypeIdMapActiveInfo(staffDTO);
+        mapActiveInfoExample = new MapActiveInfoDTO();
+        String tPayType = DataUtil.isNullOrEmpty(payType) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : payType;
+        mapActiveInfoExample.setPayType(tPayType);
+        mapActiveInfoExample.setActionCode(actionCode);
+        mapActiveInfoExample.setStaffCode(DataUtil.toUpper(staffDTO.getStaffCode()));
+        mapActiveInfoExample.setShopCode(DataUtil.toUpper(staffDTO.getShopCode()));
+        mapActiveInfoExample.setProvinceCode(staffDTO.getShopProvince());
+        mapActiveInfoExample.setDistrictCode(staffDTO.getShopDistrict());
+        mapActiveInfoExample.setPrecinctCode(staffDTO.getShopPrecinct());
+        mapActiveInfoExample.setTelServiceId(telServiceId);
+        mapActiveInfoExample.setOfferId(offerId);
+        mapActiveInfoExample.setChannelTypeId(channelTypeId);
+        mapActiveInfoExample.setRegReasonId(regReasonId);
+        mapActiveInfoExample.setPromCode(promotionCode);
+        mapActiveInfoExample.setCustomerGroup(customerGroup);
+        mapActiveInfoExample.setCustomerType(custTypeId);
+        mapActiveInfoExample.setSubType(subType);
+        mapActiveInfoExample.setSubGroup(subGroup);
+        mapActiveInfoExample.setStationCodes(stationCodes);
+        mapActiveInfoExample.setTechnology(technology);
+        if (!isTgdd) {
+            mapActiveInfoExample.setHistoryDate(historyDate);
+        }
+        mapActiveInfoExample.setNodeCode(nodeCode);
+        return mapActiveInfoExample;
+    }
+
+    private String convertCustTypeCode2Id(String customerType) {
+        return customerType == null ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : customerType;
     }
 }

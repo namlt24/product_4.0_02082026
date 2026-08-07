@@ -68,7 +68,7 @@ bccs:
     include-stacktrace: true
   config:
     enabled: true
-    team-code: CATALOG
+    team-code: POLICY
     service-name: product-policy-service
     client:
       base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://localhost:8084}
@@ -103,7 +103,7 @@ bccs:
 
     option-set:
       enabled: true
-      team-code: TEMPLATE
+      team-code: POLICY
       service-name: product-policy-service
       server-base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://localhost:8084}
       preload:

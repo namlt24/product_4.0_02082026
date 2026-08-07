@@ -10,7 +10,6 @@ import com.viettel.bccs.policy.client.ProductOfferCharUseClient;
 import com.viettel.bccs.policy.client.StaffShopClient;
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
-import com.viettel.bccs.policy.exception.LogicException;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.*;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
@@ -30,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -59,20 +59,16 @@ public class MapActiveInfoValidateService {
     private final MessageUtil messageUtil;
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
 
-    public static final String VAS_NOT_FOUND_ERROR_CODE = "VAS_NOT_FOUND_ERROR_CODE";
-    public static final String VAS_MAPPING_INVALID = "VAS_MAPPING_INVALID";
-    public static final String SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION = "SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION";
-
     public MapActiveInfoValidateService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                         OptionSetClient optionSetClient, StaffShopClient staffShopClient,
                                         StaffExtClient staffExtClient, ProductOfferingClient productOfferingClient,
                                         ProductOfferCharUseClient productOfferCharUseClient,
-                                        ReasonService reasonService,
-                                        DiscountPromotionService discountPromotionService,
+                                        @Lazy ReasonService reasonService,
+                                        @Lazy DiscountPromotionService discountPromotionService,
                                         TransactionTemplate transactionTemplate,
                                         @Qualifier("asyncExecutor") Executor asyncExecutor,
                                         MessageUtil messageUtil,
-                                        MapActiveInfoQuerryService mapActiveInfoQuerryService) {
+                                        @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
@@ -94,57 +90,6 @@ public class MapActiveInfoValidateService {
     @Value("${app.async.total-timeout-ms:10000}")
     private long totalTimeoutMs;
 
-    public ValidateInputMapActiveInfoResponse validateInputMapActiveInfo(ValidateInputMapActiveInfoRequest request) {
-        List<String> lstBusinessNo = request.getLstBusinessNo();
-        boolean isDefaultValue = false;
-
-        if (lstBusinessNo != null && !lstBusinessNo.isEmpty()) {
-            lstBusinessNo = lstBusinessNo.stream()
-                    .map(String::trim)
-                    .toList();
-            for (String businessNo : lstBusinessNo) {
-                if (businessNo.length() > 3500) {
-                    throw new BusinessException("BCCS-POLICY-002", "Business number length must not exceed 3500 characters");
-                }
-            }
-        } else {
-            lstBusinessNo = Collections.singletonList("-1");
-            isDefaultValue = true;
-        }
-
-        if (request.getRegReasonId() == null) {
-            throw new BusinessException("BCCS-POLICY-003", "regReasonId is required");
-        }
-
-        if (request.getStaffDTO() == null) {
-            throw new BusinessException("BCCS-POLICY-007", "Staff info is required");
-        }
-
-        if (!DataUtil.isNullOrEmpty(request.getStaffDTO().getStaffCode())) {
-            StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(request.getStaffDTO().getStaffCode());
-            if (staffResponse != null) {
-                if (staffResponse.getShop() != null) {
-                    ShopResponse shop = staffResponse.getShop();
-                    request.getStaffDTO().setShopId(shop.getShopId());
-                    request.getStaffDTO().setShopName(shop.getName());
-                    request.getStaffDTO().setShopCode(shop.getShopCode());
-                    request.getStaffDTO().setShopChanelTypeId(shop.getChannelTypeId());
-                    request.getStaffDTO().setShopProvince(shop.getProvince());
-                    request.getStaffDTO().setShopDistrict(shop.getDistrict());
-                    request.getStaffDTO().setShopPrecinct(shop.getPrecinct());
-                    request.getStaffDTO().setShopPath(shop.getShopPath());
-                    request.getStaffDTO().setAreaCode(shop.getAreaCode());
-                }
-            } else {
-                throw new BusinessException("ERROR-STAFF-SERVICE", "Error call service staff");
-            }
-        }
-
-        request.setLstBusinessNo(lstBusinessNo);
-
-        return new ValidateInputMapActiveInfoResponse(request);
-    }
-
     public boolean isCheckMapActiveInfo(IsCheckMapActiveInfoRequest request) {
         return mapActiveInfoQuerryService.isCheckMapActiveInfo(request);
     }
@@ -153,14 +98,14 @@ public class MapActiveInfoValidateService {
                                                         String promotionCode, Long regReasonId, String captchaAnswer, Long telServiceId, Date nowDate,
                                                         boolean isNeedCheckCaptcha, String province, String district, String precinct, String customerGroup,
                                                         String customerType, String subType, String subGroup, String stationCodes, String payType,
-                                                        String technology, int mode, String productOfferType, List<String> lstBusinessNo) throws LogicException {
+                                                        String technology, int mode, String productOfferType, List<String> lstBusinessNo) {
         List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
         MapActiveInfoDTO mapActiveInfo;
         List<ReasonDTO> lstReason ;
         List<DiscountPromotionDTO> lstPromotions;
         if (regReasonId == null) {
             log.info("regReasonId=null");
-            throw new BusinessException("BCCS-POLICY-008");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-016");
         }
         boolean isCheckMapActiveInfo;
         if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
@@ -223,30 +168,22 @@ public class MapActiveInfoValidateService {
                 List<ProductOfferingDTO> lstProductOffering = productOfferingClient.findByIds(offerIds);
                 Map<Long, ProductOfferingDTO> mapProductOfferingById = lstProductOffering.stream()
                         .collect(Collectors.toMap(ProductOfferingDTO::getProductOfferingId, p -> p, (a, b) -> a));
+                // Các thông tin này không đổi theo từng offerId trong 1 request (staff/shop, option set,
+                // channelType, tỉnh/huyện/phường suy ra từ shop) -> resolve 1 lần duy nhất thay vì gọi lại
+                // cross-service cho mỗi offerId trong vòng lặp bên dưới.
+                ValidationContext context = staffDTO != null
+                        ? resolveValidationContext(staffDTO, actionCode, payType, telServiceId, province, district, precinct)
+                        : new ValidationContext(Collections.emptyMap(), null, null, null, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
                 for (Long offerId : offerIds) {
                     lstReason = new ArrayList<>();
                     lstPromotions = new ArrayList<>();
                     String custTypeId = convertCustTypeCode2Id(customerType);
                     StringBuilder errMsgNonMapField = new StringBuilder();
-                    boolean skipValidateVas = false;
-                    String errMsg = null;
-                    try {
-                        mapActiveInfo = getUniqueMapActiveInfo(staffDTO, actionCode, offerId,
-                                DataUtil.isNullOrEmpty(promotionCode) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : promotionCode,
-                                regReasonId, telServiceId, province, district, precinct,
-                                customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField, payType, technology, mode, productOfferType,
-                                lstBusinessNo,mapProductOfferingById.get(offerId));
-                    } catch (LogicException e) {
-                        if (VAS_NOT_FOUND_ERROR_CODE.equals(e.getErrorCode())) {
-                            mapActiveInfo = null;
-                            skipValidateVas = true;
-                        } else if (VAS_MAPPING_INVALID.equals(e.getErrorCode())) {
-                            mapActiveInfo = null;
-                            errMsg = e.getKeyMsg();
-                        } else {
-                            throw e;
-                        }
-                    }
+                    mapActiveInfo = getUniqueMapActiveInfo(staffDTO, actionCode, offerId,
+                            DataUtil.isNullOrEmpty(promotionCode) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : promotionCode,
+                            regReasonId, telServiceId,
+                            customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField, payType, technology, mode, productOfferType,
+                            lstBusinessNo, mapProductOfferingById.get(offerId), context);
                     if (mapActiveInfo != null) {
                         List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
                         lstMapActiveInfo.add(mapActiveInfo);
@@ -260,18 +197,13 @@ public class MapActiveInfoValidateService {
                         mapActiveInfoDTOs.add(mapActiveInfo);
 
                     } else {
-                        if (!skipValidateVas) {
-                            if (!errMsgNonMapField.toString().isEmpty()) {
-                                throw new LogicException("sale.wired.connect.mapActiveInfo.reason.not.map.stationCode", "sale.wired.connect.mapActiveInfo.reason.not.map.stationCode");
-                            }
-                            if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
-                                throw new LogicException(SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION, errMsg);
-                            } else {
-                                ProductOfferingDTO productOfferingDTO = mapProductOfferingById.get(offerId);
-                                String textParam = messageUtil.getTextParam("sale.wired.connect.mapActiveInfo.reason.not.map.actionWithOffer", productOfferingDTO != null ? productOfferingDTO.getCode() : offerId);
-                                throw new LogicException(SALE_WIRED_CONNECT_MAP_ACTIVE_INFO_REASON_NOT_MAP_ACTION, textParam);
-                            }
+                        if (!errMsgNonMapField.toString().isEmpty()) {
+                            throw new BusinessException("BCCS-POLICY-MAPACTIVE-005");
                         }
+                        ProductOfferingDTO productOfferingDTO = mapProductOfferingById.get(offerId);
+                        String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : String.valueOf(offerId);
+                        String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-002", offerCodeForMsg);
+                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-002", textParam);
                     }
                     if (mapActiveInfo != null) {
                         validateMapActiveInfoCommon(actionCode,
@@ -282,21 +214,24 @@ public class MapActiveInfoValidateService {
                 }
             }else {
                 log.info("offerId=null");
-                throw new BusinessException("BCCS-POLICY-006",
-                        "sale.wired.connect.mapActiveInfo.reason.not.map.offerId");
+                throw new BusinessException("BCCS-POLICY-MAPACTIVE-017");
             }
         }
-        return Collections.emptyList();
+        return mapActiveInfoDTOs;
     }
 
 
-    private MapActiveInfoDTO getUniqueMapActiveInfo(StaffDTO staffDTO, String actionCode, Long offerId,
-                                                    String promotionCode, Long regReasonId, Long telServiceId,
-                                                    String province, String district, String precinct,
-                                                    String customerGroup, String custTypeId, String subType,
-                                                    String subGroup, String stationCodes, StringBuilder errMsgNonMapField,
-                                                    String payType, String technology, int mode,
-                                                    String productOfferType, List<String> lstBusinessNo, ProductOfferingDTO productOfferingDTO) throws LogicException {
+    /**
+     * Các giá trị không đổi theo từng offerId trong 1 lần gọi validateMapActiveInfo:
+     * staff/shop, cấu hình option set liên quan, channelType, và tỉnh/huyện/phường cuối cùng
+     * (đã áp dụng cả override theo staffExt nếu có) dùng để build mapActiveInfoExample.
+     */
+    private record ValidationContext(Map<String, List<OptionSetValueResponse>> optionSetMap, Long chanelTypeId,
+                                      String provinceID, String districtID, String precintId) {
+    }
+
+    private ValidationContext resolveValidationContext(StaffDTO staffDTO, String actionCode, String payType,
+                                                        Long telServiceId, String province, String district, String precinct) {
         StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
         if (staffResponse != null) {
             if (staffResponse.getShop() != null) {
@@ -321,18 +256,13 @@ public class MapActiveInfoValidateService {
                         OPTION_SET.ACTION_CODE_ALLOW_OFFER_FILTER_MODE
                 )
         );
-        List<OptionSetValueResponse> checkMapBusiness = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAP_BUSINESS_PRODUCT, Collections.emptyList());
-        List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(OPTION_SET.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
-        List<OptionSetValueResponse> checkMapArea = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
-
-        String provinceID;
-        String districtID;
-        String precintId = Const.DEFAULT_VALUE_MAP_SELECT_ALL;
-        Long chanelTypeId;
 
         if (staffDTO.getShopId() == null) {
-            return null;
+            return new ValidationContext(optionSetMap, null, null, null, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
         }
+
+        List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(OPTION_SET.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
+        List<OptionSetValueResponse> checkMapArea = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
 
         boolean isActiveCD = true
                 && (!Const.TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
@@ -340,6 +270,9 @@ public class MapActiveInfoValidateService {
                 && !Const.TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
                 && !Const.TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId));
 
+        String provinceID;
+        String districtID;
+        String precintId = Const.DEFAULT_VALUE_MAP_SELECT_ALL;
         if (!isActiveCD) {
             provinceID = staffDTO.getShopProvince();
             districtID = staffDTO.getShopDistrict();
@@ -349,7 +282,48 @@ public class MapActiveInfoValidateService {
             precintId = precinct;
         }
 
-        chanelTypeId = getChanelTypeIdMapActiveInfo(staffDTO);
+        Long chanelTypeId = getChanelTypeIdMapActiveInfo(staffDTO);
+
+        if (DataUtil.safeEqual(chanelTypeId, Const.CHANNEL_TYPE.CHUOI_TOAN_QUOC) && !DataUtil.isNullObject(staffDTO.getStaffId())) {
+            boolean isCheckMapAreaActive = !DataUtil.isNullOrEmpty(checkMapArea) && DataUtil.safeEqual(checkMapArea.get(0).getValue(), Const.STATUS.ACTIVE);
+            if (isCheckMapAreaActive) {
+                MapActiveInfoDTO userAreaCheckContext = new MapActiveInfoDTO();
+                userAreaCheckContext.setActionCode(actionCode);
+                userAreaCheckContext.setTelServiceId(telServiceId);
+                userAreaCheckContext.setPayType(payType);
+                userAreaCheckContext.setShopCode(staffDTO.getShopCode());
+                if (checkMappingByUser(userAreaCheckContext, configMappingUserArea)) {
+                    StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(staffDTO.getStaffId(), Const.STAFF_EXT_KEY.MAP_AREA_CHAIN_CHANNEL);
+                    if (!DataUtil.isNullObject(staffExtResponse)) {
+                        provinceID = staffExtResponse.getValue();
+                        districtID = null;
+                        precintId = null;
+                    }
+                }
+            }
+        }
+
+        return new ValidationContext(optionSetMap, chanelTypeId, provinceID, districtID, precintId);
+    }
+
+    private MapActiveInfoDTO getUniqueMapActiveInfo(StaffDTO staffDTO, String actionCode, Long offerId,
+                                                    String promotionCode, Long regReasonId, Long telServiceId,
+                                                    String customerGroup, String custTypeId, String subType,
+                                                    String subGroup, String stationCodes, StringBuilder errMsgNonMapField,
+                                                    String payType, String technology, int mode,
+                                                    String productOfferType, List<String> lstBusinessNo, ProductOfferingDTO productOfferingDTO,
+                                                    ValidationContext context) {
+        if (staffDTO == null || staffDTO.getShopId() == null) {
+            return null;
+        }
+
+        Map<String, List<OptionSetValueResponse>> optionSetMap = context.optionSetMap();
+        List<OptionSetValueResponse> checkMapBusiness = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAP_BUSINESS_PRODUCT, Collections.emptyList());
+
+        String provinceID = context.provinceID();
+        String districtID = context.districtID();
+        String precintId = context.precintId();
+        Long chanelTypeId = context.chanelTypeId();
 
         MapActiveInfoDTO mapActiveInfoExample = new MapActiveInfoDTO();
         mapActiveInfoExample.setActionCode(actionCode);
@@ -378,22 +352,8 @@ public class MapActiveInfoValidateService {
         mapActiveInfoExample.setPayType(payType);
         mapActiveInfoExample.setTechnology(technology);
 
-        if (DataUtil.safeEqual(checkMapBusiness.get(0).getValue(), Const.STATUS.ACTIVE)) {
+        if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(), Const.STATUS.ACTIVE)) {
             mapActiveInfoExample.setLstBusinessNo(lstBusinessNo);
-        }
-
-        if (DataUtil.safeEqual(mapActiveInfoExample.getChannelTypeId(), Const.CHANNEL_TYPE.CHUOI_TOAN_QUOC) && !DataUtil.isNullObject(staffDTO.getStaffId())) {
-            boolean isCheckMapAreaActive = !DataUtil.isNullOrEmpty(checkMapArea) && DataUtil.safeEqual(checkMapArea.get(0).getValue(), Const.STATUS.ACTIVE);
-            if (isCheckMapAreaActive) {
-                if (checkMappingByUser(mapActiveInfoExample, configMappingUserArea)) {
-                    StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(staffDTO.getStaffId(), Const.STAFF_EXT_KEY.MAP_AREA_CHAIN_CHANNEL);
-                    if (!DataUtil.isNullObject(staffExtResponse)) {
-                        mapActiveInfoExample.setProvinceCode(staffExtResponse.getValue());
-                        mapActiveInfoExample.setDistrictCode(null);
-                        mapActiveInfoExample.setPrecinctCode(null);
-                    }
-                }
-            }
         }
 
         List<MapActiveInfoDTO> mapActiveInfos = findByExampleWithOfferType(mapActiveInfoExample, mode, productOfferType);
@@ -404,7 +364,7 @@ public class MapActiveInfoValidateService {
             if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(), Const.STATUS.ACTIVE)) {
                 String businessNos = String.join(" , ", lstBusinessNo);
                 String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-001", businessNos);
-                throw new LogicException("", textParam);
+                throw new BusinessException("BCCS-POLICY-MAPACTIVE-001", textParam);
             }
         }
 
@@ -446,7 +406,7 @@ public class MapActiveInfoValidateService {
                 if (regReasonId != null && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(String.valueOf(regReasonId))) {
                     try {
                         ReasonResponse reasonResponse = reasonService.findById(regReasonId);
-                        reasonCode = reasonResponse.reasonCode();
+                        reasonCode = reasonResponse != null ? reasonResponse.reasonCode() : "";
                     } catch (BusinessException e) {
                         log.warn("Khong tim thay reason voi regReasonId={}", regReasonId);
                     }
@@ -463,16 +423,20 @@ public class MapActiveInfoValidateService {
                         }
                     }
                 }
+                String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : null;
                 String textParam;
+                String errorCodeForVas;
                 if (!DataUtil.isNullOrEmpty(promotionCode) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
-                    textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-003", areaName, reasonCode, promotionCode, productOfferingDTO.getCode());
+                    errorCodeForVas = "BCCS-POLICY-MAPACTIVE-003";
+                    textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, promotionCode, offerCodeForMsg);
                 } else {
-                    textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-004", areaName, reasonCode, productOfferingDTO.getCode());
+                    errorCodeForVas = "BCCS-POLICY-MAPACTIVE-004";
+                    textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, offerCodeForMsg);
                 }
-                throw new LogicException("", textParam);
+                throw new BusinessException(errorCodeForVas, textParam);
             } else {
                 log.info("vas khong khai bao thong tin, cho phep thuc hien");
-                throw new LogicException("", null);
+                return null;
             }
         }
         return null;
@@ -489,14 +453,12 @@ public class MapActiveInfoValidateService {
                 promotionCode);
 
         if (lstReason == null || lstReason.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-004",
-                    "regReasonId is not mapped with action");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-018");
         }
         boolean wrongReason = lstReason.stream()
                 .noneMatch(r -> Objects.equals(regReasonId, r.getReasonId()));
         if (wrongReason) {
-            throw new BusinessException("BCCS-POLICY-004",
-                    "regReasonId is not mapped with action");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-018");
         }
 
         boolean isActiveCD = !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
@@ -519,8 +481,7 @@ public class MapActiveInfoValidateService {
         }
 
         if (wrongPromotions) {
-            throw new BusinessException("BCCS-POLICY-005",
-                    "sale.wired.connect.custOrderDetail.promotion.not.map.action");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-019");
         }
     }
 
@@ -532,11 +493,14 @@ public class MapActiveInfoValidateService {
         return mapActiveInfoQuerryService.getChanelTypeIdMapActiveInfo(staffDTO);
     }
 
-    private boolean checkMappingByUser(MapActiveInfoDTO mapActiveInfoDTO, List<OptionSetValueResponse> options) {
+    public boolean checkMappingByUser(MapActiveInfoDTO mapActiveInfoDTO, List<OptionSetValueResponse> options) {
         if (DataUtil.isNullOrEmpty(options)) {
             return true;
         }
         for (OptionSetValueResponse valueDTO : options) {
+            if (DataUtil.isNullOrEmpty(valueDTO.getValue())) {
+                return false;
+            }
             List<String> lstValue = Arrays.asList(valueDTO.getValue().split(";"));
             if (lstValue.size() != 4) {
                 return false;
@@ -774,9 +738,9 @@ public class MapActiveInfoValidateService {
             Object fieldValue2 = mapActiveInfo2.getByProperty(mapField);
 
             int compareResult = 0;
-            //Sua compareTo
-            if (fieldValue1 instanceof String) compareResult = ((String) fieldValue2).compareTo((String) fieldValue1);
-            else if (fieldValue1 instanceof Long) compareResult = ((Long) fieldValue2).compareTo((Long) fieldValue1);
+            //Sua compareTo - neu 1 trong 2 gia tri null hoac khac kieu, coi nhu bang nhau o field nay, chuyen sang field uu tien tiep theo
+            if (fieldValue1 instanceof String && fieldValue2 instanceof String) compareResult = ((String) fieldValue2).compareTo((String) fieldValue1);
+            else if (fieldValue1 instanceof Long && fieldValue2 instanceof Long) compareResult = ((Long) fieldValue2).compareTo((Long) fieldValue1);
 
             if (compareResult != 0) {
                 return compareResult;

@@ -5,7 +5,6 @@ import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.entity.ReasonEntity;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,14 +26,14 @@ public class ReasonMapper {
                 .description(entity.getDescription())
                 .status(entity.getStatus())
                 .createUser(entity.getCreateUser())
-                .createDatetime(toDate(entity.getCreateDatetime()))
+                .createDatetime(entity.getCreateDatetime())
                 .updateUser(entity.getUpdateUser())
-                .updateDatetime(toDate(entity.getUpdateDatetime()))
+                .updateDatetime(entity.getUpdateDatetime())
                 .limitNumberIsdn(entity.getLimitNumberIsdn())
                 .limitNumberUser(entity.getLimitNumberUser())
                 .type(entity.getType())
-                .effectDatetime(toDate(entity.getEffectDatetime()))
-                .expireDatetime(toDate(entity.getExpireDatetime()))
+                .effectDatetime(entity.getEffectDatetime())
+                .expireDatetime(entity.getExpireDatetime())
                 .priority(entity.getPriority())
                 .note(entity.getNote())
                 .build();
@@ -49,10 +48,6 @@ public class ReasonMapper {
             result.add(toDTO(entity));
         }
         return result;
-    }
-
-    private static Date toDate(java.time.LocalDateTime localDateTime) {
-        return localDateTime == null ? null : Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     public ReasonResponse toResponse(ReasonEntity entity) {

@@ -1,7 +1,7 @@
 package com.viettel.bccs.policy.discountpromotion.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "DISCOUNT_PROMOTION")
@@ -57,22 +57,22 @@ public class DiscountPromotionEntity {
     private String areaCode;
 
     @Column(name = "EFFECT_DATETIME", nullable = false)
-    private LocalDateTime effectDatetime;
+    private Date effectDatetime;
 
     @Column(name = "EXPIRE_DATETIME")
-    private LocalDateTime expireDatetime;
+    private Date expireDatetime;
 
     @Column(name = "CREATE_USER", length = 50)
     private String createUser;
 
     @Column(name = "CREATE_DATETIME")
-    private LocalDateTime createDatetime;
+    private Date createDatetime;
 
     @Column(name = "UPDATE_USER", length = 50)
     private String updateUser;
 
     @Column(name = "UPDATE_DATETIME")
-    private LocalDateTime updateDatetime;
+    private Date updateDatetime;
 
     @Column(name = "CYCLE", precision = 10)
     private Long cycle;
@@ -103,12 +103,12 @@ public class DiscountPromotionEntity {
     public String getDescription() { return description; }
     public String getContent() { return content; }
     public String getAreaCode() { return areaCode; }
-    public LocalDateTime getEffectDatetime() { return effectDatetime; }
-    public LocalDateTime getExpireDatetime() { return expireDatetime; }
+    public Date getEffectDatetime() { return effectDatetime; }
+    public Date getExpireDatetime() { return expireDatetime; }
     public String getCreateUser() { return createUser; }
-    public LocalDateTime getCreateDatetime() { return createDatetime; }
+    public Date getCreateDatetime() { return createDatetime; }
     public String getUpdateUser() { return updateUser; }
-    public LocalDateTime getUpdateDatetime() { return updateDatetime; }
+    public Date getUpdateDatetime() { return updateDatetime; }
     public Long getCycle() { return cycle; }
     public String getListType() { return listType; }
     public Long getSubListId() { return subListId; }
@@ -131,12 +131,12 @@ public class DiscountPromotionEntity {
     public void setDescription(String description) { this.description = description; }
     public void setContent(String content) { this.content = content; }
     public void setAreaCode(String areaCode) { this.areaCode = areaCode; }
-    public void setEffectDatetime(LocalDateTime effectDatetime) { this.effectDatetime = effectDatetime; }
-    public void setExpireDatetime(LocalDateTime expireDatetime) { this.expireDatetime = expireDatetime; }
+    public void setEffectDatetime(Date effectDatetime) { this.effectDatetime = effectDatetime; }
+    public void setExpireDatetime(Date expireDatetime) { this.expireDatetime = expireDatetime; }
     public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setCreateDatetime(LocalDateTime createDatetime) { this.createDatetime = createDatetime; }
+    public void setCreateDatetime(Date createDatetime) { this.createDatetime = createDatetime; }
     public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
-    public void setUpdateDatetime(LocalDateTime updateDatetime) { this.updateDatetime = updateDatetime; }
+    public void setUpdateDatetime(Date updateDatetime) { this.updateDatetime = updateDatetime; }
     public void setCycle(Long cycle) { this.cycle = cycle; }
     public void setListType(String listType) { this.listType = listType; }
     public void setSubListId(Long subListId) { this.subListId = subListId; }

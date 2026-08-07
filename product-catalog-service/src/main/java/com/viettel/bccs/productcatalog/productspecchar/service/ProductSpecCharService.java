@@ -4,6 +4,7 @@ import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.productspecchar.dto.response.ProductSpecCharResponse;
 import com.viettel.bccs.productcatalog.productspecchar.mapper.ProductSpecCharMapper;
 import com.viettel.bccs.productcatalog.productspecchar.repository.ProductSpecCharRepository;
+import com.viettel.bccs.productcatalog.utils.Const;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,17 @@ public class ProductSpecCharService {
     @Transactional(readOnly = true)
     public List<ProductSpecCharResponse> getAll() {
         return productSpecCharRepository.findAll().stream()
+                .map(productSpecCharMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductSpecCharResponse> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return productSpecCharRepository.findAllById(ids).stream()
+                .filter(entity -> Const.STATUS.ACTIVE.equals(entity.getStatus()))
                 .map(productSpecCharMapper::toResponse)
                 .toList();
     }

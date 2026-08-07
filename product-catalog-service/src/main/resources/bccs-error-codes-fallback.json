@@ -106,5 +106,14 @@
     "severity": "ERROR",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "CATALOG-PRODUCT-003": {
+    "code": "CATALOG-PRODUCT-003",
+    "message": "productCode, productType and attributeCode are required",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

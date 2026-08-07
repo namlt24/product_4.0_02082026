@@ -6,6 +6,7 @@ import com.viettel.bccs.policy.client.dto.StaffExtResponse;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -17,6 +18,7 @@ public class StaffExtClientImpl implements StaffExtClient {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Cacheable(value = "staffExtClientCache", key = "#staffId + ':' + #key")
     public StaffExtResponse getStaffExtByStaffIDAndKey(Long staffId, String key) {
         try {
             var response = bccsHttpClient.get(

@@ -76,4 +76,11 @@ public class ProductOfferingService {
                 .map(productOfferingMapper::toDto)
                 .toList();
     }
+
+    public boolean checkAttProductOrVasByCode(String productCode, String productType, String attributeCode) {
+        if (DataUtil.isAnyNull(productCode, productType, attributeCode)) {
+            throw new BusinessException("CATALOG-PRODUCT-003", "productCode, productType and attributeCode are required");
+        }
+        return productOfferingRepository.checkAttProductOrVasByCode(productCode, Long.valueOf(productType.trim()), attributeCode);
+    }
 }

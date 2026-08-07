@@ -31,4 +31,9 @@ public class ProductSpecCharController {
         return StandardResponses.success(productSpecCharService.getByCode(code));
     }
 
+    @PostMapping("/findByIds")
+    public StandardResponse<List<ProductSpecCharResponse>> findByIds(@RequestBody List<Long> ids) {
+        return StandardResponses.success(productSpecCharService.findByIds(ids));
+    }
+
 }

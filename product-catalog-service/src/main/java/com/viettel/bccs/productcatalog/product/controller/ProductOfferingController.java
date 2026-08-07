@@ -98,6 +98,23 @@ public class ProductOfferingController {
         return StandardResponses.success(productOfferingService.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId, listProductSpec));
     }
 
+    @GetMapping("/checkAttProductOrVasByCode")
+    @Operation(
+            summary = "Kiểm tra sản phẩm/VAS có đặc tính theo mã",
+            description = "Kiểm tra sản phẩm hoặc VAS (xác định bởi productCode + productType là product_offer_type_id) có gán đặc tính (product_spec_char) theo attributeCode hay không. Chỉ tính các bản ghi đang active (status='1')."
+    )
+    public StandardResponse<Boolean> checkAttProductOrVasByCode(
+            @Parameter(description = "Mã sản phẩm / VAS", example = "300", required = true)
+            @RequestParam String productCode,
+
+            @Parameter(description = "ID loại sản phẩm (product_offer_type_id) - dùng để phân biệt product/VAS", example = "1", required = true)
+            @RequestParam String productType,
+
+            @Parameter(description = "Mã đặc tính cần kiểm tra (product_spec_char.code)", example = "IS_CONNECTED", required = true)
+            @RequestParam String attributeCode) {
+        return StandardResponses.success(productOfferingService.checkAttProductOrVasByCode(productCode, productType, attributeCode));
+    }
+
     @PostMapping("/findByCodesAndProductOfferType")
     @Operation(
             operationId = "API_DAUNOI_TT_PRODUCT_017",

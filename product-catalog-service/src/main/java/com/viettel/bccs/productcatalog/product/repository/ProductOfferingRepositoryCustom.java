@@ -16,4 +16,6 @@ public interface ProductOfferingRepositoryCustom {
     List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOfferCode, String status);
 
     List<ProductOfferingEntity> findByCodesAndProductOfferType(List<String> codes, Long productOfferTypeId);
+
+    boolean checkAttProductOrVasByCode(String productCode, Long productType, String attributeCode);
 }

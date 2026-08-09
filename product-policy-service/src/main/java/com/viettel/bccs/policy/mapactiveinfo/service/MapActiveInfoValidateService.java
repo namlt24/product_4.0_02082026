@@ -15,6 +15,7 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
+import com.viettel.bccs.policy.mapactiveinfo.model.ValidationContext;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
@@ -213,15 +214,6 @@ public class MapActiveInfoValidateService {
         return mapActiveInfoDTOs;
     }
 
-
-    /**
-     * Các giá trị không đổi theo từng offerId trong 1 lần gọi validateMapActiveInfo:
-     * staff/shop, cấu hình option set liên quan, channelType, và tỉnh/huyện/phường cuối cùng
-     * (đã áp dụng cả override theo staffExt nếu có) dùng để build mapActiveInfoExample.
-     */
-    private record ValidationContext(Map<String, List<OptionSetValueResponse>> optionSetMap, Long chanelTypeId,
-                                     String provinceID, String districtID, String precintId) {
-    }
 
     private ValidationContext resolveValidationContext(StaffDTO staffDTO, String actionCode, String payType,
                                                        Long telServiceId, String province, String district, String precinct) {

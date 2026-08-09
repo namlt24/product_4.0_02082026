@@ -1,5 +1,6 @@
 package com.viettel.bccs.policy.reason.dto.response;
 
+import com.viettel.bccs.policy.reasoncharuse.dto.response.ReasonCharUseDTO;
 import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

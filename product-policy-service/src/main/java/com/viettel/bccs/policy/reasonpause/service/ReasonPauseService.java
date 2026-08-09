@@ -42,11 +42,11 @@ public class ReasonPauseService {
         if (DataUtil.isNullOrEmpty(reasonIds)) {
             return Map.of();
         }
-        List<ReasonPauseEntity> entities = repository.findByReasonIdInAndStatus(reasonIds, Const.STATUS.ACTIVE);
+        List<ReasonPauseDTO> dtos = mapper.toDTO(repository.findByReasonIdInAndStatus(reasonIds, Const.STATUS.ACTIVE));
         Map<Long, List<ReasonPauseDTO>> result = new HashMap<>();
-        for (ReasonPauseEntity entity : entities) {
-            result.computeIfAbsent(entity.getReasonId(), k -> new ArrayList<>())
-                    .add(mapper.toDTO(entity));
+        for (ReasonPauseDTO dto : dtos) {
+            result.computeIfAbsent(dto.getReasonId(), k -> new ArrayList<>())
+                    .add(dto);
         }
         return result;
     }

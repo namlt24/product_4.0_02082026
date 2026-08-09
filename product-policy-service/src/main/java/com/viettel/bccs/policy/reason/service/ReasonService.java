@@ -13,10 +13,10 @@ import com.viettel.bccs.policy.client.dto.StaffResponse;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
-import com.viettel.bccs.policy.reason.dto.response.ReasonCharUseDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
-import com.viettel.bccs.policy.reasoncharuse.entity.ReasonCharUseEntity;
+import com.viettel.bccs.policy.reasoncharuse.dto.response.ReasonCharUseDTO;
+import com.viettel.bccs.policy.reasoncharuse.mapper.ReasonCharUseMapper;
 import com.viettel.bccs.policy.reasoncharuse.repository.ReasonCharUseRepository;
 import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
 import com.viettel.bccs.policy.reasonpause.service.ReasonPauseService;
@@ -45,6 +45,7 @@ public class ReasonService {
     private final ProductPackageClient productPackageClient;
     private final StaffShopClient staffShopClient;
     private final ReasonCharUseRepository reasonCharUseRepository;
+    private final ReasonCharUseMapper reasonCharUseMapper;
     private final ProductSpecCharClient productSpecCharClient;
     private final OptionSetClient optionSetClient;
     private final ReasonPauseService reasonPauseService;
@@ -53,7 +54,7 @@ public class ReasonService {
 
     public ReasonService(ReasonRepository repository, ReasonMapper mapper,
                           ProductPackageClient productPackageClient, StaffShopClient staffShopClient,
-                          ReasonCharUseRepository reasonCharUseRepository,
+                          ReasonCharUseRepository reasonCharUseRepository, ReasonCharUseMapper reasonCharUseMapper,
                           ProductSpecCharClient productSpecCharClient, OptionSetClient optionSetClient,
                           ReasonPauseService reasonPauseService,
                           @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService) {
@@ -62,6 +63,7 @@ public class ReasonService {
         this.productPackageClient = productPackageClient;
         this.staffShopClient = staffShopClient;
         this.reasonCharUseRepository = reasonCharUseRepository;
+        this.reasonCharUseMapper = reasonCharUseMapper;
         this.productSpecCharClient = productSpecCharClient;
         this.optionSetClient = optionSetClient;
         this.reasonPauseService = reasonPauseService;
@@ -191,12 +193,7 @@ public class ReasonService {
 
         List<ReasonDTO> lstResult = mapActiveInfoQuerryService.getReasonFullWithBusinessNo(staffDTO, payType, offerId, actionCode, serviceType, province, district, precint, customerGroup, customerType, subType, subGroup, stationCodes, promotionCode, technology, mode, getReasonCharUse, roleMap, nodeCode, singleOrCombo, listProductSpec, false, lstBusinessNo);
         if (!DataUtil.isNullOrEmpty(lstResult)) {
-            Collections.sort(lstResult, new Comparator<ReasonDTO>() {
-                @Override
-                public int compare(ReasonDTO o1, ReasonDTO o2) {
-                    return o1.getReasonCode().compareTo(o2.getReasonCode());
-                }
-            });
+            lstResult.sort(Comparator.comparing(ReasonDTO::getReasonCode));
         }
 
         return lstResult;
@@ -219,18 +216,19 @@ public class ReasonService {
             return lstReason;
         }
         List<Long> reasonIds = lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList());
-        List<ReasonCharUseEntity> charUses = reasonCharUseRepository.findByReasonIdInAndStatus(reasonIds, Const.STATUS.ACTIVE);
+        List<ReasonCharUseDTO> charUses = reasonCharUseMapper.toDTO(
+                reasonCharUseRepository.findByReasonIdInAndStatus(reasonIds, Const.STATUS.ACTIVE));
         if (DataUtil.isNullOrEmpty(charUses)) {
             return lstReason;
         }
 
         List<Long> specCharIds = charUses.stream()
-                .map(ReasonCharUseEntity::getProductSpecCharId)
+                .map(ReasonCharUseDTO::getProductSpecCharId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
         List<Long> specCharValueIds = charUses.stream()
-                .map(ReasonCharUseEntity::getProductSpecCharValueId)
+                .map(ReasonCharUseDTO::getProductSpecCharValueId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
@@ -241,7 +239,7 @@ public class ReasonService {
                 .collect(Collectors.toMap(ProductSpecCharValueLookupDTO::getProductSpecCharValueId, ProductSpecCharValueLookupDTO::getValue, (a, b) -> a));
 
         Map<Long, List<ReasonCharUseDTO>> charUseByReasonId = new HashMap<>();
-        for (ReasonCharUseEntity charUse : charUses) {
+        for (ReasonCharUseDTO charUse : charUses) {
             String code = codeBySpecCharId.get(charUse.getProductSpecCharId());
             if (code == null) {
                 continue;
@@ -267,13 +265,14 @@ public class ReasonService {
         if (DataUtil.isAnyNull(reasonId, attributeCode)) {
             throw new BusinessException("BCCS-POLICY-010", "reasonId and attributeCode are required");
         }
-        List<ReasonCharUseEntity> charUses = reasonCharUseRepository.findByReasonIdInAndStatus(List.of(reasonId), Const.STATUS.ACTIVE);
+        List<ReasonCharUseDTO> charUses = reasonCharUseMapper.toDTO(
+                reasonCharUseRepository.findByReasonIdInAndStatus(List.of(reasonId), Const.STATUS.ACTIVE));
         if (DataUtil.isNullOrEmpty(charUses)) {
             return false;
         }
 
         List<Long> specCharIds = charUses.stream()
-                .map(ReasonCharUseEntity::getProductSpecCharId)
+                .map(ReasonCharUseDTO::getProductSpecCharId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();

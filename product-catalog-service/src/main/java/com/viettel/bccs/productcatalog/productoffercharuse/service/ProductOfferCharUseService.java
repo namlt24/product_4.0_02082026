@@ -7,6 +7,7 @@ import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCha
 import com.viettel.bccs.productcatalog.productoffercharuse.repository.ProductOfferCharUseRepositoryCustom;
 import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
+import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -69,6 +70,36 @@ public class ProductOfferCharUseService {
             return Optional.empty();
         }
         return repository.findAttributeValueByOfferingIdAndCharCode(offerId, attributeName);
+    }
+
+    @Cacheable(value = "productOfferCharUseCache", key = "'PRICE_PLAN:' + #productOfferingId")
+    public List<ProductSpecCharDTO> getListPricePlanByOfferId(Long productOfferingId) {
+        if (productOfferingId == null) {
+            return Collections.emptyList();
+        }
+
+        List<Object[]> results = repository.findCharsByOfferingIdAndCharType(productOfferingId, Const.CHAR_TYPE.PRICE_PLAN);
+        if (DataUtil.isNullOrEmpty(results)) {
+            return Collections.emptyList();
+        }
+
+        List<ProductSpecCharDTO> lst = new ArrayList<>();
+        for (Object[] row : results) {
+            Long offeringId = ((Number) row[0]).longValue();
+            Long offerCharUseId = ((Number) row[1]).longValue();
+            String offerCharUseType = row[2] != null ? row[2].toString() : null;
+
+            ProductSpecCharEntity charEntity = buildCharEntity(row);
+            ProductSpecCharValueEntity valueEntity = buildValueEntity(row);
+            String valueName = row[37] != null ? row[37].toString() : null;
+
+            ProductSpecCharValueDTO valueDto = productSpecCharValueUseMapper.toDto(valueEntity);
+            ProductSpecCharDTO dto = productSpecCharUseMapper.toDtoWithValue(
+                    charEntity, valueDto, valueName, offeringId, offerCharUseId, offerCharUseType);
+
+            lst.add(dto);
+        }
+        return lst;
     }
 
     private String str(Object val) {

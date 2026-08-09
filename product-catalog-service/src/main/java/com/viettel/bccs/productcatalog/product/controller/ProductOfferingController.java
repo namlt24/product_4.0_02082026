@@ -6,6 +6,8 @@ import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
 import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
+import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
+import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +27,7 @@ import java.util.List;
 public class ProductOfferingController {
 
     private final ProductOfferingService productOfferingService;
+    private final ProductOfferCharUseService productOfferCharUseService;
 
     @GetMapping("/getByProductCode")
     public StandardResponse<ProductOfferingResponse> getByProductCode(@RequestParam String productCode) {
@@ -144,5 +147,29 @@ public class ProductOfferingController {
             @Parameter(description = "Danh sách ID sản phẩm cần tìm", example = "[12345, 67890]")
             @RequestBody List<Long> offerIds) {
         return StandardResponses.success(productOfferingService.findByIds(offerIds));
+    }
+
+    @GetMapping("/getListPricePlanByOfferId")
+    @Operation(
+            operationId = "getListPricePlanByOfferId",
+            summary = "Lấy danh sách đặc tính giá cước (price plan) của sản phẩm",
+            description = "Truy vấn các đặc tính (product_spec_char) thuộc nhóm giá cước (CHAR_TYPE = price plan) đang được gán (product_offer_char_use) cho một product offering, kèm giá trị (product_spec_char_value) tương ứng."
+    )
+    public StandardResponse<List<ProductSpecCharDTO>> getListPricePlanByOfferId(
+            @Parameter(description = "ID sản phẩm", example = "500001", required = true)
+            @RequestParam Long productOfferingId) {
+        return StandardResponses.success(productOfferCharUseService.getListPricePlanByOfferId(productOfferingId));
+    }
+
+    @GetMapping("/getListVas")
+    @Operation(
+            operationId = "getListVas",
+            summary = "Lấy danh sách VAS khả dụng cho 1 sản phẩm chính",
+            description = "Trả về danh sách VAS (dịch vụ giá trị gia tăng) được gán cho sản phẩm chính qua bảng quan hệ PRODUCT_OFFER_RELATION, kèm thuộc tính và thông tin quan hệ, cùng typeIndex đánh dấu nhóm VAS loại trừ lẫn nhau (cấu hình qua OptionSet VAS_EXCLUSIVE_GROUP) — VAS cùng typeIndex chỉ được chọn tối đa 1."
+    )
+    public StandardResponse<List<ProductOfferingDTO>> getListVas(
+            @Parameter(description = "ID sản phẩm chính", example = "500001", required = true)
+            @RequestParam Long offerId) {
+        return StandardResponses.success(productOfferingService.getListVas(offerId));
     }
 }

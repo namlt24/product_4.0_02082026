@@ -2,6 +2,8 @@ package com.viettel.bccs.productcatalog.product.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
+import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,6 +13,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 @Schema(description = "Thông tin sản phẩm gói cước")
 @Data
@@ -275,6 +278,12 @@ public class ProductOfferingDTO implements Serializable {
 
     @Schema(description = "ID quan hệ sản phẩm")
     private Long productOfferRelationId;
+
+    @Schema(description = "Danh sách thuộc tính (product spec char) của VAS này")
+    private List<ProductSpecCharDTO> lstProductSpecChars;
+
+    @Schema(description = "Thông tin quan hệ (product_offer_relation) gắn VAS này với sản phẩm chính")
+    private List<ProductOfferRelationResponse> lstProductOfferRelations;
 
     @Schema(description = "ID loại kênh ánh xạ")
     private Long mapChannelTypeId;

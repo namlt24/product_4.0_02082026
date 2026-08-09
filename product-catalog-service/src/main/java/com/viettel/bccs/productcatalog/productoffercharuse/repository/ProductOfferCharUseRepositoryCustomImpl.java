@@ -105,6 +105,77 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
     }
 
     @Override
+    public List<Object[]> findCharsByOfferingIdAndCharType(Long offeringId, String charType) {
+        if (offeringId == null || charType == null) {
+            return new ArrayList<>();
+        }
+
+        String sql = """
+            SELECT
+              a.PRODUCT_OFFERING_ID,
+              a.PRODUCT_OFFER_CHAR_USE_ID,
+              a.TYPE,
+              c.PRODUCT_SPEC_CHAR_ID,
+              c.NAME,
+              c.DESCRIPTION,
+              c.VALUE_TYPE,
+              c.CHAR_TYPE,
+              c.MIN_CARDINALITY,
+              c.MAX_CARDINALITY,
+              c.STATUS AS char_status,
+              c.CODE,
+              c.PRODUCT_SPEC_CHAR_TYPE_ID,
+              c.VALUE_SET_TYPE,
+              c.RESPONSE_CLASS,
+              c.SQL_QUERY,
+              c.DISPLAY_OBJECT,
+              c.VALUE_OBJECT,
+              c.SOLR_QUERY,
+              c.SOLR_CORE,
+              c.SOLR_SCHEMA,
+              c.DATA_TYPE,
+              c.WS_WSDL,
+              c.TEMPLATE_REQUEST,
+              c.VALIDATE_PATTERN,
+              c.EXT_DATA,
+              c.NOTE AS char_note,
+              d.PRODUCT_SPEC_CHAR_VALUE_ID,
+              d.PRODUCT_SPEC_CHAR_ID AS value_spec_char_id,
+              d.VALUE_TYPE AS value_value_type,
+              d.IS_DEFAULT,
+              d.VALUE,
+              d.UNIT_OF_MEASURE,
+              d.VALUE_FROM,
+              d.VALUE_TO,
+              d.RANGE_INTERVAL,
+              d.STATUS AS value_status,
+              d.NAME AS value_name,
+              d.SPECIFIC_VALUE,
+              d.NOTE AS value_note,
+              d.NAME AS value_name_from
+            FROM %sproduct_offer_char_use a
+            JOIN %sproduct_spec_char c ON a.PRODUCT_SPEC_CHAR_ID = c.PRODUCT_SPEC_CHAR_ID AND c.STATUS = '1'
+            JOIN %sproduct_spec_char_value d ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
+            WHERE a.STATUS = '1'
+              AND a.PRODUCT_OFFERING_ID = :offeringId
+              AND c.CHAR_TYPE = :charType
+              AND a.TYPE IN ('1', '2')
+            ORDER BY c.CODE
+            """.formatted(
+                Const.DEFAULT_PRODUCT_SCHEMA,
+                Const.DEFAULT_PRODUCT_SCHEMA,
+                Const.DEFAULT_PRODUCT_SCHEMA);
+
+        Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("offeringId", offeringId);
+        query.setParameter("charType", charType);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+        return results;
+    }
+
+    @Override
     public Optional<String> findAttributeValueByOfferingIdAndCharCode(Long offeringId, String charCode) {
         String sql = """
             SELECT COALESCE(a.SPECIFIC_VALUE, d.VALUE) AS attribute_value

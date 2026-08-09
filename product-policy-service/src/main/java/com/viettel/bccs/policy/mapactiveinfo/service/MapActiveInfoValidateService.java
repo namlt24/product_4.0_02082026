@@ -101,18 +101,14 @@ public class MapActiveInfoValidateService {
                                                         String technology, int mode, String productOfferType, List<String> lstBusinessNo) {
         List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
         MapActiveInfoDTO mapActiveInfo;
-        List<ReasonDTO> lstReason ;
+        List<ReasonDTO> lstReason;
         List<DiscountPromotionDTO> lstPromotions;
         if (regReasonId == null) {
             log.info("regReasonId=null");
             throw new BusinessException("BCCS-POLICY-MAPACTIVE-016");
         }
-        boolean isCheckMapActiveInfo;
-        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
-            isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfoForVas(actionCode, telServiceId);
-        } else {
-            isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, telServiceId);
-        }
+        boolean isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, telServiceId);
+
 
         if (!isCheckMapActiveInfo) {
             // 1. Task lấy Reason
@@ -187,12 +183,9 @@ public class MapActiveInfoValidateService {
                     if (mapActiveInfo != null) {
                         List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
                         lstMapActiveInfo.add(mapActiveInfo);
-                        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
-                            lstReason.addAll(reasonService.getReasonFromMapActiveInfosForVas(lstMapActiveInfo, mode, null));
 
-                        } else {
-                            lstReason.addAll(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
-                        }
+                        lstReason.addAll(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
+
                         lstPromotions.addAll(discountPromotionService.getPromFromMapActiveInfos(lstMapActiveInfo, mode, false));
                         mapActiveInfoDTOs.add(mapActiveInfo);
 
@@ -212,7 +205,7 @@ public class MapActiveInfoValidateService {
                                 telServiceId, lstReason, lstPromotions);
                     }
                 }
-            }else {
+            } else {
                 log.info("offerId=null");
                 throw new BusinessException("BCCS-POLICY-MAPACTIVE-017");
             }
@@ -227,11 +220,11 @@ public class MapActiveInfoValidateService {
      * (đã áp dụng cả override theo staffExt nếu có) dùng để build mapActiveInfoExample.
      */
     private record ValidationContext(Map<String, List<OptionSetValueResponse>> optionSetMap, Long chanelTypeId,
-                                      String provinceID, String districtID, String precintId) {
+                                     String provinceID, String districtID, String precintId) {
     }
 
     private ValidationContext resolveValidationContext(StaffDTO staffDTO, String actionCode, String payType,
-                                                        Long telServiceId, String province, String district, String precinct) {
+                                                       Long telServiceId, String province, String district, String precinct) {
         StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
         if (staffResponse != null) {
             if (staffResponse.getShop() != null) {
@@ -444,7 +437,7 @@ public class MapActiveInfoValidateService {
 
     public void validateMapActiveInfoCommon(String actionCode, String promotionCode, Long regReasonId,
                                             Long telServiceId, List<ReasonDTO> lstReason,
-                                            List<DiscountPromotionDTO> lstPromotions){
+                                            List<DiscountPromotionDTO> lstPromotions) {
         log.debug("[validateMapActiveInfoCommon] regReasonId={}, isActiveCD={}, promotionCode={}",
                 regReasonId, !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
                         && !TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
@@ -739,8 +732,10 @@ public class MapActiveInfoValidateService {
 
             int compareResult = 0;
             //Sua compareTo - neu 1 trong 2 gia tri null hoac khac kieu, coi nhu bang nhau o field nay, chuyen sang field uu tien tiep theo
-            if (fieldValue1 instanceof String && fieldValue2 instanceof String) compareResult = ((String) fieldValue2).compareTo((String) fieldValue1);
-            else if (fieldValue1 instanceof Long && fieldValue2 instanceof Long) compareResult = ((Long) fieldValue2).compareTo((Long) fieldValue1);
+            if (fieldValue1 instanceof String && fieldValue2 instanceof String)
+                compareResult = ((String) fieldValue2).compareTo((String) fieldValue1);
+            else if (fieldValue1 instanceof Long && fieldValue2 instanceof Long)
+                compareResult = ((Long) fieldValue2).compareTo((Long) fieldValue1);
 
             if (compareResult != 0) {
                 return compareResult;

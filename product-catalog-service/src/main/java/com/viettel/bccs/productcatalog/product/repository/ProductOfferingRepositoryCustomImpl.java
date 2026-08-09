@@ -213,6 +213,29 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
         return count.longValue() > 0;
     }
 
+    /**
+     * TAM VIET THEO SUY DOAN — bang trong repo cua he mono cu (repository.getListVas(offerId),
+     * ProductOfferingServiceImpl.java:3621) khong co trong bo code duoc cung cap, khong xac nhan
+     * duoc SQL/JPQL that. Suy doan hop ly dua theo cung 1 pattern voi getListOfferAlterStatus
+     * (join qua bang quan he PRODUCT_OFFER_RELATION): lay cac PRODUCT_OFFERING dang active,
+     * la VAS (product_offer_type_id = Const.PRODUCT_OFFER_TYPE.VAS), duoc gan voi offerId qua
+     * quan he PRODUCT_OFFER_RELATION co relation_type_id = Const.RELATION_TYPE.VAS va dang active.
+     * Neu co source that cua repository nay o he mono cu, can doi chieu lai va sua cho khop.
+     */
+    @Override
+    public List<ProductOfferingEntity> getListVas(Long offerId) {
+        String sql = "SELECT * FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offering " +
+                "WHERE status = '1' AND product_offer_type_id = " + Const.PRODUCT_OFFER_TYPE.VAS +
+                " AND product_offering_id IN ( " +
+                "SELECT a.relation_offer_id FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offer_relation a " +
+                "WHERE a.main_offer_id = :offerId AND a.relation_type_id = " + Const.RELATION_TYPE.VAS +
+                " AND a.status = '1' )";
+
+        Query query = entityManager.createNativeQuery(sql, ProductOfferingEntity.class);
+        query.setParameter("offerId", offerId);
+        return query.getResultList();
+    }
+
     public static String operatorToOracle(FilterRequest filter) {
         FilterRequest.Operator operator = filter.getOperator();
         if (operator == null) {

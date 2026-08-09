@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.telecomservice.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,23 +20,18 @@ import java.util.Date;
 public class TelecomServiceDTO implements Serializable {
 
     @Schema(description = "ID dịch vụ viễn thông")
-    @JsonProperty(value = "TELECOM_SERVICE_ID")
     private Long telecomServiceId;
 
     @Schema(description = "Tên dịch vụ viễn thông", example = "Di động")
-    @JsonProperty(value = "NAME")
     private String name;
 
     @Schema(description = "Trạng thái", example = "1")
-    @JsonProperty(value = "STATUS")
     private String status;
 
     @Schema(description = "Mô tả")
-    @JsonProperty(value = "DESCRIPTION")
     private String description;
 
     @Schema(description = "Mã alias dịch vụ", example = "MOB")
-    @JsonProperty(value = "SERVICE_ALIAS")
     private String serviceAlias;
 
     @Schema(description = "Người tạo")

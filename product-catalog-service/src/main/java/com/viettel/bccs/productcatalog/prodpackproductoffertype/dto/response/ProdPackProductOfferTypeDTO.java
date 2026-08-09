@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
 import com.viettel.bccs.productcatalog.prodpackshop.dto.response.ProdPackShopDTO;
 import com.viettel.bccs.productcatalog.productpackage.dto.response.PackageOfferDTO;
@@ -26,49 +25,39 @@ import java.util.List;
 public class ProdPackProductOfferTypeDTO implements Serializable {
 
     @Schema(description = "ID liên kết")
-    @JsonProperty(value = "PROD_PACK_TYPE_ID")
     private Long prodPackTypeId;
 
     @Schema(description = "ID gói sản phẩm")
-    @JsonProperty(value = "PRODUCT_PACKAGE_ID")
     private Long productPackageId;
 
     @Schema(description = "ID loại mặt hàng")
-    @JsonProperty(value = "PRODUCT_OFFER_TYPE_ID")
     private Long productOfferTypeId;
 
     @Schema(description = "Trạng thái", example = "1")
-    @JsonProperty(value = "STATUS")
     private String status;
 
     @Schema(description = "Cờ cập nhật tồn kho")
-    @JsonProperty(value = "UPDATE_STOCK")
     private String updateStock;
 
     @Schema(description = "Cờ kiểm tra tồn kho nhân viên")
-    @JsonProperty(value = "CHECK_STAFF_STOCK")
     private String checkStaffStock;
 
     @Schema(description = "Cờ kiểm tra tồn kho cửa hàng")
-    @JsonProperty(value = "CHECK_SHOP_STOCK")
     private String checkShopStock;
 
     @Schema(description = "Cờ bắt buộc")
-    @JsonProperty(value = "REQUIRE")
     private String require;
 
     @Schema(description = "Mô tả")
     private String description;
 
     @Schema(description = "Giới hạn hàng hóa")
-    @JsonProperty(value = "LIMIT_GOODS")
     private Long limitGoods;
 
     @Schema(description = "Phân phối")
     private Long distribute;
 
     @Schema(description = "Chuyển IM")
-    @JsonProperty(value = "TRANSFER_IM")
     private String transferIm;
 
     @Schema(description = "Người tạo")
@@ -86,11 +75,9 @@ public class ProdPackProductOfferTypeDTO implements Serializable {
     private Date updateDatetime;
 
     @Schema(description = "Tên loại mặt hàng")
-    @JsonProperty(value = "PRODUCT_OFFER_TYPE_NAME")
     private String productOfferTypeName;
 
     @Schema(description = "Danh sách kho chức năng")
-    @JsonProperty(value = "SPEC_SHOP_LIST")
     private List<ShopDTO> specShopList;
 
     private List<ProdPackShopDTO> prodPackShopDTOs = new ArrayList<>();//Danh sach cac kho chuc nang cua mat hang

@@ -1,7 +1,6 @@
 package com.viettel.bccs.productcatalog.productpackage.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,19 +22,15 @@ public class ProdPackShopDTO implements Serializable {
 
     // === ID fields ===
     @Schema(description = "ID cửa hàng trong gói")
-    @JsonProperty(value = "PROD_PACK_SHOP_ID")
     private Long prodPackShopId;
 
     @Schema(description = "ID loại sản phẩm trong gói")
-    @JsonProperty(value = "PROD_PACK_TYPE_ID")
     private Long prodPackTypeId;
 
     @Schema(description = "ID cửa hàng")
-    @JsonProperty(value = "SHOP_ID")
     private Long shopId;
 
     @Schema(description = "ID loại sản phẩm")
-    @JsonProperty(value = "PRODUCT_OFFER_TYPE_ID")
     private Long productOfferTypeId;
 
     // === Basic info ===

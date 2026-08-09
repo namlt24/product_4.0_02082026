@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.productpackagecharuse.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,23 +19,18 @@ import java.util.Date;
 public class ProductPackageCharUseDTO implements Serializable {
 
     @Schema(description = "ID thuộc tính sản phẩm trong gói")
-    @JsonProperty(value = "PRODUCT_PACKAGE_CHAR_USE_ID")
     private Long productPackageCharUseId;
 
     @Schema(description = "ID gói sản phẩm")
-    @JsonProperty(value = "PRODUCT_PACKAGE_ID")
     private Long productPackageId;
 
     @Schema(description = "ID thuộc tính sản phẩm")
-    @JsonProperty(value = "PRODUCT_SPEC_CHAR_ID")
     private Long productSpecCharId;
 
     @Schema(description = "ID giá trị thuộc tính sản phẩm")
-    @JsonProperty(value = "PRODUCT_SPEC_CHAR_VALUE_ID")
     private Long productSpecCharValueId;
 
     @Schema(description = "Trạng thái", example = "1")
-    @JsonProperty(value = "STATUS")
     private String status;
 
     @Schema(description = "Giá trị cụ thể")

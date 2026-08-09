@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.productpackagefee.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,19 +22,15 @@ import java.util.List;
 public class ProductPackageFeeDTO implements Serializable {
 
     @Schema(description = "ID phí gói sản phẩm")
-    @JsonProperty(value = "PRODUCT_PACKAGE_FEE_ID")
     private Long productPackageFeeId;
 
     @Schema(description = "ID gói sản phẩm")
-    @JsonProperty(value = "PRODUCT_PACKAGE_ID")
     private Long productPackageId;
 
     @Schema(description = "ID chính sách giá")
-    @JsonProperty(value = "PRICE_POLICY_ID")
     private Long pricePolicyId;
 
     @Schema(description = "ID loại giá")
-    @JsonProperty(value = "PRICE_TYPE_ID")
     private Long priceTypeId;
 
     private String code;

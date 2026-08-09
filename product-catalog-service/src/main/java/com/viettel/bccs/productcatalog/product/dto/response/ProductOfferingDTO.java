@@ -1,7 +1,6 @@
 package com.viettel.bccs.productcatalog.product.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,35 +22,25 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ProductOfferingDTO implements Serializable {
 
-    public static final String FIELD_PRODUCT_OFFER_TYPE_ID = "product_offer_type_id";
-    public static final String FIELD_PRODUCT_OFFERING_ID = "product_offering_id";
-
     @Schema(description = "Mã sản phẩm", example = "PACKAGE_001")
-    @JsonProperty(value = "code")
     private String code;
 
     @Schema(description = "Tên sản phẩm", example = "Gói cước data 50GB")
-    @JsonProperty(value = "name")
     private String name;
 
     @Schema(description = "ID sản phẩm", example = "12345")
-    @JsonProperty(value = "product_offering_id")
     private Long productOfferingId;
 
     @Schema(description = "ID loại sản phẩm", example = "1")
-    @JsonProperty(value = "product_offer_type_id")
     private Long productOfferTypeId;
 
     @Schema(description = "ID dịch vụ viễn thông", example = "1")
-    @JsonProperty(value = "telecom_service_id")
     private Long telecomServiceId;
 
     @Schema(description = "Trạng thái", example = "1")
-    @JsonProperty(value = "status")
     private String status;
 
     @Schema(description = "Tên loại sản phẩm", example = "Gói cước data")
-    @JsonProperty(value = "product_offer_type_name")
     private String productTypeName;
 
     @Schema(description = "ID đặc tả sản phẩm")

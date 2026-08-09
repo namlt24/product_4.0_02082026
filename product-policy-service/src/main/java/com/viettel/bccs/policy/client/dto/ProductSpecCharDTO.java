@@ -1,7 +1,6 @@
 package com.viettel.bccs.policy.client.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +16,6 @@ import lombok.NoArgsConstructor;
 public class ProductSpecCharDTO {
 
     @Schema(description = "ID đặc tính sản phẩm", example = "12345")
-    @JsonProperty(value = "product_spec_char_id")
     private Long productSpecCharId;
 
     @Schema(description = "Tên đặc tính", example = "Tên đặc tính sản phẩm")
@@ -102,7 +100,6 @@ public class ProductSpecCharDTO {
     private String valueName;
 
     @Schema(description = "Giá trị đặc tính sản phẩm")
-    @JsonProperty(value = "product_spec_char_value_dto")
     private ProductSpecCharValueDTO productSpecCharValueDTO;
 
     @Schema(description = "Giá trị")

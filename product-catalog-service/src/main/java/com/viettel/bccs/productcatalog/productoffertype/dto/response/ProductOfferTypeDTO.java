@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.productoffertype.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,23 +20,18 @@ import java.util.Date;
 public class ProductOfferTypeDTO implements Serializable {
 
     @Schema(description = "ID loại mặt hàng")
-    @JsonProperty(value = "PRODUCT_OFFER_TYPE_ID")
     private Long productOfferTypeId;
 
     @Schema(description = "ID loại mặt hàng cha")
-    @JsonProperty(value = "PARENT_ID")
     private Long parentId;
 
     @Schema(description = "Tên loại mặt hàng", example = "Sim trả trước")
-    @JsonProperty(value = "NAME")
     private String name;
 
     @Schema(description = "Mô tả")
-    @JsonProperty(value = "DESCRIPTION")
     private String description;
 
     @Schema(description = "Trạng thái", example = "1")
-    @JsonProperty(value = "STATUS")
     private String status;
 
     @Schema(description = "Người tạo")

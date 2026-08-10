@@ -1,6 +1,5 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 
-import com.viettel.bccs.policy.client.dto.StaffDTO;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -21,27 +20,7 @@ import java.util.List;
 @Schema(description = "Request validate MapActiveInfo",
         example = """
                 {
-                  "staffDTO": {
-                    "channelTypeId": 14,
-                    "email": "huongttn2@viettel.com.vn",
-                    "isdn": "0963670127",
-                    "name": "Trần Thị Ngọc Hường",
-                    "shopId": 1413284,
-                    "staffCode": "HUONGTTN2_GDV_DVTM_HCM",
-                    "staffId": 110734881,
-                    "staffOwnerId": 110745320,
-                    "tel": "0963670127",
-                    "tenantId": 1411861,
-                    "shopCode": "1600340054",
-                    "shopName": "Cửa hàng Viettel Cộng Hòa Hồ Chí Minh",
-                    "isPointOfSale": false,
-                    "shopChanelTypeId": 164,
-                    "shopProvince": "HCM",
-                    "shopPrecinct": "126",
-                    "shopPath": "72811411861_1411895_1412079_1413284",
-                    "ipAddress": "10.231.22.150",
-                    "tablePk": "HUONGTTN2_GDV_DVTM_HCM"
-                  },
+                  "staffCode": "HUONGTTN2_GDV_DVTM_HCM",
                   "actionCode": "00",
                   "offerIds": [401027120],
                   "promotionCode": "SBN",
@@ -66,8 +45,8 @@ import java.util.List;
                 }""")
 public class ValidateInputMapActiveInfoRequest {
 
-    @Schema(description = "Thông tin nhân viên")
-    private StaffDTO staffDTO;
+    @Schema(description = "Mã nhân viên", example = "HUONGTTN2_GDV_DVTM_HCM")
+    private String staffCode;
 
     @Schema(description = "Mã hành động", example = "00")
     private String actionCode;

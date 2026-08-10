@@ -58,7 +58,7 @@ public class MapActiveInfoValidateController {
             lstBusinessNo = Collections.singletonList(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
         }
 
-        List<MapActiveInfoDTO> mapActiveInfoDTOs = service.validateMapActiveInfo(request.getStaffDTO(),
+        List<MapActiveInfoDTO> mapActiveInfoDTOs = service.validateMapActiveInfo(request.getStaffCode(),
                 request.getActionCode(),
                 request.getOfferIds() == null ? new ArrayList<Long>() : request.getOfferIds(),
                 request.getPromotionCode(),

@@ -95,11 +95,16 @@ public class MapActiveInfoValidateService {
         return mapActiveInfoQuerryService.isCheckMapActiveInfo(request);
     }
 
-    public List<MapActiveInfoDTO> validateMapActiveInfo(StaffDTO staffDTO, String actionCode, List<Long> offerIds,
+    public List<MapActiveInfoDTO> validateMapActiveInfo(String staffCode, String actionCode, List<Long> offerIds,
                                                         String promotionCode, Long regReasonId, String captchaAnswer, Long telServiceId, Date nowDate,
                                                         boolean isNeedCheckCaptcha, String province, String district, String precinct, String customerGroup,
                                                         String customerType, String subType, String subGroup, String stationCodes, String payType,
                                                         String technology, int mode, String productOfferType, List<String> lstBusinessNo) {
+        // Client chỉ gửi staffCode dạng chuỗi (không phải object StaffDTO lồng nhau) -- dựng StaffDTO
+        // tối thiểu ở đây; các bước bên dưới (resolveValidationContext/getUniqueMapActiveInfo) tự
+        // enrich đầy đủ thông tin shop qua staffShopClient.getStaffShopFullInfo(staffCode) rồi mới dùng,
+        // nên object StaffDTO đầu vào chỉ cần chứa staffCode là đủ.
+        StaffDTO staffDTO = DataUtil.isNullOrEmpty(staffCode) ? null : new StaffDTO(staffCode);
         List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
         MapActiveInfoDTO mapActiveInfo;
         List<ReasonDTO> lstReason;

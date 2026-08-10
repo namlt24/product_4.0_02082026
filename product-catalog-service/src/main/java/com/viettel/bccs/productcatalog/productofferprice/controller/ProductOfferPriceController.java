@@ -56,5 +56,30 @@ public class ProductOfferPriceController {
                 productPackageId, productPackageCode, productOfferType, productOfferId, pricePolicy));
     }
 
+    @GetMapping("/getPriceInServices")
+    @Operation(
+            operationId = "getPriceInServices",
+            summary = "Lấy danh sách giá bán thiết bị trong gói dịch vụ",
+            description = "Truy vấn danh sách giá bán thiết bị (ProductOfferPrice) theo các tiêu chí: ID/Code gói sản phẩm, loại sản phẩm, ID sản phẩm và chính sách giá. " +
+                    "Hỗ trợ tính giá thiết bị CAM theo loại (indoor/outdoor) và giá thiết bị thông thường. " +
+                    "Kết quả bao gồm thông tin giá, tên sản phẩm, và giá thiết bị khuyến mãi.")
+    public StandardResponse<List<ProductOfferPriceResponse>> getPriceInServices(
+            @Parameter(description = "ID gói sản phẩm", example = "123")
+            @RequestParam(required = false) Long productPackageId,
+
+            @Parameter(description = "Mã gói sản phẩm", example = "PKG_001")
+            @RequestParam(required = false) String productPackageCode,
+
+            @Parameter(description = "ID loại sản phẩm", example = "1")
+            @RequestParam(required = false) Long productOfferType,
+
+            @Parameter(description = "ID sản phẩm", example = "456")
+            @RequestParam(required = false) Long productOfferId,
+
+            @Parameter(description = "ID chính sách giá", example = "7")
+            @RequestParam(required = false) Long pricePolicy) {
+        return StandardResponses.success(productOfferPriceService.getPriceInServices(
+                productPackageId, productPackageCode, productOfferType, productOfferId, pricePolicy));
+    }
 
 }

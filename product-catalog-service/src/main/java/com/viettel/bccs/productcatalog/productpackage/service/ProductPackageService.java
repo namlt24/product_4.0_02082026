@@ -341,4 +341,12 @@ public class ProductPackageService {
         }
         return saleServiceAdvanceDTO;
     }
+
+    @Cacheable(value = "productPackageCache", key = "'ACTIVE_PKG:' + #code")
+    public ProductPackageResponse getActiveProductPackageResponse(String code) {
+        return repository.findByCode(code)
+                .filter(e -> "1".equals(e.getStatus()))
+                .map(mapper::toResponse)
+                .orElse(null);
+    }
 }

@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface ProductPackageRepository extends JpaRepository<ProductPackageEntity, Long>, ProductPackageRepositoryCustom {
+    Optional<ProductPackageEntity> findByCode(String code);
 
     @Query(value = """
             SELECT pp.code

@@ -34,6 +34,13 @@ public class ProductOfferingService {
     private final ProductOfferCharUseService productOfferCharUseService;
     private final OptionSetValueService optionSetValueService;
 
+    @Cacheable(value = "productOfferingCache", key = "'ID:' + #productOfferingId")
+    public ProductOfferingDTO findById(Long productOfferingId) {
+        return productOfferingRepository.findById(productOfferingId)
+                .map(productOfferingMapper::toDto)
+                .orElse(null);
+    }
+
     public ProductOfferingResponse getByProductCode(String productCode) {
         return productOfferingRepository.findByCode(productCode)
                 .map(productOfferingMapper::toResponse)
@@ -280,4 +287,6 @@ public class ProductOfferingService {
                 .map(OptionSetValueResponse::value)
                 .toList();
     }
+
+
 }

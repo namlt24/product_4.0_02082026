@@ -119,12 +119,12 @@ bccs:
   response:
     defaults:
       success-code: SUCCESS
-      system-error-code: BCCS-SYS-TECH-0001
-      validation-error-code: BCCS-SYS-VAL-0001
-      unauthorized-error-code: BCCS-AUTH-SEC-0001
-      forbidden-error-code: BCCS-AUTH-SEC-0002
-      integration-error-code: BCCS-SYS-INT-0001
-      rate-limit-error-code: BCCS-SYS-RATE-0001
+      system-error-code: SYSTEM_ERROR
+      validation-error-code: VALIDATION_ERROR
+      unauthorized-error-code: UNAUTHORIZED
+      forbidden-error-code: FORBIDDEN
+      integration-error-code: INTEGRATION_ERROR
+      rate-limit-error-code: RATE_LIMIT_EXCEEDED
 
   message:
     formatter: message-format

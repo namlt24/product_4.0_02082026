@@ -37,7 +37,7 @@ public class ProductOfferingService {
     public ProductOfferingResponse getByProductCode(String productCode) {
         return productOfferingRepository.findByCode(productCode)
                 .map(productOfferingMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("CATALOG-PRODUCT-001", "Product not found with code: " + productCode));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0001", "Product not found with code: " + productCode));
     }
 
     @Cacheable(value = "productOfferingCache", key = "'OFFER_ALTER:' + #offerId + ':' + '' + #changeChannel + ':' + #checkStatus")
@@ -56,7 +56,7 @@ public class ProductOfferingService {
 
     public List<ProductOfferingDTO> findByPayTypeWithSpec(String telecomServiceId, String payType, String productOfferTypeId, List<FilterRequest> listProductSpec) {
         if (DataUtil.isAnyNull(payType, productOfferTypeId)) {
-            throw new BusinessException("CATALOG-PRODUCT-002", "payType and productOfferTypeId are required");
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0002", "payType and productOfferTypeId are required");
         }
         return productOfferingRepository.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId, listProductSpec).stream()
                 .map(productOfferingMapper::toDto)
@@ -91,7 +91,7 @@ public class ProductOfferingService {
 
     public boolean checkAttProductOrVasByCode(String productCode, String productType, String attributeCode) {
         if (DataUtil.isAnyNull(productCode, productType, attributeCode)) {
-            throw new BusinessException("CATALOG-PRODUCT-003", "productCode, productType and attributeCode are required");
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0003", "productCode, productType and attributeCode are required");
         }
         return productOfferingRepository.checkAttProductOrVasByCode(productCode, Long.valueOf(productType.trim()), attributeCode);
     }

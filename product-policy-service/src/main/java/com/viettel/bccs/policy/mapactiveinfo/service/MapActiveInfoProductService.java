@@ -95,21 +95,21 @@ public class MapActiveInfoProductService {
     private void validateRequest(RequestMbccs request) {
         DataUtil.trimValue(request);
 
-        validateMissingParam(request.getStaffCode(), "BCCS-POLICY-MAPACTIVE-006");
-        validateMissingParam(request.getPayType(), "BCCS-POLICY-MAPACTIVE-007");
-        validateMissingParam(request.getActionCode(), "BCCS-POLICY-MAPACTIVE-008");
-        validateMissingParam(request.getTelecomServiceId(), "BCCS-POLICY-MAPACTIVE-009");
+        validateMissingParam(request.getStaffCode(), "BCCS-POLICY-MAPACTIVE-0006");
+        validateMissingParam(request.getPayType(), "BCCS-POLICY-MAPACTIVE-0007");
+        validateMissingParam(request.getActionCode(), "BCCS-POLICY-MAPACTIVE-0008");
+        validateMissingParam(request.getTelecomServiceId(), "BCCS-POLICY-MAPACTIVE-0009");
 
-        RequiredRoleMap roleMap = validateMissingParam(request.getRoleMap(), "BCCS-POLICY-MAPACTIVE-010");
-        validateMissingParam(roleMap.getValues(), "BCCS-POLICY-MAPACTIVE-010");
+        RequiredRoleMap roleMap = validateMissingParam(request.getRoleMap(), "BCCS-POLICY-MAPACTIVE-0010");
+        validateMissingParam(roleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
         roleMap.setValues(roleMap.getValues().stream().map(String::trim).collect(Collectors.toList()));
         roleMap.getValues().removeIf(DataUtil::isNullOrEmpty);
-        validateMissingParam(roleMap.getValues(), "BCCS-POLICY-MAPACTIVE-010");
+        validateMissingParam(roleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
 
-        validateMaxLengthParam(request.getStaffCode(), 40, "BCCS-POLICY-MAPACTIVE-011");
-        validateMaxLengthParam(request.getPayType(), 1, "BCCS-POLICY-MAPACTIVE-012");
-        validateMaxLengthParam(request.getActionCode(), 10, "BCCS-POLICY-MAPACTIVE-013");
-        validateMaxLengthParam(String.valueOf(request.getTelecomServiceId()), 10, "BCCS-POLICY-MAPACTIVE-014");
+        validateMaxLengthParam(request.getStaffCode(), 40, "BCCS-POLICY-MAPACTIVE-0011");
+        validateMaxLengthParam(request.getPayType(), 1, "BCCS-POLICY-MAPACTIVE-0012");
+        validateMaxLengthParam(request.getActionCode(), 10, "BCCS-POLICY-MAPACTIVE-0013");
+        validateMaxLengthParam(String.valueOf(request.getTelecomServiceId()), 10, "BCCS-POLICY-MAPACTIVE-0014");
     }
 
     private List<ProductOfferingDTO> fetchOfferingsWithSpec(RequestMbccs request) {
@@ -247,7 +247,7 @@ public class MapActiveInfoProductService {
 
         StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffCode);
         if (DataUtil.isNullObject(staffResponse)) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
         }
         StaffDTO staffDTO = staffResponse.toDTO();
         if (!DataUtil.isNullOrEmpty(staffResponse.getShop())){
@@ -265,7 +265,7 @@ public class MapActiveInfoProductService {
             lstBusinessNo = lstBusinessNoNew;
             for (String businessNo : lstBusinessNo) {
                 if (businessNo.length() > 3500) {
-                    throw new BusinessException("BCCS-POLICY-MAPACTIVE-015");
+                    throw new BusinessException("BCCS-POLICY-MAPACTIVE-0015");
                 }
             }
         }
@@ -586,17 +586,17 @@ public class MapActiveInfoProductService {
                                                     String subType, String subGroup, String stationCodes, String technology, Date historyDate, String nodeCode, boolean isTgdd) {
 
         if (staffDTO == null) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-007", "Staff info is required");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0007", "Staff info is required");
         }
 
         StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
         if (DataUtil.isNullObject(staffResponse)) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
         }
 
         ShopResponse shop = staffResponse.getShop();
         if (shop == null) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006", "Shop info not found for staff: " + staffDTO.getStaffCode());
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006", "Shop info not found for staff: " + staffDTO.getStaffCode());
         }
 
         Long channelTypeId = mapActiveInfoQuerryService.getChanelTypeIdMapActiveInfo(staffDTO);

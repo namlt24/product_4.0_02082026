@@ -79,7 +79,9 @@ public class ProductPackageController {
             description = "Lấy thông tin dịch vụ bán theo mã lý do")
     @GetMapping("/getSaleServiceInfo")
     public StandardResponse<ProductPackageDTO> getSaleServiceInfo(
-            @Parameter(description = "Id lý do") @RequestParam Long reasonId) {
-        return StandardResponses.success(service.getSaleServiceInfo(reasonId));
+            @Parameter(description = "Id lý do") @RequestParam Long reasonId,
+            @Parameter(description = "Mã nhân viên - dùng để kiểm tra tồn kho theo cửa hàng khi loại mặt hàng yêu cầu checkShopStock")
+            @RequestParam(required = false) String staffCode) {
+        return StandardResponses.success(service.getSaleServiceInfo(reasonId, staffCode));
     }
 }

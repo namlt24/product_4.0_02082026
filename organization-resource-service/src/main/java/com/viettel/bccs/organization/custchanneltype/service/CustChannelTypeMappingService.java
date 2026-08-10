@@ -44,7 +44,7 @@ public class CustChannelTypeMappingService {
         log.info("Truy vấn mapping theo loại khách hàng {} và loại kênh {}", custType, channelTypeId);
         List<CustChannelTypeMappingEntity> results = mappingRepository.findByCustTypeAndChannelTypeIdAndStatus(custType, channelTypeId, Const.STATUS.ACTIVE);
         if (results.isEmpty()) {
-            throw new BusinessException("ORGANIZATION-CUST_CHANNEL_TYPE-002",
+            throw new BusinessException("BCCS-ORGANIZATION-CUSTCHANTYPE-0001",
                     "Không tìm thấy mapping cho loại khách hàng: " + custType + " và loại kênh: " + channelTypeId);
         }
         return mappingMapper.toDTO(results.get(0));

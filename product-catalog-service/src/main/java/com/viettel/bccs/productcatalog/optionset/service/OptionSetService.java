@@ -21,14 +21,14 @@ public class OptionSetService {
     public OptionSetResponse getByCode(String code) {
         return optionSetRepository.findByCode(code)
                 .map(optionSetMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("CATALOG-OPTION-001", "Option set not found with code: " + code));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-OPTION-0001", "Option set not found with code: " + code));
     }
 
     @Transactional(readOnly = true)
     public OptionSetResponse getById(Long id) {
         return optionSetRepository.findById(id)
                 .map(optionSetMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("CATALOG-OPTION-001", "Option set not found with id: " + id));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-OPTION-0001", "Option set not found with id: " + id));
     }
 
     @Transactional(readOnly = true)

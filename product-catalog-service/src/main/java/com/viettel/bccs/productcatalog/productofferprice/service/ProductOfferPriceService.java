@@ -37,7 +37,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class ProductOfferPriceService {
-    private static final String ERROR_CODE_EQUIPMENT_MORE_THAN_ONE = "PRICE-001";
+    private static final String ERROR_CODE_EQUIPMENT_MORE_THAN_ONE = "BCCS-CATALOG-PRICE-0001";
     private static final String OPTION_SET_ON_CAM = "ON_CAM_EQUIPMENT_PRICE";
     private static final String OPTION_VALUE_ON = "1";
     private static final String DEVICE_TYPE_INDOOR = "1";

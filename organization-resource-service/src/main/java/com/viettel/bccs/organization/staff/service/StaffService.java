@@ -57,7 +57,7 @@ public class StaffService {
         log.info("Truy vấn nhân viên active từ DB theo id: {}", staffId);
         return staffRepository.findByStaffIdAndStatus(staffId, Const.STATUS.ACTIVE)
                 .map(staffMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-STAFF-002", "Không tìm thấy nhân viên với id: " + staffId));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-STAFF-0001", "Không tìm thấy nhân viên với id: " + staffId));
     }
 
     @Cacheable(value = "staffCache", key = "'STAFF:' + #staffCode")
@@ -66,7 +66,7 @@ public class StaffService {
         log.info("Truy vấn nhân viên active từ DB theo mã: {}", staffCode);
         return staffRepository.findByStaffCodeAndStatus(staffCode, Const.STATUS.ACTIVE)
                 .map(staffMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-STAFF-002", "Không tìm thấy nhân viên với mã: " + staffCode));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-STAFF-0002", "Không tìm thấy nhân viên với mã: " + staffCode));
     }
 
     @Cacheable(value = "staffShopFullInfo", key = "'STAFF_SHOP_FULL:' + #staffCode")
@@ -75,7 +75,7 @@ public class StaffService {
         log.info("Truy vấn nhân viên và shop active từ DB theo mã: {}", staffCode);
 
         StaffEntity entity = staffRepository.findByStaffCodeAndStatus(staffCode, Const.STATUS.ACTIVE)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-STAFF-002", "Không tìm thấy nhân viên với mã: " + staffCode));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-STAFF-0002", "Không tìm thấy nhân viên với mã: " + staffCode));
         StaffDTO dto = staffMapper.toDTO(entity);
 
         ShopResponse shopResponse = null;

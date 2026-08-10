@@ -32,7 +32,7 @@ public class DiscountPromotionService {
     public DiscountPromotionResponse findById(Long id) {
         Optional<DiscountPromotionEntity> entity = repository.findById(id);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-001", "Discount promotion not found with id: " + id);
+            throw new BusinessException("BCCS-POLICY-DISCPROMO-0001", "Discount promotion not found with id: " + id);
         }
         return mapper.toResponse(entity.get());
     }

@@ -25,7 +25,7 @@ public class ChannelTypeService {
         log.info("Truy vấn loại kênh active từ DB theo id: {}", channelTypeId);
         return channelTypeRepository.findByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
                 .map(channelTypeMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-CHANNEL_TYPE-002", "Không tìm thấy loại kênh với id: " + channelTypeId));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CHANNELTYPE-0001", "Không tìm thấy loại kênh với id: " + channelTypeId));
     }
 
 }

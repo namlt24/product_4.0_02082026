@@ -48,7 +48,7 @@ public class MapActiveInfoValidateController {
                 if (item != null) {
                     String trimmed = item.trim();
                     if (trimmed.length() > 3500) {
-                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-015");
+                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-0015");
                     }
                     trimmedBusinessNo.add(trimmed);
                 }

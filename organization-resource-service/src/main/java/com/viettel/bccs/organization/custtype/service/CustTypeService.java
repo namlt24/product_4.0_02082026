@@ -27,7 +27,7 @@ public class CustTypeService {
         log.info("Truy vấn loại khách hàng từ DB theo mã: {}", custType);
         return custTypeRepository.findByCustTypeAndStatus(custType, Const.STATUS.ACTIVE)
                 .map(custTypeMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-CUST_TYPE-002", "Không tìm thấy loại khách hàng với mã: " + custType));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CUSTTYPE-0001", "Không tìm thấy loại khách hàng với mã: " + custType));
     }
 
     @Transactional(readOnly = true)

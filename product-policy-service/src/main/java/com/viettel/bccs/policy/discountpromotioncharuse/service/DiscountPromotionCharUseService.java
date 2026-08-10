@@ -22,7 +22,7 @@ public class DiscountPromotionCharUseService {
     public DiscountPromotionCharUseResponse findById(Long id) {
         Optional<DiscountPromotionCharUseEntity> entity = repository.findById(id);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-001", "Discount promotion char use not found with id: " + id);
+            throw new BusinessException("BCCS-POLICY-DISCPROMO-0002", "Discount promotion char use not found with id: " + id);
         }
         return mapper.toResponse(entity.get());
     }

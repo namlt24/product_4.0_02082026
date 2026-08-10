@@ -71,8 +71,8 @@
     "retryable": true,
     "logLevel": "WARN"
   },
-  "ORGANIZATION-SHOP-002": {
-    "code": "ORGANIZATION-SHOP-002",
+  "BCCS-ORGANIZATION-SHOP-0001": {
+    "code": "BCCS-ORGANIZATION-SHOP-0001",
     "message": "Không tìm thấy cửa hàng với id: {0}",
     "httpStatus": 404,
     "category": "BUSINESS",
@@ -80,8 +80,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "ORGANIZATION-SHOP-002_CODE": {
-    "code": "ORGANIZATION-SHOP-002_CODE",
+  "BCCS-ORGANIZATION-SHOP-0002": {
+    "code": "BCCS-ORGANIZATION-SHOP-0002",
     "message": "Không tìm thấy cửa hàng với mã: {0}",
     "httpStatus": 404,
     "category": "BUSINESS",
@@ -89,8 +89,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "ORGANIZATION-SHOP-003": {
-    "code": "ORGANIZATION-SHOP-003",
+  "BCCS-ORGANIZATION-SHOP-0003": {
+    "code": "BCCS-ORGANIZATION-SHOP-0003",
     "message": "Loại chủ sở hữu không hợp lệ: {0}",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -98,8 +98,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "ORGANIZATION-STAFF-002": {
-    "code": "ORGANIZATION-STAFF-002",
+  "BCCS-ORGANIZATION-STAFF-0001": {
+    "code": "BCCS-ORGANIZATION-STAFF-0001",
     "message": "Không tìm thấy nhân viên với id: {0}",
     "httpStatus": 404,
     "category": "BUSINESS",
@@ -107,8 +107,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "ORGANIZATION-STAFF-002_CODE": {
-    "code": "ORGANIZATION-STAFF-002_CODE",
+  "BCCS-ORGANIZATION-STAFF-0002": {
+    "code": "BCCS-ORGANIZATION-STAFF-0002",
     "message": "Không tìm thấy nhân viên với mã: {0}",
     "httpStatus": 404,
     "category": "BUSINESS",

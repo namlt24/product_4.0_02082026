@@ -106,7 +106,7 @@ public class MapActiveInfoValidateService {
         List<DiscountPromotionDTO> lstPromotions;
         if (regReasonId == null) {
             log.info("regReasonId=null");
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-016");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0016");
         }
         boolean isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, telServiceId);
 
@@ -192,12 +192,12 @@ public class MapActiveInfoValidateService {
 
                     } else {
                         if (!errMsgNonMapField.toString().isEmpty()) {
-                            throw new BusinessException("BCCS-POLICY-MAPACTIVE-005");
+                            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0005");
                         }
                         ProductOfferingDTO productOfferingDTO = mapProductOfferingById.get(offerId);
                         String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : String.valueOf(offerId);
-                        String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-002", offerCodeForMsg);
-                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-002", textParam);
+                        String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-0002", offerCodeForMsg);
+                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-0002", textParam);
                     }
                     if (mapActiveInfo != null) {
                         validateMapActiveInfoCommon(actionCode,
@@ -208,7 +208,7 @@ public class MapActiveInfoValidateService {
                 }
             } else {
                 log.info("offerId=null");
-                throw new BusinessException("BCCS-POLICY-MAPACTIVE-017");
+                throw new BusinessException("BCCS-POLICY-MAPACTIVE-0017");
             }
         }
         return mapActiveInfoDTOs;
@@ -348,8 +348,8 @@ public class MapActiveInfoValidateService {
                 || (!DataUtil.safeEqual(lstBusinessNo.get(0), Const.DEFAULT_VALUE_MAP_SELECT_ALL))))) {
             if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(), Const.STATUS.ACTIVE)) {
                 String businessNos = String.join(" , ", lstBusinessNo);
-                String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-001", businessNos);
-                throw new BusinessException("BCCS-POLICY-MAPACTIVE-001", textParam);
+                String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-0001", businessNos);
+                throw new BusinessException("BCCS-POLICY-MAPACTIVE-0001", textParam);
             }
         }
 
@@ -412,10 +412,10 @@ public class MapActiveInfoValidateService {
                 String textParam;
                 String errorCodeForVas;
                 if (!DataUtil.isNullOrEmpty(promotionCode) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
-                    errorCodeForVas = "BCCS-POLICY-MAPACTIVE-003";
+                    errorCodeForVas = "BCCS-POLICY-MAPACTIVE-0003";
                     textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, promotionCode, offerCodeForMsg);
                 } else {
-                    errorCodeForVas = "BCCS-POLICY-MAPACTIVE-004";
+                    errorCodeForVas = "BCCS-POLICY-MAPACTIVE-0004";
                     textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, offerCodeForMsg);
                 }
                 throw new BusinessException(errorCodeForVas, textParam);
@@ -438,12 +438,12 @@ public class MapActiveInfoValidateService {
                 promotionCode);
 
         if (lstReason == null || lstReason.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-018");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0018");
         }
         boolean wrongReason = lstReason.stream()
                 .noneMatch(r -> Objects.equals(regReasonId, r.getReasonId()));
         if (wrongReason) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-018");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0018");
         }
 
         boolean isActiveCD = !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
@@ -466,7 +466,7 @@ public class MapActiveInfoValidateService {
         }
 
         if (wrongPromotions) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-019");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0019");
         }
     }
 
@@ -698,7 +698,7 @@ public class MapActiveInfoValidateService {
                 }
                 subMapActiveInfos = tempList;
                 if (tempList.isEmpty() && Const.MAP_ACTIVE_INFO.STATION_CODES.equals(nonMapField)) {
-                    errMsg.append(messageUtil.getText("BCCS-POLICY-MAPACTIVE-005"));
+                    errMsg.append(messageUtil.getText("BCCS-POLICY-MAPACTIVE-0005"));
                     break;
                 }
 

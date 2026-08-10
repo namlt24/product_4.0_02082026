@@ -255,7 +255,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                 } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                     String datePattern = "dd/MM/yyyy";
                                     if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                        throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                        throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                     } else {
                                         if (filterRequest.isValueInRange()) {
                                             sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +
@@ -279,7 +279,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                 } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                     String datePattern = "dd/MM/yyyy";
                                     if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                        throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                        throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                     } else {
                                         if (filterRequest.isValueInRange()) {
                                             sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +
@@ -331,7 +331,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                         String datePattern = "dd/MM/yyyy";
                                         if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                            throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                            throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                         } else {
                                             if (filterRequest.isValueInRange()) {
                                                 sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "')))) " +
@@ -352,7 +352,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                         String datePattern = "dd/MM/yyyy";
                                         if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                            throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                            throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                         } else {
                                             if (filterRequest.isValueInRange()) {
                                                 sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +
@@ -372,7 +372,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                         String datePattern = "dd/MM/yyyy";
                                         if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                            throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                            throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                         } else {
                                             if (filterRequest.isValueInRange()) {
                                                 sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +
@@ -423,7 +423,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                         String datePattern = "dd/MM/yyyy";
                                         if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                            throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                            throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                         } else {
                                             if (filterRequest.isValueInRange()) {
                                                 sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +
@@ -447,7 +447,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                         String datePattern = "dd/MM/yyyy";
                                         if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                            throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                            throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                         } else {
                                             if (filterRequest.isValueInRange()) {
                                                 sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +
@@ -471,7 +471,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     } else if(DataUtil.safeEqual(DataUtil.toUpper(filterRequest.getValueType()), "DATE")) {
                                         String datePattern = "dd/MM/yyyy";
                                         if (!DateUtil.isValidDateFormat(DataUtil.safeToString(filterRequest.getValueText()), "dd/MM/yyyy")) {
-                                            throw new BusinessException("BCCS-POLICY-009", "product.lb.productoffer.validateDate");
+                                            throw new BusinessException("BCCS-POLICY-REASON-0002", "product.lb.productoffer.validateDate");
                                         } else {
                                             if (filterRequest.isValueInRange()) {
                                                 sqlQuery += " AND (d.VALUE_FROM is null or TRUNC(TO_DATE(d.VALUE_FROM, '" + datePattern + "')) <= TRUNC(TO_DATE(:p_value_" + filterRequest.getProperty() + ", '" + datePattern + "'))) " +

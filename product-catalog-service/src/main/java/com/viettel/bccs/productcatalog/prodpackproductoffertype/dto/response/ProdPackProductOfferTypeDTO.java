@@ -77,6 +77,12 @@ public class ProdPackProductOfferTypeDTO implements Serializable {
     @Schema(description = "Tên loại mặt hàng")
     private String productOfferTypeName;
 
+    @Schema(description = "ID cửa hàng của nhân viên (chỉ set khi checkShopStock=\"1\" và có truyền staffCode)")
+    private Long shopId;
+
+    @Schema(description = "Mã cửa hàng của nhân viên (chỉ set khi checkShopStock=\"1\" và có truyền staffCode)")
+    private String shopCode;
+
     @Schema(description = "Danh sách kho chức năng")
     private List<ShopDTO> specShopList;
 

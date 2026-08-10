@@ -37,7 +37,7 @@ public class ShopService {
         log.info("Truy vấn cửa hàng active từ DB theo id: {}", shopId);
         return shopRepository.findByShopIdAndStatus(shopId, Const.STATUS.ACTIVE)
                 .map(shopMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-SHOP-002", "Không tìm thấy cửa hàng với id: " + shopId));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0001", "Không tìm thấy cửa hàng với id: " + shopId));
     }
 
     @Cacheable(value = "shopCache", key = "'SHOP:' + #shopCode")
@@ -46,7 +46,7 @@ public class ShopService {
         log.info("Truy vấn cửa hàng active từ DB theo mã: {}", shopCode);
         return shopRepository.findByShopCodeAndStatus(shopCode, Const.STATUS.ACTIVE)
                 .map(shopMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("ORGANIZATION-SHOP-002", "Không tìm thấy cửa hàng với mã: " + shopCode));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0002", "Không tìm thấy cửa hàng với mã: " + shopCode));
     }
 
 
@@ -60,7 +60,7 @@ public class ShopService {
             StaffDTO staffDTO = staffService.getActiveById(ownerId);
             return new StockCodeResponse(staffDTO.getStaffCode());
         }
-        throw new BusinessException("ORGANIZATION-SHOP-003", "Loại owner không hợp lệ: " + ownerType);
+        throw new BusinessException("BCCS-ORGANIZATION-SHOP-0003", "Loại owner không hợp lệ: " + ownerType);
     }
 
     @Cacheable(value = "shopCache", key = "'ACTIVE_BATCH:' + T(String).join(',', #shopIds.stream().sorted().toList())")

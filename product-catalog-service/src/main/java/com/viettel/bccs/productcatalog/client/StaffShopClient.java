@@ -1,6 +1,7 @@
 package com.viettel.bccs.productcatalog.client;
 
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
+import com.viettel.bccs.productcatalog.client.dto.StaffShopResponse;
 
 import java.util.List;
 
@@ -14,4 +15,13 @@ public interface StaffShopClient {
      * @return danh sách ShopDTO active
      */
     List<ShopDTO> findActiveByShopIds(List<Long> shopIds);
+
+    /**
+     * Tìm thông tin nhân viên kèm cửa hàng theo mã nhân viên.
+     * Gọi sang organization-resource-service để lấy thông tin nhân viên + shop.
+     *
+     * @param staffCode mã nhân viên
+     * @return StaffShopResponse, hoặc null nếu không tìm thấy/lỗi gọi
+     */
+    StaffShopResponse getStaffShopFullInfo(String staffCode);
 }

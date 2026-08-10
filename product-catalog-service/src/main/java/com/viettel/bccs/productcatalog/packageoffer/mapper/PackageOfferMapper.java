@@ -30,6 +30,12 @@ public class PackageOfferMapper {
                 .expireDatetime(entity.getExpireDatetime())
                 .showOrHide(entity.getShowOrHide())
                 .sapMaterialNumber(entity.getSapMaterialNumber())
+                .offerCode(entity.getOfferCode())
+                .offerName(entity.getOfferName())
+                .price(entity.getPrice())
+                .vat(entity.getVat())
+                .accountingModelCode(entity.getAccountingModelCode())
+                .accountingModelName(entity.getAccountingModelName())
                 .build();
     }
 }

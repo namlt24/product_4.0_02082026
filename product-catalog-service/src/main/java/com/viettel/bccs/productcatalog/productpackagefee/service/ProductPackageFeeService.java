@@ -25,7 +25,7 @@ public class ProductPackageFeeService {
     public ProductPackageFeeResponse findById(Long id) {
         Optional<ProductPackageFeeEntity> entity = repository.findById(id);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-CATALOG-002", "Product package fee not found with id: " + id);
+            throw new BusinessException("BCCS-CATALOG-PACKAGEFEE-0001", "Product package fee not found with id: " + id);
         }
         return mapper.toResponse(entity.get());
     }

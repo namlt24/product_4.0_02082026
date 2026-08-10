@@ -71,8 +71,8 @@
     "retryable": true,
     "logLevel": "WARN"
   },
-  "CATALOG-SPEC-CHAR-VAL-001": {
-    "code": "CATALOG-SPEC-CHAR-VAL-001",
+  "BCCS-CATALOG-SPECCHARVAL-0001": {
+    "code": "BCCS-CATALOG-SPECCHARVAL-0001",
     "message": "Product spec char value not found",
     "httpStatus": 404,
     "category": "BUSINESS",
@@ -80,8 +80,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "CATALOG-OFFER-REL-001": {
-    "code": "CATALOG-OFFER-REL-001",
+  "BCCS-CATALOG-OFFERREL-0001": {
+    "code": "BCCS-CATALOG-OFFERREL-0001",
     "message": "Product offer relation not found",
     "httpStatus": 404,
     "category": "BUSINESS",
@@ -89,8 +89,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "CATALOG-OFFER-REL-DET-001": {
-    "code": "CATALOG-OFFER-REL-DET-001",
+  "BCCS-CATALOG-OFFERRELDET-0001": {
+    "code": "BCCS-CATALOG-OFFERRELDET-0001",
     "message": "Product offer relation detail not found",
     "httpStatus": 404,
     "category": "BUSINESS",
@@ -98,8 +98,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "CATALOG-PRODUCT-002": {
-    "code": "CATALOG-PRODUCT-002",
+  "BCCS-CATALOG-PRODUCT-0002": {
+    "code": "BCCS-CATALOG-PRODUCT-0002",
     "message": "payType and productOfferTypeId are required",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -107,8 +107,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "CATALOG-PRODUCT-003": {
-    "code": "CATALOG-PRODUCT-003",
+  "BCCS-CATALOG-PRODUCT-0003": {
+    "code": "BCCS-CATALOG-PRODUCT-0003",
     "message": "productCode, productType and attributeCode are required",
     "httpStatus": 400,
     "category": "BUSINESS",

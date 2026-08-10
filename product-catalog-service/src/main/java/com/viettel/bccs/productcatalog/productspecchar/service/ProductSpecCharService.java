@@ -22,14 +22,14 @@ public class ProductSpecCharService {
     public ProductSpecCharResponse getByCode(String code) {
         return productSpecCharRepository.findByCode(code)
                 .map(productSpecCharMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("CATALOG-CHAR-001", "Product spec char not found with code: " + code));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001", "Product spec char not found with code: " + code));
     }
 
     @Transactional(readOnly = true)
     public ProductSpecCharResponse getById(Long id) {
         return productSpecCharRepository.findById(id)
                 .map(productSpecCharMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("CATALOG-CHAR-001", "Product spec char not found with id: " + id));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001", "Product spec char not found with id: " + id));
     }
 
     @Transactional(readOnly = true)

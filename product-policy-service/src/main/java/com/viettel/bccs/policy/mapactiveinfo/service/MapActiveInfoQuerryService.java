@@ -67,7 +67,7 @@ public class MapActiveInfoQuerryService {
     public MapActiveInfoResponse findById(Long id) {
         Optional<MapActiveInfoEntity> entity = repository.findById(id);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-001", "Map active info not found with id: " + id);
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0020", "Map active info not found with id: " + id);
         }
         return mapper.toResponse(entity.get());
     }
@@ -509,7 +509,7 @@ public class MapActiveInfoQuerryService {
             lstBusinessNo = lstBusinessNo.stream().map(x -> x.trim()).collect(Collectors.toList());
             for (String businessNo : lstBusinessNo) {
                 if (businessNo.length() > 3500) {
-                    throw new BusinessException("");
+                    throw new BusinessException("BCCS-POLICY-MAPACTIVE-0015", "Tham số businessNo vượt quá độ dài cho phép (3500 ký tự)");
                 }
             }
         }
@@ -636,7 +636,7 @@ public class MapActiveInfoQuerryService {
         // shop trước khi gọi tới đây -> không cần gọi lại staffShopClient (tránh 1 lần
         // cross-service call thừa cho mỗi request).
         if (DataUtil.isNullObject(staffDTO)) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
         }
 
         Long channelTypeId = getChanelTypeIdMapActiveInfo(staffDTO);

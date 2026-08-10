@@ -4,6 +4,7 @@ import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.client.MappingClient;
 import com.viettel.bccs.productcatalog.client.StaffShopClient;
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
+import com.viettel.bccs.productcatalog.client.dto.StaffShopResponse;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOfferTypeDTO;
@@ -21,9 +22,9 @@ import com.viettel.bccs.productcatalog.prodpackshop.service.ProdPackShopService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProductPackageService {
 
@@ -46,6 +46,30 @@ public class ProductPackageService {
     private final PackageOfferService packageOfferService;
     private final OptionSetValueService optionSetValueService;
     private final MappingClient mappingClient;
+    // Self-inject qua proxy: findSaleServiceCodeByReasonCached được gọi nội bộ từ getSaleServiceInfo(Long)
+    // trong cùng class -> nếu gọi qua "this" (self-invocation) sẽ bỏ qua Spring AOP proxy, khiến
+    // @Cacheable ở method đó vô tác dụng. @Lazy để tránh vòng lặp khởi tạo bean khi tự inject chính nó.
+    private final ProductPackageService self;
+
+    public ProductPackageService(ProductPackageRepository repository, ProductPackageMapper mapper,
+                                  ProductPackageFeeService productPackageFeeService,
+                                  ProdPackProductOfferTypeService prodPackProductOfferTypeService,
+                                  ProdPackShopService prodPackShopService, StaffShopClient staffShopClient,
+                                  ProductOfferTypeService productOfferTypeService, PackageOfferService packageOfferService,
+                                  OptionSetValueService optionSetValueService, MappingClient mappingClient,
+                                  @Lazy ProductPackageService self) {
+        this.repository = repository;
+        this.mapper = mapper;
+        this.productPackageFeeService = productPackageFeeService;
+        this.prodPackProductOfferTypeService = prodPackProductOfferTypeService;
+        this.prodPackShopService = prodPackShopService;
+        this.staffShopClient = staffShopClient;
+        this.productOfferTypeService = productOfferTypeService;
+        this.packageOfferService = packageOfferService;
+        this.optionSetValueService = optionSetValueService;
+        this.mappingClient = mappingClient;
+        this.self = self;
+    }
 
 
     public List<String> findPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer pNumber) {
@@ -124,19 +148,24 @@ public class ProductPackageService {
         return mappingClient.findSaleServiceCodeByReason(reasonId);
     }
 
-    public ProductPackageDTO getSaleServiceInfo(Long reasonId) {
-        List<String> saleServiceCode = findSaleServiceCodeByReasonCached(reasonId);
-        if (DataUtil.isNullOrEmpty(saleServiceCode)) {
-            throw new BusinessException(ErrorCode.ERROR_USER.ERROR_USER_REQUIRE, "product.not.exists.reason.mapping.dvbh");
+    public ProductPackageDTO getSaleServiceInfo(Long reasonId, String staffCode) {
+        List<String> saleServiceCode = self.findSaleServiceCodeByReasonCached(reasonId);
+
+        String firstValidCode = DataUtil.isNullOrEmpty(saleServiceCode) ? null : saleServiceCode.stream()
+                .filter(code -> !DataUtil.isNullOrEmpty(code))
+                .findFirst()
+                .orElse(null);
+        if (DataUtil.isNullOrEmpty(firstValidCode)) {
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0001", "Sale service mapping not found for reason id: " + reasonId);
         }
-        return getSaleServiceInfo(saleServiceCode.get(0));
+        return getSaleServiceInfo(firstValidCode, staffCode);
     }
 
-    public ProductPackageDTO getSaleServiceInfo(String saleServiceCode) {
+    public ProductPackageDTO getSaleServiceInfo(String saleServiceCode, String staffCode) {
 
         List<ProductPackageDTO> productPackageDTOs = repository.getProductPackageExtra(saleServiceCode, Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE, false, true, true);
         if (DataUtil.isNullOrEmpty(productPackageDTOs)) {
-            throw new BusinessException(ErrorCode.ERROR_STANDARD.ERROR_VALIDATE_INPUT, "product.package.saleService.notExist");
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0002", "Product package not found for sale service code: " + saleServiceCode);
         }
 
         List<Long> offerTypeIds = optionSetValueService.findByOptionSetCode("MAT_HANG_SO").stream()
@@ -155,10 +184,8 @@ public class ProductPackageService {
             return productPackageDTOs.get(0);
         }
 
-        List<ProdPackProductOfferTypeDTO> productOfferTypeDTOList = prodPackProductOfferTypeService.getByProductPackageIdAndStatus(
-                productPackageDTOs.get(0).getProductPackageId(), Const.STATUS.ACTIVE);
 
-        List<Long> prodPackTypeIds = productOfferTypeDTOList.stream().map(x -> x.getProdPackTypeId()).collect(Collectors.toUnmodifiableList());
+        List<Long> prodPackTypeIds = prodPackTypeList.stream().map(ProdPackProductOfferTypeDTO::getProdPackTypeId).collect(Collectors.toUnmodifiableList());
         Map<Long, List<Long>> prodPackTypeIdToShopIds = prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
 
         log.debug("Found {} prodPackTypeIds mapping to shops", prodPackTypeIdToShopIds.size());
@@ -179,31 +206,37 @@ public class ProductPackageService {
                     .toList();
             prodPackTypeIdToShopObject.put(entry.getKey(), shopList);
         }
-        if (!DataUtil.isNullOrEmpty(productOfferTypeDTOList)) {
-            // Batch-select ProductOfferType
-            List<Long> productOfferTypeIds = productOfferTypeDTOList.stream()
-                    .map(ProdPackProductOfferTypeDTO::getProductOfferTypeId)
-                    .collect(Collectors.toUnmodifiableList());
-            Map<Long, ProductOfferTypeDTO> productOfferTypeMap = productOfferTypeService.findByIds(productOfferTypeIds);
 
-            // Batch-select PackageOffer
-            Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer = packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
+        // Batch-select ProductOfferType
+        List<Long> productOfferTypeIds = prodPackTypeList.stream()
+                .map(ProdPackProductOfferTypeDTO::getProductOfferTypeId)
+                .collect(Collectors.toUnmodifiableList());
+        Map<Long, ProductOfferTypeDTO> productOfferTypeMap = productOfferTypeService.findByIds(productOfferTypeIds);
 
-            List<SaleServiceModelAdvanceDTO> listSaleServiceModel = new ArrayList<>();
+        // Batch-select PackageOffer
+        Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer = packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
 
-            for (ProdPackProductOfferTypeDTO offerTypeDTO : productOfferTypeDTOList) {
-                offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject.getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
+        for (ProdPackProductOfferTypeDTO offerTypeDTO : prodPackTypeList) {
+            offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject.getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
 
-                ProductOfferTypeDTO productOfferTypeDTO = productOfferTypeMap.get(offerTypeDTO.getProductOfferTypeId());
-                if (!DataUtil.isNullObject(productOfferTypeDTO)) {
-                    offerTypeDTO.setProductOfferTypeName(productOfferTypeDTO.getName());
+            ProductOfferTypeDTO productOfferTypeDTO = productOfferTypeMap.get(offerTypeDTO.getProductOfferTypeId());
+            if (!DataUtil.isNullObject(productOfferTypeDTO)) {
+                offerTypeDTO.setProductOfferTypeName(productOfferTypeDTO.getName());
+            }
+
+            // Set package offers from batch lookup
+            List<PackageOfferDTO> packageOfferDTOList = prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
+            if (!DataUtil.isNullOrEmpty(packageOfferDTOList)) {
+                offerTypeDTO.setPackageOfferDTOs(packageOfferDTOList);
+            }
+
+            if (!DataUtil.isNullOrEmpty(staffCode) && DataUtil.safeEqual(offerTypeDTO.getCheckShopStock(), "1")) {
+                StaffShopResponse staffShop = staffShopClient.getStaffShopFullInfo(staffCode);
+                if (DataUtil.isNullObject(staffShop) || DataUtil.isNullObject(staffShop.getShop())) {
+                    throw new BusinessException("BCCS-CATALOG-PACKAGE-0003", "Staff not found: " + staffCode);
                 }
-
-                // Set package offers from batch lookup
-                List<PackageOfferDTO> packageOfferDTOList = prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
-                if (!DataUtil.isNullOrEmpty(packageOfferDTOList)) {
-                    offerTypeDTO.setPackageOfferDTOs(packageOfferDTOList);
-                }
+                offerTypeDTO.setShopId(staffShop.getShop().getShopId());
+                offerTypeDTO.setShopCode(staffShop.getShop().getShopCode());
             }
         }
 

@@ -28,7 +28,7 @@ public class ReasonPauseService {
     public ReasonPauseDTO findById(Long id) {
         Optional<ReasonPauseEntity> entity = repository.findById(id);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-001", "Reason pause not found with id: " + id);
+            throw new BusinessException("BCCS-POLICY-REASONPAUSE-0001", "Reason pause not found with id: " + id);
         }
         return mapper.toDTO(entity.get());
     }

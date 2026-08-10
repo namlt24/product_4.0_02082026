@@ -27,7 +27,7 @@ public class MapBusinessSkipDebtService {
     public MapBusinessSkipDebtResponse findById(Long mapId) {
         Optional<MapBusinessSkipDebtEntity> entity = repository.findById(mapId);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-001", "Map business skip debt not found with id: " + mapId);
+            throw new BusinessException("BCCS-POLICY-SKIPDEBT-0001", "Map business skip debt not found with id: " + mapId);
         }
         return mapper.toResponse(entity.get());
     }

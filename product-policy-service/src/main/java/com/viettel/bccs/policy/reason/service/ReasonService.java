@@ -73,7 +73,7 @@ public class ReasonService {
     public ReasonResponse findById(Long id) {
         Optional<ReasonEntity> entity = repository.findById(id);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-001", "Reason not found with id: " + id);
+            throw new BusinessException("BCCS-POLICY-REASON-0001", "Reason not found with id: " + id);
         }
         return mapper.toResponse(entity.get());
     }
@@ -180,7 +180,7 @@ public class ReasonService {
     public List<ReasonDTO> getReasonFull(String staffCode, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, List<String> lstBusinessNo) {
         StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffCode);
         if (DataUtil.isNullObject(staffResponse)) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-006");
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
         }
         StaffDTO staffDTO = staffResponse.toDTO();
         if (!DataUtil.isNullOrEmpty(staffResponse.getShop())) {
@@ -263,7 +263,7 @@ public class ReasonService {
 
     public boolean checkAttReason(Long reasonId, String attributeCode) {
         if (DataUtil.isAnyNull(reasonId, attributeCode)) {
-            throw new BusinessException("BCCS-POLICY-010", "reasonId and attributeCode are required");
+            throw new BusinessException("BCCS-POLICY-REASON-0003", "reasonId and attributeCode are required");
         }
         List<ReasonCharUseDTO> charUses = reasonCharUseMapper.toDTO(
                 reasonCharUseRepository.findByReasonIdInAndStatus(List.of(reasonId), Const.STATUS.ACTIVE));

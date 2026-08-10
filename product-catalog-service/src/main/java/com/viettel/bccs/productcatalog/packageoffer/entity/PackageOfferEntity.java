@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.packageoffer.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -68,4 +69,26 @@ public class PackageOfferEntity {
 
     @Column(name = "SAP_MATERIAL_NUMBER", precision = 10)
     private Long sapMaterialNumber;
+
+    // Các field dưới đây KHÔNG phải cột của bảng PACKAGE_OFFER -- được join thêm từ PRODUCT_OFFER_PRICE
+    // + PRODUCT_OFFERING trong PackageOfferRepositoryCustomImpl (native query + Tuple thủ công, không
+    // phải entityManager.find), nên gán @Column ở đây không có tác dụng persist/load tự động, chỉ dùng
+    // làm carrier để mapper chuyển sang PackageOfferDTO.
+    @Transient
+    private String offerCode;
+
+    @Transient
+    private String offerName;
+
+    @Transient
+    private BigDecimal price;
+
+    @Transient
+    private BigDecimal vat;
+
+    @Transient
+    private String accountingModelCode;
+
+    @Transient
+    private String accountingModelName;
 }

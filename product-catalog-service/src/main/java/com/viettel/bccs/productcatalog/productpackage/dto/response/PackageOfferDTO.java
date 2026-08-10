@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Schema(description = "Thông tin gói sản phẩm trong offer")
@@ -65,4 +66,22 @@ public class PackageOfferDTO implements Serializable {
     private String showOrHide;
 
     private Long sapMaterialNumber;
+
+    @Schema(description = "Mã sản phẩm (product_offering.code)")
+    private String offerCode;
+
+    @Schema(description = "Tên sản phẩm (product_offering.name)")
+    private String offerName;
+
+    @Schema(description = "Giá (product_offer_price.price)")
+    private BigDecimal price;
+
+    @Schema(description = "VAT (product_offer_price.vat)")
+    private BigDecimal vat;
+
+    @Schema(description = "Mã mô hình hạch toán (product_offering.accounting_model_code)")
+    private String accountingModelCode;
+
+    @Schema(description = "Tên mô hình hạch toán (product_offering.accounting_model_name)")
+    private String accountingModelName;
 }

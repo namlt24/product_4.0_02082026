@@ -71,8 +71,8 @@
     "retryable": true,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-001": {
-    "code": "BCCS-POLICY-MAPACTIVE-001",
+  "BCCS-POLICY-MAPACTIVE-0001": {
+    "code": "BCCS-POLICY-MAPACTIVE-0001",
     "message": "Gói cước/Hình thức hòa mạng không được khai báo đấu nối với số giấy tờ {0} đang thực hiện",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -80,8 +80,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-002": {
-    "code": "BCCS-POLICY-MAPACTIVE-002",
+  "BCCS-POLICY-MAPACTIVE-0002": {
+    "code": "BCCS-POLICY-MAPACTIVE-0002",
     "message": "Không tìm thấy thông tin kích hoạt cho offer: {0}",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -89,8 +89,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-003": {
-    "code": "BCCS-POLICY-MAPACTIVE-003",
+  "BCCS-POLICY-MAPACTIVE-0003": {
+    "code": "BCCS-POLICY-MAPACTIVE-0003",
     "message": "Không tìm thấy thông tin kích hoạt cho khu vực {0}, lý do {1}, mã khuyến mãi {2}, sản phẩm {3}",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -98,8 +98,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-004": {
-    "code": "BCCS-POLICY-MAPACTIVE-004",
+  "BCCS-POLICY-MAPACTIVE-0004": {
+    "code": "BCCS-POLICY-MAPACTIVE-0004",
     "message": "Không tìm thấy thông tin kích hoạt cho khu vực {0}, lý do {1}, sản phẩm {2}",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -107,8 +107,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-005": {
-    "code": "BCCS-POLICY-MAPACTIVE-005",
+  "BCCS-POLICY-MAPACTIVE-0005": {
+    "code": "BCCS-POLICY-MAPACTIVE-0005",
     "message": "Không tìm thấy thông tin kích hoạt cho mã trạm",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -116,8 +116,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-006": {
-    "code": "BCCS-POLICY-MAPACTIVE-006",
+  "BCCS-POLICY-MAPACTIVE-0006": {
+    "code": "BCCS-POLICY-MAPACTIVE-0006",
     "message": "Tham số staffCode không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -125,8 +125,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-007": {
-    "code": "BCCS-POLICY-MAPACTIVE-007",
+  "BCCS-POLICY-MAPACTIVE-0007": {
+    "code": "BCCS-POLICY-MAPACTIVE-0007",
     "message": "Tham số payType không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -134,8 +134,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-008": {
-    "code": "BCCS-POLICY-MAPACTIVE-008",
+  "BCCS-POLICY-MAPACTIVE-0008": {
+    "code": "BCCS-POLICY-MAPACTIVE-0008",
     "message": "Tham số actionCode không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -143,8 +143,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-009": {
-    "code": "BCCS-POLICY-MAPACTIVE-009",
+  "BCCS-POLICY-MAPACTIVE-0009": {
+    "code": "BCCS-POLICY-MAPACTIVE-0009",
     "message": "Tham số telecomServiceId không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -152,8 +152,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-010": {
-    "code": "BCCS-POLICY-MAPACTIVE-010",
+  "BCCS-POLICY-MAPACTIVE-0010": {
+    "code": "BCCS-POLICY-MAPACTIVE-0010",
     "message": "Tham số roleMap không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -161,8 +161,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-011": {
-    "code": "BCCS-POLICY-MAPACTIVE-011",
+  "BCCS-POLICY-MAPACTIVE-0011": {
+    "code": "BCCS-POLICY-MAPACTIVE-0011",
     "message": "Tham số staffCode vượt quá độ dài cho phép (40 ký tự)",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -170,8 +170,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-012": {
-    "code": "BCCS-POLICY-MAPACTIVE-012",
+  "BCCS-POLICY-MAPACTIVE-0012": {
+    "code": "BCCS-POLICY-MAPACTIVE-0012",
     "message": "Tham số payType vượt quá độ dài cho phép (1 ký tự)",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -179,8 +179,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-013": {
-    "code": "BCCS-POLICY-MAPACTIVE-013",
+  "BCCS-POLICY-MAPACTIVE-0013": {
+    "code": "BCCS-POLICY-MAPACTIVE-0013",
     "message": "Tham số actionCode vượt quá độ dài cho phép (10 ký tự)",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -188,8 +188,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-014": {
-    "code": "BCCS-POLICY-MAPACTIVE-014",
+  "BCCS-POLICY-MAPACTIVE-0014": {
+    "code": "BCCS-POLICY-MAPACTIVE-0014",
     "message": "Tham số telecomServiceId vượt quá độ dài cho phép (10 ký tự)",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -197,8 +197,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-015": {
-    "code": "BCCS-POLICY-MAPACTIVE-015",
+  "BCCS-POLICY-MAPACTIVE-0015": {
+    "code": "BCCS-POLICY-MAPACTIVE-0015",
     "message": "Tham số businessNo vượt quá độ dài cho phép (3500 ký tự)",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -206,8 +206,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-016": {
-    "code": "BCCS-POLICY-MAPACTIVE-016",
+  "BCCS-POLICY-MAPACTIVE-0016": {
+    "code": "BCCS-POLICY-MAPACTIVE-0016",
     "message": "Tham số regReasonId không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -215,8 +215,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-017": {
-    "code": "BCCS-POLICY-MAPACTIVE-017",
+  "BCCS-POLICY-MAPACTIVE-0017": {
+    "code": "BCCS-POLICY-MAPACTIVE-0017",
     "message": "Tham số offerIds không được để trống khi actionCode yêu cầu kiểm tra thông tin kích hoạt",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -224,8 +224,8 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-018": {
-    "code": "BCCS-POLICY-MAPACTIVE-018",
+  "BCCS-POLICY-MAPACTIVE-0018": {
+    "code": "BCCS-POLICY-MAPACTIVE-0018",
     "message": "Lý do đăng ký (regReasonId) không được cấu hình cho hành động/dịch vụ hiện tại",
     "httpStatus": 400,
     "category": "BUSINESS",
@@ -233,10 +233,19 @@
     "retryable": false,
     "logLevel": "WARN"
   },
-  "BCCS-POLICY-MAPACTIVE-019": {
-    "code": "BCCS-POLICY-MAPACTIVE-019",
+  "BCCS-POLICY-MAPACTIVE-0019": {
+    "code": "BCCS-POLICY-MAPACTIVE-0019",
     "message": "Mã khuyến mãi (promotionCode) không được cấu hình cho hành động/dịch vụ hiện tại",
     "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-0020": {
+    "code": "BCCS-POLICY-MAPACTIVE-0020",
+    "message": "Map active info not found with id: {0}",
+    "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",
     "retryable": false,

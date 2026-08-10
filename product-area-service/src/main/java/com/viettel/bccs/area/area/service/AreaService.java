@@ -28,7 +28,7 @@ public class AreaService {
     public AreaResponse getByAreaCode(String areaCode) {
         return areaRepository.findByAreaCode(areaCode)
                 .map(areaMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("AREA-001", "Area not found with code: " + areaCode));
+                .orElseThrow(() -> new BusinessException("BCCS-AREA-AREA-0001", "Area not found with code: " + areaCode));
     }
 
     @Transactional(readOnly = true)

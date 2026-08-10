@@ -58,9 +58,24 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
                    a.EFFECT_DATETIME,
                    a.EXPIRE_DATETIME,
                    a.SHOW_OR_HIDE,
-                   TO_CHAR(a.SAP_MATERIAL_NUMBER) AS SAP_MATERIAL_NUMBER
-            FROM BCCS_PRODUCT.PACKAGE_OFFER a
+                   TO_CHAR(a.SAP_MATERIAL_NUMBER) AS SAP_MATERIAL_NUMBER,
+                   c.CODE AS OFFER_CODE,
+                   c.NAME AS OFFER_NAME,
+                   b.PRICE,
+                   b.VAT,
+                   c.ACCOUNTING_MODEL_CODE,
+                   c.ACCOUNTING_MODEL_NAME
+            FROM BCCS_PRODUCT.PACKAGE_OFFER a, BCCS_PRODUCT.PRODUCT_OFFER_PRICE b, BCCS_PRODUCT.PRODUCT_OFFERING c
             WHERE a.PROD_PACK_TYPE_ID IN (%s)
+              AND a.STATUS = '1'
+              AND a.PRODUCT_OFFER_PRICE_ID = b.PRODUCT_OFFER_PRICE_ID
+              AND a.PRODUCT_OFFERING_ID = c.PRODUCT_OFFERING_ID
+              AND c.STATUS = '1'
+              AND (c.EFFECT_DATETIME IS NULL OR SYSDATE >= TRUNC(c.EFFECT_DATETIME))
+              AND (c.EXPIRE_DATETIME IS NULL OR SYSDATE < TRUNC(c.EXPIRE_DATETIME) + 1)
+              AND b.STATUS = '1'
+              AND (b.EFFECT_DATETIME IS NULL OR SYSDATE >= TRUNC(b.EFFECT_DATETIME))
+              AND (b.EXPIRE_DATETIME IS NULL OR SYSDATE < TRUNC(b.EXPIRE_DATETIME) + 1)
             """.formatted(inClause);
 
         NativeQuery<Tuple> query = (NativeQuery<Tuple>) entityManager.createNativeQuery(sql, Tuple.class);
@@ -95,7 +110,20 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
         e.setExpireDatetime(toDate(row.get("EXPIRE_DATETIME")));
         e.setShowOrHide(toString(row.get("SHOW_OR_HIDE")));
         e.setSapMaterialNumber(toLong(row.get("SAP_MATERIAL_NUMBER")));
+        e.setOfferCode(toString(row.get("OFFER_CODE")));
+        e.setOfferName(toString(row.get("OFFER_NAME")));
+        e.setPrice(toBigDecimal(row.get("PRICE")));
+        e.setVat(toBigDecimal(row.get("VAT")));
+        e.setAccountingModelCode(toString(row.get("ACCOUNTING_MODEL_CODE")));
+        e.setAccountingModelName(toString(row.get("ACCOUNTING_MODEL_NAME")));
         return e;
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal bd) return bd;
+        String str = value.toString().trim();
+        return str.isEmpty() ? null : new BigDecimal(str);
     }
 
     private Long toLong(Object value) {

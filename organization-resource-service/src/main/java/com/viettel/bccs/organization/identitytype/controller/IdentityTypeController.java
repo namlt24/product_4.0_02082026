@@ -30,4 +30,14 @@ public class IdentityTypeController {
             @RequestParam(required = false) String custType) {
         return StandardResponses.success(identityTypeService.getListIdentityType(custType));
     }
+
+    @GetMapping("/findByIdType")
+    @Operation(operationId = "findByIdType",
+            summary = "API lấy thông tin loại giấy tờ theo mã",
+            description = "Trả về thông tin chi tiết 1 loại giấy tờ (IDENTITY_TYPE) đang hiệu lực (status = 1) theo mã loại giấy tờ (idType). Trả lỗi nếu không tìm thấy hoặc loại giấy tờ đã inactive.")
+    public StandardResponse<IdentityTypeDTO> findByIdType(
+            @Parameter(description = "Mã loại giấy tờ", example = "IDC", required = true)
+            @RequestParam String idType) {
+        return StandardResponses.success(identityTypeService.findByIdType(idType));
+    }
 }

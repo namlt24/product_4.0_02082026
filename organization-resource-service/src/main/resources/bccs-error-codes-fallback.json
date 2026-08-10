@@ -115,5 +115,14 @@
     "severity": "WARNING",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-IDENTITYTYPE-0001": {
+    "code": "BCCS-ORGANIZATION-IDENTITYTYPE-0001",
+    "message": "Không tìm thấy loại giấy tờ với mã: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

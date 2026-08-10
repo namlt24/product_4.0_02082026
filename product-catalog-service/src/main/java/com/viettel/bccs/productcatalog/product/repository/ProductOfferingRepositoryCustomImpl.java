@@ -192,22 +192,43 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
 
     @Override
     public boolean checkAttProductOrVasByCode(String productCode, Long productType, String attributeCode) {
-        String sql = "SELECT COUNT(1) FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offering a, " +
-                Const.DEFAULT_PRODUCT_SCHEMA + "product_offer_char_use b, " +
-                Const.DEFAULT_PRODUCT_SCHEMA + "product_spec_char c, " +
-                Const.DEFAULT_PRODUCT_SCHEMA + "product_spec_char_value d" +
-                " WHERE a.product_offering_id = b.product_offering_id" +
-                " AND b.product_spec_char_id = c.product_spec_char_id" +
-                " AND d.product_spec_char_value_id = b.product_spec_char_value_id" +
-                " AND a.code = :productCode" +
-                " AND a.product_offer_type_id = :productType" +
-                " AND c.code = :attributeCode" +
-                " AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1'";
+        return hasProductAttInternal(productCode, productType, attributeCode);
+    }
 
-        Query query = entityManager.createNativeQuery(sql);
+    @Override
+    public boolean hasProductAtt(String productCode, String attributeCode) {
+        // Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc theo product_offer_type_id (dùng
+        // chung cho cả product lẫn VAS, không cần phân biệt loại) -> productType = null.
+        return hasProductAttInternal(productCode, null, attributeCode);
+    }
+
+    /**
+     * Query dùng chung cho checkAttProductOrVasByCode/hasProductAtt: 2 hàm chỉ khác nhau ở việc có lọc
+     * theo product_offer_type_id hay không, nên gom về 1 chỗ build SQL để tránh 2 bản gần-giống-hệt
+     * trôi logic khỏi nhau khi có thay đổi sau này (ví dụ thêm điều kiện status/hiệu lực ngày).
+     */
+    private boolean hasProductAttInternal(String productCode, Long productType, String attributeCode) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(1) FROM ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a, ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_char_use b, ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value d")
+                .append(" WHERE a.product_offering_id = b.product_offering_id")
+                .append(" AND b.product_spec_char_id = c.product_spec_char_id")
+                .append(" AND d.product_spec_char_value_id = b.product_spec_char_value_id")
+                .append(" AND a.code = :productCode")
+                .append(" AND c.code = :attributeCode")
+                .append(" AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1'");
+        if (productType != null) {
+            sql.append(" AND a.product_offer_type_id = :productType");
+        }
+
+        Query query = entityManager.createNativeQuery(sql.toString());
         query.setParameter("productCode", productCode);
-        query.setParameter("productType", productType);
         query.setParameter("attributeCode", attributeCode);
+        if (productType != null) {
+            query.setParameter("productType", productType);
+        }
 
         Number count = (Number) query.getSingleResult();
         return count.longValue() > 0;

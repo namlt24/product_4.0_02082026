@@ -118,6 +118,20 @@ public class ProductOfferingController {
         return StandardResponses.success(productOfferingService.checkAttProductOrVasByCode(productCode, productType, attributeCode));
     }
 
+    @GetMapping("/hasProductAtt")
+    @Operation(
+            summary = "Kiểm tra sản phẩm có đặc tính theo mã",
+            description = "Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc theo product_offer_type_id (không phân biệt product/VAS). Kiểm tra sản phẩm (xác định bởi productCode) có gán đặc tính (product_spec_char) theo attributeCode hay không. Chỉ tính các bản ghi đang active (status='1')."
+    )
+    public StandardResponse<Boolean> hasProductAtt(
+            @Parameter(description = "Mã sản phẩm / VAS", example = "300", required = true)
+            @RequestParam String productCode,
+
+            @Parameter(description = "Mã đặc tính cần kiểm tra (product_spec_char.code)", example = "IS_CONNECTED", required = true)
+            @RequestParam String attributeCode) {
+        return StandardResponses.success(productOfferingService.hasProductAtt(productCode, attributeCode));
+    }
+
     @PostMapping("/findByCodesAndProductOfferType")
     @Operation(
             operationId = "API_DAUNOI_TT_PRODUCT_017",

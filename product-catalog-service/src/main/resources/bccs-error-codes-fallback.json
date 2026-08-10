@@ -115,5 +115,14 @@
     "severity": "ERROR",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PRODUCT-0004": {
+    "code": "BCCS-CATALOG-PRODUCT-0004",
+    "message": "productCode and attributeCode are required",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

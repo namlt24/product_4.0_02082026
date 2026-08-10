@@ -97,6 +97,17 @@ public class ProductOfferingService {
     }
 
     /**
+     * Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc/yêu cầu productType
+     * (product_offer_type_id) nữa — dùng khi không cần phân biệt sản phẩm/VAS.
+     */
+    public boolean hasProductAtt(String productCode, String attributeCode) {
+        if (DataUtil.isAnyNull(productCode, attributeCode)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0004", "productCode and attributeCode are required");
+        }
+        return productOfferingRepository.hasProductAtt(productCode, attributeCode);
+    }
+
+    /**
      * Map 1:1 tu ProductOfferingServiceImpl.getListVas (code mono cu, khong con trong repo hien
      * tai). Code cu dung cache 2 tang thu cong (RAM HashMap + raw Jedis) — day la vi pham
      * CLAUDE.md ("khong dung Redis client tho") va vi pham thang rule ArchUnit

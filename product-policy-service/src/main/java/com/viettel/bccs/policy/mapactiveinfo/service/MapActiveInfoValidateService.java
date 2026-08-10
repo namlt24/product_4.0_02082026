@@ -17,6 +17,8 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActive
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
 import com.viettel.bccs.policy.mapactiveinfo.model.ValidationContext;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
+import com.viettel.bccs.policy.mapping.dto.response.MappingResponse;
+import com.viettel.bccs.policy.mapping.service.MappingService;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.service.ReasonService;
@@ -59,6 +61,7 @@ public class MapActiveInfoValidateService {
     private final Executor asyncExecutor;
     private final MessageUtil messageUtil;
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
+    private final MappingService mappingService;
 
     public MapActiveInfoValidateService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                         OptionSetClient optionSetClient, StaffShopClient staffShopClient,
@@ -69,7 +72,8 @@ public class MapActiveInfoValidateService {
                                         TransactionTemplate transactionTemplate,
                                         @Qualifier("asyncExecutor") Executor asyncExecutor,
                                         MessageUtil messageUtil,
-                                        @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService) {
+                                        @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService,
+                                        MappingService mappingService) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
@@ -83,6 +87,7 @@ public class MapActiveInfoValidateService {
         this.asyncExecutor = asyncExecutor;
         this.messageUtil = messageUtil;
         this.mapActiveInfoQuerryService = mapActiveInfoQuerryService;
+        this.mappingService = mappingService;
     }
 
     @Value("${app.async.task-timeout-ms:5000}")
@@ -100,10 +105,7 @@ public class MapActiveInfoValidateService {
                                                         boolean isNeedCheckCaptcha, String province, String district, String precinct, String customerGroup,
                                                         String customerType, String subType, String subGroup, String stationCodes, String payType,
                                                         String technology, int mode, String productOfferType, List<String> lstBusinessNo) {
-        // Client chỉ gửi staffCode dạng chuỗi (không phải object StaffDTO lồng nhau) -- dựng StaffDTO
-        // tối thiểu ở đây; các bước bên dưới (resolveValidationContext/getUniqueMapActiveInfo) tự
-        // enrich đầy đủ thông tin shop qua staffShopClient.getStaffShopFullInfo(staffCode) rồi mới dùng,
-        // nên object StaffDTO đầu vào chỉ cần chứa staffCode là đủ.
+
         StaffDTO staffDTO = DataUtil.isNullOrEmpty(staffCode) ? null : new StaffDTO(staffCode);
         List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
         MapActiveInfoDTO mapActiveInfo;
@@ -189,6 +191,11 @@ public class MapActiveInfoValidateService {
                     if (mapActiveInfo != null) {
                         List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
                         lstMapActiveInfo.add(mapActiveInfo);
+                        List<MappingResponse> lstMapping = mappingService.getMappingByMultiParams(
+                                mapActiveInfo.getRegReasonId(), actionCode, telServiceId);
+                        if (!DataUtil.isNullOrEmpty(lstMapping)) {
+                            mapActiveInfo.setSaleServiceCode(lstMapping.get(0).saleServiceCode());
+                        }
 
                         lstReason.addAll(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
 

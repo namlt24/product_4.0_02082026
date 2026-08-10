@@ -333,6 +333,9 @@ public class MapActiveInfoDTO {
     @Schema(description = "ID dịch vụ bán hàng", example = "50")
     private Long saleServiceId;
 
+    @Schema(description = "Mã dịch vụ bán hàng", example = "TAI_DVBH_DKM")
+    private String saleServiceCode;
+
     private List<String> lstTechnology;
     private List<String> lstSubType;
     private List<String> lstCustomerGroup;

@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface MappingRepository extends JpaRepository<MappingEntity, Long>, MappingRepositoryCustom {
 
+    List<MappingEntity> findByReasonIdAndActionCodeAndTelServiceIdAndStatus(Long reasonId, String actionCode, Long telServiceId, String status);
 }

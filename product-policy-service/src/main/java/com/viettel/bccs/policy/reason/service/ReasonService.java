@@ -4,13 +4,12 @@ import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.client.OptionSetClient;
 import com.viettel.bccs.policy.client.ProductPackageClient;
 import com.viettel.bccs.policy.client.ProductSpecCharClient;
-import com.viettel.bccs.policy.client.StaffShopClient;
 import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharLookupDTO;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharValueLookupDTO;
 import com.viettel.bccs.policy.client.dto.StaffDTO;
-import com.viettel.bccs.policy.client.dto.StaffResponse;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
+import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
@@ -43,7 +42,6 @@ public class ReasonService {
     private final ReasonRepository repository;
     private final ReasonMapper mapper;
     private final ProductPackageClient productPackageClient;
-    private final StaffShopClient staffShopClient;
     private final ReasonCharUseRepository reasonCharUseRepository;
     private final ReasonCharUseMapper reasonCharUseMapper;
     private final ProductSpecCharClient productSpecCharClient;
@@ -51,23 +49,25 @@ public class ReasonService {
     private final ReasonPauseService reasonPauseService;
     @Lazy
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
+    private final StaffResolveHelper staffResolveHelper;
 
     public ReasonService(ReasonRepository repository, ReasonMapper mapper,
-                          ProductPackageClient productPackageClient, StaffShopClient staffShopClient,
+                          ProductPackageClient productPackageClient,
                           ReasonCharUseRepository reasonCharUseRepository, ReasonCharUseMapper reasonCharUseMapper,
                           ProductSpecCharClient productSpecCharClient, OptionSetClient optionSetClient,
                           ReasonPauseService reasonPauseService,
-                          @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService) {
+                          @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService,
+                          StaffResolveHelper staffResolveHelper) {
         this.repository = repository;
         this.mapper = mapper;
         this.productPackageClient = productPackageClient;
-        this.staffShopClient = staffShopClient;
         this.reasonCharUseRepository = reasonCharUseRepository;
         this.reasonCharUseMapper = reasonCharUseMapper;
         this.productSpecCharClient = productSpecCharClient;
         this.optionSetClient = optionSetClient;
         this.reasonPauseService = reasonPauseService;
         this.mapActiveInfoQuerryService = mapActiveInfoQuerryService;
+        this.staffResolveHelper = staffResolveHelper;
     }
 
     public ReasonResponse findById(Long id) {
@@ -178,18 +178,7 @@ public class ReasonService {
     }
 
     public List<ReasonDTO> getReasonFull(String staffCode, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, List<String> lstBusinessNo) {
-        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffCode);
-        if (DataUtil.isNullObject(staffResponse)) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
-        }
-        StaffDTO staffDTO = staffResponse.toDTO();
-        if (!DataUtil.isNullOrEmpty(staffResponse.getShop())) {
-            staffDTO.setShopCode(staffResponse.getShop().getShopCode());
-            staffDTO.setShopProvince(staffResponse.getShop().getProvince());
-            staffDTO.setShopDistrict(staffResponse.getShop().getDistrict());
-            staffDTO.setShopPrecinct(staffResponse.getShop().getPrecinct());
-            staffDTO.setShopChanelTypeId(staffResponse.getShop().getChannelTypeId());
-        }
+        StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffCode);
 
         List<ReasonDTO> lstResult = mapActiveInfoQuerryService.getReasonFullWithBusinessNo(staffDTO, payType, offerId, actionCode, serviceType, province, district, precint, customerGroup, customerType, subType, subGroup, stationCodes, promotionCode, technology, mode, getReasonCharUse, roleMap, nodeCode, singleOrCombo, listProductSpec, false, lstBusinessNo);
         if (!DataUtil.isNullOrEmpty(lstResult)) {

@@ -57,6 +57,10 @@ public class RequestMbccs {
     private String promotionCode;
     @Schema(description = "Công nghệ", example = "4", maxLength = 10)
     private String technology;
+    @Schema(description = "Hình thức thay đổi", example = "1", maxLength = 10)
+    private String changeMethod;
+    @Schema(description = "Loại hạ tầng", example = "1", maxLength = 10)
+    private String infraType;
     @Schema(description = "mode", example = "1", maxLength = 1)
     private Integer mode;
     @Schema(description = "Có lấy thuộc tính lý do/HTHM không", example = "true")
@@ -317,6 +321,22 @@ public class RequestMbccs {
 
     public void setTechnology(String technology) {
         this.technology = technology;
+    }
+
+    public String getChangeMethod() {
+        return changeMethod;
+    }
+
+    public void setChangeMethod(String changeMethod) {
+        this.changeMethod = changeMethod;
+    }
+
+    public String getInfraType() {
+        return infraType;
+    }
+
+    public void setInfraType(String infraType) {
+        this.infraType = infraType;
     }
 
     public Integer getMode() {

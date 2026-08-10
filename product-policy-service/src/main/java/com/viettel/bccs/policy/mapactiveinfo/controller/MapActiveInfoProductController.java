@@ -32,4 +32,15 @@ public class MapActiveInfoProductController {
                 .productOfferingDTOs(mapActiveInfoProductService.getProductCodeByMapActiveInfo(request))
                 .build());
     }
+
+    @PostMapping("/getProductCodeNew")
+    @Operation(operationId = "getProductCodeNew",
+            summary = "API lấy danh sách gói cước theo map active info (bản mới)",
+            description = "Trả về danh sách gói cước (product code) hợp lệ theo map active info. Luôn ép kiểu PRODUCT_CODE và checkProductStatus=true, không lọc theo VAS.")
+    public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCodeNew(
+            @Valid @RequestBody RequestMbccs request) {
+        return StandardResponses.success(GetProductCodeByMapActiveInfoResponse.builder()
+                .productOfferingDTOs(mapActiveInfoProductService.getProductCodeNew(request))
+                .build());
+    }
 }

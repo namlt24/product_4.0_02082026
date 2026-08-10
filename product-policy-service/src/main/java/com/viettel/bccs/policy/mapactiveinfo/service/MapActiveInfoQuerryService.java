@@ -3,14 +3,13 @@ package com.viettel.bccs.policy.mapactiveinfo.service;
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.client.OptionSetClient;
 import com.viettel.bccs.policy.client.StaffExtClient;
-import com.viettel.bccs.policy.client.StaffShopClient;
 import com.viettel.bccs.policy.client.TelecomServiceClient;
 import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.policy.client.dto.StaffDTO;
 import com.viettel.bccs.policy.client.dto.StaffExtResponse;
-import com.viettel.bccs.policy.client.dto.StaffResponse;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
@@ -22,7 +21,6 @@ import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -40,7 +38,6 @@ public class MapActiveInfoQuerryService {
     private final MapActiveInfoMapper mapper;
     private final OptionSetClient optionSetClient;
     private final TelecomServiceClient telecomServiceClient;
-    private final StaffShopClient staffShopClient;
     @Lazy
     private final MapActiveInfoValidateService mapActiveInfoValidateService;
     private final StaffExtClient staffExtClient;
@@ -48,16 +45,14 @@ public class MapActiveInfoQuerryService {
     private final ReasonService reasonService;
 
     public MapActiveInfoQuerryService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
-                                     OptionSetClient optionSetClient, TelecomServiceClient telecomServiceClient,
-                                     StaffShopClient staffShopClient,
-                                     @Lazy MapActiveInfoValidateService mapActiveInfoValidateService,
-                                     StaffExtClient staffExtClient,
-                                     @Lazy ReasonService reasonService) {
+                                      OptionSetClient optionSetClient, TelecomServiceClient telecomServiceClient,
+                                      @Lazy MapActiveInfoValidateService mapActiveInfoValidateService,
+                                      StaffExtClient staffExtClient,
+                                      @Lazy ReasonService reasonService) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
         this.telecomServiceClient = telecomServiceClient;
-        this.staffShopClient = staffShopClient;
         this.mapActiveInfoValidateService = mapActiveInfoValidateService;
         this.staffExtClient = staffExtClient;
         this.reasonService = reasonService;
@@ -374,6 +369,14 @@ public class MapActiveInfoQuerryService {
                 Const.TELECOM_SERVICE_ID.HOMEPHONE,
                 Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL
         );
+    }
+
+    public Long getChanelTypeIdMapActiveInfo(ChanelTypeIdRequest request) {
+        StaffDTO staffDTO = new StaffDTO();
+        staffDTO.setShopChanelTypeId(request.getShopChanelTypeId());
+        staffDTO.setChannelTypeId(request.getChannelTypeId());
+        staffDTO.setPointOfSale(request.getPointOfSale());
+        return getChanelTypeIdMapActiveInfo(staffDTO);
     }
 
     public Long getChanelTypeIdMapActiveInfo(StaffDTO staffDTO) {

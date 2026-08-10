@@ -4,6 +4,7 @@ import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.client.*;
 import com.viettel.bccs.policy.client.dto.*;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
+import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
 import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.RequestMbccs;
@@ -44,6 +45,7 @@ public class MapActiveInfoProductService {
     private final MessageUtil messageUtil;
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
     private final MapActiveInfoValidateService mapActiveInfoValidateService;
+    private final StaffResolveHelper staffResolveHelper;
 
     public MapActiveInfoProductService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                        OptionSetClient optionSetClient, StaffShopClient staffShopClient,
@@ -54,7 +56,8 @@ public class MapActiveInfoProductService {
                                        TransactionTemplate transactionTemplate,
                                        MessageUtil messageUtil,
                                        MapActiveInfoQuerryService mapActiveInfoQuerryService,
-                                       MapActiveInfoValidateService mapActiveInfoValidateService) {
+                                       MapActiveInfoValidateService mapActiveInfoValidateService,
+                                       StaffResolveHelper staffResolveHelper) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
@@ -68,6 +71,7 @@ public class MapActiveInfoProductService {
         this.messageUtil = messageUtil;
         this.mapActiveInfoQuerryService = mapActiveInfoQuerryService;
         this.mapActiveInfoValidateService = mapActiveInfoValidateService;
+        this.staffResolveHelper = staffResolveHelper;
     }
     // ============== getProductCodeByMapActiveInfo ==============
 
@@ -94,22 +98,32 @@ public class MapActiveInfoProductService {
 
     private void validateRequest(RequestMbccs request) {
         DataUtil.trimValue(request);
+        validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
+                request.getTelecomServiceId(), request.getRoleMap());
+    }
 
-        validateMissingParam(request.getStaffCode(), "BCCS-POLICY-MAPACTIVE-0006");
-        validateMissingParam(request.getPayType(), "BCCS-POLICY-MAPACTIVE-0007");
-        validateMissingParam(request.getActionCode(), "BCCS-POLICY-MAPACTIVE-0008");
-        validateMissingParam(request.getTelecomServiceId(), "BCCS-POLICY-MAPACTIVE-0009");
+    /**
+     * Validate các tham số bắt buộc dùng chung giữa getProductCodeByMapActiveInfo và getProductCodeNew:
+     * staffCode/payType/actionCode/telecomServiceId không rỗng, roleMap có ít nhất 1 quyền hợp lệ,
+     * và độ dài tối đa của từng trường.
+     */
+    private void validateCommonProductCodeParams(String staffCode, String payType, String actionCode,
+                                                  String telecomServiceId, RequiredRoleMap roleMap) {
+        validateMissingParam(staffCode, "BCCS-POLICY-MAPACTIVE-0006");
+        validateMissingParam(payType, "BCCS-POLICY-MAPACTIVE-0007");
+        validateMissingParam(actionCode, "BCCS-POLICY-MAPACTIVE-0008");
+        validateMissingParam(telecomServiceId, "BCCS-POLICY-MAPACTIVE-0009");
 
-        RequiredRoleMap roleMap = validateMissingParam(request.getRoleMap(), "BCCS-POLICY-MAPACTIVE-0010");
-        validateMissingParam(roleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
-        roleMap.setValues(roleMap.getValues().stream().map(String::trim).collect(Collectors.toList()));
-        roleMap.getValues().removeIf(DataUtil::isNullOrEmpty);
-        validateMissingParam(roleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
+        RequiredRoleMap validRoleMap = validateMissingParam(roleMap, "BCCS-POLICY-MAPACTIVE-0010");
+        validateMissingParam(validRoleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
+        validRoleMap.setValues(validRoleMap.getValues().stream().map(String::trim).collect(Collectors.toList()));
+        validRoleMap.getValues().removeIf(DataUtil::isNullOrEmpty);
+        validateMissingParam(validRoleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
 
-        validateMaxLengthParam(request.getStaffCode(), 40, "BCCS-POLICY-MAPACTIVE-0011");
-        validateMaxLengthParam(request.getPayType(), 1, "BCCS-POLICY-MAPACTIVE-0012");
-        validateMaxLengthParam(request.getActionCode(), 10, "BCCS-POLICY-MAPACTIVE-0013");
-        validateMaxLengthParam(String.valueOf(request.getTelecomServiceId()), 10, "BCCS-POLICY-MAPACTIVE-0014");
+        validateMaxLengthParam(staffCode, 40, "BCCS-POLICY-MAPACTIVE-0011");
+        validateMaxLengthParam(payType, 1, "BCCS-POLICY-MAPACTIVE-0012");
+        validateMaxLengthParam(actionCode, 10, "BCCS-POLICY-MAPACTIVE-0013");
+        validateMaxLengthParam(telecomServiceId, 10, "BCCS-POLICY-MAPACTIVE-0014");
     }
 
     private List<ProductOfferingDTO> fetchOfferingsWithSpec(RequestMbccs request) {
@@ -245,18 +259,7 @@ public class MapActiveInfoProductService {
                                                                           String productOfferTypeId, List<FilterRequest> listProductSpec,
                                                                           List<String> lstBusinessNo, Boolean mustGic) {
 
-        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffCode);
-        if (DataUtil.isNullObject(staffResponse)) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
-        }
-        StaffDTO staffDTO = staffResponse.toDTO();
-        if (!DataUtil.isNullOrEmpty(staffResponse.getShop())){
-            staffDTO.setShopCode(staffResponse.getShop().getShopCode());
-            staffDTO.setShopProvince(staffResponse.getShop().getProvince());
-            staffDTO.setShopDistrict(staffResponse.getShop().getDistrict());
-            staffDTO.setShopPrecinct(staffResponse.getShop().getPrecinct());
-            staffDTO.setShopChanelTypeId(staffResponse.getShop().getChannelTypeId());
-        }
+        StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffCode);
 
         if (!DataUtil.isNullObject(lstBusinessNo)) {
             List<String> lstBusinessNoNew = lstBusinessNo.stream()
@@ -346,6 +349,36 @@ public class MapActiveInfoProductService {
             );
 
         }
+    }
+
+    // ============== getProductCodeNew ==============
+
+    public List<ProductOfferingDTO> getProductCodeNew(RequestMbccs request) {
+        log.info("[getProductCodeNew] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
+                request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId());
+
+        validateRequest(request);
+
+        int mode = request.getMode() != null ? request.getMode() : 0;
+        String offerId = request.getOfferId() != null ? String.valueOf(request.getOfferId()) : null;
+        List<ProductOfferingDTO> products = getProductCodeCheckStatus(
+                request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId(),
+                offerId, request.getChangeMethod(), request.getTechnology(), mode, request.getRoleMap(),
+                true, null, request.getInfraType(), null);
+
+        log.info("[getProductCodeNew] END - {} products returned", products.size());
+        return products;
+    }
+
+    public List<ProductOfferingDTO> getProductCodeCheckStatus(String staffCode, String payType, String actionCode,
+                                                               String telecomServiceId, String offerId, String changeMethod,
+                                                               String technology, int mode, RequiredRoleMap roleMap,
+                                                               boolean checkProductStatus, List<FilterRequest> listProductSpec,
+                                                               String infraType, List<String> lstBusinessNo) {
+        StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffCode);
+        return getProductOfferingCheckStatus(staffDTO, payType, actionCode, telecomServiceId, offerId, changeMethod,
+                technology, mode, roleMap, checkProductStatus, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE,
+                listProductSpec, infraType, lstBusinessNo, null);
     }
 
     private List<ProductOfferingDTO> getProductOfferingCheckStatus(StaffDTO staffDTO,

@@ -1,0 +1,103 @@
+ @WebMethod
+    List<ProductOfferingDTO> getProductCodeNew(StaffDTO staffDTO,
+                                               String payType,
+                                               String actionCode,
+                                               String telecomServiceId,
+                                               String offerId,
+                                               String changeMethod,
+                                               String technology,
+                                               int mode,
+                                               RequiredRoleMap roleMap, String infraType) throws LogicException, Exception;
+
+
+
+
+  @Override
+    public List<ProductOfferingDTO> getProductCodeNew(StaffDTO staffDTO, String payType, String actionCode, String telecomServiceId, String offerId, String changeMethod, String technology, int mode, RequiredRoleMap roleMap, String infraType) throws LogicException, Exception {
+        return getProductCodeCheckStatus(staffDTO, payType, actionCode, telecomServiceId, offerId, changeMethod, technology, mode, roleMap, true, null, infraType, null);
+    }
+
+ @WebMethod
+    public List<ProductOfferingDTO> getProductCodeCheckStatus(StaffDTO staffDTO,
+                                                              String payType,
+                                                              String actionCode,
+                                                              String telecomServiceId,
+                                                              String offerId,
+                                                              String changeMethod,
+                                                              String technology,
+                                                              int mode,
+                                                              RequiredRoleMap roleMap, boolean checkProductStatus,
+                                                              List<FilterRequest> listProductSpec, String infraType, List<String> lstBusinessNo) throws LogicException, Exception {
+        return getProductOfferingCheckStatus(staffDTO,
+                payType,
+                actionCode,
+                telecomServiceId,
+                offerId,
+                changeMethod,
+                technology,
+                mode,
+                roleMap, checkProductStatus, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE, listProductSpec, infraType, lstBusinessNo, null);
+
+    }
+
+
+
+@WebMethod
+    public List<ProductOfferingDTO> getProductOfferingCheckStatus(StaffDTO staffDTO,
+                                                                  String payType,
+                                                                  String actionCode,
+                                                                  String telecomServiceId,
+                                                                  String offerId,
+                                                                  String changeMethod,
+                                                                  String technology,
+                                                                  int mode,
+                                                                  RequiredRoleMap roleMap,
+                                                                  boolean checkProductStatus,
+                                                                  String productOfferingType,
+                                                                  List<FilterRequest> listProductSpec, String infraType,
+                                                                  List<String> lstBusinessNo, Boolean mustGic) throws LogicException, Exception {
+        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferingType)) {
+
+            return getProductOfferingCheckStatusForVas(staffDTO,
+                    payType,
+                    actionCode,
+                    telecomServiceId,
+                    offerId,
+                    changeMethod,
+                    technology,
+                    mode,
+                    roleMap,
+                    checkProductStatus,
+                    productOfferingType,
+                    Const.SOLR_CORE.MAP_ACTIVE_INFO,
+                    null,
+                    listProductSpec);
+        } else {
+            return getProductOfferingCheckStatus(
+                    staffDTO,
+                    payType,
+                    actionCode,
+                    telecomServiceId,
+                    offerId,
+                    changeMethod,
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                    null,
+                    technology,
+                    mode,
+                    roleMap,
+                    true,
+                    Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE,
+                    Const.SOLR_CORE.MAP_ACTIVE_INFO,
+                    null,
+                    null,
+                    listProductSpec,
+                    false, infraType, lstBusinessNo, mustGic
+            );
+
+        }
+    }
+

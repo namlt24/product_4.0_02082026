@@ -2,17 +2,12 @@ package com.viettel.bccs.policy.mapactiveinfo.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.RequestMbccs;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.ValidateInputMapActiveInfoRequest;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.GetProductCodeByMapActiveInfoResponse;
+
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateMapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,5 +21,13 @@ public class MapActiveInfoQuerryController {
     @GetMapping("/findById/{id}")
     public StandardResponse<MapActiveInfoResponse> findById(@PathVariable Long id) {
         return StandardResponses.success(mapActiveInfoQuerryService.findById(id));
+    }
+
+    @PostMapping("/getChanelTypeIdMapActiveInfo")
+    @Operation(operationId = "getChanelTypeIdMapActiveInfo",
+            summary = "Lấy channelTypeId dùng cho map active info",
+            description = "Suy ra channelTypeId áp dụng cho nghiệp vụ map active info từ shopChanelTypeId/channelTypeId/pointOfSale của nhân viên.")
+    public StandardResponse<Long> getChanelTypeIdMapActiveInfo(@RequestBody ChanelTypeIdRequest request) {
+        return StandardResponses.success(mapActiveInfoQuerryService.getChanelTypeIdMapActiveInfo(request));
     }
 }

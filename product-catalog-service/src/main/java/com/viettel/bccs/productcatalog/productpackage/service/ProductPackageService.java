@@ -10,7 +10,6 @@ import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOfferTypeDTO;
 import com.viettel.bccs.productcatalog.productoffertype.service.ProductOfferTypeService;
 import com.viettel.bccs.productcatalog.productpackage.dto.response.*;
-import com.viettel.bccs.productcatalog.productpackage.entity.ProductPackageEntity;
 import com.viettel.bccs.productcatalog.productpackage.mapper.ProductPackageMapper;
 import com.viettel.bccs.productcatalog.productpackage.repository.ProductPackageRepository;
 import com.viettel.bccs.productcatalog.packageoffer.service.PackageOfferService;
@@ -46,9 +45,7 @@ public class ProductPackageService {
     private final PackageOfferService packageOfferService;
     private final OptionSetValueService optionSetValueService;
     private final MappingClient mappingClient;
-    // Self-inject qua proxy: findSaleServiceCodeByReasonCached được gọi nội bộ từ getSaleServiceInfo(Long)
-    // trong cùng class -> nếu gọi qua "this" (self-invocation) sẽ bỏ qua Spring AOP proxy, khiến
-    // @Cacheable ở method đó vô tác dụng. @Lazy để tránh vòng lặp khởi tạo bean khi tự inject chính nó.
+
     private final ProductPackageService self;
 
     public ProductPackageService(ProductPackageRepository repository, ProductPackageMapper mapper,

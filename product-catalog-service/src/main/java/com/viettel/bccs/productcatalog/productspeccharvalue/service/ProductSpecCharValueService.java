@@ -2,13 +2,18 @@ package com.viettel.bccs.productcatalog.productspeccharvalue.service;
 
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
 import com.viettel.bccs.productcatalog.productspeccharvalue.dto.response.ProductSpecCharValueResponse;
+import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
 import com.viettel.bccs.productcatalog.productspeccharvalue.mapper.ProductSpecCharValueMapper;
 import com.viettel.bccs.productcatalog.productspeccharvalue.repository.ProductSpecCharValueRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
+import com.viettel.bccs.productcatalog.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -29,8 +34,15 @@ public class ProductSpecCharValueService {
                 .toList();
     }
 
-    public List<ProductSpecCharValueDTO> getByProductSpecCharCodeAndProductOfferingId(String deviceTypeCamCharCode, Long productOfferId) {
-        // TODO: stub tạm để compile được cho việc test local — chưa có logic thật, cần hoàn thiện lại
-        return List.of();
+    @Cacheable(value = "productSpecCharValueCache",
+            key = "'SPEC_CHAR_VALUE:' + #characterCode + ':' + #productOfferingId")
+    public List<ProductSpecCharValueEntity> getByProductSpecCharCodeAndProductOfferingId(
+            String characterCode, Long productOfferingId) {
+        if (DataUtil.isNullOrEmpty(characterCode) || DataUtil.isNullOrZero(productOfferingId)) {
+            return Collections.emptyList();
+        }
+        return productSpecCharValueRepository
+                .getByProductSpecCharCodeAndProductOfferingId(characterCode, productOfferingId);
     }
+
 }

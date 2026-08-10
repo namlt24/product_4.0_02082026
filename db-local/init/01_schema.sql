@@ -901,6 +901,33 @@ CREATE TABLE REASON (
     CONSTRAINT PK_REASON PRIMARY KEY (REASON_ID)
 );
 
+-- Migrate từ mono: bảng dùng bởi ProductOfferPriceServiceImpl.getPriceInServices (checkReasonFreeCam).
+-- Cột suy luận từ FreeCamEquipmentRepoImpl.java (legacy) qua alias trong SELECT.
+CREATE TABLE FREE_CAM_EQUIPMENT (
+    FREE_CAM_EQUIPMENT_ID    NUMBER(18)    NOT NULL,
+    ACTION_CODE              VARCHAR2(30),
+    REASON_ID                NUMBER(10),
+    AREA_CODE                VARCHAR2(25),
+    STATUS                   VARCHAR2(1)   NOT NULL,
+    CAM_INSIDE_NUMBER        NUMBER(10),
+    CAM_OUTSIDE_NUMBER       NUMBER(10),
+    CAM_MAX_NUMBER           NUMBER(10),
+    CAM_INSIDE_PRICE         NUMBER(18,2),
+    CAM_OUTSIDE_PRICE        NUMBER(18,2),
+    EFFECT_DATETIME          DATE,
+    EXPIRE_DATETIME          DATE,
+    CREATE_USER              VARCHAR2(50),
+    UPDATE_USER              VARCHAR2(50),
+    DESCRIPTION              VARCHAR2(512),
+    SHOP_CODE                VARCHAR2(30),
+    STAFF_CODE               VARCHAR2(40),
+    CREATE_DATETIME          DATE,
+    UPDATE_DATETIME          DATE,
+    CUSTOMER_GROUP           VARCHAR2(50),
+    CUSTOMER_TYPE            VARCHAR2(50),
+    CONSTRAINT PK_FREE_CAM_EQUIPMENT PRIMARY KEY (FREE_CAM_EQUIPMENT_ID)
+);
+
 CREATE TABLE REASON_CHAR_USE (
     REASON_CHAR_USE_ID         NUMBER(10)    NOT NULL,
     REASON_ID                  NUMBER(10),

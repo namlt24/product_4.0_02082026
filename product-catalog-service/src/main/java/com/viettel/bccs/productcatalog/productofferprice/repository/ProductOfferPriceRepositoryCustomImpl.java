@@ -14,6 +14,7 @@ import java.util.List;
 @Repository
 @RequiredArgsConstructor
 public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceRepositoryCustom {
+    private static final Long EQUIPMENT_PRICE_TYPE_ID = 289L;
 
     private final EntityManager entityManager;
 
@@ -53,4 +54,39 @@ public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceR
         List<ProductOfferPriceEntity> list = query.getResultList();
         return list;
     }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<ProductOfferPriceEntity> getPriceEquipment(Long productPackageId, Long productOfferType, Long productOfferId) {
+        String sql = """
+            SELECT a.*
+            FROM BCCS_PRODUCT.PRODUCT_OFFER_PRICE a
+            WHERE 1 = 1
+              AND a.STATUS = '1'
+              AND a.PRICE_TYPE_ID = :equipmentPriceTypeId
+              AND a.PRODUCT_OFFERING_ID = :productOfferId
+              AND a.PRODUCT_OFFER_PRICE_ID IN (
+                  SELECT b.PRODUCT_OFFER_PRICE_ID
+                  FROM BCCS_PRODUCT.PACKAGE_OFFER b
+                  WHERE b.STATUS = '1'
+                    AND b.PRODUCT_OFFERING_ID = :productOfferId
+                    AND b.PROD_PACK_TYPE_ID IN (
+                        SELECT c.PROD_PACK_TYPE_ID
+                        FROM BCCS_PRODUCT.PROD_PACK_PRODUCT_OFFER_TYPE c
+                        WHERE c.STATUS = '1'
+                          AND c.PRODUCT_PACKAGE_ID = :productPackageId
+                          AND c.PRODUCT_OFFER_TYPE_ID = :productOfferType
+                    )
+              )
+            """;
+
+        Query query = entityManager.createNativeQuery(sql, ProductOfferPriceEntity.class);
+        query.setParameter("productPackageId", productPackageId);
+        query.setParameter("productOfferType", productOfferType);
+        query.setParameter("productOfferId", productOfferId);
+        query.setParameter("equipmentPriceTypeId", EQUIPMENT_PRICE_TYPE_ID);
+
+        return query.getResultList();
+    }
+
 }

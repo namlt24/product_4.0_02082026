@@ -94,4 +94,63 @@ public class ProductOfferPriceMapper {
         }
         return new java.util.ArrayList<>(entities.stream().map(this::toResponse).toList());
     }
+
+    /**
+     * ProductOfferPriceResponse là record (immutable) — dùng method này để tạo bản sao mới của
+     * {@code base} với productOfferName/priceEquipment/priceEquipmentId/priceEquipmentTypeId được
+     * cập nhật, giữ nguyên toàn bộ field còn lại. Dùng trong getPriceInServices khi cần "set" giá
+     * thiết bị lên từng dòng kết quả (thay cho việc mutate trực tiếp như legacy).
+     */
+    public ProductOfferPriceResponse withPriceInfo(ProductOfferPriceResponse base, String productOfferName,
+                                                    Long priceEquipment, Long priceEquipmentId, Long priceEquipmentTypeId) {
+        if (base == null) {
+            return null;
+        }
+        return new ProductOfferPriceResponse(
+                base.productOfferPriceId(),
+                base.productOfferingId(),
+                base.pricePolicyId(),
+                base.priceTypeId(),
+                base.name(),
+                base.description(),
+                base.price(),
+                base.vat(),
+                base.pledgeAmount(),
+                base.pledgeTime(),
+                base.priorPay(),
+                base.status(),
+                base.effectDatetime(),
+                base.expireDatetime(),
+                base.priority(),
+                base.effectType(),
+                base.cronExpression(),
+                base.createUser(),
+                base.createDatetime(),
+                base.updateUser(),
+                base.updateDatetime(),
+                base.programCode(),
+                base.programMonth(),
+                base.isSelectAllShop(),
+                base.limited(),
+                productOfferName != null ? productOfferName : base.productOfferName(),
+                priceEquipment,
+                priceEquipmentId,
+                priceEquipmentTypeId
+        );
+    }
+
+    /**
+     * Migrate từ mono ProductOfferPriceServiceImpl.getPriceInServices dòng 381-383:
+     * khi lstResult rỗng nhưng vẫn tìm được giá thiết bị CAM, legacy thêm 1
+     * ProductOfferPriceDTO rỗng chỉ để mang priceEquipment. Do record immutable,
+     * tạo bản rỗng tương đương ở đây.
+     */
+    public ProductOfferPriceResponse emptyWithPriceEquipment(Long priceEquipment) {
+        return new ProductOfferPriceResponse(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null,
+                priceEquipment, null, null
+        );
+    }
 }

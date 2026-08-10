@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.FreeCamEquipmentDTO;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class FreeCamEquipmentClientImpl implements FreeCamEquipmentClient {
         try {
             var response = bccsHttpClient.get(
                     "product-policy-service",
-                    "/product-policy-service/v1/free-cam-equipment/checkReasonFreeCam/{productPackageId}",
+                    "/v1/free-cam-equipment/checkReasonFreeCam/{productPackageId}",
                     StandardClientResponse.class,
                     productPackageId);
             if (response != null && response.getData() != null) {
@@ -33,7 +34,8 @@ public class FreeCamEquipmentClientImpl implements FreeCamEquipmentClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling checkReasonFreeCam for productPackageId={}", productPackageId, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-policy-service checkReasonFreeCam for productPackageId=" + productPackageId, e);
         }
     }
 }

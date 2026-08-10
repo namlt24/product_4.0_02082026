@@ -3,6 +3,7 @@ package com.viettel.bccs.policy.mapping.controller;
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.mapping.service.MappingService;
+import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,5 +28,12 @@ public class MappingController {
     public StandardResponse<List<String>> findSaleServiceCodeByReason(
             @Parameter(description = "Id lý do") @PathVariable Long reasonId) {
         return StandardResponses.success(service.findSaleServiceCodeByReason(reasonId));
+    }
+
+    @Operation(summary = "Lấy danh sách lý do (reason) mapping theo gói sản phẩm (sale service), phục vụ getPriceInServices")
+    @GetMapping("/getMappingReasonProductOfferPrice/{productPackageId}")
+    public StandardResponse<List<ReasonResponse>> getMappingReasonProductOfferPrice(
+            @Parameter(description = "Id gói sản phẩm (product package / sale service)") @PathVariable Long productPackageId) {
+        return StandardResponses.success(service.getMappingReasonProductOfferPrice(productPackageId));
     }
 }

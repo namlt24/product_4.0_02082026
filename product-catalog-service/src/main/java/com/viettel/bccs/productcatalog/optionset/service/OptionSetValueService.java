@@ -142,8 +142,10 @@ public class OptionSetValueService {
     }
     @Transactional(readOnly = true)
     public OptionSetValueResponse findOneByCodeAndValue(String code, String value) {
-        return optionSetValueRepository.findOneByCodeAndValue(code, value)
-                .map(optionSetValueMapper::toResponse)
-                .orElse(null);
+        List<OptionSetValueEntity> result = optionSetValueRepository.findByCodeAndValue(code, value);
+        if (DataUtil.isNullOrEmpty(result)) {
+            return null;
+        }
+        return optionSetValueMapper.toResponse(result.get(0));
     }
 }

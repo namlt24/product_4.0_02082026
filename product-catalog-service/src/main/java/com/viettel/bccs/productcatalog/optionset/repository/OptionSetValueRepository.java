@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface OptionSetValueRepository extends JpaRepository<OptionSetValueEntity, Long> {
@@ -38,7 +37,8 @@ public interface OptionSetValueRepository extends JpaRepository<OptionSetValueEn
 
     @Query(value = "SELECT osv.* FROM option_set_value osv " +
             "JOIN option_set os ON osv.option_set_id = os.option_set_id " +
-            "WHERE os.code = :code AND os.status = '1' AND osv.value = :value AND osv.status = '1'",
+            "WHERE os.code = :code AND os.status = '1' AND UPPER(osv.value) = UPPER(:value) AND osv.status = '1' " +
+            "ORDER BY osv.value",
             nativeQuery = true)
-    Optional<OptionSetValueEntity> findOneByCodeAndValue(@Param("code") String code, @Param("value") String value);
+    List<OptionSetValueEntity> findByCodeAndValue(@Param("code") String code, @Param("value") String value);
 }

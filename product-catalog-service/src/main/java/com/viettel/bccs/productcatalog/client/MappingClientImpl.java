@@ -54,7 +54,8 @@ public class MappingClientImpl implements MappingClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getMappingReasonProductOfferPrice for productPackageId={}", productPackageId, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-policy-service getMappingReasonProductOfferPrice for productPackageId=" + productPackageId, e);
         }
     }
 }

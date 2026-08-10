@@ -7,4 +7,7 @@ import java.util.List;
 public interface ProductOfferPriceRepositoryCustom {
 
     List<ProductOfferPriceEntity> getPriceInServices(Long productPackageId, Long productOfferType, Long productOfferId, Long pricePolicy);
+
+    List<ProductOfferPriceEntity> getPriceEquipment(Long productPackageId, Long productOfferType, Long productOfferId);
+
 }

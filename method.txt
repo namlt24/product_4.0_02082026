@@ -101,3 +101,11 @@
         }
     }
 
+
+-> Viết hàm getProductCodeNew trong MapActiveInfoProductController
+
+Yêu cầu: 
++ Code đúng convention, clean, không bug
++ Refactor code sau khi làm xong
++ test đủ các case
++ 

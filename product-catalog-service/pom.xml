@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.viettel.bccs</groupId>
         <artifactId>bccs-build-parent</artifactId>
-        <version>0.1.7-SNAPSHOT</version>
+        <version>0.1.14-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -70,4 +70,16 @@
             <version>${springdoc-openapi.version}</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>product-catalog-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

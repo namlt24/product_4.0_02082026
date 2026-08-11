@@ -25,7 +25,6 @@ spring:
           - 10.207.252.213:9007
           - 10.207.252.213:9008
           - 10.207.252.213:9009
-        max-redirects: 3
       # ----------------------------------------------------
 
       # ACL Authentication
@@ -48,6 +47,26 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:10.207.252.169:8859}
     consumer:
       group-id: ${BCCS_KAFKA_CONSUMER_GROUP_ID:${spring.application.name}}
+  cloud:
+    openfeign:
+      httpclient:
+        hc5:
+          enabled: ${BCCS_FEIGN_HC5_ENABLED:true}
+      circuitbreaker:
+        enabled: ${BCCS_FEIGN_CIRCUIT_BREAKER_ENABLED:false}
+      client:
+        decode-slash: false
+        config:
+          organization-resource-service:
+            url: ${ORGANIZATION_SERVICE_URL:http://localhost:8004/organization-resource-service}
+            connect-timeout: ${ORGANIZATION_SERVICE_CONNECT_TIMEOUT_MS:3000}
+            read-timeout: ${ORGANIZATION_SERVICE_READ_TIMEOUT_MS:10000}
+            logger-level: NONE
+          product-catalog-service:
+            url: ${PRODUCT_CATALOG_SERVICE_URL:http://localhost:8001/product-catalog-service}
+            connect-timeout: ${PRODUCT_CATALOG_SERVICE_CONNECT_TIMEOUT_MS:3000}
+            read-timeout: ${PRODUCT_CATALOG_SERVICE_READ_TIMEOUT_MS:10000}
+            logger-level: NONE
 
 server:
   port: ${APP_PORT:8002}
@@ -61,6 +80,16 @@ management:
     health:
       show-details: always
 
+logging:
+  level:
+    root: INFO
+    com.viettel.bccs.policy.mapactiveinfo: DEBUG
+    com.viettel.bccs.policy.reason: DEBUG
+    com.viettel.bccs.policy.discountpromotion: DEBUG
+    com.viettel.bccs.client.core.BccsHttpClient: DEBUG
+    com.fasterxml.jackson: DEBUG
+    com.viettel.bccs: DEBUG
+
 bccs:
   web:
     include-stacktrace: true
@@ -68,10 +97,10 @@ bccs:
     include-stacktrace: true
   config:
     enabled: true
-    team-code: POLICY
+    team-code: CATALOG
     service-name: product-policy-service
     client:
-      base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://localhost:8084}
+      base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://10.207.252.17:8484}
       connect-timeout-ms: 3000
       read-timeout-ms: 5000
     kafka:
@@ -93,39 +122,21 @@ bccs:
         response-mode: code-as-message
         trigger-refresh: true
         log-level: WARN
-    client-config:
-      enabled: true
-      startup:
-        load-latest: true
-        fail-fast: ${BCCS_CLIENT_CONFIG_FAIL_FAST:false}
-      missing-client:
-        mode: use-file-config
 
     option-set:
       enabled: true
-      team-code: POLICY
-      service-name: product-policy-service
-      server-base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://localhost:8084}
-      preload:
-        - ORDER_STATUS
-        - CHANNEL_CODE
-        - FEATURE_FLAGS
-        - ORDER_NUMBER_PARAMS
-        - ORDER_STRING_PARAMS
-        - ORDER_BOOLEAN_PARAMS
-        - PARTNER_STATUS_MAPPING
       sync-interval: 60s
       fail-fast: false
       kafka-enabled: true
   response:
     defaults:
       success-code: SUCCESS
-      system-error-code: BCCS-SYS-TECH-0001
-      validation-error-code: BCCS-SYS-VAL-0001
-      unauthorized-error-code: BCCS-AUTH-SEC-0001
-      forbidden-error-code: BCCS-AUTH-SEC-0002
-      integration-error-code: BCCS-SYS-INT-0001
-      rate-limit-error-code: BCCS-SYS-RATE-0001
+      system-error-code: SYSTEM_ERROR
+      validation-error-code: VALIDATION_ERROR
+      unauthorized-error-code: UNAUTHORIZED
+      forbidden-error-code: FORBIDDEN
+      integration-error-code: INTEGRATION_ERROR
+      rate-limit-error-code: RATE_LIMIT_EXCEEDED
 
   message:
     formatter: message-format
@@ -137,8 +148,67 @@ bccs:
       enabled: true
     masking:
       enabled: true
-    request:
+      sensitive-fields:
+        - password
+        - authorization
+        - token
+        - access_token
+      replacement: "******"
+    boundary:
       enabled: true
+      http-inbound:
+        enabled: true
+        completion-enabled: false
+      client:
+        enabled: true
+        feign:
+          enabled: true
+          completion-enabled: true
+        control-plane:
+          enabled: true
+          completion-enabled: true
+        soap:
+          enabled: true
+          completion-enabled: true
+      kafka:
+        enabled: false
+        producer:
+          enabled: true
+          requested-enabled: false
+          acknowledged-enabled: true
+          failed-enabled: true
+        consumer:
+          enabled: true
+          completed-enabled: true
+          failed-enabled: true
+          retry-enabled: false
+          dlt-enabled: false
+      security:
+        enabled: false
+        authentication-failed-enabled: true
+        authorization-denied-enabled: true
+      elasticsearch:
+        enabled: false
+        success-enabled: true
+        slow-enabled: true
+        failure-enabled: true
+      solr:
+        enabled: false
+        success-enabled: true
+        slow-enabled: true
+        failure-enabled: true
+      cache:
+        enabled: false
+        slow-enabled: true
+        failure-enabled: true
+      redis:
+        enabled: false
+        slow-enabled: true
+        failure-enabled: true
+      scheduler:
+        enabled: false
+        completion-enabled: false
+    request:
       exclude-paths:
         - /actuator/**
         - /swagger-ui/**
@@ -151,33 +221,50 @@ bccs:
         enabled: true
         log-request-body: true
         log-response-body: true
-        log-headers: true
+        log-headers: false
         allowed-content-types:
           - application/json
           - application/xml
+          - application/soap+xml
           - text/plain
           - text/xml
+        include-paths: []
+        exclude-paths:
+          - /actuator/**
+          - /swagger-ui/**
+          - /v3/api-docs/**
         sampling-rate: 1.0
       outbound:
         enabled: true
+        feign:
+          enabled: true
+        soap:
+          enabled: true
         log-request-body: true
         log-response-body: true
-        log-headers: true
+        log-headers: false
+        allowed-content-types:
+          - application/json
+          - application/xml
+          - application/soap+xml
+          - text/plain
+          - text/xml
         allowed-target-systems: []
         sampling-rate: 1.0
     execution:
-      enabled: true
-      default-log-args: true
-      default-log-result: true
+      enabled: false
+      default-log-args: false
+      default-log-result: false
       slow-threshold-ms: 200
-    level:
-      root: INFO
-      com.viettel.bccs.policy.mapactiveinfo: DEBUG
-      com.viettel.bccs.policy.reason: DEBUG
-      com.viettel.bccs.policy.discountpromotion: DEBUG
-      com.viettel.bccs.client.core.BccsHttpClient: DEBUG
-      com.fasterxml.jackson: DEBUG
-    com.viettel.bccs: DEBUG
+      include-packages:
+        - "com.viettel.bccs.policy.**.service.*"
+        - "com.viettel.bccs.policy.**.client.*"
+      exclude-packages:
+        - "com.viettel.bccs.policy.**.mapper.*"
+        - "com.viettel.bccs.policy.**.shared.*"
+        - "com.viettel.bccs.policy.**.domain.model.*"
+        - "com.viettel.bccs.policy.**.api.dto.*"
+        - "com.viettel.bccs.policy.**.persistence.entity.*"
 
   observability:
     environment: local
@@ -185,18 +272,65 @@ bccs:
       enabled: ${BCCS_OBSERVABILITY_TRACING_ENABLED:false}
 
   security:
-    enabled: ${BCCS_SECURITY_ENABLED:false}
-    jwt:
-      enabled: ${BCCS_SECURITY_JWT_ENABLED:false}
+    enabled: false
+    public-paths:
+      - /actuator/health/**
+      - /v3/api-docs
+      - /v3/api-docs/**
+      - /v3/api-docs.yaml
+      - /swagger-ui.html
+      - /swagger-ui/**
+      - /error
+    service-name: ${spring.application.name}
+    control-plane:
+      base-url: http://10.207.252.17:8484
+      connect-timeout: 3s
+      read-timeout: 5s
+    snapshot:
+      startup-load: true
+      fail-fast: true
+      poll-interval: 30s
+      max-staleness: 5m
+
+    catalog-sync:
+      enabled: true
+    concurrency:
+      enabled: true
+      namespace: ${APP_ENV:local}
+      lease-ttl: 60s
+      renew-interval: 20s
+      renewal-threads: 2
+      acquire-timeout: 1s
+      max-in-flight-acquires: 2
 
   redis:
     # Set to true to enable BCCS Redis Operations (bccs-starter-redis)
+    redisson:
+      enabled: ${BCCS_REDIS_REDISSON_ENABLED:true}
+      lazy-initialization: true
+      retry-attempts: 0
+      retry-interval: 1500ms
+      single:
+        connection-pool-size: 32
+        connection-minimum-idle-size: 4
+        subscription-connection-pool-size: 8
+        subscription-connection-minimum-idle-size: 1
+      cluster:
+        master-connection-pool-size: 16
+        master-connection-minimum-idle-size: 1
+        slave-connection-pool-size: 16
+        slave-connection-minimum-idle-size: 1
+        subscription-connection-pool-size: 8
+        subscription-connection-minimum-idle-size: 1
+        scan-interval: 1s
     enabled: true
     type: ${BCCS_REDIS_TYPE:cluster}
     key-prefix: ${BCCS_REDIS_KEY_PREFIX:bccs:${spring.application.name}:}
     default-ttl: 10m
     require-ttl: false
     fail-fast: false
+    operation-timeout: 1s
+    max-in-flight-operations: 32
     log-startup-info: true
 
   cache:
@@ -242,8 +376,9 @@ bccs:
 
   client:
     enabled: true
-    # Static bccs.client.clients.* fallback for local development.
-    # Dynamic CLIENT_CONFIG is loaded from bccs-config-service on startup.
+    feign:
+      enabled: ${BCCS_FEIGN_ENABLED:true}
+    # Static client definitions are loaded from YAML and environment variables at startup.
 #    clients:
 #      customer-service:
 #        enabled: true
@@ -311,7 +446,7 @@ springdoc:
     enabled: ${BCCS_SPRINGDOC_UI_ENABLED:true}
 #    path: /swagger-ui.html
   packages-to-scan: com.viettel.bccs.policy
-paths-to-exclude: /actuator/**,/error
+  paths-to-exclude: /actuator/**,/error
 
 app:
   async:

@@ -1,6 +1,8 @@
 package com.viettel.bccs.policy.common.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.io.Serializable;
@@ -41,7 +43,12 @@ public class FilterRequest implements Serializable {
     }
 
     @Schema(description = "Mã thuộc tính")
+    @Size(max = 100, message = "property tối đa 100 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_.]{0,100}$", message = "property chỉ gồm chữ, số, '_' hoặc '.'")
     private String property;
+
+    @Size(max = 100, message = "entity tối đa 100 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_.]{0,100}$", message = "entity chỉ gồm chữ, số, '_' hoặc '.'")
     private String entity;
 
     @Schema(description = "Giá trị thuộc tính")
@@ -49,14 +56,19 @@ public class FilterRequest implements Serializable {
 
     private Operator operator;
 
-    private OrExprFilterRequest orExprFilterRequest;
-    private ListFilterRequest listFilterRequest;
-
+    @Size(max = 1000, message = "valueText tối đa 1000 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "valueText không được chứa ký tự điều khiển")
     private String valueText;
+
+    @Size(max = 20, message = "valueType tối đa 20 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "valueType chỉ gồm chữ, số, '_' hoặc '-'")
     private String valueType;
+
     private boolean notEqual;
     private boolean extract;
     private boolean valueInRange;
+
+    @Size(max = 500, message = "lstValue tối đa 500 phần tử")
     private List<String> lstValue;
 
     @Override

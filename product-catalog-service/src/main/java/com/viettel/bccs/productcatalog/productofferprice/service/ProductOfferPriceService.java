@@ -68,6 +68,16 @@ public class ProductOfferPriceService {
                 .orElse(null);
     }
 
+    /**
+     * Migrate từ mono: ProductOfferPriceServiceImpl.getPriceByTypePolicy. Lấy danh sách giá bán
+     * đang active của 1 sản phẩm theo loại giá + chính sách giá, còn hiệu lực theo ngày hiện tại,
+     * sắp xếp tăng dần theo giá.
+     */
+    @Cacheable(value = "productOfferPriceCache", key = "'TYPE_POLICY:' + #productOfferId + ':' + #priceTypeId + ':' + #pricePolicy")
+    public List<ProductOfferPriceDTO> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy) {
+        return mapper.toDtoBean(repository.getPriceByTypePolicy(productOfferId, priceTypeId, pricePolicy));
+    }
+
     @Cacheable(value = "productOfferPriceCache",
             key = "'PCCC:' + #productPackageId + ':' + #productPackageCode + ':' + #productOfferType + ':' + #productOfferId + ':' + #pricePolicy")
     public List<ProductOfferPriceDTO> getPriceInServicesForPCCC(Long productPackageId, String productPackageCode,

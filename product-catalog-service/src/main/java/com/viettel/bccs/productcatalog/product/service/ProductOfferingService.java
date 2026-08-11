@@ -61,6 +61,11 @@ public class ProductOfferingService {
                 .toList();
     }
 
+    @Cacheable(value = "productOfferingCache", key = "'TELECOM_SUB_TYPE_ACTIVE:' + #telecomServiceId + ':' + '' + #subType + ':' + #offerTypeId")
+    public List<ProductOfferingDTO> findByTelecomSubTypeOfferType(Long telecomServiceId, String subType, Long offerTypeId) {
+        return findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, true);
+    }
+
     public List<ProductOfferingDTO> findByPayTypeWithSpec(String telecomServiceId, String payType, String productOfferTypeId, List<FilterRequest> listProductSpec) {
         if (DataUtil.isAnyNull(payType, productOfferTypeId)) {
             throw new BusinessException("BCCS-CATALOG-PRODUCT-0002", "payType and productOfferTypeId are required");
@@ -103,41 +108,22 @@ public class ProductOfferingService {
         return productOfferingRepository.checkAttProductOrVasByCode(productCode, Long.valueOf(productType.trim()), attributeCode);
     }
 
-    /**
-     * Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc/yêu cầu productType
-     * (product_offer_type_id) nữa — dùng khi không cần phân biệt sản phẩm/VAS.
-     */
-    public boolean hasProductAtt(String productCode, String attributeCode) {
-        if (DataUtil.isAnyNull(productCode, attributeCode)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0004", "productCode and attributeCode are required");
+    public boolean hasProductAtt(Long offerId, String attributeCode) {
+        if (DataUtil.isAnyNull(offerId, attributeCode)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0004", "offerId and attributeCode are required");
         }
-        return productOfferingRepository.hasProductAtt(productCode, attributeCode);
+        return productOfferingRepository.hasProductAtt(offerId, attributeCode);
     }
 
-    /**
-     * Map 1:1 tu ProductOfferingServiceImpl.getListVas (code mono cu, khong con trong repo hien
-     * tai). Code cu dung cache 2 tang thu cong (RAM HashMap + raw Jedis) — day la vi pham
-     * CLAUDE.md ("khong dung Redis client tho") va vi pham thang rule ArchUnit
-     * NO_DIRECT_REDIS_CLIENT_USAGE dang bat trong repo nay, nen CHI RIENG PHAN CACHE duoc thay
-     * bang @Cacheable (BCCS starter). Toan bo logic nghiep vu con lai giu nguyen trong
-     * getListVasCore ben duoi, map tung dong voi code cu.
-     */
     @Cacheable(value = "productOfferingCache", key = "'LIST_VAS:' + #offerId")
     public List<ProductOfferingDTO> getListVas(Long offerId) {
         return getListVasCore(offerId);
     }
 
-    /**
-     * Map 1:1 tu ProductOfferingServiceImpl.getListVasCore (dong 3618-3727 code mono cu).
-     * Duy nhat 1 doan duoc thay the: "Loc danh sach vas theo cac nhom co san" (comment goc cua
-     * tac gia "MinhNH - 20160213") — code cu doc 8 danh sach tu file vascode_config.properties
-     * (qua getVasExclude), code nay doc tu OPTION_SET.CODE=VAS_EXCLUSIVE_GROUP (qua
-     * getVasExcludeGroup). Cau truc chuoi if-else-if va cach gan typeIndex giu nguyen y het.
-     */
+
     private List<ProductOfferingDTO> getListVasCore(Long offerId) {
-        // productOfferingServiceImpl.java:3621 — repository.getListVas(offerId) khong co source
-        // that trong bo code duoc cung cap, da viet tam theo suy doan trong
-        // ProductOfferingRepositoryCustomImpl.getListVas(...).
+        // productOfferingServiceImpl.java:3621 — repository.getListVas(offerId) da doi chieu voi
+        // source that va cap nhat trong ProductOfferingRepositoryCustomImpl.getListVas(...).
         List<ProductOfferingDTO> lst = productOfferingRepository.getListVas(offerId).stream()
                 .map(productOfferingMapper::toDto)
                 .collect(Collectors.toCollection(ArrayList::new));

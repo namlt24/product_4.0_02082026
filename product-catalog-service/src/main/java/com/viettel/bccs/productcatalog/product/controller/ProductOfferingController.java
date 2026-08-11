@@ -114,6 +114,36 @@ public class ProductOfferingController {
         return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, getActiveProduct));
     }
 
+    @GetMapping("/findByTelecomSubTypeOfferType")
+    @Operation(
+            operationId = "findByTelecomSubTypeOfferType",
+            summary = "Tìm kiếm sản phẩm đang active theo dịch vụ viễn thông, loại thuê bao và loại sản phẩm",
+            description = "Tìm kiếm sản phẩm gói cước đang active (status='1') theo các tiêu chí: ID dịch vụ viễn thông, loại thuê bao, loại sản phẩm. Tương đương findByTelecomSubTypeOfferTypeCheckProductStatus với getActiveProduct=true. Kết quả được sắp xếp theo mã sản phẩm."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = PRODUCT_LIST_EXAMPLE)))
+    })
+    public StandardResponse<List<ProductOfferingDTO>> findByTelecomSubTypeOfferType(
+            @Parameter(description = "ID dịch vụ viễn thông", example = "1")
+            @RequestParam(required = false)
+            @Min(value = 1, message = "telecomServiceId phải >= 1")
+            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
+            Long telecomServiceId,
+            @Parameter(description = "Loại thuê bao (1: trả sau, 2: trả trước)", example = "1")
+            @RequestParam(required = false)
+            @Size(max = 1, message = "subType đúng 1 ký tự")
+            @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "subType chỉ gồm chữ hoặc số")
+            String subType,
+            @Parameter(description = "ID loại sản phẩm", example = "1")
+            @RequestParam(required = false)
+            @Min(value = 1, message = "offerTypeId phải >= 1")
+            @Max(value = 9999999999L, message = "offerTypeId vượt quá độ dài cột (precision 10)")
+            Long offerTypeId) {
+        return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferType(telecomServiceId, subType, offerTypeId));
+    }
+
     @GetMapping("/findByCodeOrId")
     @Operation(
             operationId = "findByCodeOrId",
@@ -215,8 +245,8 @@ public class ProductOfferingController {
 
     @GetMapping("/hasProductAtt")
     @Operation(
-            summary = "Kiểm tra sản phẩm có đặc tính theo mã",
-            description = "Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc theo product_offer_type_id (không phân biệt product/VAS). Kiểm tra sản phẩm (xác định bởi productCode) có gán đặc tính (product_spec_char) theo attributeCode hay không. Chỉ tính các bản ghi đang active (status='1')."
+            summary = "Kiểm tra sản phẩm có đặc tính theo ID",
+            description = "Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc theo product_offer_type_id (không phân biệt product/VAS). Kiểm tra sản phẩm (xác định bởi offerId - product_offering_id) có gán đặc tính (product_spec_char) theo attributeCode hay không. Chỉ tính các bản ghi đang active (status='1')."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Thành công",
@@ -224,18 +254,18 @@ public class ProductOfferingController {
                             examples = @ExampleObject(name = "success", value = BOOLEAN_EXAMPLE)))
     })
     public StandardResponse<Boolean> hasProductAtt(
-            @Parameter(description = "Mã sản phẩm / VAS", example = "300", required = true)
+            @Parameter(description = "ID sản phẩm / VAS (product_offering_id)", example = "400005827", required = true)
             @RequestParam
-            @Size(min = 1, max = 50, message = "productCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
-            String productCode,
+            @Min(value = 1, message = "offerId phải >= 1")
+            @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
+            Long offerId,
 
             @Parameter(description = "Mã đặc tính cần kiểm tra (product_spec_char.code)", example = "IS_CONNECTED", required = true)
             @RequestParam
             @Size(min = 1, max = 200, message = "attributeCode tối đa 200 ký tự")
             @Pattern(regexp = "^[A-Za-z0-9_-]{1,200}$", message = "attributeCode chỉ gồm chữ, số, '_' hoặc '-'")
             String attributeCode) {
-        return StandardResponses.success(productOfferingService.hasProductAtt(productCode, attributeCode));
+        return StandardResponses.success(productOfferingService.hasProductAtt(offerId, attributeCode));
     }
 
     @PostMapping("/findByCodesAndProductOfferType")

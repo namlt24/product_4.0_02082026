@@ -143,4 +143,35 @@ public class ProductOfferPriceController {
                 productPackageId, productPackageCode, productOfferType, productOfferId, pricePolicy));
     }
 
+    @GetMapping("/getPriceByTypePolicy")
+    @Operation(
+            operationId = "getPriceByTypePolicy",
+            summary = "Lấy danh sách giá bán theo loại giá và chính sách giá",
+            description = "Truy vấn danh sách giá bán thiết bị (PRODUCT_OFFER_PRICE) đang active của 1 sản phẩm theo priceTypeId và pricePolicy, chỉ lấy bản ghi còn hiệu lực theo ngày hiện tại (EFFECT_DATETIME/EXPIRE_DATETIME). Kết quả sắp xếp tăng dần theo giá.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = PRICE_DTO_LIST_EXAMPLE)))
+    })
+    public StandardResponse<List<ProductOfferPriceDTO>> getPriceByTypePolicy(
+            @Parameter(description = "ID sản phẩm", example = "456", required = true)
+            @RequestParam
+            @Min(value = 1, message = "productOfferId phải >= 1")
+            @Max(value = 9999999999L, message = "productOfferId vượt quá độ dài cột (precision 10)")
+            Long productOfferId,
+
+            @Parameter(description = "ID loại giá", example = "1", required = true)
+            @RequestParam
+            @Min(value = 1, message = "priceTypeId phải >= 1")
+            @Max(value = 9999999999L, message = "priceTypeId vượt quá độ dài cột (precision 10)")
+            Long priceTypeId,
+
+            @Parameter(description = "ID chính sách giá", example = "7", required = true)
+            @RequestParam
+            @Min(value = 1, message = "pricePolicy phải >= 1")
+            @Max(value = 9999999999L, message = "pricePolicy vượt quá độ dài cột (precision 10)")
+            Long pricePolicy) {
+        return StandardResponses.success(productOfferPriceService.getPriceByTypePolicy(productOfferId, priceTypeId, pricePolicy));
+    }
+
 }

@@ -19,7 +19,7 @@ public interface ProductOfferingRepositoryCustom {
 
     boolean checkAttProductOrVasByCode(String productCode, Long productType, String attributeCode);
 
-    boolean hasProductAtt(String productCode, String attributeCode);
+    boolean hasProductAtt(Long offerId, String attributeCode);
 
     List<ProductOfferingEntity> getListVas(Long offerId);
 }

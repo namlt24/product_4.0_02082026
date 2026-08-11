@@ -10,4 +10,6 @@ public interface ProductOfferPriceRepositoryCustom {
 
     List<ProductOfferPriceEntity> getPriceEquipment(Long productPackageId, Long productOfferType, Long productOfferId);
 
+    List<ProductOfferPriceEntity> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy);
+
 }

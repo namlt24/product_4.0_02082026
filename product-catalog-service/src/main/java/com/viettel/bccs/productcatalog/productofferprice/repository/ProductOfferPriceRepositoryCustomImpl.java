@@ -89,4 +89,36 @@ public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceR
         return query.getResultList();
     }
 
+    /**
+     * Nguồn thật (hệ mono cũ) viết bằng JPQL (em.createQuery, entity "ProductOfferPrice", dùng
+     * hàm Oracle sysdate/trunc trực tiếp trong JPQL). Codebase này KHÔNG có tiền lệ dùng JPQL ở bất
+     * kỳ repository custom nào (100% dùng native SQL) và Hibernate không nhận sysdate/trunc như
+     * hàm JPQL chuẩn — giữ nguyên dạng JPQL như bản gốc sẽ lỗi lúc parse. Viết lại thành native SQL
+     * tương đương 1:1 về nghiệp vụ (cùng bảng, cùng điều kiện lọc, cùng thứ tự sắp xếp), theo đúng
+     * convention native SQL đã dùng cho 2 hàm phía trên trong cùng file.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<ProductOfferPriceEntity> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy) {
+        String sql = """
+            SELECT a.*
+            FROM BCCS_PRODUCT.PRODUCT_OFFER_PRICE a
+            WHERE 1 = 1
+              AND a.PRODUCT_OFFERING_ID = :productOfferingId
+              AND a.PRICE_TYPE_ID = :priceTypeId
+              AND a.PRICE_POLICY_ID = :pricePolicy
+              AND a.STATUS = '1'
+              AND (a.EFFECT_DATETIME IS NULL OR a.EFFECT_DATETIME <= TRUNC(SYSDATE))
+              AND (a.EXPIRE_DATETIME IS NULL OR a.EXPIRE_DATETIME >= TRUNC(SYSDATE))
+            ORDER BY a.PRICE
+            """;
+
+        Query query = entityManager.createNativeQuery(sql, ProductOfferPriceEntity.class);
+        query.setParameter("productOfferingId", productOfferId);
+        query.setParameter("priceTypeId", priceTypeId);
+        query.setParameter("pricePolicy", pricePolicy);
+
+        return query.getResultList();
+    }
+
 }

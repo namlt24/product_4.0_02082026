@@ -1,6 +1,35 @@
-{"@timestamp":"2026-07-24T07:29:23.444Z","ecs.version":"1.2.0","log.level":"INFO","message":"Initializing Spring DispatcherServlet 'dispatcherServlet'","process.thread.name":"http-nio-8002-exec-2","log.logger":"org.apache.catalina.core.ContainerBase.[Tomcat].[localhost].[/]"}
-{"@timestamp":"2026-07-24T07:29:23.445Z","ecs.version":"1.2.0","log.level":"INFO","message":"Initializing Servlet 'dispatcherServlet'","process.thread.name":"http-nio-8002-exec-2","log.logger":"org.springframework.web.servlet.DispatcherServlet"}
-{"@timestamp":"2026-07-24T07:29:23.446Z","ecs.version":"1.2.0","log.level":"INFO","message":"Completed initialization in 1 ms","process.thread.name":"http-nio-8002-exec-2","log.logger":"org.springframework.web.servlet.DispatcherServlet"}
-{"@timestamp":"2026-07-24T07:29:23.491Z","ecs.version":"1.2.0","log.level":"INFO","message":"Error processing request [POST /product-policy-service/v1/map-active-info/validateWithOutMapActiveInfo] Code: SYSTEM_ERROR, Status: 500, Message: SYSTEM_ERROR","process.thread.name":"http-nio-8002-exec-2","log.logger":"com.viettel.bccs.web.exception.BccsGlobalExceptionHandler","correlationId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314","requestId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314","traceId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314"}
-{"@timestamp":"2026-07-24T07:29:23.581Z","ecs.version":"1.2.0","log.level":"INFO","message":"{\"timestamp\":\"2026-07-24T07:29:23.557285400Z\",\"level\":\"INFO\",\"logType\":\"PAYLOAD\",\"event\":\"INBOUND_PAYLOAD_LOGGED\",\"traceId\":\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\",\"requestId\":\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\",\"correlationId\":\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\",\"payloadId\":\"f07729f9-f0d7-4ac2-a827-caa9d3299b64\",\"direction\":\"INBOUND\",\"ownerLogType\":\"API\",\"httpMethod\":\"POST\",\"path\":\"/product-policy-service/v1/map-active-info/validateWithOutMapActiveInfo\",\"requestHeaders\":{\"Content-Type\":\"application/json\",\"User-Agent\":\"PostmanRuntime/7.55.1\",\"Accept\":\"*/*\",\"Cache-Control\":\"no-cache\",\"Postman-Token\":\"d4aafa7b-9731-4fb6-bd0b-2657e7ecc97a\",\"Host\":\"localhost:8002\",\"Accept-Encoding\":\"gzip, deflate, br\",\"Connection\":\"keep-alive\",\"Content-Length\":\"1318\"},\"responseHeaders\":{\"X-Content-Type-Options\":\"nosniff\",\"X-XSS-Protection\":\"0\",\"Cache-Control\":\"no-cache, no-store, max-age=0, must-revalidate\",\"Pragma\":\"no-cache\",\"Expires\":\"0\",\"X-Frame-Options\":\"DENY\",\"Content-Type\":\"application/json\"},\"responseBody\":\"{\\\"code\\\":\\\"SYSTEM_ERROR\\\",\\\"message\\\":\\\"SYSTEM_ERROR\\\",\\\"traceId\\\":\\\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\\\",\\\"requestId\\\":\\\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\\\",\\\"data\\\":null,\\\"timestamp\\\":\\\"2026-07-24T07:29:23.490303600Z\\\"}\",\"payloadMasked\":true,\"payloadTruncated\":false,\"requestSizeBytes\":1318,\"responseSizeBytes\":205}","process.thread.name":"http-nio-8002-exec-2","log.logger":"com.viettel.bccs.logging.web.RequestLoggingFilter","correlationId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314","requestId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314","traceId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314"}
-{"@timestamp":"2026-07-24T07:29:23.583Z","ecs.version":"1.2.0","log.level":"INFO","message":"{\"timestamp\":\"2026-07-24T07:29:23.555284500Z\",\"level\":\"INFO\",\"logType\":\"API\",\"event\":\"REQUEST_COMPLETED\",\"traceId\":\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\",\"requestId\":\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\",\"correlationId\":\"75537c5a-f4e5-41cc-8aa2-a3adbfafd314\",\"httpMethod\":\"POST\",\"path\":\"/product-policy-service/v1/map-active-info/validateWithOutMapActiveInfo\",\"uri\":\"http://localhost:8002/product-policy-service/v1/map-active-info/validateWithOutMapActiveInfo\",\"status\":500,\"durationMs\":98,\"clientIp\":\"0:0:0:0:0:0:0:1\",\"userAgent\":\"PostmanRuntime/7.55.1\",\"requestSizeBytes\":1318,\"responseSizeBytes\":205,\"payloadLogged\":true,\"payloadTruncated\":false,\"payloadId\":\"f07729f9-f0d7-4ac2-a827-caa9d3299b64\"}","process.thread.name":"http-nio-8002-exec-2","log.logger":"com.viettel.bccs.logging.web.RequestLoggingFilter","correlationId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314","requestId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314","traceId":"75537c5a-f4e5-41cc-8aa2-a3adbfafd314"}
+@Override
+public List<ProductOfferPriceDTO> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy) throws LogicException, Exception {
+    return mapper.toDtoBean(repository.getPriceByTypePolicy(productOfferId, priceTypeId, pricePolicy));
+}
+
+
+@Override
+public List<ProductOfferPrice> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy) {
+    StringBuilder strQuery = new StringBuilder(" SELECT   a  FROM   ProductOfferPrice a " +
+            " WHERE 1=1 " +
+            " AND a.productOfferingId = :productOfferingId " +
+            " AND a.priceTypeId = :priceTypeId " +
+            " AND a.pricePolicyId = :pricePolicy " +
+            " AND a.status = '1' " +
+            " and (a.effectDatetime is null or a.effectDatetime <= trunc(sysdate)) " +
+            " and (a.expireDatetime is null or a.expireDatetime >= trunc(sysdate)) " +
+            " ORDER BY a.price  ");
+
+    Query query = em.createQuery(strQuery.toString());
+    query.setParameter("productOfferingId", productOfferId);
+    query.setParameter("priceTypeId", priceTypeId);
+    query.setParameter("pricePolicy", pricePolicy);
+
+    return query.getResultList();
+}
+
+-> Dựa vào code ở trên code hàm findByTelecomSubTypeOfferType
+Yêu cầu bắt buộc:
++ Code đúng convention, cấu trúc dự án
++ Code clean không lỗi
++ Code tối ưu
++ code đúng nghiệp vụ không được phép thay đổi
++ review code và sửa lỗi
++ Tuân thủ đúng swagger dự án
++ Thêm vào ProductOfferPriceController

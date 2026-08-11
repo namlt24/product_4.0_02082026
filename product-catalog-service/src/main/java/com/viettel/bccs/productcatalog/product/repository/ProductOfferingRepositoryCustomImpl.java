@@ -192,22 +192,16 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
 
     @Override
     public boolean checkAttProductOrVasByCode(String productCode, Long productType, String attributeCode) {
-        return hasProductAttInternal(productCode, productType, attributeCode);
+        return hasProductAttInternal(productCode, null, productType, attributeCode);
     }
 
     @Override
-    public boolean hasProductAtt(String productCode, String attributeCode) {
-        // Giống hệt checkAttProductOrVasByCode, chỉ khác: không lọc theo product_offer_type_id (dùng
-        // chung cho cả product lẫn VAS, không cần phân biệt loại) -> productType = null.
-        return hasProductAttInternal(productCode, null, attributeCode);
+    public boolean hasProductAtt(Long offerId, String attributeCode) {
+        return hasProductAttInternal(null, offerId, null, attributeCode);
     }
 
-    /**
-     * Query dùng chung cho checkAttProductOrVasByCode/hasProductAtt: 2 hàm chỉ khác nhau ở việc có lọc
-     * theo product_offer_type_id hay không, nên gom về 1 chỗ build SQL để tránh 2 bản gần-giống-hệt
-     * trôi logic khỏi nhau khi có thay đổi sau này (ví dụ thêm điều kiện status/hiệu lực ngày).
-     */
-    private boolean hasProductAttInternal(String productCode, Long productType, String attributeCode) {
+
+    private boolean hasProductAttInternal(String productCode, Long offerId, Long productType, String attributeCode) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(1) FROM ")
                 .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a, ")
                 .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_char_use b, ")
@@ -216,16 +210,26 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
                 .append(" WHERE a.product_offering_id = b.product_offering_id")
                 .append(" AND b.product_spec_char_id = c.product_spec_char_id")
                 .append(" AND d.product_spec_char_value_id = b.product_spec_char_value_id")
-                .append(" AND a.code = :productCode")
                 .append(" AND c.code = :attributeCode")
                 .append(" AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1'");
+        if (productCode != null) {
+            sql.append(" AND a.code = :productCode");
+        }
+        if (offerId != null) {
+            sql.append(" AND a.product_offering_id = :offerId");
+        }
         if (productType != null) {
             sql.append(" AND a.product_offer_type_id = :productType");
         }
 
         Query query = entityManager.createNativeQuery(sql.toString());
-        query.setParameter("productCode", productCode);
         query.setParameter("attributeCode", attributeCode);
+        if (productCode != null) {
+            query.setParameter("productCode", productCode);
+        }
+        if (offerId != null) {
+            query.setParameter("offerId", offerId);
+        }
         if (productType != null) {
             query.setParameter("productType", productType);
         }
@@ -234,25 +238,26 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
         return count.longValue() > 0;
     }
 
-    /**
-     * TAM VIET THEO SUY DOAN — bang trong repo cua he mono cu (repository.getListVas(offerId),
-     * ProductOfferingServiceImpl.java:3621) khong co trong bo code duoc cung cap, khong xac nhan
-     * duoc SQL/JPQL that. Suy doan hop ly dua theo cung 1 pattern voi getListOfferAlterStatus
-     * (join qua bang quan he PRODUCT_OFFER_RELATION): lay cac PRODUCT_OFFERING dang active,
-     * la VAS (product_offer_type_id = Const.PRODUCT_OFFER_TYPE.VAS), duoc gan voi offerId qua
-     * quan he PRODUCT_OFFER_RELATION co relation_type_id = Const.RELATION_TYPE.VAS va dang active.
-     * Neu co source that cua repository nay o he mono cu, can doi chieu lai va sua cho khop.
-     */
+
     @Override
     public List<ProductOfferingEntity> getListVas(Long offerId) {
-        String sql = "SELECT * FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offering " +
-                "WHERE status = '1' AND product_offer_type_id = " + Const.PRODUCT_OFFER_TYPE.VAS +
-                " AND product_offering_id IN ( " +
-                "SELECT a.relation_offer_id FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offer_relation a " +
-                "WHERE a.main_offer_id = :offerId AND a.relation_type_id = " + Const.RELATION_TYPE.VAS +
-                " AND a.status = '1' )";
+        StringBuilder strQuery = new StringBuilder();
+        strQuery.append(" SELECT * FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering ")
+                .append(" WHERE status = '1' AND product_offering_id IN ( ");
+        strQuery.append(" SELECT a.relation_offer_id FROM ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_relation a, ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_relation_detail b, ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value d ");
+        strQuery.append(" WHERE 1=1 AND a.main_offer_id = :offerId AND a.relation_type_id = ")
+                .append(Const.RELATION_TYPE.VAS).append(" ");
+        strQuery.append(" AND a.product_offer_relation_id = b.product_offer_relation_id ");
+        strQuery.append(" AND b.product_spec_char_id = c.product_spec_char_id ");
+        strQuery.append(" AND b.product_spec_char_value_id = d.product_spec_char_value_id ");
 
-        Query query = entityManager.createNativeQuery(sql, ProductOfferingEntity.class);
+        strQuery.append(" AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1' ) ");
+
+        Query query = entityManager.createNativeQuery(strQuery.toString(), ProductOfferingEntity.class);
         query.setParameter("offerId", offerId);
         return query.getResultList();
     }

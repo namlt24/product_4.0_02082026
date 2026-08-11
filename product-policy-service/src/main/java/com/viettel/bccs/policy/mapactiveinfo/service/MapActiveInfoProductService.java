@@ -7,7 +7,8 @@ import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
 import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.RequestMbccs;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeByMapActiveInfoRequest;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoProductVsaleRoles;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
@@ -76,7 +77,7 @@ public class MapActiveInfoProductService {
     // ============== getProductCodeByMapActiveInfo ==============
 
 
-    public List<ProductOfferingDTO> getProductCodeByMapActiveInfo(RequestMbccs request) {
+    public List<ProductOfferingDTO> getProductCodeByMapActiveInfo(GetProductCodeByMapActiveInfoRequest request) {
         log.info("[getProductCodeByMapActiveInfo] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
                 request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId());
 
@@ -96,7 +97,13 @@ public class MapActiveInfoProductService {
         return products;
     }
 
-    private void validateRequest(RequestMbccs request) {
+    private void validateRequest(GetProductCodeByMapActiveInfoRequest request) {
+        DataUtil.trimValue(request);
+        validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
+                request.getTelecomServiceId(), request.getRoleMap());
+    }
+
+    private void validateRequest(GetProductCodeRequest request) {
         DataUtil.trimValue(request);
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
@@ -126,7 +133,7 @@ public class MapActiveInfoProductService {
         validateMaxLengthParam(telecomServiceId, 10, "BCCS-POLICY-MAPACTIVE-0014");
     }
 
-    private List<ProductOfferingDTO> fetchOfferingsWithSpec(RequestMbccs request) {
+    private List<ProductOfferingDTO> fetchOfferingsWithSpec(GetProductCodeByMapActiveInfoRequest request) {
         List<ProductOfferingDTO> products = getProductCodeByMapActiveInfoWithSpec(
                 request.getStaffCode(),
                 request.getPayType(),
@@ -353,7 +360,7 @@ public class MapActiveInfoProductService {
 
     // ============== getProductCodeNew ==============
 
-    public List<ProductOfferingDTO> getProductCode(RequestMbccs request) {
+    public List<ProductOfferingDTO> getProductCode(GetProductCodeRequest request) {
         log.info("[getProductCodeNew] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
                 request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId());
 

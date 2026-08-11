@@ -25,4 +25,29 @@ public final class MapActiveInfoProductControllerExamples {
                 ]
               }
             }""";
+
+    public static final String PRODUCT_CODE_BY_MAP_ACTIVE_INFO_REQUEST_EXAMPLE = """
+            {
+              "staffCode": "1000363100_00129_CTV",
+              "payType": "1",
+              "actionCode": "00",
+              "telecomServiceId": "1",
+              "roleMap": {"values": ["MDEALER_DAUNOI_DIDONG_GOITHUONG"]},
+              "listProductSpec": []
+            }""";
+
+    public static final String PRODUCT_CODE_REQUEST_EXAMPLE = """
+            {
+              "staffCode": "1000363100_00129_CTV",
+              "payType": "1",
+              "actionCode": "00",
+              "telecomServiceId": "1",
+              "mode": 0,
+              "technology": "4G",
+              "infraType": "0",
+              "roleMap": {"values": ["MDEALER_DAUNOI_DIDONG_GOITHUONG"]},
+              "listProductSpec": [
+                {"property": "IS_CONNECTED", "valueText": "1"}
+              ]
+            }""";
 }

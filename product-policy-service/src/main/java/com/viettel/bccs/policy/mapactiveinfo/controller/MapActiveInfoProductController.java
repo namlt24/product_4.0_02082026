@@ -2,7 +2,8 @@ package com.viettel.bccs.policy.mapactiveinfo.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.RequestMbccs;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeByMapActiveInfoRequest;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.GetProductCodeByMapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,32 +33,38 @@ public class MapActiveInfoProductController {
     private final MapActiveInfoProductService mapActiveInfoProductService;
 
     @PostMapping("/getProductCodeByMapActiveInfo")
-    @Operation(operationId = "API_PRODUCT_023",
+    @Operation(operationId = "getProductCodeByMapActiveInfo",
             summary = "API lấy danh sách gói cước",
-            description = "API lấy danh sách gói cước theo map active info, loc theo vai tro nhan vien (M2M, goi dac biet, goi thuong)")
+            description = "API lấy danh sách gói cước theo map active info, loc theo vai tro nhan vien (M2M, goi dac biet, goi thuong)",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(schema = @Schema(implementation = GetProductCodeByMapActiveInfoRequest.class),
+                            examples = @ExampleObject(name = "request", value = PRODUCT_CODE_BY_MAP_ACTIVE_INFO_REQUEST_EXAMPLE))))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Thành công",
                     content = @Content(schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(name = "success", value = PRODUCT_CODE_LIST_EXAMPLE)))
     })
     public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCodeByMapActiveInfo(
-            @Valid @RequestBody RequestMbccs request) {
+            @Valid @RequestBody GetProductCodeByMapActiveInfoRequest request) {
         return StandardResponses.success(GetProductCodeByMapActiveInfoResponse.builder()
                 .productOfferingDTOs(mapActiveInfoProductService.getProductCodeByMapActiveInfo(request))
                 .build());
     }
 
-    @PostMapping("/getProductCodeNew")
-    @Operation(operationId = "getProductCodeNew",
-            summary = "API lấy danh sách gói cước theo map active info (bản mới)",
-            description = "Trả về danh sách gói cước (product code) hợp lệ theo map active info. Luôn ép kiểu PRODUCT_CODE và checkProductStatus=true, không lọc theo VAS.")
+    @PostMapping("/getProductCode")
+    @Operation(operationId = "getProductCode",
+            summary = "API lấy danh sách gói cước theo map active info",
+            description = "Trả về danh sách gói cước (product code) hợp lệ theo map active info. Luôn ép kiểu PRODUCT_CODE và checkProductStatus=true, không lọc theo VAS.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(schema = @Schema(implementation = GetProductCodeRequest.class),
+                            examples = @ExampleObject(name = "request", value = PRODUCT_CODE_REQUEST_EXAMPLE))))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Thành công",
                     content = @Content(schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(name = "success", value = PRODUCT_CODE_LIST_EXAMPLE)))
     })
     public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCode(
-            @Valid @RequestBody RequestMbccs request) {
+            @Valid @RequestBody GetProductCodeRequest request) {
         return StandardResponses.success(GetProductCodeByMapActiveInfoResponse.builder()
                 .productOfferingDTOs(mapActiveInfoProductService.getProductCode(request))
                 .build());

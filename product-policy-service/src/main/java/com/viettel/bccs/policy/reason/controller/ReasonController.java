@@ -75,6 +75,23 @@ public class ReasonController {
         return StandardResponses.success(service.checkAttReason(reasonId, attributeCode));
     }
 
+    @GetMapping("/getReasonCharacter")
+    @Operation(operationId = "getReasonCharacter", summary = "Lấy danh sách mã thuộc tính của hình thức hòa mạng",
+            description = "Trả về danh sách mã thuộc tính (product_spec_char.code) đang gán cho reason (reasonId), tra cứu qua REASON_CHAR_USE. Chỉ tính các bản ghi REASON_CHAR_USE đang active. Trả về danh sách rỗng nếu reason không có thuộc tính nào.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = REASON_CHARACTER_LIST_EXAMPLE)))
+    })
+    public StandardResponse<List<String>> getReasonCharacter(
+            @Parameter(description = "ID hình thức hòa mạng", example = "1", required = true)
+            @RequestParam
+            @Min(value = 0, message = "reasonId phải >= 0")
+            @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cột (precision 10)")
+            Long reasonId) {
+        return StandardResponses.success(service.getReasonCharacter(reasonId));
+    }
+
     @GetMapping("/getListReasonByActionCodeAndTelServiceForAudit")
     @Operation(operationId = "getListReasonByActionCodeAndTelServiceForAudit",
             summary = "Lấy danh sách hình thức hòa mạng theo mã hành động, dịch vụ viễn thông",

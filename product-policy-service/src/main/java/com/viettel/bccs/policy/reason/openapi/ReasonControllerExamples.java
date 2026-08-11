@@ -45,6 +45,16 @@ public final class ReasonControllerExamples {
               "data": true
             }""";
 
+    public static final String REASON_CHARACTER_LIST_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000004",
+              "requestId": "req-0004",
+              "timestamp": "2026-08-11T02:00:00Z",
+              "data": ["COLOR", "SIZE"]
+            }""";
+
     public static final String REASON_DTO_LIST_EXAMPLE = """
             {
               "code": "SUCCESS",

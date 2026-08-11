@@ -250,6 +250,39 @@ public class ReasonService {
         return reasonPauseService.getReasonPauseByReasonIds(reasonIds);
     }
 
+    /**
+     * Lấy danh sách mã thuộc tính (product_spec_char.code) đang gán cho reasonId, qua REASON_CHAR_USE
+     * (domain product-policy-service, JPA repository nội bộ) rồi resolve code qua PRODUCT_SPEC_CHAR
+     * (domain product-catalog-service, gọi cross-service qua ProductSpecCharClient — khác domain nên
+     * không join SQL trực tiếp). Cùng 2 nguồn dữ liệu, cùng cách resolve với checkAttReason ở trên,
+     * chỉ khác: trả về toàn bộ danh sách mã thay vì kiểm tra đúng 1 mã.
+     */
+    public List<String> getReasonCharacter(Long reasonId) {
+        if (DataUtil.isNullObject(reasonId)) {
+            throw new BusinessException("BCCS-POLICY-REASON-0004", "reasonId is required");
+        }
+        List<ReasonCharUseDTO> charUses = reasonCharUseMapper.toDTO(
+                reasonCharUseRepository.findByReasonIdInAndStatus(List.of(reasonId), Const.STATUS.ACTIVE));
+        if (DataUtil.isNullOrEmpty(charUses)) {
+            return List.of();
+        }
+
+        List<Long> specCharIds = charUses.stream()
+                .map(ReasonCharUseDTO::getProductSpecCharId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (specCharIds.isEmpty()) {
+            return List.of();
+        }
+
+        return productSpecCharClient.findByIds(specCharIds).stream()
+                .map(ProductSpecCharLookupDTO::getCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
     public boolean checkAttReason(Long reasonId, String attributeCode) {
         if (DataUtil.isAnyNull(reasonId, attributeCode)) {
             throw new BusinessException("BCCS-POLICY-REASON-0003", "reasonId and attributeCode are required");

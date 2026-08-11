@@ -3,6 +3,7 @@ package com.viettel.bccs.organization.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.organization.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,8 @@ public class OptionSetClientImpl implements OptionSetClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling option set service for code: {}", code, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service findValueByOptionSetCode for code=" + code, e);
         }
     }
 }

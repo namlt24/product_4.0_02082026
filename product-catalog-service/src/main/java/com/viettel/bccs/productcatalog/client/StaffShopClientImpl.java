@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
 import com.viettel.bccs.productcatalog.client.dto.StaffShopResponse;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
@@ -40,7 +41,8 @@ public class StaffShopClientImpl implements StaffShopClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling findActiveByShopIds for {} shopIds", shopIds.size(), e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling organization-resource-service findActiveByShopIds for " + shopIds.size() + " shopIds", e);
         }
     }
 
@@ -59,7 +61,8 @@ public class StaffShopClientImpl implements StaffShopClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getStaffShopFullInfo for staffCode: {}", staffCode, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling organization-resource-service getStaffShopFullInfo for staffCode=" + staffCode, e);
         }
     }
 }

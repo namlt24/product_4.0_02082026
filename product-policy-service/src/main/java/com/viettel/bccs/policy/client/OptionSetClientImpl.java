@@ -3,6 +3,7 @@ package com.viettel.bccs.policy.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,8 @@ public class OptionSetClientImpl implements OptionSetClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling option set service for code: {}", code, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service findValueByOptionSetCode for code=" + code, e);
         }
     }
 
@@ -61,7 +63,8 @@ public class OptionSetClientImpl implements OptionSetClient {
             return Collections.emptyMap();
         } catch (RuntimeException e) {
             log.error("Error calling findByOptionSetCodes for codes: {}", codes, e);
-            return Collections.emptyMap();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service findByOptionSetCodes for codes=" + codes, e);
         }
     }
 
@@ -80,7 +83,8 @@ public class OptionSetClientImpl implements OptionSetClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getValueByTwoCodeOption: optSetCode={}, code={}", optSetCode, code, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service getValueByTwoCodeOption for optSetCode=" + optSetCode + ", code=" + code, e);
         }
     }
 }

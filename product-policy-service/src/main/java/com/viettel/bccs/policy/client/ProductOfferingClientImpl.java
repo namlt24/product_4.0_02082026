@@ -3,6 +3,7 @@ package com.viettel.bccs.policy.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,8 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling getListOfferAlterStatus: offerId={}, changeChannel={}, checkStatus={}", offerId, changeChannel, checkStatus, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service getListOfferAlterStatus for offerId=" + offerId, e);
         }
     }
 
@@ -54,7 +56,9 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
         } catch (RuntimeException e) {
             log.error("Error calling findByTelecomSubTypeOfferTypeCheckProductStatus: telecomServiceId={}, subType={}, offerTypeId={}, getActiveProduct={}",
                     telecomServiceId, subType, offerTypeId, getActiveProduct, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service findByTelecomSubTypeOfferTypeCheckProductStatus for telecomServiceId="
+                            + telecomServiceId + ", offerTypeId=" + offerTypeId, e);
         }
     }
 
@@ -74,7 +78,9 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling findByCodesAndProductOfferType: codes={}, productOfferTypeId={}", codes, productOfferTypeId, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service findByCodesAndProductOfferType for codes=" + codes
+                            + ", productOfferTypeId=" + productOfferTypeId, e);
         }
     }
 
@@ -93,7 +99,8 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling findByIds: offerIds={}", offerIds, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service product/findByIds for offerIds=" + offerIds, e);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.viettel.bccs.policy.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharLookupDTO;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharValueLookupDTO;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
@@ -35,7 +36,8 @@ public class ProductSpecCharClientImpl implements ProductSpecCharClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling productspecchar/findByIds: ids={}", ids, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service productspecchar/findByIds for ids=" + ids, e);
         }
     }
 
@@ -53,7 +55,8 @@ public class ProductSpecCharClientImpl implements ProductSpecCharClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling productspectcharvalue/findByIds: ids={}", ids, e);
-            return Collections.emptyList();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service productspectcharvalue/findByIds for ids=" + ids, e);
         }
     }
 }

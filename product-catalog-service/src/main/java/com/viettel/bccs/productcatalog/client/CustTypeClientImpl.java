@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.CustTypeDTO;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,8 @@ public class CustTypeClientImpl implements CustTypeClient {
             return Optional.empty();
         } catch (RuntimeException e) {
             log.error("Error calling findActiveByCustType for custType={}, status={}", custType, status, e);
-            return Optional.empty();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling organization-resource-service findActiveByCustType for custType=" + custType, e);
         }
     }
 }

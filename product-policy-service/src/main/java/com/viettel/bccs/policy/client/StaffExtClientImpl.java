@@ -2,6 +2,7 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.StaffExtResponse;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,8 @@ public class StaffExtClientImpl implements StaffExtClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getStaffExtByStaffIDAndKey for staffId: {}, key: {}", staffId, key, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling organization-resource-service getStaffExtByStaffIDAndKey for staffId=" + staffId + ", key=" + key, e);
         }
     }
 }

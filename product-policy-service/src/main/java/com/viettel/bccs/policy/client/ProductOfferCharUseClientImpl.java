@@ -3,6 +3,7 @@ package com.viettel.bccs.policy.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharDTO;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +43,8 @@ public class ProductOfferCharUseClientImpl implements ProductOfferCharUseClient 
             return Collections.emptyMap();
         } catch (RuntimeException e) {
             log.error("Error calling getProductSpecCharByOfferingIds: offeringIds={}", offeringIds, e);
-            return Collections.emptyMap();
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service getProductSpecCharByOfferingIds for offeringIds=" + offeringIds, e);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import com.viettel.bccs.policy.client.dto.TelecomServiceDTO;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,8 @@ public class TelecomServiceClientImpl implements TelecomServiceClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getTelServiceByAlias: alias={}", alias, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-catalog-service getTelServiceByAlias for alias=" + alias, e);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.core.BccsHttpClient;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.SensorFeeRuleDTO;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,8 @@ public class SensorFreeClientImpl implements SensorFreeClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling checkReasonSensorFee for productPackageId={}", productPackageId, e);
-            return null;
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling organization-resource-service checkReasonSensorFee for productPackageId=" + productPackageId, e);
         }
     }
 }

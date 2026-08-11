@@ -902,30 +902,33 @@ CREATE TABLE REASON (
 );
 
 -- Migrate từ mono: bảng dùng bởi ProductOfferPriceServiceImpl.getPriceInServices (checkReasonFreeCam).
--- Cột suy luận từ FreeCamEquipmentRepoImpl.java (legacy) qua alias trong SELECT.
+-- DDL theo đúng bản do người dùng cung cấp.
 CREATE TABLE FREE_CAM_EQUIPMENT (
-    FREE_CAM_EQUIPMENT_ID    NUMBER(18)    NOT NULL,
-    ACTION_CODE              VARCHAR2(30),
-    REASON_ID                NUMBER(10),
-    AREA_CODE                VARCHAR2(25),
-    STATUS                   VARCHAR2(1)   NOT NULL,
-    CAM_INSIDE_NUMBER        NUMBER(10),
-    CAM_OUTSIDE_NUMBER       NUMBER(10),
-    CAM_MAX_NUMBER           NUMBER(10),
-    CAM_INSIDE_PRICE         NUMBER(18,2),
-    CAM_OUTSIDE_PRICE        NUMBER(18,2),
-    EFFECT_DATETIME          DATE,
-    EXPIRE_DATETIME          DATE,
-    CREATE_USER              VARCHAR2(50),
-    UPDATE_USER              VARCHAR2(50),
-    DESCRIPTION              VARCHAR2(512),
-    SHOP_CODE                VARCHAR2(30),
-    STAFF_CODE               VARCHAR2(40),
-    CREATE_DATETIME          DATE,
-    UPDATE_DATETIME          DATE,
-    CUSTOMER_GROUP           VARCHAR2(50),
-    CUSTOMER_TYPE            VARCHAR2(50),
-    CONSTRAINT PK_FREE_CAM_EQUIPMENT PRIMARY KEY (FREE_CAM_EQUIPMENT_ID)
+    FREE_CAM_EQUIPMENT_ID NUMBER(10) NOT NULL
+        CONSTRAINT FREE_CAM_EQUIPMENT_PK
+            PRIMARY KEY,
+    ACTION_CODE           VARCHAR2(10),
+    REASON_ID             NUMBER(10),
+    AREA_CODE             VARCHAR2(200),
+    CAM_INSIDE_NUMBER     NUMBER(10),
+    CAM_OUTSIDE_NUMBER    NUMBER(10),
+    STATUS                VARCHAR2(1),
+    EFFECT_DATETIME       DATE,
+    EXPIRE_DATETIME       DATE,
+    CREATE_USER           VARCHAR2(50),
+    UPDATE_USER           VARCHAR2(50),
+    CREATE_DATETIME       DATE,
+    UPDATE_DATETIME       DATE,
+    CAM_MAX_NUMBER        NUMBER(10),
+    SHOP_CODE             VARCHAR2(40),
+    STAFF_CODE            VARCHAR2(4000),
+    -- DDL gốc là NVARCHAR2(4000); hạ xuống 2000 chỉ cho DB local vì Oracle Free ở đây chạy
+    -- MAX_STRING_SIZE=STANDARD (giới hạn 4000 byte, AL16UTF16 = 2 byte/ký tự => tối đa 2000 ký tự).
+    DESCRIPTION           NVARCHAR2(2000),
+    CAM_INSIDE_PRICE      NUMBER(10),
+    CAM_OUTSIDE_PRICE     NUMBER(10),
+    CUSTOMER_GROUP        VARCHAR2(4000),
+    CUSTOMER_TYPE         VARCHAR2(4000)
 );
 
 CREATE TABLE REASON_CHAR_USE (

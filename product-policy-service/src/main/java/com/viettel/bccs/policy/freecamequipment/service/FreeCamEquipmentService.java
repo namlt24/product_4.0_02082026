@@ -1,6 +1,6 @@
 package com.viettel.bccs.policy.freecamequipment.service;
 
-import com.viettel.bccs.policy.freecamequipment.dto.response.FreeCamEquipmentResponse;
+import com.viettel.bccs.policy.freecamequipment.dto.response.FreeCamEquipmentDTO;
 import com.viettel.bccs.policy.freecamequipment.mapper.FreeCamEquipmentMapper;
 import com.viettel.bccs.policy.freecamequipment.repository.FreeCamEquipmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class FreeCamEquipmentService {
      * Migrate từ mono: ProductOfferPriceServiceImpl.getPriceInServices gọi
      * freeCamEquipmentService.checkReasonFreeCam(temp) (temp = productPackageId).
      */
-    public List<FreeCamEquipmentResponse> checkReasonFreeCam(Long productPackageId) {
+    public List<FreeCamEquipmentDTO> checkReasonFreeCam(Long productPackageId) {
         return repository.checkReasonFreeCam(productPackageId)
                 .stream()
                 .map(mapper::toResponse)

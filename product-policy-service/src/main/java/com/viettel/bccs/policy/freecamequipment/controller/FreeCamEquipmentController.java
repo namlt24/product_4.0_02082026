@@ -2,7 +2,7 @@ package com.viettel.bccs.policy.freecamequipment.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
-import com.viettel.bccs.policy.freecamequipment.dto.response.FreeCamEquipmentResponse;
+import com.viettel.bccs.policy.freecamequipment.dto.response.FreeCamEquipmentDTO;
 import com.viettel.bccs.policy.freecamequipment.service.FreeCamEquipmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,7 +25,7 @@ public class FreeCamEquipmentController {
 
     @Operation(summary = "Kiểm tra danh sách thiết bị CAM miễn phí theo gói sản phẩm (sale service), phục vụ getPriceInServices")
     @GetMapping("/checkReasonFreeCam/{productPackageId}")
-    public StandardResponse<List<FreeCamEquipmentResponse>> checkReasonFreeCam(
+    public StandardResponse<List<FreeCamEquipmentDTO>> checkReasonFreeCam(
             @Parameter(description = "Id gói sản phẩm (product package / sale service)") @PathVariable Long productPackageId) {
         return StandardResponses.success(service.checkReasonFreeCam(productPackageId));
     }

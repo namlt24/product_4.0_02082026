@@ -64,9 +64,16 @@ public class FilterRequest implements Serializable {
     @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "valueType chỉ gồm chữ, số, '_' hoặc '-'")
     private String valueType;
 
-    private boolean notEqual;
-    private boolean extract;
-    private boolean valueInRange;
+    // Boolean (không phải boolean nguyên thủy) để client được phép bỏ qua field này trong JSON —
+    // trước đây là primitive boolean, Jackson ở service này bắt buộc phải có mặt tường minh
+    // (FAIL_ON_NULL_FOR_PRIMITIVES) nếu không sẽ báo lỗi 400 dù field không liên quan tới nghiệp vụ
+    // đang gọi. @Builder.Default đảm bảo mặc định vẫn là false ở mọi cách khởi tạo (no-args, builder).
+    @Builder.Default
+    private Boolean notEqual = Boolean.FALSE;
+    @Builder.Default
+    private Boolean extract = Boolean.FALSE;
+    @Builder.Default
+    private Boolean valueInRange = Boolean.FALSE;
 
     @Size(max = 500, message = "lstValue tối đa 500 phần tử")
     private List<String> lstValue;

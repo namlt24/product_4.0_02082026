@@ -7,6 +7,7 @@ import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductS
 import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeDTO;
 import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,18 +31,22 @@ public class SaleServiceAdvanceDTO extends BaseMessage implements Serializable {
 
     @Schema(description = "Danh sách mô hình dịch vụ bán hàng")
     @Builder.Default
+    @Size(max = 500, message = "listSaleServiceModel tối đa 500 phần tử")
     private List<SaleServiceModelAdvanceDTO> listSaleServiceModel = new ArrayList<>();
 
     @Schema(description = "Danh sách phí dịch vụ bán hàng")
     @Builder.Default
+    @Size(max = 500, message = "listSaleServicePrice tối đa 500 phần tử")
     private List<ProductPackageFeeDTO> listSaleServicePrice = new ArrayList<>();
 
     @Schema(description = "Danh sách thuộc tính sản phẩm")
     @Builder.Default
+    @Size(max = 500, message = "lstProductSpecCharDTO tối đa 500 phần tử")
     private List<ProductSpecCharDTO> lstProductSpecCharDTO = new ArrayList<>();
 
     @Schema(description = "Danh sách loại mặt hàng của dịch vụ bán hàng")
     @Builder.Default
+    @Size(max = 500, message = "listProductOfferType tối đa 500 phần tử")
     private List<ProdPackProductOfferTypeDTO> listProductOfferType = new ArrayList<>();
 
     @Schema(description = "Cờ TLV")
@@ -58,10 +63,12 @@ public class SaleServiceAdvanceDTO extends BaseMessage implements Serializable {
 
     @Schema(description = "Danh sách ID cửa hàng liên kết với các loại mặt hàng của dịch vụ bán hàng")
     @Builder.Default
+    @Size(max = 1000, message = "shopIds tối đa 1000 phần tử")
     private List<Long> shopIds = new ArrayList<>();
 
     @Schema(description = "Danh sách thông tin cửa hàng active liên kết với dịch vụ bán hàng")
     @Builder.Default
+    @Size(max = 1000, message = "specShopList tối đa 1000 phần tử")
     private List<ShopDTO> specShopList = new ArrayList<>();
 
     @Schema(description = "Map prodPackTypeId -> danh sách shopId tương ứng")

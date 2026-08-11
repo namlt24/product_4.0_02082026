@@ -12,9 +12,15 @@ import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoValidateServic
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,12 +35,46 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Nghiệp vụ đấu nối di động trả trước", description = "API validate cho nghiệp vụ đấu nối di động trả trước")
 public class MapActiveInfoValidateController {
     private final MapActiveInfoValidateService service;
 
+    private static final String VALIDATE_FOLLOW_MAP_ACTIVE_INFO_NEW_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000010",
+              "requestId": "req-0010",
+              "timestamp": "2026-08-11T02:00:00Z",
+              "data": {
+                "actionCode": "00",
+                "actionName": "Kích hoạt",
+                "telServiceId": 73,
+                "productCode": "VCONNECT_VBN0",
+                "productName": "Dịch vụ Mobifone",
+                "regReasonId": 9003998100,
+                "reasonName": "Lý do đăng ký mới",
+                "promCode": "SBN",
+                "channelTypeId": 1,
+                "provinceCode": "HCM",
+                "customerGroup": "1",
+                "customerType": "CQU",
+                "payType": "1",
+                "status": "1"
+              }
+            }""";
 
-    @Operation(summary = "Validate theo thông tin mapping mới - trả về MapActiveInfoDTO")
+    @Operation(operationId = "validateFollowMapActiveInfoNew",
+            summary = "Validate theo thông tin mapping mới",
+            description = "Kiểm tra thông tin đấu nối theo bản ghi MAP_ACTIVE_INFO khớp nhất với các tiêu chí đầu vào " +
+                    "(staffCode, actionCode, offerIds, promotionCode, regReasonId, telServiceId, địa bàn, loại khách hàng...) " +
+                    "và trả về MapActiveInfoDTO tương ứng.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = VALIDATE_FOLLOW_MAP_ACTIVE_INFO_NEW_EXAMPLE)))
+    })
     @PostMapping("/validateFollowMapActiveInfoNew")
     public StandardResponse<MapActiveInfoDTO> validateFollowMapActiveInfoNew(
             @Valid @RequestBody ValidateInputMapActiveInfoRequest request) {

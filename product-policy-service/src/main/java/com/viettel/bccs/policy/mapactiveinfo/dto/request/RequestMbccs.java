@@ -3,8 +3,9 @@ package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,167 +25,297 @@ import java.util.List;
 @Schema
 public class RequestMbccs {
     @Schema(description = "Mã nhân viên", example = "VTT1", maxLength = 40)
+    @Size(max = 40, message = "staffCode tối đa 40 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String staffCode;
     @Schema(description = "ID kênh cửa hàng", example = "1", maxLength = 10)
+    @Min(value = 1, message = "shopChannelTypeId phải >= 1")
+    @Max(value = 9999999999L, message = "shopChannelTypeId vượt quá độ dài cho phép")
     private Long shopChannelTypeId;
     @Schema(description = "Nhóm kênh", example = "3", maxLength = 1000)
+    @Size(max = 1000, message = "groupType tối đa 1000 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9,_-]{0,1000}$", message = "groupType chỉ gồm chữ, số, ',', '_' hoặc '-'")
     private String groupType;
     @Schema(description = "Hình thức thanh toán", example = "1", maxLength = 1)
+    @Size(max = 1, message = "payType tối đa 1 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "payType chỉ gồm chữ hoặc số")
     private String payType;
     @Schema(description = "ID gói cước", example = "400000607", maxLength = 10)
+    @Min(value = 1, message = "offerId phải >= 1")
+    @Max(value = 9999999999L, message = "offerId vượt quá độ dài cho phép")
     private Long offerId;
     @Schema(description = "Mã tác động", example = "00", maxLength = 10)
+    @Size(max = 10, message = "actionCode tối đa 10 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,10}$", message = "actionCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String actionCode;
     @Schema(description = "Alias dịch vụ", example = "M", maxLength = 3)
+    @Size(max = 3, message = "serviceType tối đa 3 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,3}$", message = "serviceType chỉ gồm chữ, số, '_' hoặc '-'")
     private String serviceType;
     @Schema(description = "Mã tỉnh", example = "H004", maxLength = 5)
+    @Size(max = 5, message = "province tối đa 5 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,5}$", message = "province chỉ gồm chữ, số, '_' hoặc '-'")
     private String province;
     @Schema(description = "Mã huyện", example = "004", maxLength = 5)
+    @Size(max = 5, message = "district tối đa 5 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,5}$", message = "district chỉ gồm chữ, số, '_' hoặc '-'")
     private String district;
     @Schema(description = "Mã xã", example = "001", maxLength = 5)
+    @Size(max = 5, message = "precint tối đa 5 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,5}$", message = "precint chỉ gồm chữ, số, '_' hoặc '-'")
     private String precint;
     @Schema(description = "Nhóm loại khách hàng", example = "1", maxLength = 1000)
+    @Size(max = 1000, message = "customerGroup tối đa 1000 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "customerGroup không được chứa ký tự điều khiển")
     private String customerGroup;
     @Schema(description = "Loại khách hàng", example = "VIE", maxLength = 6)
+    @Size(max = 6, message = "customerType tối đa 6 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,6}$", message = "customerType chỉ gồm chữ, số, '_' hoặc '-'")
     private String customerType;
     @Schema(description = "Loại thuê bao", example = "TBT", maxLength = 4)
+    @Size(max = 4, message = "subType tối đa 4 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,4}$", message = "subType chỉ gồm chữ, số, '_' hoặc '-'")
     private String subType;
     @Schema(description = "Nhóm thuê bao", example = "1", maxLength = 10)
+    @Size(max = 10, message = "subGroup tối đa 10 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,10}$", message = "subGroup không được chứa ký tự điều khiển")
     private String subGroup;
     @Schema(description = "Mã trạm", example = "CBG0433", maxLength = 1000)
+    @Size(max = 1000, message = "stationCodes tối đa 1000 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9,_-]{0,1000}$", message = "stationCodes chỉ gồm chữ, số, ',', '_' hoặc '-'")
     private String stationCodes;
     @Schema(description = "Mã khuyến mãi", example = "FP001", maxLength = 50)
+    @Size(max = 50, message = "promotionCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "promotionCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String promotionCode;
     @Schema(description = "Công nghệ", example = "4", maxLength = 10)
+    @Size(max = 10, message = "technology tối đa 10 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,10}$", message = "technology không được chứa ký tự điều khiển")
     private String technology;
     @Schema(description = "Hình thức thay đổi", example = "1", maxLength = 10)
+    @Size(max = 10, message = "changeMethod tối đa 10 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,10}$", message = "changeMethod chỉ gồm chữ, số, '_' hoặc '-'")
     private String changeMethod;
     @Schema(description = "Loại hạ tầng", example = "1", maxLength = 10)
+    @Size(max = 10, message = "infraType tối đa 10 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,10}$", message = "infraType chỉ gồm chữ, số, '_' hoặc '-'")
     private String infraType;
     @Schema(description = "mode", example = "1", maxLength = 1)
+    @Min(value = 0, message = "mode phải >= 0")
+    @Max(value = 9, message = "mode phải <= 9")
     private Integer mode;
     @Schema(description = "Có lấy thuộc tính lý do/HTHM không", example = "true")
     private Boolean getReasonCharUse;
     @Schema(description = "Danh sách mã quyền", example = "BCCS2_SALE_SAUBAN_DVCD_TDMK_QUYEN_P")
     private RequiredRoleMap roleMap;
     @Schema(description = "Mã node", example = "CBG0433-GN12-SN11-SP01", maxLength = 1000)
+    @Size(max = 1000, message = "nodeCode tối đa 1000 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,1000}$", message = "nodeCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String nodeCode;
     @Schema(description = "singleOrCombe", example = "1")
+    @Min(value = 0, message = "singleOrCombo phải >= 0")
+    @Max(value = 9, message = "singleOrCombo phải <= 9")
     private Long singleOrCombo;
     @Schema(description = "Danh sách thuộc tính")
+    @Size(min = 0, max = 200, message = "listProductSpec tối đa 200 phần tử")
     private List<FilterRequest> listProductSpec;
     @Schema(description = "Danh sách số giấy tờ")
+    @Size(min = 0, max = 100, message = "lstBusinessNo tối đa 100 phần tử")
     private List<String> lstBusinessNo;
     @Schema(description = "Mã địa bàn cha", example = "H004", maxLength = 25)
+    @Size(max = 25, message = "parentCode tối đa 25 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,25}$", message = "parentCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String parentCode;
     @Schema(description = "par_name", example = "ACCEPT_USE_INFO_CUSTOMER_ND13", maxLength = 100)
+    @Size(max = 100, message = "par_name tối đa 100 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "par_name không được chứa ký tự điều khiển")
     private String par_name;
     @Schema(description = "product_offer", maxLength = 100)
+    @Size(max = 100, message = "productOffer tối đa 100 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "productOffer không được chứa ký tự điều khiển")
     private String productOffer;
     @Schema(description = "Mã gói cưới", example = "POBAS", maxLength = 50)
+    @Size(max = 50, message = "productCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String productCode;
     @Schema(description = "Mã ngân hàng cha", example = "VCB", maxLength = 30)
+    @Size(max = 30, message = "parentBankCode tối đa 30 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,30}$", message = "parentBankCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String parentBankCode;
     @Schema(description = "Mã địa bàn", example = "H004001008", maxLength = 25)
+    @Size(max = 25, message = "areaCode tối đa 25 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,25}$", message = "areaCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String areaCode;
     @Schema(description = "Id lý do", example = "9003991499", maxLength = 10)
+    @Min(value = 1, message = "regReasonId phải >= 1")
+    @Max(value = 9999999999L, message = "regReasonId vượt quá độ dài cho phép")
     private Long regReasonId;
     @Schema(description = "Mã gói cước", example = "SG241", maxLength = 50)
+    @Size(max = 50, message = "promCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "promCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String promCode;
     @Schema(description = "Mã lý do", example = "2", maxLength = 20)
+    @Size(max = 20, message = "regType tối đa 20 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "regType chỉ gồm chữ, số, '_' hoặc '-'")
     private String regType;
     @Schema(description = "Loại dịch vụ", example = "1", maxLength = 10)
+    @Size(max = 10, message = "telecomServiceId tối đa 10 ký tự")
+    @Pattern(regexp = "^[0-9]{0,10}$", message = "telecomServiceId chỉ gồm số")
     private String telecomServiceId;
     @Schema(description = "Id lý do", example = "9004010287", maxLength = 10)
+    @Min(value = 1, message = "reasonId phải >= 1")
+    @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cho phép")
     private Long reasonId;
     @Schema(description = "Mã chức năng", example = "DNTT")
+    @Size(max = 50, message = "functionCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "functionCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String functionCode;
     @Schema(description = "Tên chức năng", example = "Đấu nối trả trước")
+    @Size(max = 200, message = "functionName tối đa 200 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "functionName không được chứa ký tự điều khiển")
     private String functionName;
     @Schema(description = "Chi tiết hành vi", example = "{\"serviceType\": \"7\", \"reasonId\": \"123\", \"productCode\": \"PoBas\"}") // JSON string
+    @Size(max = 4000, message = "behaviorDetail tối đa 4000 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$", message = "behaviorDetail không được chứa ký tự điều khiển")
     private String behaviorDetail;
     @Schema(description = "Cấu hình chức năng", example = "{\"serviceType\": \"7\", \"reasonId\": \"123\", \"productCode\": \"PoBas\"}") // JSON string
+    @Size(max = 4000, message = "functionConfig tối đa 4000 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$", message = "functionConfig không được chứa ký tự điều khiển")
     private String functionConfig;
     @Schema(description = "Có lấy địa bàn mới không", example = "false")
     private Boolean isNewArea;
     @Schema(description = "Loại đơn hàng", example = "ORDER1")
+    @Size(max = 50, message = "orderType tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "orderType chỉ gồm chữ, số, '_' hoặc '-'")
     private String orderType;
     @Schema(description = "true: Thêm mới, false: Sửa", example = "true")
     private Boolean isCreate;
 
     @Schema(maxLength = 100)
+    @Size(max = 100, message = "addDate tối đa 100 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "addDate không được chứa ký tự điều khiển")
     private String addDate;
     @Schema(maxLength = 100)
+    @Size(max = 100, message = "transCode tối đa 100 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,100}$", message = "transCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String transCode;
     @Schema(maxLength = 1)
+    @Size(max = 1, message = "isNew tối đa 1 ký tự")
+    @Pattern(regexp = "^[01]{0,1}$", message = "isNew chỉ nhận giá trị 0 hoặc 1")
     private String isNew;
     @Schema(maxLength = 100)
+    @Min(value = 0, message = "processStatus phải >= 0")
+    @Max(value = 99, message = "processStatus phải <= 99")
     private Integer processStatus;
+    @Size(min = 0, max = 1000, message = "lstAreaCode tối đa 1000 phần tử")
     private List<String> lstAreaCode;
     @Schema(description = "Id nhân viên", example = "123")
+    @Min(value = 1, message = "staffId phải >= 1")
+    @Max(value = 9999999999L, message = "staffId vượt quá độ dài cho phép")
     private Long staffId;
     @Schema(description = "ID loại kênh", example = "80043")
+    @Size(max = 20, message = "channelTypeId tối đa 20 ký tự")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "channelTypeId chỉ gồm số")
     private String channelTypeId;
     @Schema(description = "Loại tổ chức", example = "1")
+    @Size(max = 50, message = "organizationType tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "organizationType chỉ gồm chữ, số, '_' hoặc '-'")
     private String organizationType;
     @Schema(description = "Mã đơn vị trên product", example = "VT")
+    @Size(max = 50, message = "shopCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "shopCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String shopCode;
 
     @Schema(description = "Tên nhân viên", example = "NamLT")
+    @Size(max = 200, message = "name tối đa 200 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "name không được chứa ký tự điều khiển")
     private String name;
 
     @Schema(description = "Ngày sinh nhật", example = "1999")
+    @Size(max = 20, message = "birthday tối đa 20 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,20}$", message = "birthday không được chứa ký tự điều khiển")
     private String birthday;
 
     @Schema(description = "Số điện thoại liên hệ")
+    @Size(max = 20, message = "tel tối đa 20 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,20}$", message = "tel không được chứa ký tự điều khiển")
     private String tel;
 
     @Schema(description = "email")
+    @Size(max = 100, message = "email tối đa 100 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "email không được chứa ký tự điều khiển")
     private String email;
 
     @Schema(description = "Số giấy tờ")
+    @Size(max = 20, message = "idNo tối đa 20 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,20}$", message = "idNo không được chứa ký tự điều khiển")
     private String idNo;
 
     @Schema(description = "Ngày cấp")
+    @Size(max = 50, message = "idIssueDate tối đa 50 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,50}$", message = "idIssueDate không được chứa ký tự điều khiển")
     private String idIssueDate;
 
     @Schema(description = "Nơi cấp")
+    @Size(max = 200, message = "idIssuePlace tối đa 200 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "idIssuePlace không được chứa ký tự điều khiển")
     private String idIssuePlace;
 
     @Schema(description = "Mã thông tin nhân sự")
+    @Size(max = 50, message = "ttnsCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "ttnsCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String ttnsCode;
 
     @Schema(description = "Từ khóa tìm kiếm")
+    @Size(max = 200, message = "keySearch tối đa 200 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "keySearch không được chứa ký tự điều khiển")
     private String keySearch;
 
     @Schema(description = "Index trang")
+    @Size(max = 10, message = "pageIndex tối đa 10 ký tự")
+    @Pattern(regexp = "^[0-9]{0,10}$", message = "pageIndex chỉ gồm số")
     private String  pageIndex;
 
     @Schema(description = "Số trang")
+    @Size(max = 10, message = "pageSize tối đa 10 ký tự")
+    @Pattern(regexp = "^[0-9]{0,10}$", message = "pageSize chỉ gồm số")
     private String  pageSize;
 
     @Schema(description = "Danh sách Id đơn vị")
+    @Size(min = 0, max = 500, message = "shopIds tối đa 500 phần tử")
     private List<Long> shopIds;
 
     @Schema(description = "Id đơn vị")
+    @Min(value = 1, message = "shopId phải >= 1")
+    @Max(value = 9999999999L, message = "shopId vượt quá độ dài cho phép")
     private Long shopId;
 
     @Schema(description = "Danh sách mã xã", example = "001", maxLength = 5)
+    @Size(min = 0, max = 100, message = "precints tối đa 100 phần tử")
     private List<String> precints;
 
     @Schema(description = "Id Shop hiện tại")
+    @Min(value = 1, message = "currentShopId phải >= 1")
+    @Max(value = 9999999999L, message = "currentShopId vượt quá độ dài cho phép")
     private Long currentShopId;
 
     @Schema(description = "Cấp đơn vị")
+    @Min(value = 0, message = "shopLevel phải >= 0")
+    @Max(value = 20, message = "shopLevel phải <= 20")
     private Long shopLevel;
 
     @Schema(description = "Mã số thuế")
+    @Size(max = 20, message = "tin tối đa 20 ký tự")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "tin chỉ gồm số")
     private String tin;
 
     @Schema(description = "Mã đơn vị ngân sách")
+    @Size(max = 20, message = "shopDvns tối đa 20 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "shopDvns chỉ gồm chữ, số, '_' hoặc '-'")
     private String shopDvns;
 
     @Schema(description = "Danh sách Id nhân viên")
+    @Size(min = 0, max = 500, message = "lstStaffId tối đa 500 phần tử")
     private List<Long> lstStaffId;
 
     public String getChannelTypeId() {

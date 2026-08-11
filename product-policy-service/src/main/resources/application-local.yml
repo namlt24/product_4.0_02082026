@@ -97,7 +97,7 @@ bccs:
     include-stacktrace: true
   config:
     enabled: true
-    team-code: CATALOG
+    team-code: POLICY
     service-name: product-policy-service
     client:
       base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://10.207.252.17:8484}

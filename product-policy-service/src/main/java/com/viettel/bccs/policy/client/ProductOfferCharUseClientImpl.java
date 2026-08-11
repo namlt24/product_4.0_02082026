@@ -2,7 +2,6 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharDTO;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
@@ -21,7 +20,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductOfferCharUseClientImpl implements ProductOfferCharUseClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -29,11 +28,7 @@ public class ProductOfferCharUseClientImpl implements ProductOfferCharUseClient 
                key = "'PRODUCT_SPEC_CHAR:' + T(java.lang.String).join(',', #offeringIds.stream().sorted().toList())")
     public Map<Long, List<ProductSpecCharDTO>> getProductSpecCharByOfferingIds(List<String> offeringIds) {
         try {
-            var response = bccsHttpClient.post(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/product-offer-char-use/getProductSpecCharByOfferingIds",
-                    offeringIds,
-                    StandardClientResponse.class);
+            var response = productCatalogFeignClient.getProductSpecCharByOfferingIds(offeringIds).getBody();
             if (response != null && response.getData() != null) {
                 var stringKeyMap = objectMapper.convertValue(response.getData(),
                         new TypeReference<Map<String, List<ProductSpecCharDTO>>>() {});

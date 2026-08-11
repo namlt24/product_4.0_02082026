@@ -1,8 +1,6 @@
 package com.viettel.bccs.productcatalog.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.CustTypeDTO;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
@@ -17,17 +15,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CustTypeClientImpl implements CustTypeClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final OrganizationResourceFeignClient organizationResourceFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public Optional<CustTypeDTO> findActiveByCustType(String custType, String status) {
         try {
-            var response = bccsHttpClient.get(
-                    "organization-resource-service",
-                    "/v1/cust-type/findActiveByCustType/{custType}",
-                    StandardClientResponse.class,
-                    custType);
+            var response = organizationResourceFeignClient.findActiveByCustType(custType).getBody();
             if (response != null && response.getData() != null) {
                 CustTypeDTO dto = objectMapper.convertValue(response.getData(), CustTypeDTO.class);
                 return Optional.of(dto);

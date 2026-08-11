@@ -1,7 +1,6 @@
 package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.StaffExtResponse;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
@@ -15,18 +14,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class StaffExtClientImpl implements StaffExtClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final OrganizationResourceFeignClient organizationResourceFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     @Cacheable(value = "staffExtClientCache", key = "#staffId + ':' + #key")
     public StaffExtResponse getStaffExtByStaffIDAndKey(Long staffId, String key) {
         try {
-            var response = bccsHttpClient.get(
-                    "organization-resource-service",
-                    "/organization-resource-service/v1/staffext/getStaffExtByStaffIDAndKey?staffId={0}&key={1}",
-                    StandardClientResponse.class,
-                    staffId, key);
+            var response = organizationResourceFeignClient.getStaffExtByStaffIDAndKey(staffId, key).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), StaffExtResponse.class);
             }

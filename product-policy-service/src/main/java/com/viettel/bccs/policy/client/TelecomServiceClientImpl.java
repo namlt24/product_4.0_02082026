@@ -1,7 +1,6 @@
 package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import com.viettel.bccs.policy.client.dto.TelecomServiceDTO;
@@ -15,18 +14,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class TelecomServiceClientImpl implements TelecomServiceClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     @Cacheable(value = "telecomServiceClientCache", key = "#alias")
     public Long getServiceIdByAlias(String alias) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/telecom-service/getTelServiceByAlias?alias={alias}",
-                    StandardClientResponse.class,
-                    alias);
+            var response = productCatalogFeignClient.getTelServiceByAlias(alias).getBody();
             if (response != null && response.getData() != null) {
                 TelecomServiceDTO dto = objectMapper.convertValue(response.getData(), TelecomServiceDTO.class);
                 return dto != null ? dto.getTelecomServiceId() : null;

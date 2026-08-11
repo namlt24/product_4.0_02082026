@@ -2,7 +2,6 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,17 +16,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductPackageClientImpl implements ProductPackageClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public List<String> getPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer pNumber) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/product-package/getPackageCodesByProductOfferTypeCount?excludeProdOfferType={0}&pNumber={1}",
-                    StandardClientResponse.class,
-                    excludeProdOfferType, pNumber);
+            var response = productCatalogFeignClient
+                    .getPackageCodesByProductOfferTypeCount(excludeProdOfferType, pNumber)
+                    .getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(
                         response.getData(),

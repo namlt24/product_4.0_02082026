@@ -2,7 +2,6 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharLookupDTO;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharValueLookupDTO;
@@ -19,17 +18,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductSpecCharClientImpl implements ProductSpecCharClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public List<ProductSpecCharLookupDTO> findByIds(List<Long> ids) {
         try {
-            var response = bccsHttpClient.post(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/productspecchar/findByIds",
-                    ids,
-                    StandardClientResponse.class);
+            var response = productCatalogFeignClient.findSpecCharByIds(ids).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductSpecCharLookupDTO>>() {});
             }
@@ -44,11 +39,7 @@ public class ProductSpecCharClientImpl implements ProductSpecCharClient {
     @Override
     public List<ProductSpecCharValueLookupDTO> findValuesByIds(List<Long> ids) {
         try {
-            var response = bccsHttpClient.post(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/productspectcharvalue/findByIds",
-                    ids,
-                    StandardClientResponse.class);
+            var response = productCatalogFeignClient.findSpecCharValueByIds(ids).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductSpecCharValueLookupDTO>>() {});
             }

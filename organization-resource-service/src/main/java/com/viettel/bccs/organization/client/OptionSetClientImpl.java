@@ -2,7 +2,6 @@ package com.viettel.bccs.organization.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.organization.client.dto.StandardClientResponse;
@@ -18,17 +17,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OptionSetClientImpl implements OptionSetClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public List<OptionSetValueResponse> findValueByOptionSetCode(String code) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/v1/optionsetvalue/findByOptionSetCode/{code}",
-                    StandardClientResponse.class,
-                    code);
+            var response = productCatalogFeignClient.findValueByOptionSetCode(code).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(
                         response.getData(),

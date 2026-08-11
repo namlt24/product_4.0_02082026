@@ -2,7 +2,6 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
@@ -21,18 +20,14 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OptionSetClientImpl implements OptionSetClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     @Cacheable(value = "optionSetClientCache", key = "'CODE:' + #code")
     public List<OptionSetValueResponse> findValueByOptionSetCode(String code) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/optionsetvalue/findByOptionSetCode/{code}",
-                    StandardClientResponse.class,
-                    code);
+            var response = productCatalogFeignClient.findValueByOptionSetCode(code).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(
                         response.getData(),
@@ -50,11 +45,7 @@ public class OptionSetClientImpl implements OptionSetClient {
     @Cacheable(value = "optionSetClientCache", key = "'CODES:' + T(String).join(',', #codes.stream().sorted().toList())")
     public Map<String, List<OptionSetValueResponse>> findByOptionSetCodes(List<String> codes) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/optionsetvalue/findByOptionSetCodes?codes={codes}",
-                    StandardClientResponse.class,
-                    codes);
+            var response = productCatalogFeignClient.findByOptionSetCodes(codes).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(
                         response.getData(),
@@ -72,11 +63,7 @@ public class OptionSetClientImpl implements OptionSetClient {
     @Cacheable(value = "optionSetClientCache", key = "'TWO_CODE:' + #optSetCode + ':' + #code")
     public String getValueByTwoCodeOption(String optSetCode, String code) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/optionsetvalue/getValueByTwoCodeOption?optSetCode={optSetCode}&name={name}",
-                    StandardClientResponse.class,
-                    optSetCode, code);
+            var response = productCatalogFeignClient.getValueByTwoCodeOption(optSetCode, code).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<String>() {});
             }

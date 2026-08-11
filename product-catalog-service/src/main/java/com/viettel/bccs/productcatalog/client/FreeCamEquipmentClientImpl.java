@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.FreeCamEquipmentDTO;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
@@ -17,17 +16,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FreeCamEquipmentClientImpl implements FreeCamEquipmentClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductPolicyFeignClient productPolicyFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public List<FreeCamEquipmentDTO> checkReasonFreeCam(Long productPackageId) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-policy-service",
-                    "/v1/free-cam-equipment/checkReasonFreeCam/{productPackageId}",
-                    StandardClientResponse.class,
-                    productPackageId);
+            var response = productPolicyFeignClient.checkReasonFreeCam(productPackageId).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<FreeCamEquipmentDTO>>() {});
             }

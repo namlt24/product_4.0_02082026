@@ -2,7 +2,6 @@ package com.viettel.bccs.policy.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
 import com.viettel.bccs.policy.client.dto.StandardClientResponse;
@@ -19,17 +18,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductOfferingClientImpl implements ProductOfferingClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductCatalogFeignClient productCatalogFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public List<ProductOfferingDTO> getListOfferAlterStatus(Long offerId, String changeChannel, boolean checkStatus) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/product/getListOfferAlterStatus?offerId={offerId}&changeChannel={changeChannel}&checkStatus={checkStatus}",
-                    StandardClientResponse.class,
-                    offerId, changeChannel, checkStatus);
+            var response = productCatalogFeignClient
+                    .getListOfferAlterStatus(offerId, changeChannel, checkStatus)
+                    .getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductOfferingDTO>>() {});
             }
@@ -44,11 +41,10 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
     @Override
     public List<ProductOfferingDTO> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId, String subType, Long offerTypeId, boolean getActiveProduct) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/product/findByTelecomSubTypeOfferTypeCheckProductStatus?telecomServiceId={telecomServiceId}&subType={subType}&offerTypeId={offerTypeId}&getActiveProduct={getActiveProduct}",
-                    StandardClientResponse.class,
-                    telecomServiceId, subType, offerTypeId, getActiveProduct);
+            var response = productCatalogFeignClient
+                    .findByTelecomSubTypeOfferTypeCheckProductStatus(
+                            telecomServiceId, subType, offerTypeId, getActiveProduct)
+                    .getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductOfferingDTO>>() {});
             }
@@ -66,12 +62,9 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
     @Cacheable(value = "productOfferingClientCache", key = "'CODES_OFFER_TYPE:' + T(String).join(',', #codes.stream().sorted().toList()) + ':' + #productOfferTypeId")
     public List<ProductOfferingDTO> findByCodesAndProductOfferType(List<String> codes, Long productOfferTypeId) {
         try {
-            var response = bccsHttpClient.post(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/product/findByCodesAndProductOfferType?productOfferTypeId={productOfferTypeId}",
-                    codes,
-                    StandardClientResponse.class,
-                    productOfferTypeId);
+            var response = productCatalogFeignClient
+                    .findByCodesAndProductOfferType(codes, productOfferTypeId)
+                    .getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductOfferingDTO>>() {});
             }
@@ -88,11 +81,7 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
     @Cacheable(value = "productOfferingClientCache", key = "'IDS:' + T(String).join(',', #offerIds.stream().sorted().toList().![toString()])")
     public List<ProductOfferingDTO> findByIds(List<Long> offerIds) {
         try {
-            var response = bccsHttpClient.post(
-                    "product-catalog-service",
-                    "/product-catalog-service/v1/product/findByIds",
-                    offerIds,
-                    StandardClientResponse.class);
+            var response = productCatalogFeignClient.findByIds(offerIds).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ProductOfferingDTO>>() {});
             }

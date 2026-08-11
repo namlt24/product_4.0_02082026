@@ -2,7 +2,6 @@ package com.viettel.bccs.productcatalog.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.viettel.bccs.client.core.BccsHttpClient;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.ReasonDTO;
 import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
@@ -17,17 +16,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MappingClientImpl implements MappingClient {
 
-    private final BccsHttpClient bccsHttpClient;
+    private final ProductPolicyFeignClient productPolicyFeignClient;
     private final ObjectMapper objectMapper;
 
     @Override
     public List<String> findSaleServiceCodeByReason(Long reasonId) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-policy-service",
-                    "/v1/mapping/findSaleServiceCodeByReason/{reasonId}",
-                    StandardClientResponse.class,
-                    reasonId);
+            var response = productPolicyFeignClient.findSaleServiceCodeByReason(reasonId).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<String>>() {});
             }
@@ -43,11 +38,7 @@ public class MappingClientImpl implements MappingClient {
     @Override
     public List<ReasonDTO> getMappingReasonProductOfferPrice(Long productPackageId) {
         try {
-            var response = bccsHttpClient.get(
-                    "product-policy-service",
-                    "/v1/mapping/getMappingReasonProductOfferPrice/{productPackageId}",
-                    StandardClientResponse.class,
-                    productPackageId);
+            var response = productPolicyFeignClient.getMappingReasonProductOfferPrice(productPackageId).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), new TypeReference<List<ReasonDTO>>() {});
             }

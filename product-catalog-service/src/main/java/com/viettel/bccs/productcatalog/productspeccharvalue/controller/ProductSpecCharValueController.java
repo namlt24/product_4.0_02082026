@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static com.viettel.bccs.productcatalog.productspeccharvalue.openapi.ProductSpecCharValueControllerExamples.*;
+
 @RestController
 @RequestMapping("/product-catalog-service/v1/productspectcharvalue")
 @RequiredArgsConstructor
@@ -25,26 +27,6 @@ import java.util.List;
 public class ProductSpecCharValueController {
 
     private final ProductSpecCharValueService productSpecCharValueService;
-
-    private static final String SPEC_CHAR_VALUE_LIST_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": [
-                {
-                  "productSpecCharValueId": 1,
-                  "productSpecCharId": 1,
-                  "valueType": "1",
-                  "isDefault": 0,
-                  "value": "Do",
-                  "status": "1",
-                  "name": "Mau do"
-                }
-              ]
-            }""";
 
     @Operation(operationId = "findProductSpecCharValueByIds", summary = "Lấy danh sách giá trị thuộc tính sản phẩm theo danh sách ID",
             description = "Truy vấn nhiều bản ghi PRODUCT_SPEC_CHAR_VALUE theo danh sách PRODUCT_SPEC_CHAR_VALUE_ID truyền vào.")

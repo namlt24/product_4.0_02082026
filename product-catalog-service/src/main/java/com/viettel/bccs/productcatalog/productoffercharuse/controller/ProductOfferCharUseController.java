@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.viettel.bccs.productcatalog.productoffercharuse.openapi.ProductOfferCharUseControllerExamples.*;
+
 @RestController
 @RequestMapping("/product-catalog-service/v1/product-offer-char-use")
 @RequiredArgsConstructor
@@ -32,37 +34,6 @@ import java.util.Optional;
 public class ProductOfferCharUseController {
 
     private final ProductOfferCharUseService productOfferCharUseService;
-
-    private static final String SPEC_CHAR_MAP_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": {
-                "500001": [
-                  {
-                    "productSpecCharId": 12345,
-                    "name": "Giá cước tháng",
-                    "code": "MONTHLY_FEE",
-                    "charType": "PRICE_PLAN",
-                    "status": "1",
-                    "productOfferingId": 500001
-                  }
-                ]
-              }
-            }""";
-
-    private static final String ATTRIBUTE_VALUE_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000002",
-              "requestId": "req-0002",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": "50000"
-            }""";
 
     @PostMapping("/getProductSpecCharByOfferingIds")
     @Operation(operationId = "getProductSpecCharByOfferingIds",

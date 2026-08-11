@@ -18,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import static com.viettel.bccs.productcatalog.telecomservice.openapi.TelecomServiceControllerExamples.*;
+
 @Tag(name = "Telecom Service", description = "APIs quản lý dịch vụ viễn thông")
 @RestController
 @RequestMapping("/product-catalog-service/v1/telecom-service")
@@ -26,26 +28,6 @@ import org.springframework.web.bind.annotation.*;
 public class TelecomServiceController {
 
     private final TelecomServiceService service;
-
-    private static final String TELECOM_SERVICE_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": {
-                "telecomServiceId": 1,
-                "name": "Di động",
-                "status": "1",
-                "description": "Dịch vụ di động",
-                "serviceAlias": "MOB",
-                "createUser": "system",
-                "createDatetime": "2026-01-01T00:00:00",
-                "updateUser": null,
-                "updateDatetime": null
-              }
-            }""";
 
     @GetMapping("/getTelServiceByAlias")
     @Operation(

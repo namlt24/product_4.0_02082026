@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static com.viettel.bccs.productcatalog.productpackagefee.openapi.ProductPackageFeeControllerExamples.*;
+
 @RestController
 @RequestMapping("/product-catalog-service/v1/product-package-fee")
 @RequiredArgsConstructor
@@ -32,44 +34,6 @@ import java.util.List;
 public class ProductPackageFeeController {
 
     private final ProductPackageFeeService service;
-
-    private static final String FEE_SINGLE_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": {
-                "productPackageFeeId": 1,
-                "productPackageId": 1001,
-                "code": "FEE01",
-                "name": "Phi hoa mang",
-                "status": "1",
-                "price": 100000,
-                "vat": 10000
-              }
-            }""";
-
-    private static final String FEE_LIST_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000002",
-              "requestId": "req-0002",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": [
-                {
-                  "productPackageFeeId": 1,
-                  "productPackageId": 1001,
-                  "code": "FEE01",
-                  "name": "Phi hoa mang",
-                  "status": "1",
-                  "price": 100000,
-                  "vat": 10000
-                }
-              ]
-            }""";
 
     @Operation(operationId = "findProductPackageFeeById", summary = "Lấy thông tin phí gói sản phẩm theo ID",
             description = "Tra cứu 1 bản ghi PRODUCT_PACKAGE_FEE theo khoá chính PRODUCT_PACKAGE_FEE_ID.")

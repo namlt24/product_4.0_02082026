@@ -25,6 +25,22 @@ public class StaffResolveHelper {
         if (DataUtil.isNullObject(staffResponse)) {
             throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
         }
+        return toStaffDTO(staffResponse);
+    }
+
+    /**
+     * Tương tự {@link #resolveStaffDTO(String)} nhưng tra cứu theo staffId (khoá chính STAFF_ID)
+     * thay vì staffCode, thông qua {@link StaffShopClient#getStaffShopFullInfoByStaffId(Long)}.
+     */
+    public StaffDTO resolveStaffDTO(Long staffId) {
+        StaffResponse staffResponse = staffShopClient.getStaffShopFullInfoByStaffId(staffId);
+        if (DataUtil.isNullObject(staffResponse)) {
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006");
+        }
+        return toStaffDTO(staffResponse);
+    }
+
+    private StaffDTO toStaffDTO(StaffResponse staffResponse) {
         StaffDTO staffDTO = staffResponse.toDTO();
         if (!DataUtil.isNullOrEmpty(staffResponse.getShop())) {
             staffDTO.setShopCode(staffResponse.getShop().getShopCode());

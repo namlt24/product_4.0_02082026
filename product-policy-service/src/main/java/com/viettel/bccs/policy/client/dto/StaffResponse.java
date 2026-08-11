@@ -94,6 +94,9 @@ public class StaffResponse {
     @Schema(description = "Thông tin cửa hàng")
     private ShopResponse shop;
 
+    @Schema(description = "Điểm bán hàng (POINT_OF_SALE)", example = "POS01")
+    private String pointOfSale;
+
     public StaffDTO toDTO() {
         StaffDTO dto = new StaffDTO();
         dto.setStaffId(this.staffId);
@@ -117,6 +120,7 @@ public class StaffResponse {
         dto.setStaffOwnType(this.staffOwnType);
         dto.setAreaCode(this.areaCode);
         dto.setShopCode(this.shopCode);
+        dto.setPointOfSale(this.pointOfSale);
         return dto;
     }
 }

@@ -32,4 +32,20 @@ public class StaffShopClientImpl implements StaffShopClient {
                     "Error calling organization-resource-service getStaffShopFullInfo for staffCode=" + staffCode, e);
         }
     }
+
+    @Override
+    @Cacheable(value = "staffShopClientCache", key = "'BY_ID:' + #staffId")
+    public StaffResponse getStaffShopFullInfoByStaffId(Long staffId) {
+        try {
+            var response = organizationResourceFeignClient.getStaffShopFullInfoByStaffId(staffId).getBody();
+            if (response != null && response.getData() != null) {
+                return objectMapper.convertValue(response.getData(), StaffResponse.class);
+            }
+            return null;
+        } catch (RuntimeException e) {
+            log.error("Error calling getStaffShopFullInfoByStaffId for staffId: {}", staffId, e);
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling organization-resource-service getStaffShopFullInfoByStaffId for staffId=" + staffId, e);
+        }
+    }
 }

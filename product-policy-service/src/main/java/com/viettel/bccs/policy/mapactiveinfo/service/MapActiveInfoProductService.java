@@ -353,7 +353,7 @@ public class MapActiveInfoProductService {
 
     // ============== getProductCodeNew ==============
 
-    public List<ProductOfferingDTO> getProductCodeNew(RequestMbccs request) {
+    public List<ProductOfferingDTO> getProductCode(RequestMbccs request) {
         log.info("[getProductCodeNew] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
                 request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId());
 
@@ -364,7 +364,7 @@ public class MapActiveInfoProductService {
         List<ProductOfferingDTO> products = getProductCodeCheckStatus(
                 request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId(),
                 offerId, request.getChangeMethod(), request.getTechnology(), mode, request.getRoleMap(),
-                true, null, request.getInfraType(), null);
+                true, request.getListProductSpec(), request.getInfraType(), null);
 
         log.info("[getProductCodeNew] END - {} products returned", products.size());
         return products;

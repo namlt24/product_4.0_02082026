@@ -27,17 +27,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * thật lấy từ Oracle local (không mock), xác nhận HTTP 200 và code=SUCCESS.
  *
  * PHẠM VI: bao phủ các controller/endpoint TỰ ĐÓNG GÓI (chỉ truy vấn DB trực tiếp của chính
- * service này). KHÔNG bao gồm trong lần này (lý do nêu cụ thể, không phải bỏ sót):
- *   - mapactiveinfo/* (MapActiveInfoProductController, MapActiveInfoQuerryController,
- *     MapActiveInfoValidateController): nhiều endpoint gọi cross-service qua Feign sang
- *     product-catalog-service/organization-resource-service (StaffResolveHelper, RequestMbccs
- *     169 field) — cần cả 2 service kia chạy thật đồng thời, không chỉ Oracle; để lại cho lượt
+ * service này), CỘNG THÊM {@code MapActiveInfoQuerryController.getChanelTypeIdMapActiveInfo}
+ * (chỉ phụ thuộc organization-resource-service qua Feign, không cần product-catalog-service —
+ * chạy được với 2 service: policy + organization). KHÔNG bao gồm trong lần này (lý do nêu cụ
+ * thể, không phải bỏ sót):
+ *   - mapactiveinfo/* còn lại (MapActiveInfoProductController, MapActiveInfoValidateController,
+ *     các endpoint khác của MapActiveInfoQuerryController): nhiều endpoint gọi cross-service qua
+ *     Feign sang CẢ product-catalog-service lẫn organization-resource-service (RequestMbccs 169
+ *     field) — cần cả 2 service kia chạy thật đồng thời, không chỉ Oracle; để lại cho lượt
  *     kiểm thử tích hợp đa-service riêng.
  *   - MapBusinessSkipDebtController: entity ánh xạ tới bảng MAP_BUSINESS_SKIP_DEBT nhưng bảng
  *     này KHÔNG TỒN TẠI trong schema Oracle local hiện tại (không có trong db-local/init/) — mọi
  *     endpoint của controller này sẽ lỗi ORA-00942 bất kể code đúng hay sai. Đây là gap hạ tầng
  *     DB cần bổ sung DDL riêng, ngoài phạm vi chuẩn hoá OpenAPI lần này.
  *   - ReasonController.getReasonFull (RequestMbccs 169 field, business logic phức tạp).
+ *
+ * {@code getChanelTypeIdMapActiveInfo} cần organization-resource-service đang chạy thật (mặc
+ * định local port 8004, override qua {@code ORGANIZATION_SERVICE_URL}) — nếu service đó không
+ * chạy, test method tương ứng sẽ fail rõ ràng (Feign timeout/connection refused) thay vì bị bỏ
+ * qua âm thầm.
  *
  * KHÔNG chạy trong `mvn test` mặc định (tên hậu tố *IT) — chỉ chạy khi gọi tường minh, cần Oracle
  * local (docker bccs-oracle) đang chạy:
@@ -70,6 +78,8 @@ class OpenApiExampleSmokeIT {
     private Long refProdPackTypeId;
     private Long refProductPackageId;
     private Long refProductOfferTypeId;
+    private Long chanelTypeStaffId;
+    private Long chanelTypeShopId;
 
     @BeforeAll
     void loadRealSampleData() {
@@ -97,6 +107,14 @@ class OpenApiExampleSmokeIT {
         refProdPackTypeId = ((Number) refRow.get("PROD_PACK_TYPE_ID")).longValue();
         refProductPackageId = ((Number) refRow.get("PRODUCT_PACKAGE_ID")).longValue();
         refProductOfferTypeId = ((Number) refRow.get("PRODUCT_OFFER_TYPE_ID")).longValue();
+
+        // STAFF không thuộc entity của policy-service, nhưng cùng schema Oracle chia sẻ với
+        // organization-resource-service (xem [[bccs_local_dev_setup]]) — JdbcTemplate query thẳng
+        // để lấy 1 staffId thật, active, đúng như getChanelTypeIdMapActiveInfo cần resolve qua Feign.
+        var staff = jdbcTemplate.queryForMap(
+                "SELECT STAFF_ID, SHOP_ID FROM STAFF WHERE STATUS='1' AND ROWNUM <= 1");
+        chanelTypeStaffId = ((Number) staff.get("STAFF_ID")).longValue();
+        chanelTypeShopId = ((Number) staff.get("SHOP_ID")).longValue();
     }
 
     private String baseUrl() {
@@ -111,6 +129,18 @@ class OpenApiExampleSmokeIT {
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         assertEquals(200, response.statusCode(), "HTTP status không phải 200 cho " + path + ": " + response.body());
+        return objectMapper.readTree(response.body());
+    }
+
+    private JsonNode postJson(String path, String body) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl() + path))
+                .timeout(Duration.ofSeconds(15))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        assertEquals(200, response.statusCode(), "HTTP status không phải 200 cho POST " + path + ": " + response.body());
         return objectMapper.readTree(response.body());
     }
 
@@ -226,5 +256,15 @@ class OpenApiExampleSmokeIT {
         JsonNode body = getJson("/ref-prod-pack-po-type/findByProductOfferTypeId/" + refProductOfferTypeId);
         assertSuccess(body);
         assertTrue(body.path("data").isArray());
+    }
+
+    // ---------------------------------------------------------------- MapActiveInfoQuerry
+
+    @Test
+    void mapActiveInfoQuerry_getChanelTypeIdMapActiveInfo_returnsSuccess() throws Exception {
+        // Cần organization-resource-service chạy thật (Feign) — xem Javadoc đầu class.
+        String requestBody = "{\"staffId\": " + chanelTypeStaffId + ", \"shopId\": " + chanelTypeShopId + "}";
+        JsonNode body = postJson("/map-active-info/getChanelTypeIdMapActiveInfo", requestBody);
+        assertSuccess(body);
     }
 }

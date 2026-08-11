@@ -3,8 +3,7 @@ package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,9 +11,17 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request DTO cho API getChanelTypeIdMapActiveInfo.
- * Chỉ gồm 3 field thực sự được dùng để suy ra channelTypeId (thay vì nhận nguyên object
- * StaffDTO ở package client.dto, việc controller phụ thuộc package client vi phạm
- * LayeredArchitectureTest).
+ *
+ * <p>Chỉ mang {@code staffId} — server tự resolve toàn bộ thông tin nhân viên/shop cần thiết
+ * (channelTypeId, shopChanelTypeId, pointOfSale...) từ organization-resource-service (nguồn dữ
+ * liệu gốc) thay vì tin vào giá trị "suy luận sẵn" mà client tự truyền lên, tránh sai lệch khi
+ * dữ liệu shop/staff phía server đã thay đổi.
+ *
+ * <p><b>{@code shopChanelTypeId}/{@code shopId} khai báo trong hợp đồng API nhưng KHÔNG được
+ * tiêu thụ trong {@code MapActiveInfoQuerryService.getChanelTypeIdMapActiveInfo(ChanelTypeIdRequest)}
+ * hiện tại</b> — chỉ {@code staffId} được dùng để resolve. Hai field còn lại giữ trong DTO theo
+ * đúng hợp đồng đã yêu cầu (định danh nhân viên/shop mà caller đang thao tác), dành cho các mở
+ * rộng nghiệp vụ sau này; đây là quyết định có chủ đích, không phải thiếu sót khi review.
  */
 @Data
 @Builder
@@ -28,13 +35,14 @@ public class ChanelTypeIdRequest {
     @Max(value = 9999999999L, message = "shopChanelTypeId vượt quá độ dài cho phép")
     private Long shopChanelTypeId;
 
-    @Schema(description = "ID kênh của nhân viên", example = "1")
-    @Min(value = 0, message = "channelTypeId phải >= 0")
-    @Max(value = 9999999999L, message = "channelTypeId vượt quá độ dài cho phép")
-    private Long channelTypeId;
+    @Schema(description = "ID nhân viên (STAFF_ID) — dùng để server tự resolve thông tin nhân viên/shop", example = "12345", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "staffId không được để trống")
+    @Min(value = 1, message = "staffId phải >= 1")
+    @Max(value = 9999999999L, message = "staffId vượt quá độ dài cho phép")
+    private Long staffId;
 
-    @Schema(description = "Điểm bán (point of sale)", example = "1")
-    @Size(max = 5, message = "pointOfSale tối đa 5 ký tự")
-    @Pattern(regexp = "^[A-Za-z0-9_-]{0,5}$", message = "pointOfSale chỉ gồm chữ, số, '_' hoặc '-'")
-    private String pointOfSale;
+    @Schema(description = "ID cửa hàng (SHOP_ID)", example = "12345")
+    @Min(value = 0, message = "shopId phải >= 0")
+    @Max(value = 9999999999L, message = "shopId vượt quá độ dài cho phép")
+    private Long shopId;
 }

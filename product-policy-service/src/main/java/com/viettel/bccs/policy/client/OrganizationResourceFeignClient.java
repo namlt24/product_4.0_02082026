@@ -18,6 +18,9 @@ public interface OrganizationResourceFeignClient {
     @GetMapping("/v1/staff/getStaffShopFullInfo/{staffCode}")
     ResponseEntity<StandardClientResponse> getStaffShopFullInfo(@PathVariable String staffCode);
 
+    @GetMapping("/v1/staff/getStaffShopFullInfoByStaffId/{staffId}")
+    ResponseEntity<StandardClientResponse> getStaffShopFullInfoByStaffId(@PathVariable Long staffId);
+
     @GetMapping("/v1/staffext/getStaffExtByStaffIDAndKey")
     ResponseEntity<StandardClientResponse> getStaffExtByStaffIDAndKey(
             @RequestParam Long staffId, @RequestParam String key);

@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoProductControllerExamples.*;
+
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
 @RequiredArgsConstructor
@@ -28,27 +30,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Nghiệp vụ đấu nối di động trả trước", description = "API cho nghiệp vụ đấu nối di động trả trước")
 public class MapActiveInfoProductController {
     private final MapActiveInfoProductService mapActiveInfoProductService;
-
-    private static final String PRODUCT_CODE_LIST_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000003",
-              "requestId": "req-0003",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": {
-                "productOfferingDTOs": [
-                  {
-                    "code": "PACKAGE_001",
-                    "name": "Gói cước data 50GB",
-                    "productOfferingId": 12345,
-                    "productOfferTypeId": 1,
-                    "telecomServiceId": 1,
-                    "status": "1"
-                  }
-                ]
-              }
-            }""";
 
     @PostMapping("/getProductCodeByMapActiveInfo")
     @Operation(operationId = "API_PRODUCT_023",
@@ -75,10 +56,10 @@ public class MapActiveInfoProductController {
                     content = @Content(schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(name = "success", value = PRODUCT_CODE_LIST_EXAMPLE)))
     })
-    public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCodeNew(
+    public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCode(
             @Valid @RequestBody RequestMbccs request) {
         return StandardResponses.success(GetProductCodeByMapActiveInfoResponse.builder()
-                .productOfferingDTOs(mapActiveInfoProductService.getProductCodeNew(request))
+                .productOfferingDTOs(mapActiveInfoProductService.getProductCode(request))
                 .build());
     }
 }

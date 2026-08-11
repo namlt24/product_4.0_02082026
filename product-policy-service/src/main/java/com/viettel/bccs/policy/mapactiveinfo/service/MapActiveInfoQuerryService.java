@@ -8,6 +8,7 @@ import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.policy.client.dto.StaffDTO;
 import com.viettel.bccs.policy.client.dto.StaffExtResponse;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
+import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
@@ -43,12 +44,14 @@ public class MapActiveInfoQuerryService {
     private final StaffExtClient staffExtClient;
     @Lazy
     private final ReasonService reasonService;
+    private final StaffResolveHelper staffResolveHelper;
 
     public MapActiveInfoQuerryService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                       OptionSetClient optionSetClient, TelecomServiceClient telecomServiceClient,
                                       @Lazy MapActiveInfoValidateService mapActiveInfoValidateService,
                                       StaffExtClient staffExtClient,
-                                      @Lazy ReasonService reasonService) {
+                                      @Lazy ReasonService reasonService,
+                                      StaffResolveHelper staffResolveHelper) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
@@ -56,6 +59,7 @@ public class MapActiveInfoQuerryService {
         this.mapActiveInfoValidateService = mapActiveInfoValidateService;
         this.staffExtClient = staffExtClient;
         this.reasonService = reasonService;
+        this.staffResolveHelper = staffResolveHelper;
     }
 
 
@@ -372,10 +376,8 @@ public class MapActiveInfoQuerryService {
     }
 
     public Long getChanelTypeIdMapActiveInfo(ChanelTypeIdRequest request) {
-        StaffDTO staffDTO = new StaffDTO();
-        staffDTO.setShopChanelTypeId(request.getShopChanelTypeId());
-        staffDTO.setChannelTypeId(request.getChannelTypeId());
-        staffDTO.setPointOfSale(request.getPointOfSale());
+        Long staffId = request.getStaffId();
+        StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffId);
         return getChanelTypeIdMapActiveInfo(staffDTO);
     }
 

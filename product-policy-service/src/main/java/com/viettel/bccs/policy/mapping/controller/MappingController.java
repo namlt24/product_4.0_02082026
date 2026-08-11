@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static com.viettel.bccs.policy.mapping.openapi.MappingControllerExamples.*;
+
 @Tag(name = "Mapping", description = "APIs quản lý mapping dịch vụ bán hàng")
 @RestController
 @RequestMapping("/product-policy-service/v1/mapping")
@@ -31,26 +33,6 @@ import java.util.List;
 public class MappingController {
 
     private final MappingService service;
-
-    private static final String SALE_SERVICE_CODE_LIST_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": ["SS001", "SS002"]
-            }""";
-
-    private static final String REASON_LIST_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000002",
-              "requestId": "req-0002",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": []
-            }""";
 
     @Operation(operationId = "findSaleServiceCodeByReason", summary = "Tìm mã dịch vụ bán hàng theo lý do",
             description = "Trả về danh sách SALE_SERVICE_CODE trong bảng MAPPING khớp với REASON_ID truyền vào.")

@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static com.viettel.bccs.policy.freecamequipment.openapi.FreeCamEquipmentControllerExamples.*;
+
 @Tag(name = "Free Cam Equipment", description = "APIs quản lý giá thiết bị CAM miễn phí theo lý do đấu nối")
 @RestController
 @RequestMapping("/product-policy-service/v1/free-cam-equipment")
@@ -31,40 +33,6 @@ import java.util.List;
 public class FreeCamEquipmentController {
 
     private final FreeCamEquipmentService service;
-
-    private static final String CHECK_REASON_FREE_CAM_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": [
-                {
-                  "freeCamEquipmentId": 1,
-                  "actionCode": "5001",
-                  "reasonId": 9003997310,
-                  "areaCode": "H004",
-                  "status": "1",
-                  "camInsideNumber": 2,
-                  "camOutsideNumber": 3,
-                  "camMaxNumber": 5,
-                  "camInsidePrice": 88888,
-                  "camOutsidePrice": 99999,
-                  "effectDatetime": "2026-08-01T00:00:00.000+00:00",
-                  "expireDatetime": null,
-                  "createUser": "system",
-                  "updateUser": null,
-                  "description": null,
-                  "shopCode": null,
-                  "staffCode": null,
-                  "createDatetime": "2026-08-01T00:00:00.000+00:00",
-                  "updateDatetime": null,
-                  "customerGroup": null,
-                  "customerType": null
-                }
-              ]
-            }""";
 
     @Operation(operationId = "checkReasonFreeCam", summary = "Kiểm tra danh sách thiết bị CAM miễn phí theo gói sản phẩm (sale service), phục vụ getPriceInServices",
             description = "Trả về danh sách bản ghi FREE_CAM_EQUIPMENT khớp với gói sản phẩm (product package / sale service) truyền vào.")

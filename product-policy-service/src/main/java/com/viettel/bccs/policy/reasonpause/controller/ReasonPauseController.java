@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static com.viettel.bccs.policy.reasonpause.openapi.ReasonPauseControllerExamples.*;
+
 @RestController
 @RequestMapping("/product-policy-service/v1/reason-pause")
 @RequiredArgsConstructor
@@ -29,48 +31,6 @@ import java.util.List;
 public class ReasonPauseController {
 
     private final ReasonPauseService service;
-
-    private static final String REASON_PAUSE_SINGLE_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000001",
-              "requestId": "req-0001",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": {
-                "reasonPauseId": 1,
-                "numMonth": 3,
-                "price": 50000,
-                "reasonId": 1,
-                "status": "1",
-                "createDatetime": "2026-08-11T00:00:00.000+00:00",
-                "createUser": "system",
-                "updateDatetime": null,
-                "updateUser": null
-              }
-            }""";
-
-    private static final String REASON_PAUSE_LIST_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000002",
-              "requestId": "req-0002",
-              "timestamp": "2026-08-11T02:00:00Z",
-              "data": [
-                {
-                  "reasonPauseId": 1,
-                  "numMonth": 3,
-                  "price": 50000,
-                  "reasonId": 1,
-                  "status": "1",
-                  "createDatetime": "2026-08-11T00:00:00.000+00:00",
-                  "createUser": "system",
-                  "updateDatetime": null,
-                  "updateUser": null
-                }
-              ]
-            }""";
 
     @GetMapping("/findById/{id}")
     @Operation(operationId = "findReasonPauseById", summary = "Lấy kỳ tạm ngưng theo ID",

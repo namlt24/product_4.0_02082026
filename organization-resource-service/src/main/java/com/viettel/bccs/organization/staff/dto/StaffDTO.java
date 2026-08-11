@@ -1,11 +1,24 @@
 package com.viettel.bccs.organization.staff.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Bound/pattern trên từng field lấy đúng theo độ dài/precision cột thật của STAFF (xem StaffEntity)
+ * khi field ánh xạ 1-1 vào cột DB; field "view"/tổng hợp không có cột DB dùng biên suy luận hợp lý.
+ * Field không nullable ở DB vẫn cho phép null ở DTO, @Size/@Pattern/@Min/@Max chỉ áp dụng khi giá trị khác null.
+ *
+ * Lưu ý: field `staffApp` (List&lt;StaffDTO&gt;) đã bị XOÁ khỏi DTO này — đây là field tự tham chiếu
+ * (cycle vi phạm quy tắc DTO) nhưng không có bất kỳ usage thật nào (getStaffApp/setStaffApp) ngoài
+ * chính class này trong toàn bộ module main, nên được dọn bỏ an toàn.
+ */
 @Schema
 public class StaffDTO implements Serializable {
 
@@ -19,351 +32,639 @@ public class StaffDTO implements Serializable {
     public static enum FILTER {staffCode, name, staffId, status}
 
     public static enum COLUMNS {address, areaCode, bankplusMobile, birthday, btsCode, businessLicence,
-        businessMethod, channelTypeId, contractFromDate, contractMethod, contractNo, contractToDate,
-        depositValue, discountPolicy, district, email, fileName, hasEquipment, hasTin, home, idIssueDate,
+        businessMethod, channelTypeId, contractFromDate, contractMethod, contractNo, depositValue,
+        discountPolicy, district, email, fileName, hasEquipment, hasTin, home, idIssueDate,
         idIssuePlace, idNo, idType, imsi, isdn, lastLockTime, lastModified, lockFlag, lockStatus, name, note,
         paymentLimit, paymentUsage, pin, pointOfSale, pointOfSaleType, precinct, pricePolicy, province, registerInfo, serial,
         shopId, shopOwnerId, staffCode, staffId, staffOwnType, staffOwnerId, subOwnerId, subOwnerType, tel, tin, ttnsCode, type, userId, warningContent, mapAreaChainChannel, createUser, installationStatus}
 
     @Schema(description = "Ten trang thai", example = "Dang hoat dong")
+    @Size(max = 100, message = "statusName toi da 100 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "statusName khong duoc chua ky tu dieu khien")
     private String statusName;
     @Schema(description = "So bankplus", example = "0909123456")
+    @Size(max = 20, message = "bankplusMobile toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9+\\-\\s]{0,20}$", message = "bankplusMobile chi gom so, '+', '-' hoac khoang trang")
     private String bankplusMobile;
     @Schema(description = "Ngay sinh", example = "1990-01-01")
     private Date birthday;
     @Schema(description = "Ma BTS", example = "BTS_HN_001")
+    @Size(max = 10, message = "btsCode toi da 10 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,10}$", message = "btsCode chi gom chu, so, '_' hoac '-'")
     private String btsCode;
     @Schema(description = "Giay phep kinh doanh", example = "GPKD_123456")
+    @Size(max = 200, message = "businessLicence toi da 200 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,200}$", message = "businessLicence chi gom chu, so, '_' hoac '-'")
     private String businessLicence;
     @Schema(description = "Phuong thuc kinh doanh", example = "1")
+    @Min(value = 0, message = "businessMethod phai >= 0")
+    @Max(value = 99, message = "businessMethod vuot qua do dai cot (precision 2)")
     private Long businessMethod;
     @Schema(description = "ID loai kenh", example = "1")
+    @Min(value = 0, message = "channelTypeId phai >= 0")
+    @Max(value = 9999999999L, message = "channelTypeId vuot qua do dai cot (precision 10)")
     private Long channelTypeId;
     @Schema(description = "Ngay bat dau hop dong", example = "2024-01-01")
     private Date contractFromDate;
     @Schema(description = "Phuong thuc hop dong", example = "1")
+    @Min(value = 0, message = "contractMethod phai >= 0")
+    @Max(value = 99, message = "contractMethod vuot qua do dai cot (precision 2)")
     private Long contractMethod;
     @Schema(description = "So hop dong", example = "HD_2024_001")
+    @Size(max = 100, message = "contractNo toi da 100 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,100}$", message = "contractNo chi gom chu, so, '_' hoac '-'")
     private String contractNo;
     @Schema(description = "So tai khoan nhan dien", example = "1234567890")
+    @Size(max = 50, message = "identifyAccountNo toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "identifyAccountNo chi gom chu, so, '_' hoac '-'")
     private String identifyAccountNo;
     @Schema(description = "Ten tai khoan nhan dien", example = "Nguyen Van A")
+    @Size(max = 300, message = "identifyAccountName toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "identifyAccountName khong duoc chua ky tu dieu khien")
     private String identifyAccountName;
     @Schema(description = "Loai phe duyet", example = "APPROVE")
+    @Size(max = 50, message = "approvalType toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "approvalType chi gom chu, so, '_' hoac '-'")
     private String approvalType;
     @Schema(description = "Ngay ket thuc hop dong", example = "2025-01-01")
     private Date contractToDate;
     @Schema(description = "Gia tri dat coc", example = "5000000")
+    @Min(value = 0, message = "depositValue phai >= 0")
+    @Max(value = 9999999999L, message = "depositValue vuot qua do dai cot (precision 10)")
     private Long depositValue;
     @Schema(description = "Chinh sach giam gia", example = "DISC_001")
+    @Size(max = 50, message = "discountPolicy toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "discountPolicy chi gom chu, so, '_' hoac '-'")
     private String discountPolicy;
     @Schema(description = "Quan/huyen", example = "Ba Dinh")
+    @Size(max = 50, message = "district toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "district chi gom chu va so")
     private String district;
     @Schema(description = "Email", example = "nguyenvana@viettel.vn")
+    @Size(max = 100, message = "email toi da 100 ky tu")
+    @Pattern(regexp = "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", message = "email khong dung dinh dang")
     private String email;
     @Schema(description = "Dia chi", example = "123 Nguyen Trai, Quan 1, TP HCM")
+    @Size(max = 500, message = "address toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "address khong duoc chua ky tu dieu khien")
     private String address;
     @Schema(description = "Ten file dinh kem", example = "hop_dong.pdf")
+    @Size(max = 200, message = "fileName toi da 200 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "fileName khong duoc chua ky tu dieu khien")
     private String fileName;
     @Schema(description = "Gioi tinh", example = "1")
+    @Min(value = 0, message = "gender phai >= 0")
+    @Max(value = 99, message = "gender vuot qua do dai cot (precision 2)")
     private Long gender;
     @Schema(description = "Co thiet bi", example = "1")
+    @Min(value = 0, message = "hasEquipment phai >= 0")
+    @Max(value = 99, message = "hasEquipment vuot qua do dai cot (precision 2)")
     private Long hasEquipment;
     @Schema(description = "Co ma so thue", example = "1")
+    @Min(value = 0, message = "hasTin phai >= 0")
+    @Max(value = 99, message = "hasTin vuot qua do dai cot (precision 2)")
     private Long hasTin;
     @Schema(description = "Ngay cap CMND/CCCD", example = "2020-01-01")
     private Date idIssueDate;
     @Schema(description = "Noi cap CMND/CCCD", example = "Ha Noi")
+    @Size(max = 150, message = "idIssuePlace toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "idIssuePlace khong duoc chua ky tu dieu khien")
     private String idIssuePlace;
     @Schema(description = "So CMND/CCCD", example = "001234567890")
+    @Size(max = 20, message = "idNo toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "idNo chi gom chu so")
     private String idNo;
     @Schema(description = "La nhan vien moi", example = "Y")
+    @Size(max = 1, message = "isNew toi da 1 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "isNew chi gom chu hoac so")
     private String isNew;
     @Schema(description = "Loai CMND/CCCD", example = "1")
+    @Min(value = 0, message = "idType phai >= 0")
+    @Max(value = 99, message = "idType vuot qua do dai cot (precision 2)")
     private Long idType;
     @Schema(description = "IMSI", example = "452011234567890")
+    @Size(max = 20, message = "imsi toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "imsi chi gom chu so")
     private String imsi;
     @Schema(description = "So dien thoai ISDN", example = "0909123456")
+    @Size(max = 15, message = "isdn toi da 15 ky tu")
+    @Pattern(regexp = "^[0-9+\\-\\s]{0,15}$", message = "isdn chi gom so, '+', '-' hoac khoang trang")
     private String isdn;
     @Schema(description = "Thoi gian khoa cuoi", example = "2024-06-01")
     private Date lastLockTime;
     @Schema(description = "Lan cap nhat cuoi", example = "2024-06-01")
     private Date lastModified;
     @Schema(description = "Flag khoa", example = "1")
+    @Size(max = 10, message = "lockFlag toi da 10 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,10}$", message = "lockFlag chi gom chu hoac so")
     private String lockFlag;
     @Schema(description = "Trang thai khoa", example = "0")
+    @Min(value = 0, message = "lockStatus phai >= 0")
+    @Max(value = 9999999999L, message = "lockStatus vuot qua do dai cot (precision 10)")
     private Long lockStatus;
     @Schema(name = "name", description = "Ten nhan vien/diem ban", example = "Nguyen Van A")
+    @Size(max = 300, message = "name toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "name khong duoc chua ky tu dieu khien")
     private String name;
     @Schema(description = "Ghi chu", example = "Ghi chu nhan vien")
+    @Size(max = 500, message = "note toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "note khong duoc chua ky tu dieu khien")
     private String note;
     @Schema(description = "Gioi han thanh toan", example = "50000000")
+    @Min(value = 0, message = "paymentLimit phai >= 0")
+    @Max(value = 9999999999L, message = "paymentLimit vuot qua do dai cot (precision 10)")
     private Long paymentLimit;
     @Schema(description = "Su dung thanh toan", example = "10000000")
+    @Min(value = 0, message = "paymentUsage phai >= 0")
+    @Max(value = 9999999999L, message = "paymentUsage vuot qua do dai cot (precision 10)")
     private Long paymentUsage;
     @Schema(description = "Ma PIN", example = "1234")
+    @Size(max = 10, message = "pin toi da 10 ky tu")
+    @Pattern(regexp = "^[0-9]{0,10}$", message = "pin chi gom chu so")
     private String pin;
     @Schema(description = "Diem ban hang", example = "POS_001")
+    @Size(max = 5, message = "pointOfSale toi da 5 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,5}$", message = "pointOfSale chi gom chu, so, '_' hoac '-'")
     private String pointOfSale;
     @Schema(description = "Loai diem ban", example = "1")
+    @Min(value = 0, message = "pointOfSaleType phai >= 0")
+    @Max(value = 9, message = "pointOfSaleType vuot qua do dai cot (precision 1)")
     private Long pointOfSaleType;
     @Schema(description = "Chinh sach gia", example = "PRICE_001")
+    @Size(max = 20, message = "pricePolicy toi da 20 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "pricePolicy chi gom chu, so, '_' hoac '-'")
     private String pricePolicy;
     @Schema(description = "Thong tin dang ky", example = "Dang ky tai khoan")
+    @Size(max = 2, message = "registerInfo toi da 2 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,2}$", message = "registerInfo chi gom chu hoac so")
     private String registerInfo;
     @Schema(description = "Serial", example = "SN123456789")
+    @Size(max = 20, message = "serial toi da 20 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "serial chi gom chu, so, '_' hoac '-'")
     private String serial;
     @Schema(description = "ID cua hang/dai ly", example = "12345")
+    @Min(value = 0, message = "shopId phai >= 0")
+    @Max(value = 9999999999L, message = "shopId vuot qua do dai cot (precision 10)")
     private Long shopId;
     @Schema(description = "ID chu cua hang", example = "12345")
+    @Min(value = 0, message = "shopOwnerId phai >= 0")
+    @Max(value = Long.MAX_VALUE, message = "shopOwnerId vuot qua do dai cot (precision 20)")
     private Long shopOwnerId;
     @Schema(description = "Ma nhan vien/diem ban", example = "NV_001")
+    @Size(max = 40, message = "staffCode toi da 40 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chi gom chu, so, '_' hoac '-'")
     private String staffCode;
     @Schema(description = "ID nhan vien/diem ban", example = "12345")
+    @Min(value = 0, message = "staffId phai >= 0")
+    @Max(value = 9999999999L, message = "staffId vuot qua do dai cot (precision 10)")
     private Long staffId;
     @Schema(description = "Loai chu so huu", example = "OWNER")
+    @Size(max = 1, message = "staffOwnType toi da 1 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "staffOwnType chi gom chu hoac so")
     private String staffOwnType;
     @Schema(description = "ID nhan vien quan ly", example = "12345")
+    @Min(value = 0, message = "staffOwnerId phai >= 0")
+    @Max(value = 9999999999L, message = "staffOwnerId vuot qua do dai cot (precision 10)")
     private Long staffOwnerId;
     @Schema(description = "Ma nhan vien quan ly", example = "NV_002")
+    @Size(max = 40, message = "staffOwnerCode toi da 40 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffOwnerCode chi gom chu, so, '_' hoac '-'")
     private String staffOwnerCode;
     @Schema(description = "Ten nhan vien quan ly", example = "Tran Van B")
+    @Size(max = 300, message = "staffOwnerName toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "staffOwnerName khong duoc chua ky tu dieu khien")
     private String staffOwnerName;
     @Schema(description = "Dien thoai nhan vien quan ly", example = "0909123457")
+    @Size(max = 15, message = "staffOwnerTel toi da 15 ky tu")
+    @Pattern(regexp = "^[0-9+\\-\\s]{0,15}$", message = "staffOwnerTel chi gom so, '+', '-' hoac khoang trang")
     private String staffOwnerTel;
     @Schema(description = "Trang thai", example = "1")
+    @Size(max = 1, message = "status toi da 1 ky tu")
+    @Pattern(regexp = "^[01]$", message = "status chi nhan gia tri 0 hoac 1")
     private String status;
     @Schema(description = "So kho nhap", example = "100")
+    @Min(value = 0, message = "stockNum phai >= 0")
+    @Max(value = 9999999, message = "stockNum vuot qua do dai cot (precision 7)")
     private Long stockNum;
     @Schema(description = "So kho xuat", example = "50")
+    @Min(value = 0, message = "stockNumImp phai >= 0")
+    @Max(value = 9999999, message = "stockNumImp vuot qua do dai cot (precision 7)")
     private Long stockNumImp;
     @Schema(description = "Duong", example = "Nguyen Trai")
+    @Size(max = 100, message = "street toi da 100 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "street khong duoc chua ky tu dieu khien")
     private String street;
     @Schema(description = "ID chu so huu phu", example = "12345")
+    @Min(value = 0, message = "subOwnerId phai >= 0")
+    @Max(value = Long.MAX_VALUE, message = "subOwnerId vuot qua do dai cot (precision 20)")
     private Long subOwnerId;
     @Schema(description = "Loai chu so huu phu", example = "SUB_OWNER")
+    @Min(value = 0, message = "subOwnerType phai >= 0")
+    @Max(value = 9, message = "subOwnerType vuot qua do dai cot (precision 1)")
     private Long subOwnerType;
     @Schema(description = "So dien thoai lien he", example = "0909123456")
+    @Size(max = 15, message = "tel toi da 15 ky tu")
+    @Pattern(regexp = "^[0-9+\\-\\s]{0,15}$", message = "tel chi gom so, '+', '-' hoac khoang trang")
     private String tel;
     @Schema(description = "Ma so thue", example = "0123456789")
+    @Size(max = 50, message = "tin toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "tin chi gom chu, so, '_' hoac '-'")
     private String tin;
     @Schema(description = "Ma thong tin nhan su", example = "TTNS_001")
+    @Size(max = 200, message = "ttnsCode toi da 200 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,200}$", message = "ttnsCode chi gom chu, so, '_' hoac '-'")
     private String ttnsCode;
     @Schema(description = "Loai nhan vien", example = "1")
+    @Min(value = 0, message = "type phai >= 0")
+    @Max(value = 9999999999L, message = "type vuot qua do dai cot (precision 10)")
     private Long type;
     @Schema(description = "ID nguoi dung", example = "12345")
+    @Min(value = 0, message = "userId phai >= 0")
+    @Max(value = Long.MAX_VALUE, message = "userId vuot qua do dai cot (precision 20)")
     private Long userId;
     @Schema(description = "Noi dung canh bao", example = "Canh bao tai khoan")
+    @Size(max = 500, message = "warningContent toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "warningContent khong duoc chua ky tu dieu khien")
     private String warningContent;
     @Schema(description = "Ma cua hang", example = "VTST_HN_001")
+    @Size(max = 40, message = "shopCode toi da 40 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "shopCode chi gom chu, so, '_' hoac '-'")
     private String shopCode;
     @Schema(description = "Ten cua hang", example = "Viettel Store Ha Noi")
+    @Size(max = 300, message = "shopName toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "shopName khong duoc chua ky tu dieu khien")
     private String shopName;
     @Schema(description = "La diem ban hang", example = "true")
     private boolean isPointOfSale;
     @Schema(description = "ID loai kenh cua hang", example = "1")
+    @Min(value = 0, message = "shopChanelTypeId phai >= 0")
+    @Max(value = 9999999999L, message = "shopChanelTypeId vuot qua do dai cot (precision 10)")
     private Long shopChanelTypeId;
     @Schema(description = "Tinh/thanh pho cua hang", example = "Ha Noi")
+    @Size(max = 50, message = "shopProvince toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "shopProvince chi gom chu va so")
     private String shopProvince;
     @Schema(description = "Quan/huyen cua hang", example = "Ba Dinh")
+    @Size(max = 50, message = "shopDistrict toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "shopDistrict chi gom chu va so")
     private String shopDistrict;
     @Schema(description = "Phuong/xa cua hang", example = "Phuong 1")
+    @Size(max = 50, message = "shopPrecinct toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "shopPrecinct chi gom chu va so")
     private String shopPrecinct;
     @Schema(description = "Duong dan cua hang", example = "/HN/VTST_HN_001")
+    @Size(max = 500, message = "shopPath toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "shopPath khong duoc chua ky tu dieu khien")
     private String shopPath;
     @Schema(description = "ID nhan vien giao dich", example = "12345")
+    @Min(value = 0, message = "saleTransStaffId phai >= 0")
+    @Max(value = 9999999999L, message = "saleTransStaffId vuot qua do dai cot (precision 10)")
     private Long saleTransStaffId;
     @Schema(description = "Dia chi IP", example = "192.168.1.1")
+    @Size(max = 45, message = "ipAddress toi da 45 ky tu")
+    @Pattern(regexp = "^[0-9a-fA-F.:]{0,45}$", message = "ipAddress khong dung dinh dang")
     private String ipAddress;
     @Schema(description = "Khoa chinh bang", example = "staff_id")
+    @Size(max = 50, message = "tablePk toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "tablePk chi gom chu, so, '_' hoac '-'")
     private String tablePk;
     @Schema(description = "Ten loai kenh", example = "Dai ly")
+    @Size(max = 150, message = "channelTypeName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "channelTypeName khong duoc chua ky tu dieu khien")
     private String channelTypeName;
     @Schema(description = "Ten nhan vien quan ly", example = "Tran Van B")
+    @Size(max = 300, message = "managerName toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "managerName khong duoc chua ky tu dieu khien")
     private String managerName;
     @Schema(description = "Loai cua hang", example = "1")
+    @Size(max = 1, message = "shopType toi da 1 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "shopType chi gom chu hoac so")
     private String shopType;
     @Schema(description = "Hanh dong", example = "CREATE")
+    @Size(max = 20, message = "action toi da 20 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "action chi gom chu, so, '_' hoac '-'")
     private String action;
     @Schema(description = "So SDN", example = "SDN_001")
+    @Size(max = 20, message = "sdnNumber toi da 20 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "sdnNumber chi gom chu, so, '_' hoac '-'")
     private String sdnNumber;
     @Schema(description = "Cua hang la dai ly", example = "true")
     private Boolean shopIsAgent;
     @Schema(description = "ID nhom loai kenh", example = "5")
+    @Min(value = 0, message = "groupChannelTypeId phai >= 0")
+    @Max(value = 9999999999L, message = "groupChannelTypeId vuot qua do dai cot (precision 10)")
     private Long groupChannelTypeId;
     @Schema(description = "Ma chuc danh", example = "POS_001")
+    @Size(max = 50, message = "positionCode toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "positionCode chi gom chu, so, '_' hoac '-'")
     private String positionCode;
     @Schema(description = "Ten chuc danh", example = "Nhan vien ban hang")
+    @Size(max = 150, message = "positionName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "positionName khong duoc chua ky tu dieu khien")
     private String positionName;
     @Schema(description = "Ten to chuc", example = "Viettel Ha Noi")
+    @Size(max = 300, message = "organizationName toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "organizationName khong duoc chua ky tu dieu khien")
     private String organizationName;
     @Schema(description = "Ma ngan hang bankplus", example = "VCB")
+    @Size(max = 50, message = "bankplusBankCode toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "bankplusBankCode chi gom chu, so, '_' hoac '-'")
     private String bankplusBankCode;
     @Schema(description = "Ma ngan hang cha", example = "VCB")
+    @Size(max = 50, message = "parentBankCode toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "parentBankCode chi gom chu, so, '_' hoac '-'")
     private String parentBankCode;
     @Schema(description = "Ma CITAD", example = "CITAD_001")
+    @Size(max = 50, message = "citadCode toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "citadCode chi gom chu, so, '_' hoac '-'")
     private String citadCode;
     @Schema(description = "So tai khoan", example = "1234567890")
+    @Size(max = 50, message = "accountNumber toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "accountNumber chi gom chu, so, '_' hoac '-'")
     private String accountNumber;
     @Schema(description = "Chu tai khoan", example = "Nguyen Van A")
+    @Size(max = 300, message = "accountOwner toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "accountOwner khong duoc chua ky tu dieu khien")
     private String accountOwner;
     @Schema(description = "ID map shop bank CITAD", example = "12345")
+    @Min(value = 0, message = "mapShopBankCitadId phai >= 0")
+    @Max(value = Long.MAX_VALUE, message = "mapShopBankCitadId vuot qua gioi han cho phep")
     private Long mapShopBankCitadId;
     @Schema(description = "ID tenant", example = "1")
+    @Min(value = 0, message = "tenantId phai >= 0")
+    @Max(value = Long.MAX_VALUE, message = "tenantId vuot qua gioi han cho phep")
     private Long tenantId;
     @Schema(description = "Ten chinh sach gia", example = "Chinh sach gia 2024")
+    @Size(max = 150, message = "pricePolicyName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "pricePolicyName khong duoc chua ky tu dieu khien")
     private String pricePolicyName;
     @Schema(description = "Ten chinh sach giam gia", example = "Chinh sach giam gia 2024")
+    @Size(max = 150, message = "discountPolicyName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "discountPolicyName khong duoc chua ky tu dieu khien")
     private String discountPolicyName;
     @Schema(description = "Ten tinh/thanh pho", example = "Ha Noi")
+    @Size(max = 150, message = "provinceName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "provinceName khong duoc chua ky tu dieu khien")
     private String provinceName;
     @Schema(description = "Map vung chan", example = "HN_BD")
+    @Size(max = 50, message = "mapAreaChainChannel toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "mapAreaChainChannel chi gom chu, so, '_' hoac '-'")
     private String mapAreaChainChannel;
     @Schema(description = "ID loai kenh phu", example = "2")
+    @Min(value = 0, message = "subChannelTypeId phai >= 0")
+    @Max(value = 9999999999L, message = "subChannelTypeId vuot qua do dai cot (precision 10)")
     private Long subChannelTypeId;
     @Schema(description = "Yeu cau VSA", example = "false")
     private boolean vsaRequest = false;
     @Schema(description = "Da dang ky viettel wallet", example = "true")
     private boolean isWalletRegister;
     @Schema(description = "Ten quan/huyen", example = "Ba Dinh")
+    @Size(max = 150, message = "districtName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "districtName khong duoc chua ky tu dieu khien")
     private String districtName;
     @Schema(description = "Ten phuong/xa", example = "Phuong 1")
+    @Size(max = 150, message = "precinctName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "precinctName khong duoc chua ky tu dieu khien")
     private String precinctName;
     @Schema(description = "Du lieu nhi phan", example = "...")
+    @Size(max = 5_000_000, message = "data toi da 5MB")
     private byte[] data;
     @Schema(description = "Kiem tra map nhom vi tri", example = "false")
     private boolean checkMapGroupPos;
     @Schema(description = "Danh sach ID kenh", example = "[1, 2, 3]")
+    @Size(max = 1000, message = "channelList toi da 1000 phan tu")
     private List<Long> channelList;
     @Schema(description = "Ma nhom vi tri", example = "PG_001")
+    @Size(max = 50, message = "positionGroup toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "positionGroup chi gom chu, so, '_' hoac '-'")
     private String positionGroup;
     @Schema(description = "Ten nhom vi tri", example = "Nhom vi tri ban hang")
+    @Size(max = 150, message = "positionGroupName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "positionGroupName khong duoc chua ky tu dieu khien")
     private String positionGroupName;
     @Schema(description = "Kiem tra", example = "Y")
+    @Size(max = 10, message = "check toi da 10 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,10}$", message = "check chi gom chu hoac so")
     private String check;
     @Schema(description = "Nguoi tao", example = "admin")
+    @Size(max = 50, message = "createUser toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9._-]{0,50}$", message = "createUser chi gom chu, so, '.', '_' hoac '-'")
     private String createUser;
     @Schema(description = "Nguoi cap nhat", example = "admin")
+    @Size(max = 50, message = "updateUser toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9._-]{0,50}$", message = "updateUser chi gom chu, so, '.', '_' hoac '-'")
     private String updateUser;
     @Schema(description = "Ngay tao", example = "2024-01-01")
     private Date createDatetime;
     @Schema(description = "Ngay cap nhat", example = "2024-06-01")
     private Date updateDatetime;
     @Schema(description = "ID to chuc", example = "12345")
+    @Size(max = 50, message = "organizationId toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "organizationId chi gom chu, so, '_' hoac '-'")
     private String organizationId;
     @Schema(description = "ID cua hang cha", example = "12345")
+    @Min(value = 0, message = "parentShopId phai >= 0")
+    @Max(value = 9999999999L, message = "parentShopId vuot qua do dai cot (precision 10)")
     private Long parentShopId;
     @Schema(description = "Ten thuong hieu", example = "Viettel")
+    @Size(max = 150, message = "brandName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "brandName khong duoc chua ky tu dieu khien")
     private String brandName;
     @Schema(description = "Cap bac", example = "1")
+    @Min(value = 0, message = "lv phai >= 0")
+    @Max(value = 999, message = "lv vuot qua gioi han cho phep")
     private Long lv;
     @Schema(description = "Ma ngan hang cha", example = "VCB")
+    @Size(max = 50, message = "parenBank toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "parenBank chi gom chu, so, '_' hoac '-'")
     private String parenBank;
     @Schema(description = "Dia chi theo CMND", example = "123 Nguyen Trai, Ba Dinh, Ha Noi")
+    @Size(max = 500, message = "addressIdNo toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "addressIdNo khong duoc chua ky tu dieu khien")
     private String addressIdNo;
     @Schema(description = "Loai hinh kinh doanh", example = "1")
+    @Size(max = 20, message = "businessType toi da 20 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,20}$", message = "businessType chi gom chu, so, '_' hoac '-'")
     private String businessType;
     @Schema(description = "Tong so ban ghi", example = "100")
+    @Size(max = 20, message = "totalRecords toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "totalRecords chi gom chu so")
     private String totalRecords;
     @Schema(description = "Ma so thue cong ty", example = "0123456789")
+    @Size(max = 50, message = "companyTax toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "companyTax chi gom chu, so, '_' hoac '-'")
     private String companyTax;
     @Schema(description = "Loai thue", example = "1")
+    @Min(value = 0, message = "taxType phai >= 0")
+    @Max(value = 99, message = "taxType vuot qua gioi han cho phep")
     private Long taxType;
     @Schema(description = "So giay phep kinh doanh", example = "GPKD_001")
+    @Size(max = 100, message = "companyBusinessNo toi da 100 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,100}$", message = "companyBusinessNo chi gom chu, so, '_' hoac '-'")
     private String companyBusinessNo;
     @Schema(description = "Chuc danh dai dien", example = "Giam doc")
+    @Size(max = 150, message = "companyRepresentPosition toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "companyRepresentPosition khong duoc chua ky tu dieu khien")
     private String companyRepresentPosition;
     @Schema(description = "So thu tu", example = "1")
+    @Min(value = 0, message = "rowNum phai >= 0")
+    @Max(value = Long.MAX_VALUE, message = "rowNum vuot qua gioi han cho phep")
     private Long rowNum;
     @Schema(description = "Ma kenh", example = "CH_001")
+    @Size(max = 50, message = "channelCode toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "channelCode chi gom chu, so, '_' hoac '-'")
     private String channelCode;
     @Schema(description = "Ma kho", example = "STOCK_001")
+    @Size(max = 40, message = "stockCode toi da 40 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "stockCode chi gom chu, so, '_' hoac '-'")
     private String stockCode;
     @Schema(description = "CMND/CCCD", example = "001234567890")
+    @Size(max = 20, message = "identityCard toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "identityCard chi gom chu so")
     private String identityCard;
     @Schema(description = "Ngay cap", example = "2020-01-01")
     private Date issueDate;
     @Schema(description = "Noi cap", example = "Ha Noi")
+    @Size(max = 150, message = "issuePlace toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "issuePlace khong duoc chua ky tu dieu khien")
     private String issuePlace;
     @Schema(description = "So dien thoai", example = "0909123456")
+    @Size(max = 20, message = "phoneNumber toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9+\\-\\s]{0,20}$", message = "phoneNumber chi gom so, '+', '-' hoac khoang trang")
     private String phoneNumber;
     @Schema(description = "Danh sach ID vai tro", example = "[\"ROLE_001\", \"ROLE_002\"]")
+    @Size(max = 200, message = "roleIds toi da 200 phan tu")
     private List<String> roleIds;
     @Schema(description = "Ho va ten day du", example = "Nguyen Van A")
+    @Size(max = 300, message = "fullName toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "fullName khong duoc chua ky tu dieu khien")
     private String fullName;
     @Schema(description = "ID loai kenh cua nhan vien", example = "1")
+    @Min(value = 0, message = "channelTypeOfStaff phai >= 0")
+    @Max(value = 9999999999L, message = "channelTypeOfStaff vuot qua do dai cot (precision 10)")
     private Long channelTypeOfStaff;
     @Schema(description = "Ten loai kenh cua nhan vien", example = "Dai ly")
+    @Size(max = 150, message = "nameOfChannelStaff toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "nameOfChannelStaff khong duoc chua ky tu dieu khien")
     private String nameOfChannelStaff;
     @Schema(description = "ID loai kenh cua cua hang", example = "1")
+    @Min(value = 0, message = "channelTypeOfShop phai >= 0")
+    @Max(value = 9999999999L, message = "channelTypeOfShop vuot qua do dai cot (precision 10)")
     private Long channelTypeOfShop;
     @Schema(description = "Ten loai kenh cua cua hang", example = "Dai ly")
+    @Size(max = 150, message = "nameOfChannelShop toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "nameOfChannelShop khong duoc chua ky tu dieu khien")
     private String nameOfChannelShop;
     @Schema(description = "Gioi thieu cong ty", example = "Cong ty Viettel")
+    @Size(max = 2000, message = "companyPresent toi da 2000 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,2000}$", message = "companyPresent khong duoc chua ky tu dieu khien")
     private String companyPresent;
     @Schema(description = "Dia chi hoat dong", example = "123 Nguyen Trai, Ba Dinh, Ha Noi")
+    @Size(max = 500, message = "activeAddress toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "activeAddress khong duoc chua ky tu dieu khien")
     private String activeAddress;
     @Schema(description = "Ngay sinh", example = "1990-01-01")
+    @Size(max = 20, message = "birthDay toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9/\\-]{0,20}$", message = "birthDay chi gom so, '/' hoac '-'")
     private String birthDay;
     @Schema(description = "Ngay cap AI", example = "2020-01-01")
+    @Size(max = 20, message = "idIssueDateAI toi da 20 ky tu")
+    @Pattern(regexp = "^[0-9/\\-]{0,20}$", message = "idIssueDateAI chi gom so, '/' hoac '-'")
     private String idIssueDateAI;
     @Schema(description = "File CMND/CCCD mat truoc", example = "cmnd_mat_truoc.jpg")
+    @Size(max = 200, message = "fileIdentifyId toi da 200 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "fileIdentifyId khong duoc chua ky tu dieu khien")
     private String fileIdentifyId;
     @Schema(description = "File chan dung", example = "chan_dung.jpg")
+    @Size(max = 200, message = "filePortraitId toi da 200 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "filePortraitId khong duoc chua ky tu dieu khien")
     private String filePortraitId;
     @Schema(description = "File CMND/CCCD mat sau", example = "cmnd_mat_sau.jpg")
+    @Size(max = 200, message = "fileIdentifyIdUp toi da 200 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "fileIdentifyIdUp khong duoc chua ky tu dieu khien")
     private String fileIdentifyIdUp;
     @Schema(description = "File CMND/CCCD un", example = "cmnd_un.jpg")
+    @Size(max = 200, message = "fileIdentifyIdUn toi da 200 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "fileIdentifyIdUn khong duoc chua ky tu dieu khien")
     private String fileIdentifyIdUn;
     @Schema(description = "Mo ta", example = "Mo ta nhan vien")
+    @Size(max = 1000, message = "description toi da 1000 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "description khong duoc chua ky tu dieu khien")
     private String description;
     @Schema(description = "Ngay hieu luc", example = "2024-01-01")
     private Date effectDatetime;
     @Schema(description = "Ngay het han", example = "2025-01-01")
     private Date expireDatetime;
     @Schema(description = "Ten dang nhap", example = "nguyenvana")
+    @Size(max = 50, message = "username toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9._-]{0,50}$", message = "username chi gom chu, so, '.', '_' hoac '-'")
     private String username;
     @Schema(description = "Trang thai cai dat", example = "INSTALLED")
+    @Size(max = 50, message = "installationStatus toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "installationStatus chi gom chu, so, '_' hoac '-'")
     private String installationStatus;
     @Schema(description = "Can kiem tra tat ca vai tro", example = "false")
     private boolean needCheckAllRole;
     @Schema(description = "La chu so huu", example = "true")
     private boolean owner;
     @Schema(description = "Tin nhan tu SAP", example = "SAP_001")
+    @Size(max = 500, message = "sapMessage toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "sapMessage khong duoc chua ky tu dieu khien")
     private String sapMessage;
     @Schema(description = "Gui tin nhan", example = "false")
     private boolean sendMessage;
     @Schema(description = "Danh sach ma vung", example = "[\"HN\", \"HCM\"]")
+    @Size(max = 200, message = "lstAreaCode toi da 200 phan tu")
     private List<String> lstAreaCode;
     @Schema(description = "Ten tinh/thanh pho cua hang", example = "Ha Noi")
+    @Size(max = 150, message = "shopProvinceName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "shopProvinceName khong duoc chua ky tu dieu khien")
     private String shopProvinceName;
     @Schema(description = "Loai thong tin nhan vien", example = "FULL_TIME")
+    @Size(max = 50, message = "staffInfoType toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "staffInfoType chi gom chu, so, '_' hoac '-'")
     private String staffInfoType;
     @Schema(description = "My Viettel Order", example = "true")
     private Boolean myViettelOrder;
     @Schema(description = "Ghi chu cap nhat", example = "Cap nhat thong tin nhan vien")
+    @Size(max = 500, message = "updateNote toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "updateNote khong duoc chua ky tu dieu khien")
     private String updateNote;
     @Schema(description = "Khoa", example = "false")
     private boolean disable = false;
-    @Schema(description = "Danh sach nhan vien", example = "[]")
-    private List<StaffDTO> staffApp;
     @Schema(description = "Ngay kinh doanh cong ty", example = "2020-01-01")
     private Date companyBusinessDate;
     @Schema(description = "Noi kinh doanh cong ty", example = "Ha Noi")
+    @Size(max = 300, message = "companyBusinessPlace toi da 300 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "companyBusinessPlace khong duoc chua ky tu dieu khien")
     private String companyBusinessPlace;
     @Schema(description = "Ten chuong trinh", example = "CT_001")
+    @Size(max = 150, message = "programName toi da 150 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "programName khong duoc chua ky tu dieu khien")
     private String programName;
     @Schema(description = "URL hien tai", example = "/staff/detail")
+    @Size(max = 500, message = "currentURL toi da 500 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "currentURL khong duoc chua ky tu dieu khien")
     private String currentURL;
     @Schema(description = "Tinh/thanh pho", example = "Ha Noi")
+    @Size(max = 50, message = "province toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "province chi gom chu va so")
     private String province;
     @Schema(description = "Ma vung", example = "HN")
+    @Size(max = 200, message = "areaCode toi da 200 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,200}$", message = "areaCode chi gom chu va so")
     private String areaCode;
     @Schema(description = "Khoi duong", example = "Phuong 1")
+    @Size(max = 100, message = "streetBlock toi da 100 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "streetBlock khong duoc chua ky tu dieu khien")
     private String streetBlock;
     @Schema(description = "So nha", example = "123")
+    @Size(max = 100, message = "home toi da 100 ky tu")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "home khong duoc chua ky tu dieu khien")
     private String home;
     @Schema(description = "Phuong/xa", example = "Phuong 1")
+    @Size(max = 50, message = "precinct toi da 50 ky tu")
+    @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "precinct chi gom chu va so")
     private String precinct;
     @Schema(description = "Thong tin cua hang", example = "...")
     private com.viettel.bccs.organization.shop.dto.ShopDTO shop;
@@ -534,7 +835,6 @@ public class StaffDTO implements Serializable {
     public Boolean getMyViettelOrder() { return myViettelOrder; }
     public String getUpdateNote() { return updateNote; }
     public boolean isDisable() { return disable; }
-    public List<StaffDTO> getStaffApp() { return staffApp; }
     public Date getCompanyBusinessDate() { return companyBusinessDate; }
     public String getCompanyBusinessPlace() { return companyBusinessPlace; }
     public String getOrganizationName() { return organizationName; }
@@ -706,7 +1006,6 @@ public class StaffDTO implements Serializable {
     public void setMyViettelOrder(Boolean myViettelOrder) { this.myViettelOrder = myViettelOrder; }
     public void setUpdateNote(String updateNote) { this.updateNote = updateNote; }
     public void setDisable(boolean disable) { this.disable = disable; }
-    public void setStaffApp(List<StaffDTO> staffApp) { this.staffApp = staffApp; }
     public void setCompanyBusinessDate(Date companyBusinessDate) { this.companyBusinessDate = companyBusinessDate; }
     public void setCompanyBusinessPlace(String companyBusinessPlace) { this.companyBusinessPlace = companyBusinessPlace; }
     public void setOrganizationName(String organizationName) { this.organizationName = organizationName; }

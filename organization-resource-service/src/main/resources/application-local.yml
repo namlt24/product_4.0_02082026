@@ -86,7 +86,7 @@ bccs:
     include-stacktrace: true
   config:
     enabled: true
-    team-code: CATALOG
+    team-code: ORGANIZATION
     service-name: organization-resource-service
     client:
       base-url: ${BCCS_CONFIG_SERVICE_BASE_URL:http://10.207.252.17:8484}

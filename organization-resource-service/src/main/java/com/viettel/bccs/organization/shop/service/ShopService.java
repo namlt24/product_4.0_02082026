@@ -63,7 +63,7 @@ public class ShopService {
         throw new BusinessException("BCCS-ORGANIZATION-SHOP-0003", "Loại owner không hợp lệ: " + ownerType);
     }
 
-    @Cacheable(value = "shopCache", key = "'ACTIVE_BATCH:' + T(String).join(',', #shopIds.stream().sorted().toList())")
+    @Cacheable(value = "shopCache", key = "'ACTIVE_BATCH:' + #shopIds.stream().sorted().toList().toString()")
     @Transactional(readOnly = true)
     @Operation(
             summary = "Tìm danh sách cửa hàng active theo nhiều shopId",

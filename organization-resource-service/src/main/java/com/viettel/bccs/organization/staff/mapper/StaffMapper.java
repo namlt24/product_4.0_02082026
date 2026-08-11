@@ -106,6 +106,7 @@ public class StaffMapper {
                 .userId(dto.getUserId())
                 .staffOwnerId(dto.getStaffOwnerId())
                 .staffOwnType(dto.getStaffOwnType())
+                .pointOfSale(dto.getPointOfSale())
                 .shop(shopResponse)
                 .build();
         if (dto.getBirthday() != null) {

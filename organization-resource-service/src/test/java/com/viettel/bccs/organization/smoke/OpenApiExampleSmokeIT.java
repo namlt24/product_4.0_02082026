@@ -288,6 +288,13 @@ class OpenApiExampleSmokeIT {
     }
 
     @Test
+    void staff_getStaffShopFullInfoByStaffId_returnsSuccess() throws Exception {
+        JsonNode body = getJson("/staff/getStaffShopFullInfoByStaffId/" + staffId);
+        assertSuccess(body);
+        assertEquals(staffId.longValue(), body.path("data").path("staffId").asLong());
+    }
+
+    @Test
     void staff_getMappingChannelCustTypeV2_returnsSuccess() throws Exception {
         // data có thể null (SUCCESS) nếu nhân viên được chọn ngẫu nhiên không có mapping loại kênh -
         // loại khách hàng tương ứng — chỉ cần xác nhận endpoint trả về thành công (không lỗi 5xx),

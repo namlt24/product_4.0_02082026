@@ -87,6 +87,24 @@ public class StaffService {
         return staffMapper.toResponse(dto, shopResponse);
     }
 
+    @Cacheable(value = "staffShopFullInfo", key = "'STAFF_SHOP_FULL_BY_ID:' + #staffId")
+    @Transactional(readOnly = true)
+    public StaffResponse getStaffShopFullInfoByStaffId(Long staffId) {
+        log.info("Truy vấn nhân viên và shop active từ DB theo id: {}", staffId);
+
+        StaffEntity entity = staffRepository.findByStaffIdAndStatus(staffId, Const.STATUS.ACTIVE)
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-STAFF-0001", "Không tìm thấy nhân viên với id: " + staffId));
+        StaffDTO dto = staffMapper.toDTO(entity);
+
+        ShopResponse shopResponse = null;
+        if (dto.getShopId() != null) {
+            shopResponse = staffMapper.toShopResponse(
+                    shopRepository.findByShopIdAndStatus(dto.getShopId(), Const.STATUS.ACTIVE)
+                            .orElse(null));
+        }
+        return staffMapper.toResponse(dto, shopResponse);
+    }
+
     @Cacheable(value = "getListStockByStaffCode", key = "'STOCKS:' + #staffCode")
     @Transactional(readOnly = true)
     public List<StockDTO> getListStockByStaffCode(String staffCode) {

@@ -145,6 +145,11 @@ public class StaffResponse {
     @Schema(description = "Thông tin cửa hàng")
     private ShopResponse shop;
 
+    @Schema(description = "Điểm bán hàng (POINT_OF_SALE)", example = "POS01")
+    @Size(max = 5, message = "pointOfSale tối đa 5 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,5}$", message = "pointOfSale chỉ gồm chữ, số, '_' hoặc '-'")
+    private String pointOfSale;
+
     public StaffDTO toDTO() {
         StaffDTO dto = new StaffDTO();
         dto.setStaffId(this.staffId);
@@ -168,6 +173,7 @@ public class StaffResponse {
         dto.setStaffOwnerId(this.staffOwnerId);
         dto.setStaffOwnType(this.staffOwnType);
         dto.setAreaCode(this.areaCode);
+        dto.setPointOfSale(this.pointOfSale);
         if (this.shop != null) {
             dto.setShop(this.shop.toDTO());
         }

@@ -91,4 +91,7 @@ public class PackageOfferEntity {
 
     @Transient
     private String accountingModelName;
+
+    @Transient
+    private Long priceTypeId;
 }

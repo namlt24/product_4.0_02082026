@@ -36,6 +36,7 @@ public class PackageOfferMapper {
                 .vat(entity.getVat())
                 .accountingModelCode(entity.getAccountingModelCode())
                 .accountingModelName(entity.getAccountingModelName())
+                .priceTypeId(entity.getPriceTypeId())
                 .build();
     }
 }

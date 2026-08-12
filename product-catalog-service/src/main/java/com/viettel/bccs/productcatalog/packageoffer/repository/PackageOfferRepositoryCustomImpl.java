@@ -64,7 +64,8 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
                    b.PRICE,
                    b.VAT,
                    c.ACCOUNTING_MODEL_CODE,
-                   c.ACCOUNTING_MODEL_NAME
+                   c.ACCOUNTING_MODEL_NAME,
+                   b.PRICE_TYPE_ID
             FROM BCCS_PRODUCT.PACKAGE_OFFER a, BCCS_PRODUCT.PRODUCT_OFFER_PRICE b, BCCS_PRODUCT.PRODUCT_OFFERING c
             WHERE a.PROD_PACK_TYPE_ID IN (%s)
               AND a.STATUS = '1'
@@ -116,6 +117,7 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
         e.setVat(toBigDecimal(row.get("VAT")));
         e.setAccountingModelCode(toString(row.get("ACCOUNTING_MODEL_CODE")));
         e.setAccountingModelName(toString(row.get("ACCOUNTING_MODEL_NAME")));
+        e.setPriceTypeId(toLong(row.get("PRICE_TYPE_ID")));
         return e;
     }
 

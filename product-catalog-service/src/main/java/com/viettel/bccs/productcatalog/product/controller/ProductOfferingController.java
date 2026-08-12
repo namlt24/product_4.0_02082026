@@ -388,10 +388,10 @@ public class ProductOfferingController {
     @Operation(
             operationId = "getListStockTypeWS",
             summary = "Lấy danh sách hàng hoá (kèm giá) cho 1 gói cước",
-            description = "Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS. Lấy danh sách loại hàng hoá " +
+            description = "Lấy danh sách loại hàng hoá " +
                     "(product offer type) kèm mặt hàng (product offering) và giá bán cho 1 gói cước, xác định qua " +
-                    "regType (mã lý do) + serviceType (alias dịch vụ viễn thông) + actionCode + productCode. " +
-                    "Xem chi tiết flow tại product-catalog-service/flow-getListStockTypeWS.md.",
+                    "regType (mã lý do) + serviceType (alias dịch vụ viễn thông) + actionCode + productCode. "
+                    ,
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(examples = @ExampleObject(name = "request", value = STOCK_TYPE_WS_REQUEST_EXAMPLE)))
     )

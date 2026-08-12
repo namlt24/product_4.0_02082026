@@ -131,4 +131,9 @@ public class PackageOfferDTO implements Serializable {
     @Size(max = 500, message = "accountingModelName tối đa 500 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "accountingModelName không được chứa ký tự điều khiển")
     private String accountingModelName;
+
+    @Schema(description = "ID loại giá")
+    @Min(value = 1, message = "priceTypeId phải >= 1")
+    @Max(value = 9999999999L, message = "priceTypeId vượt quá độ dài cho phép")
+    private Long priceTypeId;
 }

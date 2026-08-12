@@ -20,7 +20,6 @@ import com.viettel.bccs.productcatalog.prodpackproductoffertype.service.ProdPack
 import com.viettel.bccs.productcatalog.prodpackshop.service.ProdPackShopService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
-import com.viettel.bccs.productcatalog.utils.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -243,102 +242,89 @@ public class ProductPackageService {
     }
 
     public SaleServiceAdvanceDTO getSaleServicesAdvBOBySSCodeCheckStatus(String saleServiceCode, boolean checkStatus) {
+        if (DataUtil.isNullOrEmpty(saleServiceCode)) {
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0004", "saleServiceCode is required");
+        }
+
+        List<ProductPackageDTO> productPackageDTOs = repository.getProductPackageExtra(
+                saleServiceCode, Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE, true, false, checkStatus);
+
+        if (productPackageDTOs == null || productPackageDTOs.isEmpty()) {
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0005", "Sale service not found for code: " + saleServiceCode);
+        }
+
         SaleServiceAdvanceDTO saleServiceAdvanceDTO = new SaleServiceAdvanceDTO();
         saleServiceAdvanceDTO.setSuccess(true);
-        try {
-            if (DataUtil.isNullOrEmpty(saleServiceCode)) {
-                saleServiceAdvanceDTO.setSuccess(false);
-                saleServiceAdvanceDTO.setErrorCode(ErrorCode.ERROR_STANDARD.ERROR_VALIDATE_INPUT);
-                saleServiceAdvanceDTO.setKeyMsg("product.package.saleService.requireMsg.code");
-                return saleServiceAdvanceDTO;
-            }
+        saleServiceAdvanceDTO.setSaleService(productPackageDTOs.get(0));
+        saleServiceAdvanceDTO.setTLV(false);
+        saleServiceAdvanceDTO.setBonus(true);
 
-            List<ProductPackageDTO> productPackageDTOs = repository.getProductPackageExtra(
-                    saleServiceCode, Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE, true, false, checkStatus);
+        //Lay danh sach phi cua DVBH
+        List<ProductPackageFeeDTO> productPackageFeeDTOList = productPackageFeeService.findByProductPackageIdForPackage(productPackageDTOs.get(0).getProductPackageId());
+        saleServiceAdvanceDTO.setListSaleServicePrice(new java.util.ArrayList<>(productPackageFeeDTOList));
 
-            if (productPackageDTOs == null || productPackageDTOs.isEmpty()) {
-                saleServiceAdvanceDTO.setSuccess(false);
-                saleServiceAdvanceDTO.setErrorCode(ErrorCode.ERROR_STANDARD.ERROR_VALIDATE_INPUT);
-                saleServiceAdvanceDTO.setKeyMsg("product.package.saleService.notExist");
-                return saleServiceAdvanceDTO;
-            }
+        //Lay danh sach loai mat hang thuoc DVBH
+        List<ProdPackProductOfferTypeDTO> productOfferTypeDTOList = prodPackProductOfferTypeService.getByProductPackageIdAndStatus(
+                productPackageDTOs.get(0).getProductPackageId(), Const.STATUS.ACTIVE);
+        saleServiceAdvanceDTO.setListProductOfferType(productOfferTypeDTOList);
 
-            saleServiceAdvanceDTO.setSaleService(productPackageDTOs.get(0));
-            saleServiceAdvanceDTO.setTLV(false);
-            saleServiceAdvanceDTO.setBonus(true);
+        List<Long> prodPackTypeIds = productOfferTypeDTOList.stream().map(x -> x.getProdPackTypeId()).collect(Collectors.toUnmodifiableList());
+        Map<Long, List<Long>> prodPackTypeIdToShopIds = prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
 
-            //Lay danh sach phi cua DVBH
-            List<ProductPackageFeeDTO> productPackageFeeDTOList = productPackageFeeService.findByProductPackageIdForPackage(productPackageDTOs.get(0).getProductPackageId());
-            saleServiceAdvanceDTO.setListSaleServicePrice(new java.util.ArrayList<>(productPackageFeeDTOList));
+        log.debug("Found {} prodPackTypeIds mapping to shops", prodPackTypeIdToShopIds.size());
 
-            //Lay danh sach loai mat hang thuoc DVBH
-            List<ProdPackProductOfferTypeDTO> productOfferTypeDTOList = prodPackProductOfferTypeService.getByProductPackageIdAndStatus(
-                    productPackageDTOs.get(0).getProductPackageId(), Const.STATUS.ACTIVE);
-            saleServiceAdvanceDTO.setListProductOfferType(productOfferTypeDTOList);
+        List<Long> shopIds = prodPackTypeIdToShopIds.values().stream()
+                .flatMap(List::stream)
+                .distinct()
+                .toList();
+        List<ShopDTO> shops = staffShopClient.findActiveByShopIds(shopIds);
+        log.debug("Found {} shops for {} shopIds", shops.size(), shopIds.size());
 
-            List<Long> prodPackTypeIds = productOfferTypeDTOList.stream().map(x -> x.getProdPackTypeId()).collect(Collectors.toUnmodifiableList());
-            Map<Long, List<Long>> prodPackTypeIdToShopIds = prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
-
-            log.debug("Found {} prodPackTypeIds mapping to shops", prodPackTypeIdToShopIds.size());
-
-            List<Long> shopIds = prodPackTypeIdToShopIds.values().stream()
-                    .flatMap(List::stream)
-                    .distinct()
+        Map<Long, List<ShopDTO>> prodPackTypeIdToShopObject = new HashMap<>();
+        Map<Long, ShopDTO> shopMap = shops.stream().collect(Collectors.toMap(ShopDTO::getShopId, s -> s));
+        for (Map.Entry<Long, List<Long>> entry : prodPackTypeIdToShopIds.entrySet()) {
+            List<ShopDTO> shopList = entry.getValue().stream()
+                    .map(shopMap::get)
+                    .filter(s -> s != null)
                     .toList();
-            List<ShopDTO> shops = staffShopClient.findActiveByShopIds(shopIds);
-            log.debug("Found {} shops for {} shopIds", shops.size(), shopIds.size());
-
-            Map<Long, List<ShopDTO>> prodPackTypeIdToShopObject = new HashMap<>();
-            Map<Long, ShopDTO> shopMap = shops.stream().collect(Collectors.toMap(ShopDTO::getShopId, s -> s));
-            for (Map.Entry<Long, List<Long>> entry : prodPackTypeIdToShopIds.entrySet()) {
-                List<ShopDTO> shopList = entry.getValue().stream()
-                        .map(shopMap::get)
-                        .filter(s -> s != null)
-                        .toList();
-                prodPackTypeIdToShopObject.put(entry.getKey(), shopList);
-            }
-            if (!DataUtil.isNullOrEmpty(productOfferTypeDTOList)) {
-                // Batch-select ProductOfferType
-                List<Long> productOfferTypeIds = productOfferTypeDTOList.stream()
-                        .map(ProdPackProductOfferTypeDTO::getProductOfferTypeId)
-                        .collect(Collectors.toUnmodifiableList());
-                Map<Long, ProductOfferTypeDTO> productOfferTypeMap = productOfferTypeService.findByIds(productOfferTypeIds);
-
-                // Batch-select PackageOffer
-                Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer = packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
-
-                List<SaleServiceModelAdvanceDTO> listSaleServiceModel = new ArrayList<>();
-
-                for (ProdPackProductOfferTypeDTO offerTypeDTO : productOfferTypeDTOList) {
-                    offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject.getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
-
-                    // Set productOfferTypeName from batch lookup
-                    ProductOfferTypeDTO productOfferTypeDTO = productOfferTypeMap.get(offerTypeDTO.getProductOfferTypeId());
-                    if (!DataUtil.isNullObject(productOfferTypeDTO)) {
-                        offerTypeDTO.setProductOfferTypeName(productOfferTypeDTO.getName());
-                    }
-                    if (DataUtil.safeEqual(offerTypeDTO.getProductOfferTypeId(), 7L)) {
-                        offerTypeDTO.setProductOfferTypeName("Mặt hàng");
-                    }
-
-                    // Set package offers from batch lookup
-                    List<PackageOfferDTO> packageOfferDTOList = prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
-                    if (!DataUtil.isNullOrEmpty(packageOfferDTOList)) {
-                        SaleServiceModelAdvanceDTO saleServiceModelAdvanceDTO = new SaleServiceModelAdvanceDTO();
-                        saleServiceModelAdvanceDTO.setSaleServiceModel(offerTypeDTO);
-                        saleServiceModelAdvanceDTO.setListSaleServiceDetail(packageOfferDTOList);
-                        listSaleServiceModel.add(saleServiceModelAdvanceDTO);
-                    }
-                }
-                saleServiceAdvanceDTO.setListSaleServiceModel(listSaleServiceModel);
-            }
-
-        } catch (Exception e) {
-            saleServiceAdvanceDTO.setSuccess(false);
-            saleServiceAdvanceDTO.setErrorCode(ErrorCode.ERROR_NOT_DEFINE);
-            saleServiceAdvanceDTO.setKeyMsg("common.error.happened");
-            log.error("Exception in getSaleServicesAdvBOBySSCodeCheckStatus", e);
+            prodPackTypeIdToShopObject.put(entry.getKey(), shopList);
         }
+        if (!DataUtil.isNullOrEmpty(productOfferTypeDTOList)) {
+            // Batch-select ProductOfferType
+            List<Long> productOfferTypeIds = productOfferTypeDTOList.stream()
+                    .map(ProdPackProductOfferTypeDTO::getProductOfferTypeId)
+                    .collect(Collectors.toUnmodifiableList());
+            Map<Long, ProductOfferTypeDTO> productOfferTypeMap = productOfferTypeService.findByIds(productOfferTypeIds);
+
+            // Batch-select PackageOffer
+            Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer = packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
+
+            List<SaleServiceModelAdvanceDTO> listSaleServiceModel = new ArrayList<>();
+
+            for (ProdPackProductOfferTypeDTO offerTypeDTO : productOfferTypeDTOList) {
+                offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject.getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
+
+                // Set productOfferTypeName from batch lookup
+                ProductOfferTypeDTO productOfferTypeDTO = productOfferTypeMap.get(offerTypeDTO.getProductOfferTypeId());
+                if (!DataUtil.isNullObject(productOfferTypeDTO)) {
+                    offerTypeDTO.setProductOfferTypeName(productOfferTypeDTO.getName());
+                }
+                if (DataUtil.safeEqual(offerTypeDTO.getProductOfferTypeId(), 7L)) {
+                    offerTypeDTO.setProductOfferTypeName("Mặt hàng");
+                }
+
+                // Set package offers from batch lookup
+                List<PackageOfferDTO> packageOfferDTOList = prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
+                if (!DataUtil.isNullOrEmpty(packageOfferDTOList)) {
+                    SaleServiceModelAdvanceDTO saleServiceModelAdvanceDTO = new SaleServiceModelAdvanceDTO();
+                    saleServiceModelAdvanceDTO.setSaleServiceModel(offerTypeDTO);
+                    saleServiceModelAdvanceDTO.setListSaleServiceDetail(packageOfferDTOList);
+                    listSaleServiceModel.add(saleServiceModelAdvanceDTO);
+                }
+            }
+            saleServiceAdvanceDTO.setListSaleServiceModel(listSaleServiceModel);
+        }
+
         return saleServiceAdvanceDTO;
     }
 

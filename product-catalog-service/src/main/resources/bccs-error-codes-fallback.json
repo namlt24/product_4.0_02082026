@@ -124,5 +124,23 @@
     "severity": "WARNING",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PACKAGE-0004": {
+    "code": "BCCS-CATALOG-PACKAGE-0004",
+    "message": "saleServiceCode is required",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PACKAGE-0005": {
+    "code": "BCCS-CATALOG-PACKAGE-0005",
+    "message": "Sale service not found",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

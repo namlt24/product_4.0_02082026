@@ -1,7 +1,7 @@
 {
   "BCCS-SYS-TECH-0001": {
     "code": "BCCS-SYS-TECH-0001",
-    "message": "System error",
+    "message": "Lỗi hệ thống",
     "httpStatus": 500,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -10,7 +10,7 @@
   },
   "BCCS-SYS-VAL-0001": {
     "code": "BCCS-SYS-VAL-0001",
-    "message": "validation error",
+    "message": "Lỗi xác thực dữ liệu",
     "httpStatus": 400,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -19,7 +19,7 @@
   },
   "BCCS-SYS-VAL-0002": {
     "code": "BCCS-SYS-VAL-0002",
-    "message": "Resource not found",
+    "message": "Không tìm thấy tài nguyên",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -28,7 +28,7 @@
   },
   "BCCS-AUTH-SEC-0001": {
     "code": "BCCS-AUTH-SEC-0001",
-    "message": "Authentication failed",
+    "message": "Xác thực thất bại",
     "httpStatus": 401,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -37,7 +37,7 @@
   },
   "BCCS-AUTH-SEC-0002": {
     "code": "BCCS-AUTH-SEC-0002",
-    "message": "Access denied",
+    "message": "Từ chối truy cập",
     "httpStatus": 403,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -46,7 +46,7 @@
   },
   "BCCS-SYS-INT-0001": {
     "code": "BCCS-SYS-INT-0001",
-    "message": "Integration error",
+    "message": "Lỗi tích hợp",
     "httpStatus": 502,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -55,7 +55,7 @@
   },
   "BCCS-SYS-INT-0002": {
     "code": "BCCS-SYS-INT-0002",
-    "message": "Integration timeout",
+    "message": "Hết thời gian chờ tích hợp",
     "httpStatus": 504,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -64,7 +64,7 @@
   },
   "BCCS-SYS-RATE-0001": {
     "code": "BCCS-SYS-RATE-0001",
-    "message": "Rate limit exceeded",
+    "message": "Vượt giới hạn tần suất yêu cầu",
     "httpStatus": 429,
     "category": "SYSTEM",
     "severity": "WARNING",
@@ -73,7 +73,7 @@
   },
   "CATALOG-SPEC-CHAR-VAL-001": {
     "code": "CATALOG-SPEC-CHAR-VAL-001",
-    "message": "Product spec char value not found",
+    "message": "Không tìm thấy giá trị đặc tính sản phẩm (product spec char value)",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -82,7 +82,7 @@
   },
   "CATALOG-OFFER-REL-001": {
     "code": "CATALOG-OFFER-REL-001",
-    "message": "Product offer relation not found",
+    "message": "Không tìm thấy quan hệ mặt hàng (product offer relation)",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -91,7 +91,7 @@
   },
   "CATALOG-OFFER-REL-DET-001": {
     "code": "CATALOG-OFFER-REL-DET-001",
-    "message": "Product offer relation detail not found",
+    "message": "Không tìm thấy chi tiết quan hệ mặt hàng (product offer relation detail)",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -100,7 +100,7 @@
   },
   "CATALOG-PRODUCT-002": {
     "code": "CATALOG-PRODUCT-002",
-    "message": "payType and productOfferTypeId are required",
+    "message": "Tham số payType và productOfferTypeId không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -109,7 +109,7 @@
   },
   "CATALOG-PRODUCT-003": {
     "code": "CATALOG-PRODUCT-003",
-    "message": "productCode, productType and attributeCode are required",
+    "message": "Tham số productCode, productType và attributeCode không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -127,7 +127,7 @@
   },
   "BCCS-CATALOG-PACKAGE-0004": {
     "code": "BCCS-CATALOG-PACKAGE-0004",
-    "message": "saleServiceCode is required",
+    "message": "Tham số saleServiceCode không được để trống",
     "httpStatus": 400,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -136,7 +136,97 @@
   },
   "BCCS-CATALOG-PACKAGE-0005": {
     "code": "BCCS-CATALOG-PACKAGE-0005",
-    "message": "Sale service not found",
+    "message": "Không tìm thấy dịch vụ bán hàng (sale service) theo mã đã cung cấp",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PRODUCT-0001": {
+    "code": "BCCS-CATALOG-PRODUCT-0001",
+    "message": "Không tìm thấy sản phẩm với mã: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PRODUCT-0002": {
+    "code": "BCCS-CATALOG-PRODUCT-0002",
+    "message": "Tham số payType và productOfferTypeId không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PRODUCT-0003": {
+    "code": "BCCS-CATALOG-PRODUCT-0003",
+    "message": "Tham số productCode, productType và attributeCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PRODUCT-0004": {
+    "code": "BCCS-CATALOG-PRODUCT-0004",
+    "message": "Tham số offerId và attributeCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-CHAR-0001": {
+    "code": "BCCS-CATALOG-CHAR-0001",
+    "message": "Không tìm thấy đặc tính sản phẩm (product spec char) với mã/id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PACKAGEFEE-0001": {
+    "code": "BCCS-CATALOG-PACKAGEFEE-0001",
+    "message": "Không tìm thấy phí gói dịch vụ bán hàng (product package fee) với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-OPTION-0001": {
+    "code": "BCCS-CATALOG-OPTION-0001",
+    "message": "Không tìm thấy option set với mã/id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PACKAGE-0001": {
+    "code": "BCCS-CATALOG-PACKAGE-0001",
+    "message": "Không tìm thấy ánh xạ dịch vụ bán hàng cho lý do (reason) id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PACKAGE-0002": {
+    "code": "BCCS-CATALOG-PACKAGE-0002",
+    "message": "Không tìm thấy gói sản phẩm (product package) cho mã dịch vụ bán hàng: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-PACKAGE-0003": {
+    "code": "BCCS-CATALOG-PACKAGE-0003",
+    "message": "Không tìm thấy nhân viên với mã: {0}",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",

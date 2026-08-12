@@ -124,5 +124,32 @@
     "severity": "WARNING",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-CHANNELTYPE-0001": {
+    "code": "BCCS-ORGANIZATION-CHANNELTYPE-0001",
+    "message": "Không tìm thấy loại kênh với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-CUSTTYPE-0001": {
+    "code": "BCCS-ORGANIZATION-CUSTTYPE-0001",
+    "message": "Không tìm thấy loại khách hàng với mã: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-CUSTCHANTYPE-0001": {
+    "code": "BCCS-ORGANIZATION-CUSTCHANTYPE-0001",
+    "message": "Không tìm thấy mapping cho loại khách hàng: {0} và loại kênh: {1}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "WARNING",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

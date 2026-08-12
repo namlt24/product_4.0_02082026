@@ -1,7 +1,7 @@
 {
   "BCCS-SYS-TECH-0001": {
     "code": "BCCS-SYS-TECH-0001",
-    "message": "System error",
+    "message": "Lỗi hệ thống",
     "httpStatus": 500,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -10,7 +10,7 @@
   },
   "BCCS-SYS-VAL-0001": {
     "code": "BCCS-SYS-VAL-0001",
-    "message": "validation error",
+    "message": "Lỗi xác thực dữ liệu",
     "httpStatus": 400,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -19,7 +19,7 @@
   },
   "BCCS-SYS-VAL-0002": {
     "code": "BCCS-SYS-VAL-0002",
-    "message": "Resource not found",
+    "message": "Không tìm thấy tài nguyên",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",
@@ -28,7 +28,7 @@
   },
   "BCCS-AUTH-SEC-0001": {
     "code": "BCCS-AUTH-SEC-0001",
-    "message": "Authentication failed",
+    "message": "Xác thực thất bại",
     "httpStatus": 401,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -37,7 +37,7 @@
   },
   "BCCS-AUTH-SEC-0002": {
     "code": "BCCS-AUTH-SEC-0002",
-    "message": "Access denied",
+    "message": "Từ chối truy cập",
     "httpStatus": 403,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -46,7 +46,7 @@
   },
   "BCCS-SYS-INT-0001": {
     "code": "BCCS-SYS-INT-0001",
-    "message": "Integration error",
+    "message": "Lỗi tích hợp",
     "httpStatus": 502,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -55,7 +55,7 @@
   },
   "BCCS-SYS-INT-0002": {
     "code": "BCCS-SYS-INT-0002",
-    "message": "Integration timeout",
+    "message": "Hết thời gian chờ tích hợp",
     "httpStatus": 504,
     "category": "SYSTEM",
     "severity": "ERROR",
@@ -64,7 +64,7 @@
   },
   "BCCS-SYS-RATE-0001": {
     "code": "BCCS-SYS-RATE-0001",
-    "message": "Rate limit exceeded",
+    "message": "Vượt giới hạn tần suất yêu cầu",
     "httpStatus": 429,
     "category": "SYSTEM",
     "severity": "WARNING",
@@ -244,7 +244,79 @@
   },
   "BCCS-POLICY-MAPACTIVE-0020": {
     "code": "BCCS-POLICY-MAPACTIVE-0020",
-    "message": "Map active info not found with id: {0}",
+    "message": "Không tìm thấy thông tin kích hoạt (map active info) với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-DISCPROMO-0001": {
+    "code": "BCCS-POLICY-DISCPROMO-0001",
+    "message": "Không tìm thấy chương trình khuyến mãi giảm giá (discount promotion) với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-DISCPROMO-0002": {
+    "code": "BCCS-POLICY-DISCPROMO-0002",
+    "message": "Không tìm thấy đặc tính sử dụng của chương trình khuyến mãi giảm giá (discount promotion char use) với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-REASON-0001": {
+    "code": "BCCS-POLICY-REASON-0001",
+    "message": "Không tìm thấy hình thức hòa mạng (reason) với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-REASON-0002": {
+    "code": "BCCS-POLICY-REASON-0002",
+    "message": "Giá trị lọc dạng ngày tháng không đúng định dạng dd/MM/yyyy",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-REASON-0003": {
+    "code": "BCCS-POLICY-REASON-0003",
+    "message": "Tham số reasonId và attributeCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-REASON-0004": {
+    "code": "BCCS-POLICY-REASON-0004",
+    "message": "Tham số reasonId không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-SKIPDEBT-0001": {
+    "code": "BCCS-POLICY-SKIPDEBT-0001",
+    "message": "Không tìm thấy bản ghi bỏ qua nợ (map business skip debt) với id: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-REASONPAUSE-0001": {
+    "code": "BCCS-POLICY-REASONPAUSE-0001",
+    "message": "Không tìm thấy lý do tạm dừng (reason pause) với id: {0}",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",

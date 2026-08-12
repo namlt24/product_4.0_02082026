@@ -49,4 +49,19 @@ public class MappingClientImpl implements MappingClient {
                     "Error calling product-policy-service getMappingReasonProductOfferPrice for productPackageId=" + productPackageId, e);
         }
     }
+
+    @Override
+    public String getSaleServiceCode(Long telecomServiceId, Long reasonId, String productCode, String actionCode) {
+        try {
+            var response = productPolicyFeignClient.getSaleServiceCode(telecomServiceId, reasonId, productCode, actionCode).getBody();
+            if (response != null && response.getData() != null) {
+                return objectMapper.convertValue(response.getData(), String.class);
+            }
+            return null;
+        } catch (RuntimeException e) {
+            log.error("Error calling getSaleServiceCode for reasonId={}", reasonId, e);
+            throw new IntegrationException("BCCS-SYS-INT-0001",
+                    "Error calling product-policy-service getSaleServiceCode for reasonId=" + reasonId, e);
+        }
+    }
 }

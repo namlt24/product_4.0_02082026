@@ -5,6 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(
         name = ProductPolicyFeignClient.CLIENT_NAME,
@@ -24,4 +25,15 @@ public interface ProductPolicyFeignClient {
 
     @GetMapping("/v1/free-cam-equipment/checkReasonFreeCam/{productPackageId}")
     ResponseEntity<StandardClientResponse> checkReasonFreeCam(@PathVariable Long productPackageId);
+
+    @GetMapping("/v1/reason/getReasonIdByTypeAndCode")
+    ResponseEntity<StandardClientResponse> getReasonIdByTypeAndCode(@RequestParam String reasonCode,
+                                                                      @RequestParam String actionCode,
+                                                                      @RequestParam Long telecomServiceId);
+
+    @GetMapping("/v1/mapping/getSaleServiceCode")
+    ResponseEntity<StandardClientResponse> getSaleServiceCode(@RequestParam(required = false) Long telecomServiceId,
+                                                                @RequestParam Long reasonId,
+                                                                @RequestParam(required = false) String productCode,
+                                                                @RequestParam(required = false) String actionCode);
 }

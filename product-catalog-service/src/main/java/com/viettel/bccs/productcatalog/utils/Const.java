@@ -18,10 +18,24 @@ public class Const {
         private OPTION_SET() {}
     }
 
+    public static final class ACTION_CODE {
+        /** Mã hành động mặc định (đấu nối thuê bao) khi actionCode truyền vào rỗng. */
+        public static final String SUB_CONNECTION = "00";
+
+        private ACTION_CODE() {}
+    }
+
     public static final class STATUS {
         public static final String ACTIVE = "1";
 
         private STATUS() {}
+    }
+
+    public static final class CONDITION {
+        public static final String AND = "AND";
+        public static final String OR = "OR";
+
+        private CONDITION() {}
     }
 
     public static final class CHAR_TYPE {

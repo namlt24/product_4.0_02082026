@@ -534,4 +534,33 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
 
     }
 
+    /**
+     * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS bước tìm reasonId
+     * (ReasonServiceImpl.getReasonIdByTypeAndCode). Query giữ nguyên điều kiện gốc:
+     * reason_type khớp action tương ứng actionCode, reason_code = regType, còn hiệu lực,
+     * dịch vụ khớp telServiceId (hoặc reason không ràng buộc dịch vụ). Lấy bản ghi đầu
+     * tiên sắp theo name ASC.
+     */
+    @Override
+    public Long findReasonIdByCodeActionAndTelService(String reasonCode, String actionCode, Long telServiceId) {
+        String sqlQuery = "SELECT a.* FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "reason a " +
+                " WHERE a.reason_type IN (SELECT reason_type FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "action WHERE status = '1' AND action_code = :actionCode) " +
+                "   AND a.status = '1' " +
+                "   AND (a.effect_datetime IS NULL OR a.effect_datetime < TRUNC(sysdate) + 1) " +
+                "   AND (a.expire_datetime IS NULL OR a.expire_datetime >= TRUNC(sysdate)) " +
+                "   AND a.reason_code = :reasonCode " +
+                "   AND (','||a.tel_service||',' LIKE :telService OR a.tel_service IS NULL) " +
+                " ORDER BY a.name ASC";
+
+        Query query = em.createNativeQuery(sqlQuery, ReasonEntity.class);
+        query.setParameter("actionCode", actionCode);
+        query.setParameter("reasonCode", reasonCode);
+        query.setParameter("telService", "%," + telServiceId + ",%");
+        query.setMaxResults(1);
+
+        @SuppressWarnings("unchecked")
+        List<ReasonEntity> result = query.getResultList();
+        return result.isEmpty() ? null : result.get(0).getReasonId();
+    }
+
 }

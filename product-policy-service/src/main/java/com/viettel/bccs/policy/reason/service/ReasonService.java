@@ -283,6 +283,17 @@ public class ReasonService {
                 .toList();
     }
 
+    /**
+     * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS bước tìm reasonId theo
+     * regType (reasonCode) + actionCode + telecomServiceId. Phục vụ product-catalog-service
+     * gọi cross-service (qua ReasonClient) khi dựng API getListStockTypeWS.
+     * Trả về {@code null} nếu không tìm thấy — không throw exception ở tầng query thuần tuý này,
+     * việc xác định "không tồn tại" là lỗi nghiệp vụ do phía gọi (product-catalog-service) quyết định.
+     */
+    public Long getReasonIdByTypeAndCode(String reasonCode, String actionCode, Long telecomServiceId) {
+        return repository.findReasonIdByCodeActionAndTelService(reasonCode, actionCode, telecomServiceId);
+    }
+
     public boolean checkAttReason(Long reasonId, String attributeCode) {
         if (DataUtil.isAnyNull(reasonId, attributeCode)) {
             throw new BusinessException("BCCS-POLICY-REASON-0003", "reasonId and attributeCode are required");

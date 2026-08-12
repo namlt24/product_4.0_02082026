@@ -240,6 +240,53 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
 
 
     @Override
+    public List<ProductOfferingEntity> findBySpecCharCodes(List<String> specCodes, String condition) {
+        StringBuilder sql = new StringBuilder("SELECT a.* FROM ")
+                .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a")
+                .append(" WHERE a.status = '1'");
+
+        Map<String, Object> params = new HashMap<>();
+
+        if (Const.CONDITION.OR.equals(condition)) {
+            // OR: mặt hàng chỉ cần khớp ÍT NHẤT 1 trong các specCode -> gộp thành 1 EXISTS duy nhất
+            // với c.code IN (...), tránh JOIN trực tiếp (sẽ ra nhiều dòng trùng offering khi khớp >1 spec).
+            sql.append(" AND EXISTS (SELECT 1 FROM ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_char_use b, ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value d")
+                    .append(" WHERE b.product_offering_id = a.product_offering_id")
+                    .append(" AND b.product_spec_char_id = c.product_spec_char_id")
+                    .append(" AND d.product_spec_char_value_id = b.product_spec_char_value_id")
+                    .append(" AND b.status = '1' AND c.status = '1' AND d.status = '1'")
+                    .append(" AND c.code IN (");
+            for (int i = 0; i < specCodes.size(); i++) {
+                sql.append(i == 0 ? ":specCode0" : ", :specCode" + i);
+                params.put("specCode" + i, specCodes.get(i));
+            }
+            sql.append("))");
+        } else {
+            // AND (mặc định): mặt hàng phải khớp TẤT CẢ specCode -> mỗi specCode 1 EXISTS riêng, nối AND.
+            for (int i = 0; i < specCodes.size(); i++) {
+                sql.append(" AND EXISTS (SELECT 1 FROM ")
+                        .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_char_use b, ")
+                        .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
+                        .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value d")
+                        .append(" WHERE b.product_offering_id = a.product_offering_id")
+                        .append(" AND b.product_spec_char_id = c.product_spec_char_id")
+                        .append(" AND d.product_spec_char_value_id = b.product_spec_char_value_id")
+                        .append(" AND b.status = '1' AND c.status = '1' AND d.status = '1'")
+                        .append(" AND c.code = :specCode").append(i).append(")");
+                params.put("specCode" + i, specCodes.get(i));
+            }
+        }
+        sql.append(" ORDER BY a.code");
+
+        Query query = entityManager.createNativeQuery(sql.toString(), ProductOfferingEntity.class);
+        params.forEach(query::setParameter);
+        return query.getResultList();
+    }
+
+    @Override
     public List<ProductOfferingEntity> getListVas(Long offerId) {
         StringBuilder strQuery = new StringBuilder();
         strQuery.append(" SELECT * FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering ")

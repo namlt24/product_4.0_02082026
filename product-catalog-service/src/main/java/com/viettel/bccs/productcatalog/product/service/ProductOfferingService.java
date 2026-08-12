@@ -6,6 +6,7 @@ import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResp
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
+import com.viettel.bccs.productcatalog.product.dto.response.StockOfferingRow;
 import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
@@ -115,9 +116,58 @@ public class ProductOfferingService {
         return productOfferingRepository.hasProductAtt(offerId, attributeCode);
     }
 
+    /**
+     * Lấy danh sách mặt hàng (product_offering) có gán các đặc tính (product_spec_char.code) trong
+     * specCodes, theo điều kiện AND (phải có TẤT CẢ) hoặc OR (chỉ cần có ÍT NHẤT 1). Không truyền
+     * condition thì mặc định AND.
+     */
+    @Cacheable(value = "productOfferingCache", key = "'SPEC_CHARS:' + T(String).join(',', #specCodes.stream().sorted().toList()) + ':' + #condition")
+    public List<ProductOfferingDTO> getListProductOfferingBySpecChars(List<String> specCodes, String condition) {
+        if (DataUtil.isNullOrEmpty(specCodes)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0005", "specCodes must not be empty");
+        }
+        String normalizedCondition = DataUtil.isNullOrEmpty(condition) ? Const.CONDITION.AND : condition.trim().toUpperCase();
+        if (!Const.CONDITION.AND.equals(normalizedCondition) && !Const.CONDITION.OR.equals(normalizedCondition)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0005", "condition must be AND or OR");
+        }
+        return productOfferingRepository.findBySpecCharCodes(specCodes, normalizedCondition).stream()
+                .map(productOfferingMapper::toDto)
+                .toList();
+    }
+
     @Cacheable(value = "productOfferingCache", key = "'LIST_VAS:' + #offerId")
     public List<ProductOfferingDTO> getListVas(Long offerId) {
         return getListVasCore(offerId);
+    }
+
+    /**
+     * Migrate từ mono: ProductOfferingServiceImpl.getListStockModelBySaleServiceCode
+     * (nhánh containNumber=true — xem ghi chú tại ProductOfferingRepositoryCustom). Trả về shape
+     * nội bộ {@link StockOfferingRow} (chưa có giá — giá được tính riêng ở bước 8, do phụ thuộc
+     * ProductOfferPriceService, không thể inject ngược lại đây vì ProductOfferPriceService đã
+     * phụ thuộc ProductOfferingService, tránh circular dependency).
+     */
+    public List<StockOfferingRow> getListStockModelBySaleServiceCode(String saleServiceCode) {
+        return productOfferingRepository.getListStockModelBySaleServiceCode(saleServiceCode).stream()
+                .map(ProductOfferingService::toStockOfferingRow)
+                .toList();
+    }
+
+    private static StockOfferingRow toStockOfferingRow(Object[] row) {
+        return new StockOfferingRow(
+                toLong(row[0]),
+                toLong(row[1]),
+                row[2] != null ? row[2].toString() : null,
+                row[3] != null ? ((Number) row[3]).shortValue() : null,
+                toLong(row[4]),
+                row[5] != null ? row[5].toString() : null,
+                row[6] != null ? row[6].toString() : null,
+                toLong(row[7])
+        );
+    }
+
+    private static Long toLong(Object value) {
+        return value != null ? ((Number) value).longValue() : null;
     }
 
 

@@ -179,6 +179,15 @@
     "retryable": false,
     "logLevel": "WARN"
   },
+  "BCCS-CATALOG-PRODUCT-0005": {
+    "code": "BCCS-CATALOG-PRODUCT-0005",
+    "message": "Tham số specCodes không được để trống, condition (nếu có) chỉ được là AND hoặc OR",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
   "BCCS-CATALOG-CHAR-0001": {
     "code": "BCCS-CATALOG-CHAR-0001",
     "message": "Không tìm thấy đặc tính sản phẩm (product spec char) với mã/id: {0}",
@@ -227,6 +236,69 @@
   "BCCS-CATALOG-PACKAGE-0003": {
     "code": "BCCS-CATALOG-PACKAGE-0003",
     "message": "Không tìm thấy nhân viên với mã: {0}",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0001": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0001",
+    "message": "Tham số actionCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0002": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0002",
+    "message": "Tham số regType không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0003": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0003",
+    "message": "Tham số productCode không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0004": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0004",
+    "message": "Tham số serviceType không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0005": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0005",
+    "message": "telecomServiceId không tồn tại hoặc không có hiệu lực",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0006": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0006",
+    "message": "regType không tồn tại hoặc không có hiệu lực",
+    "httpStatus": 404,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-STOCKTYPE-0007": {
+    "code": "BCCS-CATALOG-STOCKTYPE-0007",
+    "message": "saleServiceCode không tồn tại hoặc không có hiệu lực",
     "httpStatus": 404,
     "category": "BUSINESS",
     "severity": "ERROR",

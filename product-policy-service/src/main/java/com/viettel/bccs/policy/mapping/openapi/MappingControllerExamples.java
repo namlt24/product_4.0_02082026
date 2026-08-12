@@ -24,4 +24,14 @@ public final class MappingControllerExamples {
               "timestamp": "2026-08-11T02:00:00Z",
               "data": []
             }""";
+
+    public static final String SALE_SERVICE_CODE_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000003",
+              "requestId": "req-0003",
+              "timestamp": "2026-08-11T02:00:00Z",
+              "data": "POBAS"
+            }""";
 }

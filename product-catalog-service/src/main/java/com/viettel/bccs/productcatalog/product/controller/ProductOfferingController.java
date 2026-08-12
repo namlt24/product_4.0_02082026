@@ -3,9 +3,12 @@ package com.viettel.bccs.productcatalog.product.controller;
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
+import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWSRequest;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferTypeStockDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
 import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
+import com.viettel.bccs.productcatalog.product.service.StockTypeWSService;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +19,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -37,6 +41,7 @@ public class ProductOfferingController {
 
     private final ProductOfferingService productOfferingService;
     private final ProductOfferCharUseService productOfferCharUseService;
+    private final StockTypeWSService stockTypeWSService;
 
     @Operation(operationId = "getByProductCode", summary = "Lấy sản phẩm theo mã",
             description = "Tra cứu 1 bản ghi PRODUCT_OFFERING theo CODE (mã sản phẩm). Ném lỗi BCCS-CATALOG-PRODUCT-0001 nếu không tìm thấy.")
@@ -268,6 +273,32 @@ public class ProductOfferingController {
         return StandardResponses.success(productOfferingService.hasProductAtt(offerId, attributeCode));
     }
 
+    @PostMapping("/getListProductOfferingBySpecChars")
+    @Operation(
+            operationId = "getListProductOfferingBySpecChars",
+            summary = "Lấy danh sách mặt hàng theo danh sách đặc tính (spec char)",
+            description = "Tìm mặt hàng (product_offering) đang active có gán các đặc tính (product_spec_char.code) trong specCodes. " +
+                    "condition=OR: chỉ cần khớp ÍT NHẤT 1 đặc tính. condition=AND (mặc định nếu không truyền): phải khớp TẤT CẢ đặc tính."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = PRODUCT_LIST_EXAMPLE))),
+            @ApiResponse(responseCode = "400", description = "specCodes rỗng, hoặc condition không phải AND/OR")
+    })
+    public StandardResponse<List<ProductOfferingDTO>> getListProductOfferingBySpecChars(
+            @Parameter(description = "Danh sách mã đặc tính cần lọc (product_spec_char.code)", example = "[\"IS_CONNECTED\", \"DATA_CAP\"]")
+            @RequestBody
+            @Size(min = 1, max = 50, message = "specCodes phải có từ 1 đến 50 phần tử")
+            List<String> specCodes,
+
+            @Parameter(description = "Điều kiện kết hợp: AND (mặc định) hoặc OR", example = "AND")
+            @RequestParam(required = false)
+            @Pattern(regexp = "(?i)^(AND|OR)$", message = "condition chỉ được là AND hoặc OR")
+            String condition) {
+        return StandardResponses.success(productOfferingService.getListProductOfferingBySpecChars(specCodes, condition));
+    }
+
     @PostMapping("/findByCodesAndProductOfferType")
     @Operation(
             operationId = "API_DAUNOI_TT_PRODUCT_017",
@@ -351,5 +382,27 @@ public class ProductOfferingController {
             @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
             Long offerId) {
         return StandardResponses.success(productOfferingService.getListVas(offerId));
+    }
+
+    @PostMapping("/getListStockTypeWS")
+    @Operation(
+            operationId = "getListStockTypeWS",
+            summary = "Lấy danh sách hàng hoá (kèm giá) cho 1 gói cước",
+            description = "Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS. Lấy danh sách loại hàng hoá " +
+                    "(product offer type) kèm mặt hàng (product offering) và giá bán cho 1 gói cước, xác định qua " +
+                    "regType (mã lý do) + serviceType (alias dịch vụ viễn thông) + actionCode + productCode. " +
+                    "Xem chi tiết flow tại product-catalog-service/flow-getListStockTypeWS.md.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(examples = @ExampleObject(name = "request", value = STOCK_TYPE_WS_REQUEST_EXAMPLE)))
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = STOCK_TYPE_WS_LIST_EXAMPLE))),
+            @ApiResponse(responseCode = "400", description = "Tham số bắt buộc bị thiếu hoặc không hợp lệ"),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy dịch vụ viễn thông / lý do / dịch vụ bán hàng tương ứng")
+    })
+    public StandardResponse<List<ProductOfferTypeStockDTO>> getListStockTypeWS(@Valid @RequestBody GetListStockTypeWSRequest request) {
+        return StandardResponses.success(stockTypeWSService.getListStockTypeWS(request));
     }
 }

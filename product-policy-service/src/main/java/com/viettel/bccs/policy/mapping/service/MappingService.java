@@ -6,6 +6,7 @@ import com.viettel.bccs.policy.mapping.repository.MappingRepository;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
 import com.viettel.bccs.policy.utils.Const;
+import com.viettel.bccs.policy.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,5 +42,18 @@ public class MappingService {
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS bước tìm saleServiceCode.
+     * Nếu reasonId null hoặc 0 thì trả về null ngay, không query (giữ đúng hành vi legacy).
+     * Phục vụ product-catalog-service gọi cross-service (qua MappingClient) khi dựng API
+     * getListStockTypeWS.
+     */
+    public String getSaleServiceCode(Long telecomServiceId, Long reasonId, String productCode, String actionCode) {
+        if (reasonId == null || reasonId == 0L) {
+            return null;
+        }
+        return repository.getSaleServiceCode(telecomServiceId, reasonId, productCode, actionCode);
     }
 }

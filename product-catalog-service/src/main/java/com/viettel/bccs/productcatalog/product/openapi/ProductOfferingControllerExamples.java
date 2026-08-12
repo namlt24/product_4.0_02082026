@@ -113,4 +113,51 @@ public final class ProductOfferingControllerExamples {
                 }
               ]
             }""";
+
+    public static final String STOCK_TYPE_WS_REQUEST_EXAMPLE = """
+            {
+              "actionCode": "00",
+              "regType": "2",
+              "serviceType": "M",
+              "productCode": "POBAS"
+            }""";
+
+    public static final String STOCK_TYPE_WS_LIST_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000005",
+              "requestId": "req-0005",
+              "timestamp": "2026-08-11T02:00:00Z",
+              "data": [
+                {
+                  "productOfferType": {
+                    "productOfferTypeId": 7,
+                    "name": "Mặt hàng",
+                    "status": "1"
+                  },
+                  "productOfferings": [
+                    {
+                      "productOfferingId": 400005827,
+                      "code": "IP15PM256",
+                      "name": "iPhone 15 Pro Max 256GB",
+                      "productTypeName": "Mặt hàng",
+                      "checkSerial": 1,
+                      "telecomServiceId": 1,
+                      "lstProductOfferPrice": [
+                        {
+                          "productOfferPriceId": 12345,
+                          "productOfferingId": 400005827,
+                          "pricePolicyId": 1,
+                          "priceTypeId": 1,
+                          "price": 28990000,
+                          "status": "1",
+                          "productOfferName": "iPhone 15 Pro Max 256GB"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }""";
 }

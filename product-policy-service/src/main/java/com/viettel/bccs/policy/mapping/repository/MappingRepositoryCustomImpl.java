@@ -1,12 +1,15 @@
 package com.viettel.bccs.policy.mapping.repository;
 
 import com.viettel.bccs.policy.reason.entity.ReasonEntity;
+import com.viettel.bccs.policy.utils.DataUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
@@ -39,5 +42,47 @@ public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
         Query query = em.createNativeQuery(sql.toString(), ReasonEntity.class);
         query.setParameter("productPackageId", productPackageId);
         return query.getResultList();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public String getSaleServiceCode(Long telecomServiceId, Long reasonId, String productCode, String actionCode) {
+        Map<String, Object> params = new HashMap<>();
+        StringBuilder sql = new StringBuilder();
+        sql.append(" SELECT m.SALE_SERVICE_CODE FROM MAPPING m, REASON r, ACTION a ");
+        sql.append(" WHERE m.REASON_ID = r.REASON_ID ");
+        sql.append("   AND a.REASON_TYPE = m.ACTION_CODE ");
+        sql.append("   AND r.STATUS = '1' AND m.STATUS = '1' AND a.STATUS = '1' ");
+
+        if (DataUtil.notNullOrEmpty(actionCode)) {
+            sql.append("   AND a.ACTION_CODE = :actionCode ");
+            params.put("actionCode", actionCode);
+        }
+
+        sql.append("   AND m.REASON_ID = :reasonId ");
+        params.put("reasonId", reasonId);
+
+        if (telecomServiceId != null && telecomServiceId != 0L) {
+            sql.append("   AND m.TEL_SERVICE_ID = :telecomServiceId ");
+            params.put("telecomServiceId", telecomServiceId);
+        } else {
+            sql.append("   AND m.TEL_SERVICE_ID IS NULL ");
+        }
+
+        if (DataUtil.notNullOrEmpty(productCode)) {
+            sql.append("   AND (m.PRODUCT_CODE = :productCode OR m.PRODUCT_CODE IS NULL) ");
+            params.put("productCode", productCode);
+        } else {
+            sql.append("   AND m.PRODUCT_CODE IS NULL ");
+        }
+
+        sql.append(" ORDER BY m.PRODUCT_CODE");
+
+        Query query = em.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        query.setMaxResults(1);
+
+        List<Object> result = query.getResultList();
+        return result.isEmpty() ? null : (String) result.get(0);
     }
 }

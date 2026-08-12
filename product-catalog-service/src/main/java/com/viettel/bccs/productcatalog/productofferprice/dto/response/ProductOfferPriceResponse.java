@@ -71,10 +71,10 @@ public record ProductOfferPriceResponse(
         @Max(value = 9999999999L, message = "pledgeTime vượt quá độ dài cột (precision 10)")
         Long pledgeTime,
 
-        @Schema(description = "Số tiền thanh toán trước", example = "300000")
-        @DecimalMin(value = "0", message = "priorPay phải >= 0")
-        @DecimalMax(value = "9999999999", message = "priorPay vượt quá độ dài cột (precision 10)")
-        BigDecimal priorPay,
+        @Schema(description = "Số tiền thanh toán trước (VARCHAR2 trên DB, không phải số)", example = "10")
+        @Size(max = 10, message = "priorPay tối đa 10 ký tự")
+        @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,10}$", message = "priorPay không được chứa ký tự điều khiển")
+        String priorPay,
 
         @Schema(description = "Trạng thái", example = "1")
         @Size(max = 1, message = "status đúng 1 ký tự")

@@ -4,6 +4,7 @@ import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOffe
 import com.viettel.bccs.productcatalog.productoffertype.entity.ProductOfferTypeEntity;
 import com.viettel.bccs.productcatalog.productoffertype.mapper.ProductOfferTypeMapper;
 import com.viettel.bccs.productcatalog.productoffertype.repository.ProductOfferTypeRepository;
+import com.viettel.bccs.productcatalog.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,5 +34,18 @@ public class ProductOfferTypeService {
         return repository.findByIds(ids).stream()
                 .map(mapper::toDto)
                 .collect(Collectors.toMap(ProductOfferTypeDTO::getProductOfferTypeId, Function.identity()));
+    }
+
+    /**
+     * Migrate từ mono: ProductOfferTypeServiceImpl.findBySaleServiceCodeWithProductOffering
+     * (nhánh containNumber=true). Nếu saleServiceCode rỗng, trả về danh sách rỗng, không query.
+     */
+    public List<ProductOfferTypeDTO> findBySaleServiceCodeWithProductOffering(String saleServiceCode) {
+        if (DataUtil.isNullOrEmpty(saleServiceCode)) {
+            return List.of();
+        }
+        return repository.findBySaleServiceCodeWithProductOffering(saleServiceCode).stream()
+                .map(mapper::toDto)
+                .toList();
     }
 }

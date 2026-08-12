@@ -96,6 +96,56 @@ public class ProductOfferPriceMapper {
     }
 
     /**
+     * Chuyển ProductOfferPriceDTO (kết quả getPriceInServicesForPCCC, nhánh PCCC) sang
+     * ProductOfferPriceResponse (kết quả getPriceInServices, nhánh thường) để 2 nhánh dùng chung
+     * 1 shape khi gộp kết quả cho API getListStockTypeWS. priceEquipmentId/priceEquipmentTypeId
+     * không có ở nhánh PCCC (chỉ ghi đè priceEquipment) nên luôn null.
+     */
+    public ProductOfferPriceResponse toResponse(ProductOfferPriceDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        return new ProductOfferPriceResponse(
+                dto.getProductOfferPriceId(),
+                dto.getProductOfferingId(),
+                dto.getPricePolicyId(),
+                dto.getPriceTypeId(),
+                dto.getName(),
+                dto.getDescription(),
+                dto.getPrice(),
+                dto.getVat(),
+                dto.getPledgeAmount(),
+                dto.getPledgeTime(),
+                dto.getPriorPay(),
+                dto.getStatus(),
+                dto.getEffectDatetime(),
+                dto.getExpireDatetime(),
+                dto.getPriority(),
+                dto.getEffectType(),
+                dto.getCronExpression(),
+                dto.getCreateUser(),
+                dto.getCreateDatetime(),
+                dto.getUpdateUser(),
+                dto.getUpdateDatetime(),
+                dto.getProgramCode(),
+                dto.getProgramMonth(),
+                dto.getIsSelectAllShop(),
+                dto.getLimited(),
+                dto.getProductOfferName(),
+                dto.getPriceEquipment(),
+                null,
+                null
+        );
+    }
+
+    public List<ProductOfferPriceResponse> toResponseFromDto(List<ProductOfferPriceDTO> dtos) {
+        if (dtos == null) {
+            return List.of();
+        }
+        return dtos.stream().map(this::toResponse).toList();
+    }
+
+    /**
      * ProductOfferPriceResponse là record (immutable) — dùng method này để tạo bản sao mới của
      * {@code base} với productOfferName/priceEquipment/priceEquipmentId/priceEquipmentTypeId được
      * cập nhật, giữ nguyên toàn bộ field còn lại. Dùng trong getPriceInServices khi cần "set" giá

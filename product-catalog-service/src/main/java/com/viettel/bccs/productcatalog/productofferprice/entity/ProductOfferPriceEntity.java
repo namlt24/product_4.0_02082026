@@ -46,8 +46,11 @@ public class ProductOfferPriceEntity {
     @Column(name = "PLEDGE_TIME", precision = 10)
     private Long pledgeTime;
 
-    @Column(name = "PRIOR_PAY", precision = 10)
-    private BigDecimal priorPay;
+    // PRIOR_PAY là VARCHAR2(10) trên DB thật (không phải NUMBER) — khai báo BigDecimal trước đây
+    // gây ORA-17026 (Numeric overflow) khi đọc dữ liệu thật qua native query SELECT a.* (phát hiện
+    // khi test API getListStockTypeWS). Sửa đúng theo kiểu cột thật.
+    @Column(name = "PRIOR_PAY", length = 10)
+    private String priorPay;
 
     @Column(name = "STATUS", length = 1)
     private String status;

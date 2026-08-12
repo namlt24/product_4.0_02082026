@@ -92,6 +92,33 @@ public class ReasonController {
         return StandardResponses.success(service.getReasonCharacter(reasonId));
     }
 
+    @GetMapping("/getReasonIdByTypeAndCode")
+    @Operation(operationId = "getReasonIdByTypeAndCode", summary = "Tìm reasonId theo mã lý do, mã hành động và dịch vụ viễn thông",
+            description = "Tra cứu REASON còn hiệu lực, khớp reason_code (regType), reason_type của actionCode và telecomServiceId (hoặc reason không ràng buộc dịch vụ). Trả về reasonId bản ghi đầu tiên (sắp theo name ASC), hoặc null nếu không tìm thấy. Phục vụ product-catalog-service (API getListStockTypeWS).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = REASON_ID_EXAMPLE)))
+    })
+    public StandardResponse<Long> getReasonIdByTypeAndCode(
+            @Parameter(description = "Mã lý do (REASON_CODE)", example = "2", required = true)
+            @RequestParam
+            @Size(min = 1, max = 20, message = "reasonCode tối đa 20 ký tự")
+            @Pattern(regexp = "^[A-Za-z0-9_-]{1,20}$", message = "reasonCode chỉ gồm chữ, số, '_' hoặc '-'")
+            String reasonCode,
+            @Parameter(description = "Mã hành động (ACTION_CODE)", example = "00", required = true)
+            @RequestParam
+            @Size(min = 1, max = 10, message = "actionCode tối đa 10 ký tự")
+            @Pattern(regexp = "^[A-Za-z0-9_-]{1,10}$", message = "actionCode chỉ gồm chữ, số, '_' hoặc '-'")
+            String actionCode,
+            @Parameter(description = "ID dịch vụ viễn thông", example = "1", required = true)
+            @RequestParam
+            @Min(value = 0, message = "telecomServiceId phải >= 0")
+            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
+            Long telecomServiceId) {
+        return StandardResponses.success(service.getReasonIdByTypeAndCode(reasonCode, actionCode, telecomServiceId));
+    }
+
     @GetMapping("/getListReasonByActionCodeAndTelServiceForAudit")
     @Operation(operationId = "getListReasonByActionCodeAndTelServiceForAudit",
             summary = "Lấy danh sách hình thức hòa mạng theo mã hành động, dịch vụ viễn thông",

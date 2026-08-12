@@ -55,6 +55,16 @@ public final class ReasonControllerExamples {
               "data": ["COLOR", "SIZE"]
             }""";
 
+    public static final String REASON_ID_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000005",
+              "requestId": "req-0005",
+              "timestamp": "2026-08-11T02:00:00Z",
+              "data": 1
+            }""";
+
     public static final String REASON_DTO_LIST_EXAMPLE = """
             {
               "code": "SUCCESS",

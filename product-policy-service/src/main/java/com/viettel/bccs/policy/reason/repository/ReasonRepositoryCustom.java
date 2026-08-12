@@ -18,4 +18,12 @@ public interface ReasonRepositoryCustom {
             List<String> excludeProdOfferTypeIds);
 
     List<ReasonDTO> findByLstIdWithSpec(List<Long> lstReasonId, List<FilterRequest> listProductSpec, String productCode);
+
+    /**
+     * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS bước tìm reasonId theo
+     * reasonCode (regType) + actionCode (qua reason_type của ACTION) + telServiceId.
+     * Trả về reasonId của bản ghi REASON đầu tiên (sắp theo name ASC) còn hiệu lực, hoặc
+     * {@code null} nếu không tìm thấy.
+     */
+    Long findReasonIdByCodeActionAndTelService(String reasonCode, String actionCode, Long telServiceId);
 }

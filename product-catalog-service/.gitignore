@@ -51,7 +51,9 @@ ehthumbs.db
 logs/
 
 # --- Local Superpowers artifacts ---
-/docs/
+/docs/*
+!/docs/flow-*.md
+!/docs/flow-*.docx
 /docs/superpowers/
 /src/test/java/com/viettel/bccs/template/
 

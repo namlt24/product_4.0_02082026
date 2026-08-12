@@ -2,8 +2,8 @@ package com.viettel.bccs.productcatalog.optionset.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.productcatalog.optionset.dto.response.GetSubObjectResponse;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
-import com.viettel.bccs.productcatalog.optionset.dto.response.ResponseMDealerDTO;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -153,7 +153,7 @@ public class OptionSetValueController {
                             examples = @ExampleObject(name = "success", value = MDEALER_EXAMPLE)))
     })
     @PostMapping("/getSubObject")
-    public StandardResponse<ResponseMDealerDTO> getSubObject(
+    public StandardResponse<GetSubObjectResponse> getSubObject(
             @Parameter(description = "Loại khách hàng (custType)", example = "PREPAID", required = true)
             @RequestParam
             @Schema(description = "Loại khách hàng", maxLength = 10)

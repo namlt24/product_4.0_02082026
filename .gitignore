@@ -10,8 +10,10 @@ logs/
 .idea/
 *.iml
 
-# Claude Code local tool config
-.claude/
+# Claude Code local tool config (settings/lock files stay local everywhere; root agents/ are shareable team standards, keep tracked)
+**/.claude/*
+!/.claude/agents/
+!/.claude/agents/**
 
 # OS
 .DS_Store

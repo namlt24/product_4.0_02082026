@@ -16,7 +16,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ResponseMDealerDTO {
+public class GetSubObjectResponse {
 
     @Schema(description = "Danh sách giá trị option set (đối tượng con)", example = "[]")
     @JsonProperty("lstOptionSetValue")

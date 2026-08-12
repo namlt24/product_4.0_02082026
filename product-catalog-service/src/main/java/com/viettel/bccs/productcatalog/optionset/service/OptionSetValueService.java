@@ -3,7 +3,7 @@ package com.viettel.bccs.productcatalog.optionset.service;
 import com.viettel.bccs.productcatalog.client.CustTypeClient;
 import com.viettel.bccs.productcatalog.client.dto.CustTypeDTO;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
-import com.viettel.bccs.productcatalog.optionset.dto.response.ResponseMDealerDTO;
+import com.viettel.bccs.productcatalog.optionset.dto.response.GetSubObjectResponse;
 import com.viettel.bccs.productcatalog.optionset.entity.OptionSetValueEntity;
 import com.viettel.bccs.productcatalog.optionset.mapper.OptionSetValueMapper;
 import com.viettel.bccs.productcatalog.optionset.repository.OptionSetValueRepository;
@@ -89,10 +89,10 @@ public class OptionSetValueService {
         return optionSetValueRepository.findValueByTwoCodeOption(optSetCode, name);
     }
 
-    @Cacheable(value = "mdealerSubObjectCache",
+    @Cacheable(value = "subObjectCache",
             key = "'SUB_OBJ:' + #custType + ':' + (#birthDate != null ? #birthDate : 'NULL')")
-    public ResponseMDealerDTO getSubObject(String custType, String birthDate) {
-        ResponseMDealerDTO response = new ResponseMDealerDTO();
+    public GetSubObjectResponse getSubObject(String custType, String birthDate) {
+        GetSubObjectResponse response = new GetSubObjectResponse();
 
         Optional<CustTypeDTO> custTypeOpt = custTypeClient.findActiveByCustType(custType, Const.STATUS.ACTIVE);
         if (custTypeOpt.isEmpty()) {

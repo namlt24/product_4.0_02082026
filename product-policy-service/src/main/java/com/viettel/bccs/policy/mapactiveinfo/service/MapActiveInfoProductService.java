@@ -84,14 +84,20 @@ public class MapActiveInfoProductService {
         validateRequest(request);
 
         List<ProductOfferingDTO> products = fetchOfferingsWithSpec(request);
-        MapActiveInfoProductVsaleRoles vsaleRoles = loadMapActiveInfoProductVsaleRoles();
 
-        List<ProductOfferingDTO> lstRemove = new ArrayList<>();
-        List<ProductOfferingDTO> lstAdd = new ArrayList<>();
+        // roleMap không bắt buộc — nếu không truyền (values rỗng), bỏ qua bước lọc theo quyền
+        // nhân viên, trả về nguyên danh sách sản phẩm đã khớp các điều kiện khác. Nếu có roleMap,
+        // giữ đúng hành vi lọc theo quyền như cũ.
+        if (!DataUtil.isNullOrEmpty(request.getRoleMap().getValues())) {
+            MapActiveInfoProductVsaleRoles vsaleRoles = loadMapActiveInfoProductVsaleRoles();
 
-        filterProductsByRole(products, vsaleRoles, request.getRoleMap(), lstRemove, lstAdd);
+            List<ProductOfferingDTO> lstRemove = new ArrayList<>();
+            List<ProductOfferingDTO> lstAdd = new ArrayList<>();
 
-        applyRoleFilter(products, vsaleRoles, request.getRoleMap(), lstRemove, lstAdd);
+            filterProductsByRole(products, vsaleRoles, request.getRoleMap(), lstRemove, lstAdd);
+
+            applyRoleFilter(products, vsaleRoles, request.getRoleMap(), lstRemove, lstAdd);
+        }
 
         log.info("[getProductCodeByMapActiveInfo] END - {} products returned", products.size());
         return products;
@@ -99,20 +105,29 @@ public class MapActiveInfoProductService {
 
     private void validateRequest(GetProductCodeByMapActiveInfoRequest request) {
         DataUtil.trimValue(request);
+        if (request.getRoleMap() == null) {
+            request.setRoleMap(RequiredRoleMap.builder().values(new ArrayList<>()).build());
+        }
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
     }
 
     private void validateRequest(GetProductCodeRequest request) {
         DataUtil.trimValue(request);
+        if (request.getRoleMap() == null) {
+            request.setRoleMap(RequiredRoleMap.builder().values(new ArrayList<>()).build());
+        }
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
     }
 
     /**
      * Validate các tham số bắt buộc dùng chung giữa getProductCodeByMapActiveInfo và getProductCodeNew:
-     * staffCode/payType/actionCode/telecomServiceId không rỗng, roleMap có ít nhất 1 quyền hợp lệ,
-     * và độ dài tối đa của từng trường.
+     * staffCode/payType/actionCode/telecomServiceId không rỗng, độ dài tối đa của từng trường.
+     * roleMap KHÔNG còn bắt buộc (theo yêu cầu bỏ ràng buộc BCCS-POLICY-MAPACTIVE-0010) — nếu không
+     * truyền, validateRequest(...) đã default sẵn về RequiredRoleMap rỗng (values=[]) trước khi gọi
+     * hàm này, nên roleMap ở đây luôn khác null. Values rỗng đồng nghĩa "không có quyền nào" —
+     * RequiredRoleMap.hasRole/hasListRole đã null-safe với values rỗng, không cần validate thêm.
      */
     private void validateCommonProductCodeParams(String staffCode, String payType, String actionCode,
                                                   String telecomServiceId, RequiredRoleMap roleMap) {
@@ -121,11 +136,12 @@ public class MapActiveInfoProductService {
         validateMissingParam(actionCode, "BCCS-POLICY-MAPACTIVE-0008");
         validateMissingParam(telecomServiceId, "BCCS-POLICY-MAPACTIVE-0009");
 
-        RequiredRoleMap validRoleMap = validateMissingParam(roleMap, "BCCS-POLICY-MAPACTIVE-0010");
-        validateMissingParam(validRoleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
-        validRoleMap.setValues(validRoleMap.getValues().stream().map(String::trim).collect(Collectors.toList()));
-        validRoleMap.getValues().removeIf(DataUtil::isNullOrEmpty);
-        validateMissingParam(validRoleMap.getValues(), "BCCS-POLICY-MAPACTIVE-0010");
+        if (roleMap.getValues() != null) {
+            roleMap.setValues(roleMap.getValues().stream()
+                    .filter(v -> !DataUtil.isNullOrEmpty(v))
+                    .map(String::trim)
+                    .collect(Collectors.toList()));
+        }
 
         validateMaxLengthParam(staffCode, 40, "BCCS-POLICY-MAPACTIVE-0011");
         validateMaxLengthParam(payType, 1, "BCCS-POLICY-MAPACTIVE-0012");

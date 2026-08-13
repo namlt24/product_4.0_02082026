@@ -617,7 +617,7 @@ public class MapActiveInfoQuerryService {
         if (!DataUtil.isNullOrEmpty(listProductSpec)) {
             lstReason = reasonService.findByLstIdWithSpec(lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()), listProductSpec, null);
         }
-        if (getReasonCharUse) {
+        if (Boolean.TRUE.equals(getReasonCharUse)) {
             lstReason = reasonService.getReasonCharUse(lstReason);
         }
         log.info("list reasonId before return : " + lstReason.stream().map(ReasonDTO::getReasonId).toList());

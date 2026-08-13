@@ -83,7 +83,7 @@ public class MapActiveInfoValidateController {
                 request.getCaptchaAnswer(),
                 request.getTelServiceId(),
                 request.getNowDate(),
-                request.isNeedCheckCaptcha(),
+                Boolean.TRUE.equals(request.getIsNeedCheckCaptcha()),
                 request.getProvince(),
                 request.getDistrict(),
                 request.getPrecinct(),

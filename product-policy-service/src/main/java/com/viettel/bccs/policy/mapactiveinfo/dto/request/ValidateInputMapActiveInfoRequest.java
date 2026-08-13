@@ -92,8 +92,12 @@ public class ValidateInputMapActiveInfoRequest {
     @Schema(description = "Ngày hiện tại")
     private Date nowDate;
 
+    // Boolean (khong phai primitive boolean): project bat FAIL_ON_NULL_FOR_PRIMITIVES, neu client
+    // khong truyen field nay se gay HttpMessageNotReadableException (400) o tang deserialize thay
+    // vi duoc hieu ngam la false. Doi sang Boolean de field thuc su optional; noi doc gia tri phai
+    // dung Boolean.TRUE.equals(...) de tranh NPE khi null (xem MapActiveInfoValidateController).
     @Schema(description = "Có cần kiểm tra CAPTCHA", example = "false")
-    private boolean isNeedCheckCaptcha;
+    private Boolean isNeedCheckCaptcha;
 
     @Schema(description = "Mã tỉnh/thành phố", example = "HCM")
     @Size(max = 50, message = "province tối đa 50 ký tự")

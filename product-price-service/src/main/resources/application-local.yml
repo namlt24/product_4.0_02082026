@@ -306,7 +306,7 @@ bccs:
     # Supported modes: memory-only, redis-only, two-level.
     # Set BCCS_CACHE_ENABLED=false only after removing sample cache components that inject BccsCacheService.
     # redis-only and two-level require a running Redis instance.
-    mode: ${BCCS_CACHE_MODE:two-level}
+    mode: ${BCCS_CACHE_MODE:memory-only}
     l1:
       default-ttl: 5m
       max-size: 5000

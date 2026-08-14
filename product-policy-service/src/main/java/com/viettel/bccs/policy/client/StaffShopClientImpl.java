@@ -18,7 +18,7 @@ public class StaffShopClientImpl implements StaffShopClient {
     private final ObjectMapper objectMapper;
 
     @Override
-    @Cacheable(value = "staffShopClientCache", key = "#staffCode")
+//    @Cacheable(value = "staffShopClientCache", key = "#staffCode")
     public StaffResponse getStaffShopFullInfo(String staffCode) {
         try {
             var response = organizationResourceFeignClient.getStaffShopFullInfo(staffCode).getBody();

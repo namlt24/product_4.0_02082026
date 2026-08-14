@@ -27,14 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS — xem flow chi tiết tại
- * {@code product-catalog-service/flow-getListStockTypeWS.md}. Đây là service điều phối
- * (orchestrator) riêng, KHÔNG gộp vào ProductOfferingService/ProductOfferPriceService vì:
- * ProductOfferPriceService đã phụ thuộc ProductOfferingService (để tra cứu offering khi tính giá)
- * — nếu gộp logic này vào ProductOfferingService và cho nó phụ thuộc ngược lại
- * ProductOfferPriceService sẽ tạo circular bean dependency.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor

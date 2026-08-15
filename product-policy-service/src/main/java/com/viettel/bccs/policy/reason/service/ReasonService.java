@@ -50,6 +50,7 @@ public class ReasonService {
     @Lazy
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
     private final StaffResolveHelper staffResolveHelper;
+    private final ReasonMappingLookupService reasonMappingLookupService;
 
     public ReasonService(ReasonRepository repository, ReasonMapper mapper,
                           ProductPackageClient productPackageClient,
@@ -57,7 +58,8 @@ public class ReasonService {
                           ProductSpecCharClient productSpecCharClient, OptionSetClient optionSetClient,
                           ReasonPauseService reasonPauseService,
                           @Lazy MapActiveInfoQuerryService mapActiveInfoQuerryService,
-                          StaffResolveHelper staffResolveHelper) {
+                          StaffResolveHelper staffResolveHelper,
+                          ReasonMappingLookupService reasonMappingLookupService) {
         this.repository = repository;
         this.mapper = mapper;
         this.productPackageClient = productPackageClient;
@@ -68,6 +70,7 @@ public class ReasonService {
         this.reasonPauseService = reasonPauseService;
         this.mapActiveInfoQuerryService = mapActiveInfoQuerryService;
         this.staffResolveHelper = staffResolveHelper;
+        this.reasonMappingLookupService = reasonMappingLookupService;
     }
 
     public ReasonResponse findById(Long id) {
@@ -113,7 +116,8 @@ public class ReasonService {
             List<ReasonDTO> lstReasonDTOs;
             log.info("getListReasonByMapActiveInfoWithMappingChecking. list reasonId from MapActiveInfo sau khi loc: " + mapActiveInfosDTO.stream().map(MapActiveInfoDTO::getRegReasonId).collect(Collectors.toList()));
             List<String> excludeProdOfferTypeIds = resolveExcludeProdOfferTypeIds(numProduct);
-            lstReasonDTOs = mapper.toDTO(repository.getByActionCodeOrderByIdWithMappingChecking(actionCode, mapActiveInfosDTO.get(0).getTelServiceId(), numProduct, productOfferType, excludeProdOfferTypeIds));
+            lstReasonDTOs = new ArrayList<>(reasonMappingLookupService.getByActionCodeOrderByIdWithMappingChecking(
+                    actionCode, mapActiveInfosDTO.get(0).getTelServiceId(), numProduct, productOfferType, excludeProdOfferTypeIds));
             log.info("list reasonId after select DB : " + lstReasonDTOs.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()));
             for (MapActiveInfoDTO mapActiveInfoDTO : mapActiveInfosDTO) {
                 if (DataUtil.safeEqual(-1, mapActiveInfoDTO.getRegReasonId())) {

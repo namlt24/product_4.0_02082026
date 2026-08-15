@@ -17,19 +17,11 @@ spring:
       # port: ${REDIS_PORT:6379}
       # ----------------------------------------------------
 
-      # --- Redis Enterprise Cluster Endpoint ------
-      cluster:
-        nodes:
-          - 10.207.252.213:9001
-          - 10.207.252.213:9002
-          - 10.207.252.213:9003
-          - 10.207.252.213:9004
-          - 10.207.252.213:9005
-          - 10.207.252.213:9006
-          - 10.207.252.213:9007
-          - 10.207.252.213:9008
-          - 10.207.252.213:9009
-      # ----------------------------------------------------
+      # --- Redis Enterprise Cluster Endpoint: xem document rieng o cuoi file, guard
+      # on-profile: '!local' - phai tach doc rieng vi Spring khong the "xoa" mot nested
+      # config-properties object (DataRedisProperties.Cluster) mot khi bat ky property nao
+      # duoi spring.data.redis.cluster.* con ton tai o BAT KY active source nao, ke ca khi
+      # bi override thanh list rong o application-local.yml. ------
 
       # ACL Authentication
       username: ${REDIS_USERNAME:redis_miniapp}
@@ -191,6 +183,13 @@ bccs:
         ttl-l1: 5m
         ttl-l2: 30m
 
+  elasticsearch:
+    # Mac dinh tat - chi bat khi that su co cum ES (local docker hoac that). Khi tat, code fallback
+    # nguyen ban query truc tiep Oracle qua MapActiveInfoRepositoryCustomImpl (khong doi hanh vi).
+    enabled: ${BCCS_ELASTICSEARCH_ENABLED:false}
+    hosts: ${BCCS_ELASTICSEARCH_HOSTS:localhost:9200}
+    scheme: ${BCCS_ELASTICSEARCH_SCHEME:http}
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:10.207.252.169:8859}
     consumer:
@@ -218,5 +217,27 @@ springdoc:
     path: /swagger-ui.html
   packages-to-scan: com.viettel.bccs.policy
   paths-to-exclude: /actuator/**,/error
+
+---
+# Redis Enterprise Cluster that (chi active khi KHONG phai profile local - xem giai thich
+# o block spring.data.redis phia tren). Local dev dung Redis standalone qua docker,
+# cau hinh o application-local.yml (host/port).
+spring:
+  config:
+    activate:
+      on-profile: '!local'
+  data:
+    redis:
+      cluster:
+        nodes:
+          - 10.207.252.213:9001
+          - 10.207.252.213:9002
+          - 10.207.252.213:9003
+          - 10.207.252.213:9004
+          - 10.207.252.213:9005
+          - 10.207.252.213:9006
+          - 10.207.252.213:9007
+          - 10.207.252.213:9008
+          - 10.207.252.213:9009
 
 

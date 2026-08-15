@@ -7,6 +7,7 @@ import com.viettel.bccs.policy.client.dto.StaffDTO;
 import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
+import com.viettel.bccs.policy.mapactiveinfo.elasticsearch.MapActiveInfoElasticsearchService;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
 import com.viettel.bccs.policy.reason.service.ReasonService;
 import com.viettel.bccs.policy.utils.Const;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -47,13 +49,16 @@ class MapActiveInfoQuerryServiceTest {
     private ReasonService reasonService;
     @Mock
     private StaffResolveHelper staffResolveHelper;
+    @Mock
+    private ObjectProvider<MapActiveInfoElasticsearchService> mapActiveInfoElasticsearchServiceProvider;
 
     private MapActiveInfoQuerryService service;
 
     @BeforeEach
     void setUp() {
         service = new MapActiveInfoQuerryService(repository, mapper, optionSetClient, telecomServiceClient,
-                mapActiveInfoValidateService, staffExtClient, reasonService, staffResolveHelper);
+                mapActiveInfoValidateService, staffExtClient, reasonService, staffResolveHelper,
+                mapActiveInfoElasticsearchServiceProvider);
     }
 
     private static StaffDTO staffDTO(Long shopChanelTypeId, Long channelTypeId, String pointOfSale) {

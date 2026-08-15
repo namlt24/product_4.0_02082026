@@ -251,6 +251,24 @@
     "retryable": false,
     "logLevel": "WARN"
   },
+  "BCCS-POLICY-MAPACTIVE-0021": {
+    "code": "BCCS-POLICY-MAPACTIVE-0021",
+    "message": "Elasticsearch chưa được bật (bccs.elasticsearch.enabled=false) hoặc chưa kết nối được cụm Elasticsearch",
+    "httpStatus": 503,
+    "category": "INTEGRATION",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-MAPACTIVE-0022": {
+    "code": "BCCS-POLICY-MAPACTIVE-0022",
+    "message": "Lỗi truy vấn MAP_ACTIVE_INFO từ Oracle: {0}",
+    "httpStatus": 500,
+    "category": "SYSTEM",
+    "severity": "ERROR",
+    "retryable": true,
+    "logLevel": "ERROR"
+  },
   "BCCS-POLICY-DISCPROMO-0001": {
     "code": "BCCS-POLICY-DISCPROMO-0001",
     "message": "Không tìm thấy chương trình khuyến mãi giảm giá (discount promotion) với id: {0}",

@@ -22,6 +22,7 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Cacheable(value = "productOfferingClientCache", key = "'ALTER_STATUS:' + #offerId + ':' + #changeChannel + ':' + #checkStatus")
     public List<ProductOfferingDTO> getListOfferAlterStatus(Long offerId, String changeChannel, boolean checkStatus) {
         try {
             var response = productCatalogFeignClient
@@ -39,6 +40,7 @@ public class ProductOfferingClientImpl implements ProductOfferingClient {
     }
 
     @Override
+    @Cacheable(value = "productOfferingClientCache", key = "'TELECOM_SUBTYPE_OFFERTYPE:' + #telecomServiceId + ':' + #subType + ':' + #offerTypeId + ':' + #getActiveProduct")
     public List<ProductOfferingDTO> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId, String subType, Long offerTypeId, boolean getActiveProduct) {
         try {
             var response = productCatalogFeignClient

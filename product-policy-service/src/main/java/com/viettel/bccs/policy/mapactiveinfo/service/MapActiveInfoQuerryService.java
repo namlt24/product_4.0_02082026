@@ -14,6 +14,7 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
+import com.viettel.bccs.policy.mapactiveinfo.elasticsearch.MapActiveInfoElasticsearchService;
 import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
@@ -23,6 +24,7 @@ import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,13 +47,21 @@ public class MapActiveInfoQuerryService {
     @Lazy
     private final ReasonService reasonService;
     private final StaffResolveHelper staffResolveHelper;
+    /**
+     * Optional: bean {@link MapActiveInfoElasticsearchService} chỉ tồn tại khi
+     * {@code bccs.elasticsearch.enabled=true} (xem {@code @ConditionalOnBean(ElasticsearchClient.class)}
+     * trên chính class đó). Dùng {@link ObjectProvider} thay vì inject trực tiếp để service này vẫn
+     * khởi động bình thường ở môi trường chưa bật Elasticsearch.
+     */
+    private final ObjectProvider<MapActiveInfoElasticsearchService> mapActiveInfoElasticsearchServiceProvider;
 
     public MapActiveInfoQuerryService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                       OptionSetClient optionSetClient, TelecomServiceClient telecomServiceClient,
                                       @Lazy MapActiveInfoValidateService mapActiveInfoValidateService,
                                       StaffExtClient staffExtClient,
                                       @Lazy ReasonService reasonService,
-                                      StaffResolveHelper staffResolveHelper) {
+                                      StaffResolveHelper staffResolveHelper,
+                                      ObjectProvider<MapActiveInfoElasticsearchService> mapActiveInfoElasticsearchServiceProvider) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
@@ -60,6 +70,7 @@ public class MapActiveInfoQuerryService {
         this.staffExtClient = staffExtClient;
         this.reasonService = reasonService;
         this.staffResolveHelper = staffResolveHelper;
+        this.mapActiveInfoElasticsearchServiceProvider = mapActiveInfoElasticsearchServiceProvider;
     }
 
 
@@ -72,7 +83,58 @@ public class MapActiveInfoQuerryService {
     }
 
     public List<MapActiveInfoDTO> findByExampleWithOfferType(MapActiveInfoDTO exampleMapActiveInfo, int mode, String offerType) {
-        return findByExample(exampleMapActiveInfo, mode, false, offerType, false);
+        return findByExample(exampleMapActiveInfo, mode, true, offerType, false);
+    }
+
+    /**
+     * Đọc toàn bộ MAP_ACTIVE_INFO từ Oracle và bulk-index sang Elasticsearch. Trả về số document đã
+     * index. Dùng để nạp/đồng bộ thủ công cho local/thử nghiệm — service này không có write-path ghi
+     * MAP_ACTIVE_INFO nên không thể tự động đồng bộ real-time (xem javadoc MapActiveInfoElasticsearchService).
+     */
+    public long reindexElasticsearch() {
+        MapActiveInfoElasticsearchService esService = requireElasticsearchService();
+        try {
+            return esService.reindexAll();
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0021", ex.getMessage());
+        }
+    }
+
+    /**
+     * Search trực tiếp qua Elasticsearch (không qua nhánh {@code searchCache} nội bộ) — dùng để kiểm
+     * tra/so sánh kết quả ES với kết quả Oracle (repository.findByExample) khi vận hành/kiểm thử.
+     */
+    public List<MapActiveInfoDTO> searchByElasticsearch(MapActiveInfoDTO exampleMapActiveInfo, boolean searchInvidualField) {
+        MapActiveInfoElasticsearchService esService = requireElasticsearchService();
+        try {
+            return mapper.toDtoBean(esService.search(exampleMapActiveInfo, searchInvidualField));
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0021", ex.getMessage());
+        }
+    }
+
+    /**
+     * Search trực tiếp qua Oracle (repository.findByExample) — cùng cơ chế HTTP/mapper với
+     * {@link #searchByElasticsearch}, chỉ khác nguồn dữ liệu — dùng để đo/so sánh hiệu năng công bằng
+     * giữa 2 đường (không phải hàm nghiệp vụ chính thức, chỉ phục vụ kiểm thử/vận hành).
+     */
+    public List<MapActiveInfoDTO> searchByOracle(MapActiveInfoDTO exampleMapActiveInfo, boolean searchInvidualField) {
+        try {
+            return mapper.toDtoBean(repository.findByExample(exampleMapActiveInfo, searchInvidualField, false));
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0022", ex.getMessage());
+        }
+    }
+
+    private MapActiveInfoElasticsearchService requireElasticsearchService() {
+        MapActiveInfoElasticsearchService esService = mapActiveInfoElasticsearchServiceProvider.getIfAvailable();
+        if (esService == null) {
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0021");
+        }
+        return esService;
     }
 
     private List<MapActiveInfoDTO> findByExample(MapActiveInfoDTO exampleMapActiveInfo, int mode, boolean searchCache, String offerType, boolean isTgdd) {
@@ -98,7 +160,9 @@ public class MapActiveInfoQuerryService {
                 mapActiveInfos = mapper.toDtoBean(repository.findByExample(exampleMapActiveInfo, true, isTgdd));
             } else {
                 if (searchCache) {
-                    mapActiveInfos = new ArrayList<>(); // todo cache elasticsearch
+
+                    MapActiveInfoElasticsearchService esService = requireElasticsearchService();
+                    mapActiveInfos = mapper.toDtoBean(esService.search(exampleMapActiveInfo, true));
                     List<Long> elasticListId = new ArrayList<>();
                     for (MapActiveInfoDTO map : mapActiveInfos) {
                         elasticListId.add(map.getId());
@@ -586,7 +650,7 @@ public class MapActiveInfoQuerryService {
                 }
             }
 
-            List<MapActiveInfoDTO> mapActiveInfos = findByExample(mapActiveInfoExample, mode, false, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE, false);
+            List<MapActiveInfoDTO> mapActiveInfos = findByExample(mapActiveInfoExample, mode, true, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE, false);
 
             List<MapActiveInfoDTO> lstMapRemoveCheckBusinessNo = new ArrayList<>();
             List<Long> lstRemoveReasonId = new ArrayList<>();

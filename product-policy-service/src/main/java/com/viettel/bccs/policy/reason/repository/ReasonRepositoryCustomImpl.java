@@ -534,13 +534,6 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
 
     }
 
-    /**
-     * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS bước tìm reasonId
-     * (ReasonServiceImpl.getReasonIdByTypeAndCode). Query giữ nguyên điều kiện gốc:
-     * reason_type khớp action tương ứng actionCode, reason_code = regType, còn hiệu lực,
-     * dịch vụ khớp telServiceId (hoặc reason không ràng buộc dịch vụ). Lấy bản ghi đầu
-     * tiên sắp theo name ASC.
-     */
     @Override
     public Long findReasonIdByCodeActionAndTelService(String reasonCode, String actionCode, Long telServiceId) {
         String sqlQuery = "SELECT a.* FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "reason a " +

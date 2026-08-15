@@ -150,6 +150,16 @@ class OpenApiExampleSmokeIT {
         assertEquals(productCode, body.path("data").path("code").asText());
     }
 
+    @Test
+    void product_findProductOfferingByListCodeListSpecCode_returnsSuccess() throws Exception {
+        // productSpecCharCode lay ngau nhien tu @BeforeAll, khong dam bao co gan vao offering nao
+        // qua PRODUCT_OFFER_CHAR_USE - chi assert SUCCESS (data co the null neu khong khop, dung
+        // hanh vi migrate tu mono), khong assert data.isArray().
+        JsonNode body = postJson("/product/findProductOfferingByListCodeListSpecCode",
+                "{\"lstSpecCode\":[\"" + productSpecCharCode + "\"]}");
+        assertSuccess(body);
+    }
+
     // ---------------------------------------------------------------- OptionSet
 
     @Test

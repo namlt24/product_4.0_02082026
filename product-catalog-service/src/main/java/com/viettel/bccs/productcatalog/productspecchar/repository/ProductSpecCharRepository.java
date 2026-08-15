@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ProductSpecCharRepository extends JpaRepository<ProductSpecCharEntity, Long> {
+public interface ProductSpecCharRepository extends JpaRepository<ProductSpecCharEntity, Long>, ProductSpecCharRepositoryCustom {
 
     Optional<ProductSpecCharEntity> findByCode(String code);
 

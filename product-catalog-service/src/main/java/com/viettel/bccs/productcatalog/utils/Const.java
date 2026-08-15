@@ -46,6 +46,8 @@ public class Const {
 
     public static final class PRODUCT_OFFER_TYPE {
         public static final Long VAS = 300L;
+        /** Loại sản phẩm mặc định (product code thường) khi không truyền productOfferType. */
+        public static final Long PRODUCT_CODE = 200L;
 
         private PRODUCT_OFFER_TYPE() {}
     }

@@ -6,9 +6,11 @@ import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
 import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
+import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
+import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,8 @@ class ProductOfferingServiceTest {
     private ProductOfferCharUseService productOfferCharUseService;
     @Mock
     private OptionSetValueService optionSetValueService;
+    @Mock
+    private ProductSpecCharService productSpecCharService;
 
     private ProductOfferingService service;
 
@@ -51,7 +55,9 @@ class ProductOfferingServiceTest {
                 new ProductOfferingMapper(),
                 productOfferRelationService,
                 productOfferCharUseService,
-                optionSetValueService);
+                optionSetValueService,
+                productSpecCharService,
+                new ProductSpecCharUseMapper());
     }
 
     @Test

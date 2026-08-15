@@ -10,9 +10,12 @@ import com.viettel.bccs.productcatalog.product.dto.response.StockOfferingRow;
 import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
+import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
+import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
+import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +39,8 @@ public class ProductOfferingService {
     private final ProductOfferRelationService productOfferRelationService;
     private final ProductOfferCharUseService productOfferCharUseService;
     private final OptionSetValueService optionSetValueService;
+    private final ProductSpecCharService productSpecCharService;
+    private final ProductSpecCharUseMapper productSpecCharUseMapper;
 
     @Cacheable(value = "productOfferingCache", key = "'ID:' + #productOfferingId")
     public ProductOfferingDTO findById(Long productOfferingId) {
@@ -324,5 +331,87 @@ public class ProductOfferingService {
                 .toList();
     }
 
+    // Chi so cot trong Object[] tra ve tu ProductSpecCharService.findByLstSpecCodeAndLstProductCode
+    // (xem ProductSpecCharRepositoryCustomImpl - 24 cot product_spec_char + 3 cot product_offering).
+    private static final int ROW_IDX_OFFERING_ID = 24;
+    private static final int ROW_IDX_OFFERING_CODE = 25;
+    private static final int ROW_IDX_OFFERING_NAME = 26;
 
+    /**
+     * Migrate từ mono: ExternalServiceForMbccsImpl.findProductOfferingByListCodeListSpecCode. Tìm
+     * các product_offering (mặc định productOfferType=200/PRODUCT_CODE nếu không truyền) có gán ít
+     * nhất 1 đặc tính trong lstSpecCode (bắt buộc), tuỳ chọn lọc thêm theo lstProductOfferCode. Gom
+     * nhóm kết quả theo productOfferingId — mỗi dòng DB trả về là 1 spec char; DTO offering dựng
+     * mới CHỈ gồm id/code/name/status (ACTIVE), không load đầy đủ như {@link #findById}, đúng hành
+     * vi gốc. Trả về {@code null} nếu không có kết quả nào (không phải list rỗng — đúng hành vi mono).
+     */
+    public List<ProductOfferingDTO> findProductOfferingByListCodeListSpecCode(
+            List<String> lstProductOfferCode, List<String> lstSpecCode, String productOfferType) {
+        Long productOfferTypeId = DataUtil.isNullOrEmpty(productOfferType)
+                ? Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE
+                : Long.valueOf(productOfferType.trim());
+
+        List<Object[]> rows = productSpecCharService.findByLstSpecCodeAndLstProductCode(lstSpecCode, lstProductOfferCode, productOfferTypeId);
+        if (DataUtil.isNullOrEmpty(rows)) {
+            return null;
+        }
+
+        Map<Long, ProductOfferingDTO> resultByOfferingId = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            Long productOfferingId = ((Number) row[ROW_IDX_OFFERING_ID]).longValue();
+
+            ProductSpecCharDTO specCharDto = productSpecCharUseMapper.toDto(buildSpecCharEntity(row));
+            specCharDto.setProductOfferingId(productOfferingId);
+
+            ProductOfferingDTO offeringDto = resultByOfferingId.get(productOfferingId);
+            if (offeringDto == null) {
+                List<ProductSpecCharDTO> lstProductSpecChars = new ArrayList<>();
+                lstProductSpecChars.add(specCharDto);
+                offeringDto = ProductOfferingDTO.builder()
+                        .productOfferingId(productOfferingId)
+                        .code(rowStr(row[ROW_IDX_OFFERING_CODE]))
+                        .name(rowStr(row[ROW_IDX_OFFERING_NAME]))
+                        .status(Const.STATUS.ACTIVE)
+                        .lstProductSpecChars(lstProductSpecChars)
+                        .build();
+                resultByOfferingId.put(productOfferingId, offeringDto);
+            } else {
+                offeringDto.getLstProductSpecChars().add(specCharDto);
+            }
+        }
+        return new ArrayList<>(resultByOfferingId.values());
+    }
+
+    private static String rowStr(Object val) {
+        return val != null ? val.toString() : null;
+    }
+
+    private static ProductSpecCharEntity buildSpecCharEntity(Object[] row) {
+        return ProductSpecCharEntity.builder()
+                .productSpecCharId(row[0] != null ? ((Number) row[0]).longValue() : null)
+                .name(rowStr(row[1]))
+                .description(rowStr(row[2]))
+                .valueType(rowStr(row[3]))
+                .charType(rowStr(row[4]))
+                .minCardinality(row[5] != null ? ((Number) row[5]).longValue() : null)
+                .maxCardinality(row[6] != null ? ((Number) row[6]).longValue() : null)
+                .status(rowStr(row[7]))
+                .code(rowStr(row[8]))
+                .productSpecCharTypeId(rowStr(row[9]))
+                .valueSetType(row[10] != null ? ((Number) row[10]).longValue() : null)
+                .responseClass(rowStr(row[11]))
+                .sqlQuery(rowStr(row[12]))
+                .displayObject(rowStr(row[13]))
+                .valueObject(rowStr(row[14]))
+                .solrQuery(rowStr(row[15]))
+                .solrCore(rowStr(row[16]))
+                .solrSchema(rowStr(row[17]))
+                .dataType(rowStr(row[18]))
+                .wsWsdl(rowStr(row[19]))
+                .templateRequest(rowStr(row[20]))
+                .validatePattern(rowStr(row[21]))
+                .extData(rowStr(row[22]))
+                .note(rowStr(row[23]))
+                .build();
+    }
 }

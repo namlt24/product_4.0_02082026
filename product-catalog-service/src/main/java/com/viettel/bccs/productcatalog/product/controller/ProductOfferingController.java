@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.product.controller;
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
+import com.viettel.bccs.productcatalog.product.dto.request.FindProductOfferingByListCodeListSpecCodeRequest;
 import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWSRequest;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferTypeStockDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
@@ -404,5 +405,28 @@ public class ProductOfferingController {
     })
     public StandardResponse<List<ProductOfferTypeStockDTO>> getListStockTypeWS(@Valid @RequestBody GetListStockTypeWSRequest request) {
         return StandardResponses.success(stockTypeWSService.getListStockTypeWS(request));
+    }
+
+    @PostMapping("/findProductOfferingByListCodeListSpecCode")
+    @Operation(
+            operationId = "findProductOfferingByListCodeListSpecCode",
+            summary = "Tìm sản phẩm theo danh sách mã đặc tính (kèm mã sản phẩm tuỳ chọn)",
+            description = "Migrate từ mono: ExternalServiceForMbccsImpl.findProductOfferingByListCodeListSpecCode. " +
+                    "Tìm các product_offering (loại mặc định PRODUCT_CODE=200 nếu không truyền productOfferType) " +
+                    "có gán ít nhất 1 trong lstSpecCode (product_spec_char.code), tuỳ chọn lọc thêm theo " +
+                    "lstProductOfferCode (product_offering.code). Kết quả gom nhóm theo productOfferingId — mỗi " +
+                    "phần tử trả về chỉ gồm id/code/name/status (ACTIVE) kèm lstProductSpecChars là các đặc tính " +
+                    "khớp của sản phẩm đó. Trả về null nếu không tìm thấy kết quả nào."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = PRODUCT_LIST_EXAMPLE))),
+            @ApiResponse(responseCode = "400", description = "lstSpecCode rỗng hoặc thiếu")
+    })
+    public StandardResponse<List<ProductOfferingDTO>> findProductOfferingByListCodeListSpecCode(
+            @Valid @RequestBody FindProductOfferingByListCodeListSpecCodeRequest request) {
+        return StandardResponses.success(productOfferingService.findProductOfferingByListCodeListSpecCode(
+                request.getLstProductOfferCode(), request.getLstSpecCode(), request.getProductOfferType()));
     }
 }

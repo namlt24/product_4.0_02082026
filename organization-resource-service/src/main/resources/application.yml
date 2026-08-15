@@ -14,19 +14,11 @@ spring:
       # port: ${REDIS_PORT:6379}
       # ----------------------------------------------------
 
-      # --- Redis Enterprise Cluster Endpoint ------
-      cluster:
-        nodes:
-          - 10.58.71.184:8385
-          - 10.58.71.185:8385
-          - 10.58.71.240:8385
-          - 10.58.71.184:8386
-          - 10.58.71.185:8386
-          - 10.58.71.240:8386
-          - 10.58.71.184:8387
-          - 10.58.71.185:8387
-          - 10.58.71.240:8387
-      # ----------------------------------------------------
+      # --- Redis Enterprise Cluster Endpoint: xem document rieng o cuoi file, guard
+      # on-profile: '!local' - phai tach doc rieng vi Spring khong the "xoa" mot nested
+      # config-properties object (DataRedisProperties.Cluster) mot khi bat ky property nao
+      # duoi spring.data.redis.cluster.* con ton tai o BAT KY active source nao, ke ca khi
+      # bi override thanh list rong o application-local.yml. ------
 
       # ACL Authentication
       username: ${REDIS_USERNAME:}
@@ -194,6 +186,11 @@ bccs:
       enabled: ${BCCS_CACHE_INVALIDATION_ENABLED:false}
       provider: redis
       topic: ${BCCS_CACHE_INVALIDATION_TOPIC:bccs.cache.invalidation}
+    # Cache warming dung chung (xem BccsCacheWarmerScheduler): chu ky tick, khong phai TTL tung cache
+    # - moi BccsCacheWarmTask tu khai bao interval() rieng.
+    warmer:
+      enabled: ${BCCS_CACHE_WARMER_ENABLED:true}
+      tick-interval-ms: ${BCCS_CACHE_WARMER_TICK_MS:60000}
 
   kafka:
     enabled: ${BCCS_KAFKA_ENABLED:true}
@@ -231,4 +228,26 @@ springdoc:
     path: /swagger-ui.html
   packages-to-scan: com.viettel.bccs.organization
   paths-to-exclude: /actuator/**,/error
+
+---
+# Redis Enterprise Cluster that (chi active khi KHONG phai profile local - xem giai thich
+# o block spring.data.redis phia tren). Local dev dung Redis standalone qua docker,
+# cau hinh o application-local.yml (host/port).
+spring:
+  config:
+    activate:
+      on-profile: '!local'
+  data:
+    redis:
+      cluster:
+        nodes:
+          - 10.58.71.184:8385
+          - 10.58.71.185:8385
+          - 10.58.71.240:8385
+          - 10.58.71.184:8386
+          - 10.58.71.185:8386
+          - 10.58.71.240:8386
+          - 10.58.71.184:8387
+          - 10.58.71.185:8387
+          - 10.58.71.240:8387
 

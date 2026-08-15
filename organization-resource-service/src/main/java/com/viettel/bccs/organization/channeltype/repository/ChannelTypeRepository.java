@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ChannelTypeRepository extends JpaRepository<ChannelTypeEntity, Long> {
+public interface ChannelTypeRepository extends JpaRepository<ChannelTypeEntity, Long>, ChannelTypeRepositoryCustom {
 
     Optional<ChannelTypeEntity> findByChannelTypeIdAndStatus(Long channelTypeId, String status);
 

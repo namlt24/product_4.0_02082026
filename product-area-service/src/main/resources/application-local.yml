@@ -8,29 +8,20 @@ spring:
     password: BCCS_PRODUCT123
   data:
     redis:
-      # --- Redis Enterprise Standalone Endpoint ---
-      # host: ${REDIS_HOST:localhost}
-      # port: ${REDIS_PORT:6379}
+      # --- Redis local (docker) - bat de test cache Redis o local ---
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       # ----------------------------------------------------
 
-      # --- Redis Enterprise Cluster Endpoint ------
-      cluster:
-        nodes:
-          - 10.207.252.213:9001
-          - 10.207.252.213:9002
-          - 10.207.252.213:9003
-          - 10.207.252.213:9004
-          - 10.207.252.213:9005
-          - 10.207.252.213:9006
-          - 10.207.252.213:9007
-          - 10.207.252.213:9008
-          - 10.207.252.213:9009
-        max-redirects: 3
+      # --- Redis Enterprise Cluster Endpoint: cau hinh that nam o document rieng cuoi
+      # application.yml (guard on-profile: '!local'), KHONG duoc dinh nghia lai key `cluster`
+      # o day du la rong - chi can property duoi spring.data.redis.cluster.* ton tai o BAT KY
+      # active source nao la Spring coi Cluster != null va bat cluster mode ngay. ------
       # ----------------------------------------------------
 
-      # ACL Authentication
-      username: ${REDIS_USERNAME:redis_miniapp}
-      password: ${REDIS_PASSWORD:redisMiniApp@2025}
+      # ACL Authentication (Redis local docker khong bat auth -> de trong)
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
       # TLS Configuration
       # ssl:
       #   enabled: true
@@ -183,7 +174,7 @@ bccs:
   redis:
     # Set to true to enable BCCS Redis Operations (bccs-starter-redis)
     enabled: true
-    type: ${BCCS_REDIS_TYPE:cluster}
+    type: ${BCCS_REDIS_TYPE:standalone}
     key-prefix: ${BCCS_REDIS_KEY_PREFIX:bccs:${spring.application.name}:}
     default-ttl: 10m
     require-ttl: false

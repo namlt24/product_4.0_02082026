@@ -14,28 +14,20 @@ spring:
       max-lifetime: 1200000        # 20 phút
   data:
     redis:
-      # --- Redis Enterprise Standalone Endpoint ---
-      # host: ${REDIS_HOST:localhost}
-      # port: ${REDIS_PORT:6379}
+      # --- Redis local (docker) - bat de test cache Redis o local ---
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       # ----------------------------------------------------
 
-      # --- Redis Enterprise Cluster Endpoint ------
-      cluster:
-        nodes:
-          - 10.58.71.184:8385
-          - 10.58.71.185:8385
-          - 10.58.71.240:8385
-          - 10.58.71.184:8386
-          - 10.58.71.185:8386
-          - 10.58.71.240:8386
-          - 10.58.71.184:8387
-          - 10.58.71.185:8387
-          - 10.58.71.240:8387
+      # --- Redis Enterprise Cluster Endpoint: cau hinh that nam o document rieng cuoi
+      # application.yml (guard on-profile: '!local'), KHONG duoc dinh nghia lai key `cluster`
+      # o day du la rong - chi can property duoi spring.data.redis.cluster.* ton tai o BAT KY
+      # active source nao la Spring coi Cluster != null va bat cluster mode ngay. ------
       # ----------------------------------------------------
 
-      # ACL Authentication
+      # ACL Authentication (Redis local docker khong bat auth -> de trong)
       username: ${REDIS_USERNAME:}
-      password: ${REDIS_PASSWORD:Mbccs@2025}
+      password: ${REDIS_PASSWORD:}
       # TLS Configuration
       # ssl:
       #   enabled: true
@@ -313,7 +305,7 @@ bccs:
         subscription-connection-minimum-idle-size: 1
         scan-interval: 1s
     enabled: true
-    type: ${BCCS_REDIS_TYPE:cluster}
+    type: ${BCCS_REDIS_TYPE:standalone}
     key-prefix: ${BCCS_REDIS_KEY_PREFIX:bccs:${spring.application.name}:}
     default-ttl: 10m
     require-ttl: false
@@ -356,6 +348,8 @@ bccs:
         ttl-l2: 30m
       staffCache:
         ttl-l2: 30m
+      staffShopFullInfo:
+        ttl-l2: 1d
       getListStockByStaffCode:
         ttl-l2: 168h
 

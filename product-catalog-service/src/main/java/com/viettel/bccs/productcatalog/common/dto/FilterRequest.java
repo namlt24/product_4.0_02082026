@@ -1,5 +1,6 @@
 package com.viettel.bccs.productcatalog.common.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,7 +30,20 @@ public class FilterRequest implements Serializable {
         RANGE,
         STARTWITH,
         IS_NULL,
-        IS_NOT_NULL
+        IS_NOT_NULL;
+
+        // Client gui "" (chuoi rong) cho field operator -> coi nhu khong truyen (null), thay vi
+        // Jackson nem HttpMessageNotReadableException chung chung "BAD_REQUEST Request is invalid"
+        // khong ro field nao gay loi. FilterRequest.getOperator()/operatorToOracle(...) da xu ly
+        // operator=null bang cach mac dinh ve EQ (dung y dinh nghiep vu goc), nen tra ve null o day
+        // la an toan.
+        @JsonCreator
+        public static Operator fromValue(String value) {
+            if (value == null || value.isBlank()) {
+                return null;
+            }
+            return Operator.valueOf(value.trim());
+        }
     }
 
     @Schema(description = "Mã thuộc tính đặc tính (code của product_spec_char)", example = "SPEED")

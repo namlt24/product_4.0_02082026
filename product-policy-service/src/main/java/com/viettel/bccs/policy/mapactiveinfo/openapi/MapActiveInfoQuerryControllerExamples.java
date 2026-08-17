@@ -54,24 +54,4 @@ public final class MapActiveInfoQuerryControllerExamples {
               "timestamp": "2026-08-15T02:00:00Z",
               "data": 332209
             }""";
-
-    public static final String SEARCH_ELASTICSEARCH_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000007",
-              "requestId": "req-0007",
-              "timestamp": "2026-08-15T02:00:00Z",
-              "data": [
-                {
-                  "id": 1,
-                  "telServiceId": 73,
-                  "productCode": "PROD001",
-                  "provinceCode": "HN",
-                  "staffCode": "NV001",
-                  "actionCode": "00",
-                  "payType": "1"
-                }
-              ]
-            }""";
 }

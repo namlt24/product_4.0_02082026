@@ -4,7 +4,6 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -83,44 +82,5 @@ public class MapActiveInfoQuerryController {
     })
     public StandardResponse<Long> reindexElasticsearch() {
         return StandardResponses.success(mapActiveInfoQuerryService.reindexElasticsearch());
-    }
-
-    @PostMapping("/searchElasticsearch")
-    @Operation(operationId = "searchElasticsearch",
-            summary = "[Debug/kiểm thử] Search MAP_ACTIVE_INFO trực tiếp qua Elasticsearch",
-            description = "Gọi thẳng MapActiveInfoElasticsearchService.search(...) (không qua nhánh searchCache nội bộ) "
-                    + "- dùng để so sánh kết quả với API query Oracle thông thường khi kiểm thử. Yêu cầu đã "
-                    + "reindexElasticsearch trước đó và bccs.elasticsearch.enabled=true.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @Content(schema = @Schema(implementation = MapActiveInfoDTO.class))))
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
-                            examples = @ExampleObject(name = "success", value = SEARCH_ELASTICSEARCH_EXAMPLE))),
-            @ApiResponse(responseCode = "503", description = "Elasticsearch chưa được bật hoặc chưa kết nối được")
-    })
-    public StandardResponse<java.util.List<MapActiveInfoDTO>> searchElasticsearch(
-            @RequestBody MapActiveInfoDTO example,
-            @Parameter(description = "true: lọc cả productCode/regReasonId/promCode (giống searchInvidualField=true trong buildQuery gốc)")
-            @RequestParam(defaultValue = "true") boolean searchInvidualField) {
-        return StandardResponses.success(mapActiveInfoQuerryService.searchByElasticsearch(example, searchInvidualField));
-    }
-
-    @PostMapping("/searchOracle")
-    @Operation(operationId = "searchOracle",
-            summary = "[Debug/kiểm thử] Search MAP_ACTIVE_INFO trực tiếp qua Oracle",
-            description = "Cùng cơ chế HTTP/mapper với searchElasticsearch, chỉ khác nguồn dữ liệu (Oracle thay vì "
-                    + "Elasticsearch) - dùng để đo/so sánh hiệu năng công bằng giữa 2 đường.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @Content(schema = @Schema(implementation = MapActiveInfoDTO.class))))
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
-                            examples = @ExampleObject(name = "success", value = SEARCH_ELASTICSEARCH_EXAMPLE)))
-    })
-    public StandardResponse<java.util.List<MapActiveInfoDTO>> searchOracle(
-            @RequestBody MapActiveInfoDTO example,
-            @RequestParam(defaultValue = "true") boolean searchInvidualField) {
-        return StandardResponses.success(mapActiveInfoQuerryService.searchByOracle(example, searchInvidualField));
     }
 }

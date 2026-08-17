@@ -44,6 +44,18 @@ spring:
     consumer:
       group-id: ${BCCS_KAFKA_CONSUMER_GROUP_ID:${spring.application.name}}
 
+  # Elasticsearch connection uses the standard spring.elasticsearch namespace.
+  # The BCCS starter (bccs-starter-elasticsearch) auto-configures the imperative 8.4.3 client.
+  # The BCCS starter does not duplicate these connection properties.
+  elasticsearch:
+    uris:
+      - ${ELASTICSEARCH_URI}
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+    connection-timeout: ${ELASTICSEARCH_CONNECTION_TIMEOUT:3s}
+    socket-timeout: ${ELASTICSEARCH_SOCKET_TIMEOUT:10s}
+    socket-keep-alive: ${ELASTICSEARCH_SOCKET_KEEP_ALIVE:true}
+
 server:
   port: ${APP_PORT:8002}
 
@@ -63,6 +75,9 @@ management:
   otlp:
     tracing:
       endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+  health:
+    elasticsearch:
+      enabled: ${ELASTICSEARCH_HEALTH_ENABLED:true}
 
 logging:
   level:
@@ -184,11 +199,16 @@ bccs:
         ttl-l2: 30m
 
   elasticsearch:
-    # Mac dinh tat - chi bat khi that su co cum ES (local docker hoac that). Khi tat, code fallback
-    # nguyen ban query truc tiep Oracle qua MapActiveInfoRepositoryCustomImpl (khong doi hanh vi).
-    enabled: ${BCCS_ELASTICSEARCH_ENABLED:false}
-    hosts: ${BCCS_ELASTICSEARCH_HOSTS:localhost:9200}
-    scheme: ${BCCS_ELASTICSEARCH_SCHEME:http}
+    # false: khong ping luc startup, loi chi xay ra khi thuc su goi ES.
+    # true: ping dung 1 lan luc startup, fail startup neu ES khong san sang.
+    fail-fast: ${BCCS_ELASTICSEARCH_FAIL_FAST:true}
+
+  policy:
+    mapactiveinfo:
+      elasticsearch:
+        # Mac dinh tat - chi bat khi that su co cum ES (local docker hoac that). Khi tat, code fallback
+        # nguyen ban query truc tiep Oracle qua MapActiveInfoRepositoryCustomImpl (khong doi hanh vi).
+        enabled: ${BCCS_POLICY_MAPACTIVEINFO_ELASTICSEARCH_ENABLED:false}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:10.207.252.169:8859}

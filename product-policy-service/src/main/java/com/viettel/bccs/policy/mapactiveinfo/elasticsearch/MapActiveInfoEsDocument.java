@@ -27,6 +27,8 @@ import java.util.List;
 @Builder
 public class MapActiveInfoEsDocument {
 
+    public static final String INDEX_NAME = "map_active_info";
+
     private Long id;
     private Long telServiceId;
     private String productCode;

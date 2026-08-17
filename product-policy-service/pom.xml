@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.viettel.bccs</groupId>
         <artifactId>bccs-build-parent</artifactId>
-        <version>0.1.14-SNAPSHOT</version>
+        <version>0.1.17-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -44,12 +44,8 @@
             <artifactId>bccs-starter-redis</artifactId>
         </dependency>
         <dependency>
-            <groupId>co.elastic.clients</groupId>
-            <artifactId>elasticsearch-java</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-client</artifactId>
+            <groupId>com.viettel.bccs</groupId>
+            <artifactId>bccs-starter-elasticsearch</artifactId>
         </dependency>
         <dependency>
             <groupId>com.viettel.bccs</groupId>

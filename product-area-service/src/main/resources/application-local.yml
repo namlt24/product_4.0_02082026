@@ -133,28 +133,6 @@ bccs:
         - /actuator/**
         - /swagger-ui/**
         - /v3/api-docs/**
-    payload:
-      enabled: true
-      max-body-size: 102400
-      max-field-length: 4096
-      inbound:
-        enabled: true
-        log-request-body: true
-        log-response-body: true
-        log-headers: true
-        allowed-content-types:
-          - application/json
-          - application/xml
-          - text/plain
-          - text/xml
-        sampling-rate: 1.0
-      outbound:
-        enabled: true
-        log-request-body: true
-        log-response-body: true
-        log-headers: true
-        allowed-target-systems: []
-        sampling-rate: 1.0
     execution:
       enabled: true
       default-log-args: true

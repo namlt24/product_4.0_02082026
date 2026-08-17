@@ -60,6 +60,21 @@ spring:
             read-timeout: ${PRODUCT_CATALOG_SERVICE_READ_TIMEOUT_MS:10000}
             logger-level: NONE
 
+  # Elasticsearch connection uses the standard spring.elasticsearch namespace.
+  # The BCCS starter (bccs-starter-elasticsearch) auto-configures the imperative 8.4.3 client.
+  # The BCCS starter does not duplicate these connection properties.
+  elasticsearch:
+    # Local: tro vao Elasticsearch docker (xem db-local/docker-compose.yml, service elasticsearch).
+    # Sau nay tro cum that: chi doi ELASTICSEARCH_URI, khong doi code.
+    uris:
+      - ${ELASTICSEARCH_URI:http://localhost:9200}
+    # Redis local docker khong bat auth -> de trong.
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+    connection-timeout: ${ELASTICSEARCH_CONNECTION_TIMEOUT:3s}
+    socket-timeout: ${ELASTICSEARCH_SOCKET_TIMEOUT:5s}
+    socket-keep-alive: ${ELASTICSEARCH_SOCKET_KEEP_ALIVE:true}
+
 server:
   port: ${APP_PORT:8002}
 
@@ -71,6 +86,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    elasticsearch:
+      enabled: ${ELASTICSEARCH_HEALTH_ENABLED:true}
 
 logging:
   level:
@@ -205,44 +223,6 @@ bccs:
         - /actuator/**
         - /swagger-ui/**
         - /v3/api-docs/**
-    payload:
-      enabled: true
-      max-body-size: 102400
-      max-field-length: 4096
-      inbound:
-        enabled: true
-        log-request-body: true
-        log-response-body: true
-        log-headers: false
-        allowed-content-types:
-          - application/json
-          - application/xml
-          - application/soap+xml
-          - text/plain
-          - text/xml
-        include-paths: []
-        exclude-paths:
-          - /actuator/**
-          - /swagger-ui/**
-          - /v3/api-docs/**
-        sampling-rate: 1.0
-      outbound:
-        enabled: true
-        feign:
-          enabled: true
-        soap:
-          enabled: true
-        log-request-body: true
-        log-response-body: true
-        log-headers: false
-        allowed-content-types:
-          - application/json
-          - application/xml
-          - application/soap+xml
-          - text/plain
-          - text/xml
-        allowed-target-systems: []
-        sampling-rate: 1.0
     execution:
       enabled: false
       default-log-args: false
@@ -352,11 +332,15 @@ bccs:
         ttl-l2: 5m
 
   elasticsearch:
-    # Local: bat de test qua Elasticsearch docker (xem db-local/docker-compose.yml, service elasticsearch).
-    # Sau nay tro cum that: chi doi BCCS_ELASTICSEARCH_HOSTS, khong doi code.
-    enabled: ${BCCS_ELASTICSEARCH_ENABLED:true}
-    hosts: ${BCCS_ELASTICSEARCH_HOSTS:localhost:9200}
-    scheme: ${BCCS_ELASTICSEARCH_SCHEME:http}
+    # false: khong ping luc startup, loi chi xay ra khi thuc su goi ES.
+    # true: ping dung 1 lan luc startup, fail startup neu ES khong san sang.
+    fail-fast: ${BCCS_ELASTICSEARCH_FAIL_FAST:false}
+
+  policy:
+    mapactiveinfo:
+      elasticsearch:
+        # Local: bat de test qua Elasticsearch docker (xem db-local/docker-compose.yml, service elasticsearch).
+        enabled: ${BCCS_POLICY_MAPACTIVEINFO_ELASTICSEARCH_ENABLED:true}
 
   kafka:
     # Set to false to completely disable Kafka auto-configuration and listener containers.

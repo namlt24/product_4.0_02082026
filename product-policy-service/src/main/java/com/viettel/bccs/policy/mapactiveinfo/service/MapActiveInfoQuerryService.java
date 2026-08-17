@@ -101,34 +101,6 @@ public class MapActiveInfoQuerryService {
         }
     }
 
-    /**
-     * Search trực tiếp qua Elasticsearch (không qua nhánh {@code searchCache} nội bộ) — dùng để kiểm
-     * tra/so sánh kết quả ES với kết quả Oracle (repository.findByExample) khi vận hành/kiểm thử.
-     */
-    public List<MapActiveInfoDTO> searchByElasticsearch(MapActiveInfoDTO exampleMapActiveInfo, boolean searchInvidualField) {
-        MapActiveInfoElasticsearchService esService = requireElasticsearchService();
-        try {
-            return mapper.toDtoBean(esService.search(exampleMapActiveInfo, searchInvidualField));
-        } catch (Exception ex) {
-            log.error(ex.getMessage(), ex);
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0021", ex.getMessage());
-        }
-    }
-
-    /**
-     * Search trực tiếp qua Oracle (repository.findByExample) — cùng cơ chế HTTP/mapper với
-     * {@link #searchByElasticsearch}, chỉ khác nguồn dữ liệu — dùng để đo/so sánh hiệu năng công bằng
-     * giữa 2 đường (không phải hàm nghiệp vụ chính thức, chỉ phục vụ kiểm thử/vận hành).
-     */
-    public List<MapActiveInfoDTO> searchByOracle(MapActiveInfoDTO exampleMapActiveInfo, boolean searchInvidualField) {
-        try {
-            return mapper.toDtoBean(repository.findByExample(exampleMapActiveInfo, searchInvidualField, false));
-        } catch (Exception ex) {
-            log.error(ex.getMessage(), ex);
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0022", ex.getMessage());
-        }
-    }
-
     private MapActiveInfoElasticsearchService requireElasticsearchService() {
         MapActiveInfoElasticsearchService esService = mapActiveInfoElasticsearchServiceProvider.getIfAvailable();
         if (esService == null) {

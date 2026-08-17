@@ -1,8 +1,8 @@
 package com.viettel.bccs.policy.mapactiveinfo.elasticsearch;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -11,6 +11,9 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import co.elastic.clients.json.JsonData;
+import com.viettel.bccs.common.error.code.CommonErrorCode;
+import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
@@ -23,8 +26,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -33,23 +36,23 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "bccs.elasticsearch", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "bccs.policy.mapactiveinfo.elasticsearch", name = "enabled", havingValue = "true")
 public class MapActiveInfoElasticsearchService {
-
-    public static final String INDEX_NAME = "map_active_info";
 
     private static final int REINDEX_PAGE_SIZE = 2000;
 
     private final ElasticsearchClient client;
     private final MapActiveInfoRepository repository;
 
-    public void ensureIndex() throws Exception {
-        boolean exists = client.indices().exists(ExistsRequest.of(e -> e.index(INDEX_NAME))).value();
+    public void ensureIndex() {
+        boolean exists = execute("indices.exists", () -> client.indices()
+                .exists(ExistsRequest.of(e -> e.index(MapActiveInfoEsDocument.INDEX_NAME)))
+                .value());
         if (exists) {
             return;
         }
-        client.indices().create(c -> c
-                .index(INDEX_NAME)
+        execute("indices.create", () -> client.indices().create(c -> c
+                .index(MapActiveInfoEsDocument.INDEX_NAME)
                 .mappings(m -> m
                         .properties("id", p -> p.long_(l -> l))
                         .properties("telServiceId", p -> p.long_(l -> l))
@@ -80,15 +83,15 @@ public class MapActiveInfoElasticsearchService {
                         .properties("issueDatetime", p -> p.date(d -> d))
                         .properties("updateDatetime", p -> p.date(d -> d))
                 )
-        );
-        log.info("Đã tạo index Elasticsearch '{}'", INDEX_NAME);
+        ));
+        log.info("Đã tạo index Elasticsearch '{}'", MapActiveInfoEsDocument.INDEX_NAME);
     }
 
     /**
      * Đọc toàn bộ MAP_ACTIVE_INFO từ Oracle (phân trang) và bulk-index
      * sang Elasticsearch. Trả về tổng số document đã index.
      */
-    public long reindexAll() throws Exception {
+    public long reindexAll() {
         ensureIndex();
         long total = 0;
         int page = 0;
@@ -99,11 +102,11 @@ public class MapActiveInfoElasticsearchService {
             }
             List<BulkOperation> operations = pageResult.stream()
                     .map(entity -> BulkOperation.of(op -> op.index(idx -> idx
-                            .index(INDEX_NAME)
+                            .index(MapActiveInfoEsDocument.INDEX_NAME)
                             .id(String.valueOf(entity.getId()))
                             .document(toDocument(entity)))))
                     .toList();
-            client.bulk(BulkRequest.of(b -> b.operations(operations)));
+            execute("bulk", () -> client.bulk(BulkRequest.of(b -> b.operations(operations))));
             total += pageResult.getNumberOfElements();
             log.info("Đã reindex {} document (page {})", total, page);
             if (!pageResult.hasNext()) {
@@ -111,13 +114,13 @@ public class MapActiveInfoElasticsearchService {
             }
             page++;
         }
-        client.indices().refresh(r -> r.index(INDEX_NAME));
+        execute("indices.refresh", () -> client.indices().refresh(r -> r.index(MapActiveInfoEsDocument.INDEX_NAME)));
         log.info("Reindex Elasticsearch xong: {} document", total);
         return total;
     }
 
 
-    public List<MapActiveInfoEntity> search(MapActiveInfoDTO dto, boolean searchInvidualField) throws Exception {
+    public List<MapActiveInfoEntity> search(MapActiveInfoDTO dto, boolean searchInvidualField) {
         BoolQuery.Builder root = new BoolQuery.Builder();
 
         // STATUS != 0
@@ -182,12 +185,12 @@ public class MapActiveInfoElasticsearchService {
 
         Query query = Query.of(q -> q.bool(root.build()));
 
-        SearchResponse<MapActiveInfoEsDocument> response = client.search(s -> s
-                        .index(INDEX_NAME)
+        SearchResponse<MapActiveInfoEsDocument> response = execute("search", () -> client.search(s -> s
+                        .index(MapActiveInfoEsDocument.INDEX_NAME)
                         .size(10000)
                         .query(query)
                         .sort(so -> so.field(fs -> fs.field("regReasonId").order(SortOrder.Asc))),
-                MapActiveInfoEsDocument.class);
+                MapActiveInfoEsDocument.class));
 
         return response.hits().hits().stream()
                 .map(hit -> hit.source())
@@ -354,5 +357,23 @@ public class MapActiveInfoElasticsearchService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+    }
+
+    private <T> T execute(String operation, ElasticsearchCall<T> call) {
+        try {
+            return call.execute();
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (IOException | ElasticsearchException exception) {
+            throw new IntegrationException(
+                    CommonErrorCode.INTEGRATION_ERROR,
+                    "Elasticsearch " + operation + " operation failed",
+                    exception);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ElasticsearchCall<T> {
+        T execute() throws IOException;
     }
 }

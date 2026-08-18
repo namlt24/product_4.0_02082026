@@ -14,8 +14,10 @@ import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCha
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
+import com.viettel.bccs.productcatalog.productoffertype.repository.ProductOfferTypeRepository;
 import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
 import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
+import com.viettel.bccs.productcatalog.telecomservice.repository.TelecomServiceRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,8 @@ public class ProductOfferingService {
     private final OptionSetValueService optionSetValueService;
     private final ProductSpecCharService productSpecCharService;
     private final ProductSpecCharUseMapper productSpecCharUseMapper;
+    private final TelecomServiceRepository telecomServiceRepository;
+    private final ProductOfferTypeRepository productOfferTypeRepository;
 
     @Cacheable(value = "productOfferingCache", key = "'ID:' + #productOfferingId")
     public ProductOfferingDTO findById(Long productOfferingId) {
@@ -72,6 +76,26 @@ public class ProductOfferingService {
     @Cacheable(value = "productOfferingCache", key = "'TELECOM_SUB_TYPE_ACTIVE:' + #telecomServiceId + ':' + '' + #subType + ':' + #offerTypeId")
     public List<ProductOfferingDTO> findByTelecomSubTypeOfferType(Long telecomServiceId, String subType, Long offerTypeId) {
         return findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, true);
+    }
+
+    /**
+     * API cho hệ thống thứ 3 lấy danh sách mã mặt hàng đang active theo dịch vụ + loại thuê bao
+     * (bắt buộc), tuỳ chọn lọc thêm theo loại mặt hàng. Validate telServiceId/productOfferTypeId tồn
+     * tại thật trong TELECOM_SERVICE/PRODUCT_OFFER_TYPE, subType thuộc {@link Const.SUB_TYPE} — sai
+     * thì báo lỗi rõ field nào không hợp lệ (đúng yêu cầu, không dùng message chung chung).
+     */
+    @Cacheable(value = "productOfferingCache", key = "'LIST_PRODUCT_CODE:' + #telServiceId + ':' + '' + #subType + ':' + #productOfferTypeId")
+    public List<ProductOfferingDTO> getByTelServiceIdAndSubTypeAndProductOfferTypeId(Long telServiceId, String subType, Long productOfferTypeId) {
+        if (!telecomServiceRepository.existsById(telServiceId)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0006", "Dịch vụ không hợp lệ");
+        }
+        if (!Const.SUB_TYPE.PRE.equals(subType) && !Const.SUB_TYPE.POST.equals(subType)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0006", "Loại thuê bao không hợp lệ");
+        }
+        if (productOfferTypeId != null && !productOfferTypeRepository.existsById(productOfferTypeId)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0006", "Loại mặt hàng không hợp lệ");
+        }
+        return findByTelecomSubTypeOfferTypeCheckProductStatus(telServiceId, subType, productOfferTypeId, true);
     }
 
     public List<ProductOfferingDTO> findByPayTypeWithSpec(String telecomServiceId, String payType, String productOfferTypeId, List<FilterRequest> listProductSpec) {

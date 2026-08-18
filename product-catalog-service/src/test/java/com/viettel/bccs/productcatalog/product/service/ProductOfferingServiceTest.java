@@ -8,9 +8,12 @@ import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
 import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
+import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
+import com.viettel.bccs.productcatalog.productoffertype.repository.ProductOfferTypeRepository;
 import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
+import com.viettel.bccs.productcatalog.telecomservice.repository.TelecomServiceRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
@@ -45,6 +49,10 @@ class ProductOfferingServiceTest {
     private OptionSetValueService optionSetValueService;
     @Mock
     private ProductSpecCharService productSpecCharService;
+    @Mock
+    private TelecomServiceRepository telecomServiceRepository;
+    @Mock
+    private ProductOfferTypeRepository productOfferTypeRepository;
 
     private ProductOfferingService service;
 
@@ -57,7 +65,9 @@ class ProductOfferingServiceTest {
                 productOfferCharUseService,
                 optionSetValueService,
                 productSpecCharService,
-                new ProductSpecCharUseMapper());
+                new ProductSpecCharUseMapper(),
+                telecomServiceRepository,
+                productOfferTypeRepository);
     }
 
     @Test
@@ -200,5 +210,59 @@ class ProductOfferingServiceTest {
 
     private OptionSetValueResponse groupRow(String groupName, String vasCode) {
         return new OptionSetValueResponse(null, null, null, groupName, vasCode, Const.STATUS.ACTIVE, null, null, null, null, null, null);
+    }
+
+    @Test
+    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_telServiceIdNotExist_throwsBusinessException() {
+        when(telecomServiceRepository.existsById(1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.POST, null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo("BCCS-CATALOG-PRODUCT-0006");
+    }
+
+    @Test
+    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_subTypeNotInKnownSet_throwsBusinessException() {
+        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, "9", null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo("BCCS-CATALOG-PRODUCT-0006");
+    }
+
+    @Test
+    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_productOfferTypeIdNotExist_throwsBusinessException() {
+        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
+        when(productOfferTypeRepository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.POST, 99L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo("BCCS-CATALOG-PRODUCT-0006");
+    }
+
+    @Test
+    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_validInput_returnsActiveOfferingsOnly() {
+        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
+        when(productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(1L, Const.SUB_TYPE.POST, null, true))
+                .thenReturn(List.of(offering(100L, "CODE_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.POST)));
+
+        List<ProductOfferingDTO> result = service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.POST, null);
+
+        assertThat(result).extracting(ProductOfferingDTO::getCode).containsExactly("CODE_A");
+    }
+
+    @Test
+    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_productOfferTypeIdProvidedAndValid_delegatesWithFilter() {
+        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
+        when(productOfferTypeRepository.existsById(5L)).thenReturn(true);
+        when(productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(1L, Const.SUB_TYPE.PRE, 5L, true))
+                .thenReturn(List.of(offering(200L, "CODE_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+
+        List<ProductOfferingDTO> result = service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.PRE, 5L);
+
+        assertThat(result).extracting(ProductOfferingDTO::getCode).containsExactly("CODE_B");
     }
 }

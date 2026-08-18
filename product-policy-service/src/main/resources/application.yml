@@ -79,6 +79,18 @@ management:
     elasticsearch:
       enabled: ${ELASTICSEARCH_HEALTH_ENABLED:true}
 
+app:
+  async:
+    # Timeout cho từng task async / tổng cả batch trong MapActiveInfoValidateService (ms).
+    task-timeout-ms: ${APP_ASYNC_TASK_TIMEOUT_MS:5000}
+    total-timeout-ms: ${APP_ASYNC_TOTAL_TIMEOUT_MS:10000}
+    # Size ThreadPoolTaskExecutor (taskExecutor/asyncExecutor). -1 = tự tính theo
+    # Runtime.availableProcessors() (xem AsyncConfig) - set số cụ thể khi CPU limit thật của pod
+    # (k8s resources.limits.cpu) không khớp con số JVM tự đọc được.
+    core-pool-size: ${APP_ASYNC_CORE_POOL_SIZE:-1}
+    max-pool-size: ${APP_ASYNC_MAX_POOL_SIZE:-1}
+    queue-capacity: ${APP_ASYNC_QUEUE_CAPACITY:500}
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}

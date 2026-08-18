@@ -150,6 +150,41 @@ public class ProductOfferingController {
         return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferType(telecomServiceId, subType, offerTypeId));
     }
 
+    @GetMapping("/getByTelServiceIdAndSubTypeAndProductOfferTypeId")
+    @Operation(
+            operationId = "getByTelServiceIdAndSubTypeAndProductOfferTypeId",
+            summary = "Lấy danh sách mã mặt hàng cho hệ thống thứ 3",
+            description = "API cung cấp cho hệ thống thứ 3 lấy danh sách mã mặt hàng (mã - tên - ID) đang active, " +
+                    "theo dịch vụ viễn thông + loại thuê bao (bắt buộc), tuỳ chọn lọc thêm theo loại mặt hàng. " +
+                    "Validate telServiceId/subType/productOfferTypeId có hợp lệ (tồn tại thật) hay không trước khi trả kết quả."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = PRODUCT_LIST_EXAMPLE))),
+            @ApiResponse(responseCode = "400", description = "Thiếu tham số bắt buộc, hoặc telServiceId/subType/productOfferTypeId không hợp lệ")
+    })
+    public StandardResponse<List<ProductOfferingDTO>> getByTelServiceIdAndSubTypeAndProductOfferTypeId(
+            @Parameter(description = "ID dịch vụ viễn thông (TELECOM_SERVICE_ID)", example = "1", required = true)
+            @RequestParam
+            @Min(value = 1, message = "telServiceId phải >= 1")
+            @Max(value = 9999999999L, message = "telServiceId vượt quá độ dài cột (precision 10)")
+            Long telServiceId,
+
+            @Parameter(description = "Loại thuê bao (SUB_TYPE): 1 trả sau, 2 trả trước", example = "1", required = true)
+            @RequestParam
+            @Size(min = 1, max = 1, message = "subType đúng 1 ký tự")
+            @Pattern(regexp = "^[A-Za-z0-9]{1}$", message = "subType chỉ gồm chữ hoặc số")
+            String subType,
+
+            @Parameter(description = "ID loại mặt hàng (PRODUCT_OFFER_TYPE_ID)", example = "1")
+            @RequestParam(required = false)
+            @Min(value = 1, message = "productOfferTypeId phải >= 1")
+            @Max(value = 9999999999L, message = "productOfferTypeId vượt quá độ dài cột (precision 10)")
+            Long productOfferTypeId) {
+        return StandardResponses.success(productOfferingService.getByTelServiceIdAndSubTypeAndProductOfferTypeId(telServiceId, subType, productOfferTypeId));
+    }
+
     @GetMapping("/findByCodeOrId")
     @Operation(
             operationId = "findByCodeOrId",

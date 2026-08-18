@@ -188,6 +188,15 @@
     "retryable": false,
     "logLevel": "WARN"
   },
+  "BCCS-CATALOG-PRODUCT-0006": {
+    "code": "BCCS-CATALOG-PRODUCT-0006",
+    "message": "Dữ liệu đầu vào không hợp lệ",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
   "BCCS-CATALOG-CHAR-0001": {
     "code": "BCCS-CATALOG-CHAR-0001",
     "message": "Không tìm thấy đặc tính sản phẩm (product spec char) với mã/id: {0}",

@@ -437,3 +437,9 @@ app:
     task-timeout-ms: 5000
     # Thời gian timeout tổng cho toàn bộ hàm validate (ms)
     total-timeout-ms: 10000
+    # Size ThreadPoolTaskExecutor (taskExecutor/asyncExecutor). -1 = tự tính theo
+    # Runtime.availableProcessors() (xem AsyncConfig) - chỉ set số cụ thể khi cần ghi đè
+    # (VD test lệch với CPU limit thật của pod trên k8s).
+    core-pool-size: -1
+    max-pool-size: -1
+    queue-capacity: 500

@@ -1,7 +1,7 @@
 package com.viettel.bccs.policy.mapactiveinfo.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.common.error.exception.SystemException;
+import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.policy.client.StaffExtClient;
 import com.viettel.bccs.policy.client.dto.*;
 import com.viettel.bccs.policy.client.OptionSetClient;
@@ -13,8 +13,8 @@ import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionServic
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.*;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
 import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
+import com.viettel.bccs.policy.mapactiveinfo.model.OfferOutcome;
 import com.viettel.bccs.policy.mapactiveinfo.model.ValidationContext;
 import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
 import com.viettel.bccs.policy.mapping.dto.response.MappingResponse;
@@ -24,7 +24,6 @@ import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.service.ReasonService;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.Const.OPTION_SET;
-import com.viettel.bccs.policy.utils.Const.PRODUCT_OFFER_TYPE;
 import com.viettel.bccs.policy.utils.Const.TELECOM_SERVICE_ID;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.MessageUtil;
@@ -38,7 +37,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -108,7 +110,6 @@ public class MapActiveInfoValidateService {
 
         StaffDTO staffDTO = DataUtil.isNullOrEmpty(staffCode) ? null : new StaffDTO(staffCode);
         List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
-        MapActiveInfoDTO mapActiveInfo;
         List<ReasonDTO> lstReason;
         List<DiscountPromotionDTO> lstPromotions;
         if (regReasonId == null) {
@@ -154,10 +155,13 @@ public class MapActiveInfoValidateService {
                     .orTimeout(taskTimeoutMs, TimeUnit.MILLISECONDS);
 
             // 3. Chờ cả 2 task hoàn thành với Timeout tổng
-            CompletableFuture.allOf(futureReason, futurePromotion).join();
-
-            lstReason = futureReason.join();
-            lstPromotions = futurePromotion.join();
+            try {
+                CompletableFuture.allOf(futureReason, futurePromotion).join();
+                lstReason = futureReason.join();
+                lstPromotions = futurePromotion.join();
+            } catch (CompletionException | CancellationException ex) {
+                throw unwrapAsyncException(ex, "lấy reason/promotion (actionCode=" + actionCode + ", telServiceId=" + telServiceId + ")");
+            }
 
             log.info("[validateWithOutMapActiveInfo] Both tasks completed - reasons={}, promotions={}",
                     lstReason != null ? lstReason.size() : 0, lstPromotions != null ? lstPromotions.size() : 0);
@@ -178,45 +182,50 @@ public class MapActiveInfoValidateService {
                 ValidationContext context = staffDTO != null
                         ? resolveValidationContext(staffDTO, actionCode, payType, telServiceId, province, district, precinct)
                         : new ValidationContext(Collections.emptyMap(), null, null, null, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
-                for (Long offerId : offerIds) {
-                    lstReason = new ArrayList<>();
-                    lstPromotions = new ArrayList<>();
-                    String custTypeId = convertCustTypeCode2Id(customerType);
-                    StringBuilder errMsgNonMapField = new StringBuilder();
-                    mapActiveInfo = getUniqueMapActiveInfo(staffDTO, actionCode, offerId,
-                            DataUtil.isNullOrEmpty(promotionCode) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : promotionCode,
-                            regReasonId, telServiceId,
-                            customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField, payType, technology, mode, productOfferType,
-                            lstBusinessNo, mapProductOfferingById.get(offerId), context);
-                    if (mapActiveInfo != null) {
-                        List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
-                        lstMapActiveInfo.add(mapActiveInfo);
-                        List<MappingResponse> lstMapping = mappingService.getMappingByMultiParams(
-                                mapActiveInfo.getRegReasonId(), actionCode, telServiceId);
-                        if (!DataUtil.isNullOrEmpty(lstMapping)) {
-                            mapActiveInfo.setSaleServiceCode(lstMapping.get(0).saleServiceCode());
-                        }
 
-                        lstReason.addAll(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
+                // Mỗi offerId trước đây được xử lý TUẦN TỰ (ES/Oracle search + mapping + reason +
+                // promotion cho từng offerId, không timeout) -> độ trễ cộng dồn không giới hạn khi
+                // offerIds có nhiều phần tử hoặc 1 lần gọi chậm bất thường. Chuyển sang chạy SONG SONG,
+                // mỗi task tự mở transaction riêng (transactionTemplate, giống pattern futureReason/
+                // futurePromotion ở trên - transaction của request gốc không propagate sang thread khác)
+                // và có timeout riêng (taskTimeoutMs) + timeout tổng cho cả batch (totalTimeoutMs).
+                // Vẫn giữ đúng thứ tự ưu tiên báo lỗi theo vị trí offerId trong list đầu vào như code
+                // tuần tự cũ (không theo thứ tự hoàn thành) - xem ghi chú tại resolveOneOffer/OfferOutcome.
+                List<CompletableFuture<OfferOutcome>> futures = offerIds.stream()
+                        .map(offerId -> CompletableFuture
+                                .supplyAsync(() -> transactionTemplate.execute(status -> resolveOneOffer(
+                                        staffDTO, actionCode, offerId, promotionCode, regReasonId, telServiceId,
+                                        customerGroup, customerType, subType, subGroup, stationCodes, payType,
+                                        technology, mode, productOfferType, lstBusinessNo,
+                                        mapProductOfferingById.get(offerId), context)), asyncExecutor)
+                                .orTimeout(taskTimeoutMs, TimeUnit.MILLISECONDS)
+                                .handle((dto, ex) -> new OfferOutcome(offerId, dto,
+                                        unwrapAsyncException(ex, "xác thực map active info cho offerId=" + offerId))))
+                        .toList();
 
-                        lstPromotions.addAll(discountPromotionService.getPromFromMapActiveInfos(lstMapActiveInfo, mode, false));
-                        mapActiveInfoDTOs.add(mapActiveInfo);
+                try {
+                    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                            .orTimeout(totalTimeoutMs, TimeUnit.MILLISECONDS)
+                            .join();
+                } catch (CompletionException | CancellationException ex) {
+                    log.error("[validateMapActiveInfo] Timeout tổng khi xử lý offerIds={}: {}", offerIds, ex.getMessage(), ex);
+                    throw unwrapAsyncException(ex, "xác thực map active info (offerIds=" + offerIds + ")");
+                }
 
-                    } else {
-                        if (!errMsgNonMapField.toString().isEmpty()) {
-                            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0005");
-                        }
-                        ProductOfferingDTO productOfferingDTO = mapProductOfferingById.get(offerId);
-                        String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : String.valueOf(offerId);
-                        String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-0002", offerCodeForMsg);
-                        throw new BusinessException("BCCS-POLICY-MAPACTIVE-0002", textParam);
+                // handle(...) đảm bảo mọi future ở trên hoàn thành BÌNH THƯỜNG (lỗi/timeout đã được gom
+                // vào OfferOutcome.error) -> join() ở đây không bao giờ ném exception.
+                List<OfferOutcome> outcomes = futures.stream().map(CompletableFuture::join).toList();
+
+                // Duyệt đúng thứ tự offerIds đầu vào (KHÔNG theo thứ tự hoàn thành) để giữ nguyên ưu
+                // tiên báo lỗi như code tuần tự cũ: offerId đứng trước trong list luôn được báo lỗi
+                // trước, kể cả khi nó hoàn thành sau các offerId phía sau.
+                for (OfferOutcome outcome : outcomes) {
+                    if (outcome.error() != null) {
+                        throw outcome.error();
                     }
-                    if (mapActiveInfo != null) {
-                        validateMapActiveInfoCommon(actionCode,
-                                promotionCode,
-                                regReasonId,
-                                telServiceId, lstReason, lstPromotions);
-                    }
+                }
+                for (OfferOutcome outcome : outcomes) {
+                    mapActiveInfoDTOs.add(outcome.mapActiveInfo());
                 }
             } else {
                 log.info("offerId=null");
@@ -224,6 +233,75 @@ public class MapActiveInfoValidateService {
             }
         }
         return mapActiveInfoDTOs;
+    }
+
+    /**
+     * Xử lý đầy đủ nghiệp vụ cho 1 offerId (map active info + mapping + reason + promotion +
+     * validate common) - extract nguyên vẹn từ thân vòng lặp tuần tự cũ, KHÔNG đổi điều kiện/message
+     * lỗi, chỉ đổi từ "1 vòng lặp" thành "1 hàm nhận đúng tham số của 1 offerId" để có thể gọi song
+     * song qua {@link CompletableFuture} (xem {@link #validateMapActiveInfo}). Package-private (không
+     * {@code private}) để unit test có thể spy/stub method này, cô lập phần orchestration song song
+     * mới (thứ tự báo lỗi, transaction, timeout) khỏi business logic bên trong vốn không đổi.
+     */
+    MapActiveInfoDTO resolveOneOffer(StaffDTO staffDTO, String actionCode, Long offerId, String promotionCode,
+                                             Long regReasonId, Long telServiceId, String customerGroup, String customerType,
+                                             String subType, String subGroup, String stationCodes, String payType,
+                                             String technology, int mode, String productOfferType, List<String> lstBusinessNo,
+                                             ProductOfferingDTO productOfferingDTO, ValidationContext context) {
+        String custTypeId = convertCustTypeCode2Id(customerType);
+        StringBuilder errMsgNonMapField = new StringBuilder();
+        MapActiveInfoDTO mapActiveInfo = getUniqueMapActiveInfo(staffDTO, actionCode, offerId,
+                DataUtil.isNullOrEmpty(promotionCode) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : promotionCode,
+                regReasonId, telServiceId,
+                customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField, payType, technology, mode, productOfferType,
+                lstBusinessNo, productOfferingDTO, context);
+        if (mapActiveInfo == null) {
+            if (!errMsgNonMapField.toString().isEmpty()) {
+                throw new BusinessException("BCCS-POLICY-MAPACTIVE-0005");
+            }
+            String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : String.valueOf(offerId);
+            String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-0002", offerCodeForMsg);
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0002", textParam);
+        }
+        List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
+        lstMapActiveInfo.add(mapActiveInfo);
+        List<MappingResponse> lstMapping = mappingService.getMappingByMultiParams(
+                mapActiveInfo.getRegReasonId(), actionCode, telServiceId);
+        if (!DataUtil.isNullOrEmpty(lstMapping)) {
+            mapActiveInfo.setSaleServiceCode(lstMapping.get(0).saleServiceCode());
+        }
+
+        List<ReasonDTO> lstReason = new ArrayList<>(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
+        List<DiscountPromotionDTO> lstPromotions = new ArrayList<>(discountPromotionService.getPromFromMapActiveInfos(lstMapActiveInfo, mode, false));
+        validateMapActiveInfoCommon(actionCode, promotionCode, regReasonId, telServiceId, lstReason, lstPromotions);
+        return mapActiveInfo;
+    }
+
+    /**
+     * Gỡ lớp bọc {@link CompletionException}/{@link ExecutionException} (do {@code .join()}/
+     * {@code .handle()} của {@link CompletableFuture} tự thêm vào) để trả lại đúng exception gốc:
+     * {@link BusinessException} giữ nguyên mã lỗi/HTTP status đúng như khi ném trực tiếp (không bị
+     * BccsGlobalExceptionHandler hiểu nhầm thành lỗi hệ thống); các RuntimeException đã được BCCS
+     * phân loại sẵn (VD IntegrationException) cũng giữ nguyên; còn lại (bao gồm
+     * {@link java.util.concurrent.TimeoutException} do {@code .orTimeout()} ném ra) bọc thành
+     * {@link IntegrationException} dùng chung mã BCCS-SYS-INT-0001 (đúng mã đã dùng thống nhất cho
+     * lỗi tích hợp/downstream trong toàn service, xem các *ClientImpl.java).
+     */
+    private RuntimeException unwrapAsyncException(Throwable ex, String integrationMessage) {
+        if (ex == null) {
+            return null;
+        }
+        Throwable cause = ex;
+        while (cause.getCause() != null && (cause instanceof CompletionException || cause instanceof ExecutionException)) {
+            cause = cause.getCause();
+        }
+        if (cause instanceof BusinessException businessException) {
+            return businessException;
+        }
+        if (cause instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        return new IntegrationException("BCCS-SYS-INT-0001", integrationMessage, cause);
     }
 
 
@@ -260,7 +338,7 @@ public class MapActiveInfoValidateService {
 
         List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(OPTION_SET.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
         List<OptionSetValueResponse> checkMapArea = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
-
+        
         boolean isActiveCD = true
                 && (!Const.TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
                 && !Const.TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)

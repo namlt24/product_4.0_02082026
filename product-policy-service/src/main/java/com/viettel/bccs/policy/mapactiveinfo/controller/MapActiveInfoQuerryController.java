@@ -51,9 +51,7 @@ public class MapActiveInfoQuerryController {
     @PostMapping("/getChanelTypeIdMapActiveInfo")
     @Operation(operationId = "getChanelTypeIdMapActiveInfo",
             summary = "Lấy channelTypeId dùng cho map active info",
-            description = "Suy ra channelTypeId áp dụng cho nghiệp vụ map active info từ staffId — server tự resolve "
-                    + "thông tin nhân viên/shop (channelTypeId, shopChanelTypeId, pointOfSale) từ organization-resource-service "
-                    + "thay vì nhận trực tiếp từ client.",
+            description = "Thông tin nhân viên/shop (channelTypeId, shopChanelTypeId, pointOfSale)",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(schema = @Schema(implementation = ChanelTypeIdRequest.class),
                             examples = @ExampleObject(name = "request", value = CHANEL_TYPE_ID_REQUEST_EXAMPLE))))
@@ -71,9 +69,7 @@ public class MapActiveInfoQuerryController {
     @Operation(operationId = "reindexElasticsearch",
             summary = "Đồng bộ toàn bộ MAP_ACTIVE_INFO từ Oracle sang Elasticsearch",
             description = "Đọc toàn bộ bảng MAP_ACTIVE_INFO (phân trang) và bulk-index sang Elasticsearch. "
-                    + "Dùng để nạp/đồng bộ thủ công cho local/thử nghiệm - service không có write-path ghi "
-                    + "MAP_ACTIVE_INFO nên không tự động đồng bộ real-time. Yêu cầu bccs.elasticsearch.enabled=true, "
-                    + "nếu không sẽ trả lỗi BCCS-POLICY-MAPACTIVE-0021.")
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Thành công - trả về số document đã index",
                     content = @Content(schema = @Schema(implementation = StandardResponse.class),

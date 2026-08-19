@@ -1,5 +1,6 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.service;
 
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
@@ -73,33 +74,13 @@ public class ProductOfferCharUseService {
     }
 
     @Cacheable(value = "productOfferCharUseCache", key = "'PRICE_PLAN:' + #productOfferingId")
-    public List<ProductSpecCharDTO> getListPricePlanByOfferId(Long productOfferingId) {
-        if (productOfferingId == null) {
-            return Collections.emptyList();
+    public List<ProductOfferingCharacterFullDTO> getListPricePlanByOfferId(Long productOfferingId) {
+        List<ProductOfferingCharacterFullDTO> resultList = repository.getListPricePlanByOfferId(productOfferingId);
+        if (DataUtil.isNullOrEmpty(resultList)) {
+            return null;
+        } else {
+            return resultList;
         }
-
-        List<Object[]> results = repository.findCharsByOfferingIdAndCharType(productOfferingId, Const.CHAR_TYPE.PRICE_PLAN);
-        if (DataUtil.isNullOrEmpty(results)) {
-            return Collections.emptyList();
-        }
-
-        List<ProductSpecCharDTO> lst = new ArrayList<>();
-        for (Object[] row : results) {
-            Long offeringId = ((Number) row[0]).longValue();
-            Long offerCharUseId = ((Number) row[1]).longValue();
-            String offerCharUseType = row[2] != null ? row[2].toString() : null;
-
-            ProductSpecCharEntity charEntity = buildCharEntity(row);
-            ProductSpecCharValueEntity valueEntity = buildValueEntity(row);
-            String valueName = row[37] != null ? row[37].toString() : null;
-
-            ProductSpecCharValueDTO valueDto = productSpecCharValueUseMapper.toDto(valueEntity);
-            ProductSpecCharDTO dto = productSpecCharUseMapper.toDtoWithValue(
-                    charEntity, valueDto, valueName, offeringId, offerCharUseId, offerCharUseType);
-
-            lst.add(dto);
-        }
-        return lst;
     }
 
     private String str(Object val) {

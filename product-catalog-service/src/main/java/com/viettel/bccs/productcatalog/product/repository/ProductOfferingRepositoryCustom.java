@@ -23,5 +23,5 @@ public interface ProductOfferingRepositoryCustom {
 
     List<ProductOfferingEntity> findBySpecCharCodes(List<String> specCodes, String condition);
 
-    List<ProductOfferingEntity> getListVas(Long offerId);
+    List<ProductOfferingEntity> getListVas(Long offerId, Integer type);
 }

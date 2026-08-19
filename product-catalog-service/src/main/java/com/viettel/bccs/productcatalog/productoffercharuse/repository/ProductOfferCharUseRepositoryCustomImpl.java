@@ -1,15 +1,25 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.repository;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
+import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecExtensionDTO;
+import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
+import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharValueUseMapper;
+import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
+import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
 import com.viettel.bccs.productcatalog.utils.Const;
+import com.viettel.bccs.productcatalog.utils.DataUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferCharUseRepositoryCustom {
@@ -17,6 +27,9 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
     private static final int BATCH_SIZE = 100;
 
     private final EntityManager entityManager;
+    private final ProductSpecCharUseMapper productSpecCharUseMapper;
+    private final ProductSpecCharValueUseMapper productSpecCharValueUseMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     public List<Object[]> findSpecCharsByOfferingIds(List<String> offeringIds) {
@@ -201,5 +214,158 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
         }
         Object val = results.get(0);
         return Optional.ofNullable(val != null ? val.toString() : null);
+    }
+    @Override
+    public List<ProductOfferingCharacterFullDTO> getListPricePlanByOfferId(Long productOfferingId) {
+        StringBuilder strQuery = new StringBuilder();
+        List<ProductOfferingCharacterFullDTO> lst = new ArrayList<>();
+        strQuery.append(" SELECT "
+                + " c.PRODUCT_SPEC_CHAR_ID, c.NAME, c.DESCRIPTION, c.VALUE_TYPE, c.CHAR_TYPE, "
+                + " c.MIN_CARDINALITY, c.MAX_CARDINALITY, c.STATUS, c.CODE, c.PRODUCT_SPEC_CHAR_TYPE_ID, "
+                + " c.VALUE_SET_TYPE, c.RESPONSE_CLASS, c.SQL_QUERY, c.DISPLAY_OBJECT, c.VALUE_OBJECT, "
+                + " c.SOLR_QUERY, c.SOLR_CORE, c.SOLR_SCHEMA, c.DATA_TYPE, c.WS_WSDL, "
+                + " c.TEMPLATE_REQUEST, c.VALIDATE_PATTERN, c.EXT_DATA, c.NOTE, "
+                + " d.PRODUCT_SPEC_CHAR_VALUE_ID, d.PRODUCT_SPEC_CHAR_ID, d.VALUE_TYPE, d.IS_DEFAULT, d.VALUE, "
+                + " d.UNIT_OF_MEASURE, d.VALUE_FROM, d.VALUE_TO, d.RANGE_INTERVAL, d.STATUS, "
+                + " d.NAME, d.SPECIFIC_VALUE, d.NOTE ");
+        strQuery.append(" FROM   product_spec_char_use a, product_offering b, product_spec_char c,  product_spec_Char_value d ");
+        strQuery.append(" WHERE      1= 1  ");
+        strQuery.append(" AND b.product_offering_id = :productOfferingId    ");
+        strQuery.append(" AND a.product_spec_id = b.product_spec_id    ");
+        strQuery.append(" AND a.status ='1'   ");
+        strQuery.append(" AND b.status ='1'   ");
+        strQuery.append(" AND c.status ='1'    ");
+        strQuery.append(" AND d.status ='1'    ");
+        strQuery.append(" AND a.product_spec_char_id = c.product_spec_char_id    ");
+        strQuery.append(" AND a.product_spec_Char_value_id = d.product_spec_char_value_id  (+)  ");
+        strQuery.append(" AND c.char_type = :charType   ");
+        strQuery.append(" and a.product_spec_char_id not in (   ");
+        strQuery.append(" SELECT   a.product_spec_char_id ");
+        strQuery.append(" FROM   product_offer_char_use a ");
+        strQuery.append(" WHERE 1 = 1 ");
+        strQuery.append(" AND a.product_offering_id = :productOfferingId ");
+        strQuery.append(" AND a.status = '1') ");
+
+
+        Query query = entityManager.createNativeQuery(strQuery.toString());
+        query.setParameter("productOfferingId", productOfferingId);
+        query.setParameter("charType", Const.CHAR_TYPE.PRICE_PLAN);
+
+        List<Object[]> result = query.getResultList();
+        for (Object[] temp : result) {
+            ProductSpecCharEntity productSpecChar = buildCharEntity(temp);
+            ProductSpecCharValueEntity productSpecCharValue = buildValueEntity(temp);
+            ProductOfferingCharacterFullDTO productOfferingCharacterFullDTO = new ProductOfferingCharacterFullDTO();
+            productOfferingCharacterFullDTO.setProductOfferingId(productOfferingId);
+            productOfferingCharacterFullDTO.setProductSpecCharDTO(productSpecCharUseMapper.toDto(productSpecChar));
+            productOfferingCharacterFullDTO.setProductSpecCharValueDTO(productSpecCharValueUseMapper.toDto(productSpecCharValue));
+            lst.add(productOfferingCharacterFullDTO);
+        }
+
+        strQuery.setLength(0);
+        strQuery.append(" SELECT   c, d ,"
+                + " ( select offer.productOfferTypeId from ProductOfferingEntity offer where offer.productOfferingId = a.productOfferingId ) as offerType "
+                + "  , a.specificValue ");
+        strQuery.append(" FROM   ProductOfferCharUseEntity a,ProductSpecCharEntity c,  ProductSpecCharValueEntity d ");
+        strQuery.append(" WHERE    1=1 ");
+        strQuery.append(" AND a.productOfferingId = :productOfferingId ");
+        strQuery.append(" AND a.status = '1' ");
+
+        strQuery.append(" AND c.status = '1' ");
+        strQuery.append(" AND d.status = '1' ");
+        strQuery.append(" AND a.type IN ('1', '2') ");
+        strQuery.append(" AND a.productSpecCharId = c.productSpecCharId    ");
+        strQuery.append(" AND a.productSpecCharValueId = d.productSpecCharValueId    ");
+        strQuery.append(" AND c.productSpecCharId = d.productSpecCharId    ");
+        strQuery.append(" AND c.charType = :charType   ");
+        query = entityManager.createQuery(strQuery.toString());
+        query.setParameter("productOfferingId", productOfferingId);
+        query.setParameter("charType", Const.CHAR_TYPE.PRICE_PLAN);
+        result = query.getResultList();
+        for (Object[] temp : result) {
+            ProductSpecCharValueEntity productSpecCharValue = (ProductSpecCharValueEntity) temp[1];
+            if (!(productSpecCharValue != null && Const.STATUS.INACTIVE.equals(productSpecCharValue.getStatus()))) {
+                ProductSpecCharEntity productSpecChar = (ProductSpecCharEntity) temp[0];
+                ProductOfferingCharacterFullDTO productOfferingCharacterFullDTO = new ProductOfferingCharacterFullDTO();
+                productOfferingCharacterFullDTO.setProductOfferingId(productOfferingId);
+                productOfferingCharacterFullDTO.setProductSpecCharDTO(productSpecCharUseMapper.toDto(productSpecChar));
+                productOfferingCharacterFullDTO.setProductSpecCharValueDTO(productSpecCharValueUseMapper.toDto(productSpecCharValue));
+                Long productOfferTypeId = DataUtil.safeToLong(temp[2], null);
+                if (DataUtil.safeEqual(productOfferTypeId, Const.SPEC_CHAR_TYPE.OFFERING)) {
+                    String specificValue = DataUtil.safeToString(temp[3]);
+                    if (!DataUtil.isNullOrEmpty(specificValue)) {
+                        try {
+                            ProductSpecExtensionDTO productSpecExtensionDTO = objectMapper.readValue(specificValue, ProductSpecExtensionDTO.class);
+                            if (productSpecExtensionDTO != null) {
+                                productOfferingCharacterFullDTO.setExtensionType(productSpecExtensionDTO.getExtensionType());
+                                productOfferingCharacterFullDTO.setExtensionValue(productSpecExtensionDTO.getExtensionValue());
+                            }
+                        } catch (Exception e) {
+                            log.error("Parse specific_value failed for productOfferingId {}: {}", productOfferingId, specificValue, e);
+                        }
+
+                    }
+
+                }
+                lst.add(productOfferingCharacterFullDTO);
+            }
+
+        }
+        return lst;
+    }
+
+    private ProductSpecCharEntity buildCharEntity(Object[] row) {
+        return ProductSpecCharEntity.builder()
+                .productSpecCharId(row[0] != null ? ((Number) row[0]).longValue() : null)
+                .name(str(row[1]))
+                .description(str(row[2]))
+                .valueType(str(row[3]))
+                .charType(str(row[4]))
+                .minCardinality(row[5] != null ? ((Number) row[5]).longValue() : null)
+                .maxCardinality(row[6] != null ? ((Number) row[6]).longValue() : null)
+                .status(str(row[7]))
+                .code(str(row[8]))
+                .productSpecCharTypeId(str(row[9]))
+                .valueSetType(row[10] != null ? ((Number) row[10]).longValue() : null)
+                .responseClass(str(row[11]))
+                .sqlQuery(str(row[12]))
+                .displayObject(str(row[13]))
+                .valueObject(str(row[14]))
+                .solrQuery(str(row[15]))
+                .solrCore(str(row[16]))
+                .solrSchema(str(row[17]))
+                .dataType(str(row[18]))
+                .wsWsdl(str(row[19]))
+                .templateRequest(str(row[20]))
+                .validatePattern(str(row[21]))
+                .extData(str(row[22]))
+                .note(str(row[23]))
+                .build();
+    }
+
+    private ProductSpecCharValueEntity buildValueEntity(Object[] row) {
+        // Outer join d.product_spec_char_value_id (+) — khi miss (value_id null) trả về null entity
+        if (row.length <= 24 || row[24] == null) {
+            return null;
+        }
+        return ProductSpecCharValueEntity.builder()
+                .productSpecCharValueId(((Number) row[24]).longValue())
+                .productSpecCharId(row[25] != null ? ((Number) row[25]).longValue() : null)
+                .valueType(str(row[26]))
+                .isDefault(row[27] != null ? ((Number) row[27]).longValue() : null)
+                .value(str(row[28]))
+                .unitOfMeasure(str(row[29]))
+                .valueFrom(str(row[30]))
+                .valueTo(str(row[31]))
+                .rangeInterval(str(row[32]))
+                .status(str(row[33]))
+                .name(str(row[34]))
+                .specificValue(str(row[35]))
+                .note(str(row[36]))
+                .build();
+    }
+
+    private String str(Object val) {
+        return val != null ? val.toString() : null;
     }
 }

@@ -8,12 +8,9 @@ import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
 import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
-import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
-import com.viettel.bccs.productcatalog.productoffertype.repository.ProductOfferTypeRepository;
 import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
-import com.viettel.bccs.productcatalog.telecomservice.repository.TelecomServiceRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +22,14 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit test cho {@link ProductOfferingService#getListVas(Long)}, viet lai theo dung logic
+ * Unit test cho {@link ProductOfferingService#getListVas(Long, Integer)}, viet lai theo dung logic
  * ProductOfferingServiceImpl.getListVas cua he mono cu (map 1:1), chi khac o nguon cau hinh
  * nhom loai tru (OptionSet thay cho file properties) va co che cache (@Cacheable thay RAM+Jedis).
  * Khong dung DB that — mock repository + 3 service cross-feature.
@@ -49,10 +47,6 @@ class ProductOfferingServiceTest {
     private OptionSetValueService optionSetValueService;
     @Mock
     private ProductSpecCharService productSpecCharService;
-    @Mock
-    private TelecomServiceRepository telecomServiceRepository;
-    @Mock
-    private ProductOfferTypeRepository productOfferTypeRepository;
 
     private ProductOfferingService service;
 
@@ -65,17 +59,15 @@ class ProductOfferingServiceTest {
                 productOfferCharUseService,
                 optionSetValueService,
                 productSpecCharService,
-                new ProductSpecCharUseMapper(),
-                telecomServiceRepository,
-                productOfferTypeRepository);
+                new ProductSpecCharUseMapper());
     }
 
     @Test
     void getListVas_repositoryReturnsEmpty_returnsNull() {
         // Map 1:1 code cu: DataUtil.isNullOrEmpty(lst) -> return null (KHONG phai list rong)
-        when(productOfferingRepository.getListVas(100L)).thenReturn(List.of());
+        when(productOfferingRepository.getListVas(100L, null)).thenReturn(List.of());
 
-        assertThat(service.getListVas(100L)).isNull();
+        assertThat(service.getListVas(100L, null)).isNull();
     }
 
     @Test
@@ -83,7 +75,7 @@ class ProductOfferingServiceTest {
         Long mainOfferId = 100L;
         Long vasId = 10L;
 
-        when(productOfferingRepository.getListVas(mainOfferId))
+        when(productOfferingRepository.getListVas(mainOfferId, null))
                 .thenReturn(List.of(offering(vasId, "VAS1", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
 
         when(productOfferRelationService.findByMainOfferId(mainOfferId))
@@ -92,7 +84,7 @@ class ProductOfferingServiceTest {
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
         when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
-        List<ProductOfferingDTO> result = service.getListVas(mainOfferId);
+        List<ProductOfferingDTO> result = service.getListVas(mainOfferId, null);
 
         assertThat(result).hasSize(1);
         ProductOfferingDTO dto = result.get(0);
@@ -107,7 +99,7 @@ class ProductOfferingServiceTest {
         Long mainOfferId = 100L;
         Long vasId = 10L;
 
-        when(productOfferingRepository.getListVas(mainOfferId))
+        when(productOfferingRepository.getListVas(mainOfferId, null))
                 .thenReturn(List.of(offering(vasId, "VAS1", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
 
         ProductOfferRelationResponse wrongTypeRelation = new ProductOfferRelationResponse(
@@ -117,7 +109,7 @@ class ProductOfferingServiceTest {
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
         when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
-        List<ProductOfferingDTO> result = service.getListVas(mainOfferId);
+        List<ProductOfferingDTO> result = service.getListVas(mainOfferId, null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getLstProductOfferRelations()).isNull();
@@ -126,7 +118,7 @@ class ProductOfferingServiceTest {
     @Test
     void getListVas_sameExclusiveGroup_shareTypeIndex_andUngroupedVasEachGetOwnIndex() {
         Long mainOfferId = 100L;
-        when(productOfferingRepository.getListVas(mainOfferId)).thenReturn(List.of(
+        when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
                 offering(10L, "GPRS0", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
                 offering(11L, "GPRS5", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
                 offering(12L, "STANDALONE_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
@@ -139,7 +131,7 @@ class ProductOfferingServiceTest {
                 groupRow("PRE_GPRS", "GPRS5")
         ));
 
-        List<ProductOfferingDTO> result = service.getListVas(mainOfferId);
+        List<ProductOfferingDTO> result = service.getListVas(mainOfferId, null);
 
         Integer indexA = typeIndexOf(result, 10L);
         Integer indexB = typeIndexOf(result, 11L);
@@ -163,7 +155,7 @@ class ProductOfferingServiceTest {
     @Test
     void getListVas_sameCodeInBothPreAndPostBbGroup_disambiguatedBySubType() {
         Long mainOfferId = 100L;
-        when(productOfferingRepository.getListVas(mainOfferId)).thenReturn(List.of(
+        when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
                 offering(10L, "BBMAIL", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
                 offering(11L, "BBMAIL", Const.STATUS.ACTIVE, Const.SUB_TYPE.POST)));
 
@@ -174,7 +166,7 @@ class ProductOfferingServiceTest {
                 groupRow("POS_BB", "BBMAIL")
         ));
 
-        List<ProductOfferingDTO> result = service.getListVas(mainOfferId);
+        List<ProductOfferingDTO> result = service.getListVas(mainOfferId, null);
 
         Integer indexPre = typeIndexOf(result, 10L);
         Integer indexPost = typeIndexOf(result, 11L);
@@ -213,56 +205,49 @@ class ProductOfferingServiceTest {
     }
 
     @Test
-    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_telServiceIdNotExist_throwsBusinessException() {
-        when(telecomServiceRepository.existsById(1L)).thenReturn(false);
+    void getListVas_multipleOffers_batchesSpecCharLookupInOneCall() {
+        Long mainOfferId = 100L;
+        when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
+                offering(10L, "VAS_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
+                offering(11L, "VAS_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
+                offering(12L, "VAS_C", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+        when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of());
+        when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
+        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.POST, null))
-                .isInstanceOf(BusinessException.class)
-                .extracting(ex -> ((BusinessException) ex).getCode())
-                .isEqualTo("BCCS-CATALOG-PRODUCT-0006");
+        service.getListVas(mainOfferId, null);
+
+        // Fix N+1: truoc day goi 1 lan/VAS (3 lan cho 3 phan tu), nay phai gom het thanh 1 lan
+        // duy nhat truoc vong lap, dung dung kha nang batch da co san cua method nay.
+        verify(productOfferCharUseService, times(1)).getProductSpecCharByOfferingIds(anyList());
     }
 
     @Test
-    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_subTypeNotInKnownSet_throwsBusinessException() {
-        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
+    void getListVas_multipleOffers_fetchesExclusiveGroupOnce() {
+        Long mainOfferId = 100L;
+        when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
+                offering(10L, "VAS_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
+                offering(11L, "VAS_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+        when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of());
+        when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
+        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, "9", null))
-                .isInstanceOf(BusinessException.class)
-                .extracting(ex -> ((BusinessException) ex).getCode())
-                .isEqualTo("BCCS-CATALOG-PRODUCT-0006");
+        service.getListVas(mainOfferId, null);
+
+        // Truoc day getVasExcludeGroup tu query lai findByOptionSetCode cho MOI 1 trong 8 nhom
+        // loai tru (PRE_GPRS, POS_GPRS, ...) -> 8 lan goi giong het nhau. Phai gom ve 1 lan.
+        verify(optionSetValueService, times(1)).findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP);
     }
 
     @Test
-    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_productOfferTypeIdNotExist_throwsBusinessException() {
-        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
-        when(productOfferTypeRepository.existsById(99L)).thenReturn(false);
+    void getListVas_typeProvided_passesThroughToRepository() {
+        // Loc theo type nam o tang SQL (khong test duoc bang Mockito) -- unit test nay chi xac
+        // nhan tham so type duoc truyen xuyen suot dung xuong repository, khong bi mat/doi gia tri.
+        Long mainOfferId = 100L;
+        when(productOfferingRepository.getListVas(mainOfferId, 1)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.POST, 99L))
-                .isInstanceOf(BusinessException.class)
-                .extracting(ex -> ((BusinessException) ex).getCode())
-                .isEqualTo("BCCS-CATALOG-PRODUCT-0006");
-    }
+        assertThat(service.getListVas(mainOfferId, 1)).isNull();
 
-    @Test
-    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_validInput_returnsActiveOfferingsOnly() {
-        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
-        when(productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(1L, Const.SUB_TYPE.POST, null, true))
-                .thenReturn(List.of(offering(100L, "CODE_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.POST)));
-
-        List<ProductOfferingDTO> result = service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.POST, null);
-
-        assertThat(result).extracting(ProductOfferingDTO::getCode).containsExactly("CODE_A");
-    }
-
-    @Test
-    void getByTelServiceIdAndSubTypeAndProductOfferTypeId_productOfferTypeIdProvidedAndValid_delegatesWithFilter() {
-        when(telecomServiceRepository.existsById(1L)).thenReturn(true);
-        when(productOfferTypeRepository.existsById(5L)).thenReturn(true);
-        when(productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(1L, Const.SUB_TYPE.PRE, 5L, true))
-                .thenReturn(List.of(offering(200L, "CODE_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
-
-        List<ProductOfferingDTO> result = service.getByTelServiceIdAndSubTypeAndProductOfferTypeId(1L, Const.SUB_TYPE.PRE, 5L);
-
-        assertThat(result).extracting(ProductOfferingDTO::getCode).containsExactly("CODE_B");
+        verify(productOfferingRepository, times(1)).getListVas(mainOfferId, 1);
     }
 }

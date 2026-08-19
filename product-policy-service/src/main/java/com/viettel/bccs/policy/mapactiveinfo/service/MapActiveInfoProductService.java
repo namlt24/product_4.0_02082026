@@ -19,13 +19,11 @@ import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.MessageUtil;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
-import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,8 +72,6 @@ public class MapActiveInfoProductService {
         this.mapActiveInfoValidateService = mapActiveInfoValidateService;
         this.staffResolveHelper = staffResolveHelper;
     }
-    // ============== getProductCodeByMapActiveInfo ==============
-
 
     public List<ProductOfferingDTO> getProductCodeByMapActiveInfo(GetProductCodeByMapActiveInfoRequest request) {
         log.info("[getProductCodeByMapActiveInfo] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
@@ -85,9 +81,7 @@ public class MapActiveInfoProductService {
 
         List<ProductOfferingDTO> products = fetchOfferingsWithSpec(request);
 
-        // roleMap không bắt buộc — nếu không truyền (values rỗng), bỏ qua bước lọc theo quyền
-        // nhân viên, trả về nguyên danh sách sản phẩm đã khớp các điều kiện khác. Nếu có roleMap,
-        // giữ đúng hành vi lọc theo quyền như cũ.
+
         if (!DataUtil.isNullOrEmpty(request.getRoleMap().getValues())) {
             MapActiveInfoProductVsaleRoles vsaleRoles = loadMapActiveInfoProductVsaleRoles();
 
@@ -121,14 +115,7 @@ public class MapActiveInfoProductService {
                 request.getTelecomServiceId(), request.getRoleMap());
     }
 
-    /**
-     * Validate các tham số bắt buộc dùng chung giữa getProductCodeByMapActiveInfo và getProductCodeNew:
-     * staffCode/payType/actionCode/telecomServiceId không rỗng, độ dài tối đa của từng trường.
-     * roleMap KHÔNG còn bắt buộc (theo yêu cầu bỏ ràng buộc BCCS-POLICY-MAPACTIVE-0010) — nếu không
-     * truyền, validateRequest(...) đã default sẵn về RequiredRoleMap rỗng (values=[]) trước khi gọi
-     * hàm này, nên roleMap ở đây luôn khác null. Values rỗng đồng nghĩa "không có quyền nào" —
-     * RequiredRoleMap.hasRole/hasListRole đã null-safe với values rỗng, không cần validate thêm.
-     */
+
     private void validateCommonProductCodeParams(String staffCode, String payType, String actionCode,
                                                   String telecomServiceId, RequiredRoleMap roleMap) {
         validateMissingParam(staffCode, "BCCS-POLICY-MAPACTIVE-0006");
@@ -374,7 +361,6 @@ public class MapActiveInfoProductService {
         }
     }
 
-    // ============== getProductCodeNew ==============
 
     public List<ProductOfferingDTO> getProductCode(GetProductCodeRequest request) {
         log.info("[getProductCodeNew] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",

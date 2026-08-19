@@ -41,7 +41,7 @@ public class MapActiveInfoProductController {
                             examples = @ExampleObject(name = "request", value = PRODUCT_CODE_BY_MAP_ACTIVE_INFO_REQUEST_EXAMPLE))))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                content = @Content(schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(name = "success", value = PRODUCT_CODE_LIST_EXAMPLE)))
     })
     public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCodeByMapActiveInfo(

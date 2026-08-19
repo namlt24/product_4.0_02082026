@@ -14,10 +14,8 @@ import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCha
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
-import com.viettel.bccs.productcatalog.productoffertype.repository.ProductOfferTypeRepository;
 import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
 import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
-import com.viettel.bccs.productcatalog.telecomservice.repository.TelecomServiceRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
@@ -43,8 +41,6 @@ public class ProductOfferingService {
     private final OptionSetValueService optionSetValueService;
     private final ProductSpecCharService productSpecCharService;
     private final ProductSpecCharUseMapper productSpecCharUseMapper;
-    private final TelecomServiceRepository telecomServiceRepository;
-    private final ProductOfferTypeRepository productOfferTypeRepository;
 
     @Cacheable(value = "productOfferingCache", key = "'ID:' + #productOfferingId")
     public ProductOfferingDTO findById(Long productOfferingId) {
@@ -78,33 +74,49 @@ public class ProductOfferingService {
         return findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, true);
     }
 
-    /**
-     * API cho hệ thống thứ 3 lấy danh sách mã mặt hàng đang active theo dịch vụ + loại thuê bao
-     * (bắt buộc), tuỳ chọn lọc thêm theo loại mặt hàng. Validate telServiceId/productOfferTypeId tồn
-     * tại thật trong TELECOM_SERVICE/PRODUCT_OFFER_TYPE, subType thuộc {@link Const.SUB_TYPE} — sai
-     * thì báo lỗi rõ field nào không hợp lệ (đúng yêu cầu, không dùng message chung chung).
-     */
-    @Cacheable(value = "productOfferingCache", key = "'LIST_PRODUCT_CODE:' + #telServiceId + ':' + '' + #subType + ':' + #productOfferTypeId")
-    public List<ProductOfferingDTO> getByTelServiceIdAndSubTypeAndProductOfferTypeId(Long telServiceId, String subType, Long productOfferTypeId) {
-        if (!telecomServiceRepository.existsById(telServiceId)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0006", "Dịch vụ không hợp lệ");
-        }
-        if (!Const.SUB_TYPE.PRE.equals(subType) && !Const.SUB_TYPE.POST.equals(subType)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0006", "Loại thuê bao không hợp lệ");
-        }
-        if (productOfferTypeId != null && !productOfferTypeRepository.existsById(productOfferTypeId)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0006", "Loại mặt hàng không hợp lệ");
-        }
-        return findByTelecomSubTypeOfferTypeCheckProductStatus(telServiceId, subType, productOfferTypeId, true);
-    }
-
     public List<ProductOfferingDTO> findByPayTypeWithSpec(String telecomServiceId, String payType, String productOfferTypeId, List<FilterRequest> listProductSpec) {
         if (DataUtil.isAnyNull(payType, productOfferTypeId)) {
             throw new BusinessException("BCCS-CATALOG-PRODUCT-0002", "payType and productOfferTypeId are required");
         }
+        validateOperators(listProductSpec);
         return productOfferingRepository.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId, listProductSpec).stream()
                 .map(productOfferingMapper::toDto)
                 .toList();
+    }
+
+    private void validateOperators(List<FilterRequest> listProductSpec) {
+        if (DataUtil.isNullOrEmpty(listProductSpec)) {
+            return;
+        }
+        for (FilterRequest filterRequest : listProductSpec) {
+            validateProperty(filterRequest.getProperty());
+            FilterRequest.Operator operator = filterRequest.getOperator();
+            if (operator == null) {
+                continue;
+            }
+            boolean supported = false;
+            for (FilterRequest.Operator candidate : FilterRequest.Operator.values()) {
+                if (candidate == operator) {
+                    supported = true;
+                    break;
+                }
+            }
+            if (!supported) {
+                throw new BusinessException("BCCS-CATALOG-PRODUCT-0006",
+                        "operator " + operator + " không hợp lệ, chỉ chấp nhận một trong: "
+                                + DataUtil.safeToString(FilterRequest.Operator.values()));
+            }
+        }
+    }
+
+    private void validateProperty(String property) {
+        if (DataUtil.isNullOrEmpty(property)) {
+            return;
+        }
+        if (!property.matches("^[A-Za-z0-9_-]+$")) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0007",
+                    "property không hợp lệ, chỉ gồm chữ, số, '_' hoặc '-': " + property);
+        }
     }
 
     @Cacheable(value = "productOfferingCache", key = "'CODE_OR_ID:' + #proOfferId + ':' + #prodOfferCode + ':' + #status")
@@ -166,9 +178,9 @@ public class ProductOfferingService {
                 .toList();
     }
 
-    @Cacheable(value = "productOfferingCache", key = "'LIST_VAS:' + #offerId")
-    public List<ProductOfferingDTO> getListVas(Long offerId) {
-        return getListVasCore(offerId);
+    @Cacheable(value = "productOfferingCache", key = "'LIST_VAS:' + #offerId + ':' + #type")
+    public List<ProductOfferingDTO> getListVas(Long offerId, Integer type) {
+        return getListVasCore(offerId, type);
     }
 
     /**
@@ -202,10 +214,9 @@ public class ProductOfferingService {
     }
 
 
-    private List<ProductOfferingDTO> getListVasCore(Long offerId) {
-        // productOfferingServiceImpl.java:3621 — repository.getListVas(offerId) da doi chieu voi
-        // source that va cap nhat trong ProductOfferingRepositoryCustomImpl.getListVas(...).
-        List<ProductOfferingDTO> lst = productOfferingRepository.getListVas(offerId).stream()
+    private List<ProductOfferingDTO> getListVasCore(Long offerId, Integer type) {
+
+        List<ProductOfferingDTO> lst = productOfferingRepository.getListVas(offerId, type).stream()
                 .map(productOfferingMapper::toDto)
                 .collect(Collectors.toCollection(ArrayList::new));
         if (DataUtil.isNullOrEmpty(lst)) {
@@ -213,24 +224,29 @@ public class ProductOfferingService {
         }
 
         List<ProductOfferRelationResponse> mainOfferRelations = productOfferRelationService.findByMainOfferId(offerId);
+        // Gom relation theo relationOfferId 1 lan duy nhat (loc VAS truoc khi group, giu dung
+        // dieu kien relationTypeId==VAS nhu code cu) - tranh quet lai toan bo mainOfferRelations
+        // cho MOI phan tu cua lst (O(n*m) -> O(n+m)).
+        Map<Long, List<ProductOfferRelationResponse>> relationsByOfferId = mainOfferRelations.stream()
+                .filter(x -> DataUtil.safeEqual(x.relationTypeId(), Const.RELATION_TYPE.VAS))
+                .collect(Collectors.groupingBy(ProductOfferRelationResponse::relationOfferId));
+
+        // Batch 1 lan duy nhat cho ca lst (method nay da duoc thiet ke de nhan ca list va tu
+        // chia batch 100 id/query - truoc day bi goi rieng le tung id trong vong lap ben duoi,
+        // thanh N+1 query khong can thiet).
+        List<String> offeringIds = lst.stream()
+                .map(dto -> String.valueOf(dto.getProductOfferingId()))
+                .toList();
+        Map<Long, List<ProductSpecCharDTO>> specCharsByOfferingId = productOfferCharUseService.getProductSpecCharByOfferingIds(offeringIds);
 
         for (ProductOfferingDTO productOfferingDTO : lst) {
-            // (a) lay thuoc tinh cua VAS. Code cu goi productOfferCharUseService.getProductOfferCharacter(id)
-            // rieng le cho tung VAS trong vong lap (N+1) — method nay khong con trong repo hien tai,
-            // dung tam getProductSpecCharByOfferingIds(List.of(id)) goi tung VAS 1 de giu dung cau truc N+1 cua code cu.
-            List<ProductSpecCharDTO> lstAtt = productOfferCharUseService
-                    .getProductSpecCharByOfferingIds(List.of(String.valueOf(productOfferingDTO.getProductOfferingId())))
-                    .getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
+
+            List<ProductSpecCharDTO> lstAtt = specCharsByOfferingId.getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
             if (!DataUtil.isNullOrEmpty(lstAtt)) {
                 productOfferingDTO.setLstProductSpecChars(lstAtt);
             }
 
-            // (b) lay thong tin quan he — loc lai tu mainOfferRelations da lay 1 lan o tren,
-            // dung 2 dieu kien y het code cu: relationOfferId == VAS dang xet, va relationTypeId == VAS
-            List<ProductOfferRelationResponse> lstTemp = mainOfferRelations.stream()
-                    .filter(x -> DataUtil.safeEqual(x.relationOfferId(), productOfferingDTO.getProductOfferingId()))
-                    .filter(x -> DataUtil.safeEqual(x.relationTypeId(), Const.RELATION_TYPE.VAS))
-                    .toList();
+            List<ProductOfferRelationResponse> lstTemp = relationsByOfferId.getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
             if (!DataUtil.isNullOrEmpty(lstTemp)) {
                 productOfferingDTO.setLstProductOfferRelations(lstTemp);
             }
@@ -240,17 +256,20 @@ public class ProductOfferingService {
         // dua theo Product 1. THAY THE nguon du lieu: truoc doc file vascode_config.properties
         // (getVasExclude), nay lay tu OptionSet.CODE=VAS_EXCLUSIVE_GROUP (getVasExcludeGroup).
         if (!DataUtil.isNullOrEmpty(lst)) {
-            List<String> PRE_GPRS = getVasExcludeGroup("PRE_GPRS");
-            List<String> POS_GPRS = getVasExcludeGroup("POS_GPRS");
-            List<String> PRE_G1 = getVasExcludeGroup("PRE_G1");
-            List<String> POS_G1 = getVasExcludeGroup("POS_G1");
-            List<String> POS_AP_BH = getVasExcludeGroup("POS_AP_BH");
-            List<String> POS_BB = getVasExcludeGroup("POS_BB");
-            List<String> PRE_BB = getVasExcludeGroup("PRE_BB");
+            // Fetch 1 lan duy nhat - truoc day getVasExcludeGroup tu query lai findByOptionSetCode
+            // (khong cache) cho MOI 1 trong 8 nhom ben duoi, ra 8 query DB giong het nhau.
+            List<OptionSetValueResponse> vasExclusiveGroups = optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP);
+            List<String> PRE_GPRS = getVasExcludeGroup(vasExclusiveGroups, "PRE_GPRS");
+            List<String> POS_GPRS = getVasExcludeGroup(vasExclusiveGroups, "POS_GPRS");
+            List<String> PRE_G1 = getVasExcludeGroup(vasExclusiveGroups, "PRE_G1");
+            List<String> POS_G1 = getVasExcludeGroup(vasExclusiveGroups, "POS_G1");
+            List<String> POS_AP_BH = getVasExcludeGroup(vasExclusiveGroups, "POS_AP_BH");
+            List<String> POS_BB = getVasExcludeGroup(vasExclusiveGroups, "POS_BB");
+            List<String> PRE_BB = getVasExcludeGroup(vasExclusiveGroups, "PRE_BB");
             // code cu dat ten bien la "PRE_IPP" nhung thuc chat goi getVasExclude("IPP", "POS")
             // -> doc du lieu tu property key POS_IPP_* (da xac nhan qua doi chieu source that),
             // nen o day dat dung ten nhom theo ban chat du lieu la POS_IPP.
-            List<String> POS_IPP = getVasExcludeGroup("POS_IPP");
+            List<String> POS_IPP = getVasExcludeGroup(vasExclusiveGroups, "POS_IPP");
 
             List<List<ProductOfferingDTO>> standList = new ArrayList<>();
             List<ProductOfferingDTO> checkPreGPRS = new ArrayList<>();
@@ -348,8 +367,8 @@ public class ProductOfferingService {
      * tu OPTION_SET.CODE=VAS_EXCLUSIVE_GROUP, OPTION_SET_VALUE.NAME=groupName,
      * OPTION_SET_VALUE.VALUE=ma VAS.
      */
-    private List<String> getVasExcludeGroup(String groupName) {
-        return optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP).stream()
+    private List<String> getVasExcludeGroup(List<OptionSetValueResponse> allGroups, String groupName) {
+        return allGroups.stream()
                 .filter(v -> groupName.equals(v.name()) && v.value() != null)
                 .map(OptionSetValueResponse::value)
                 .toList();

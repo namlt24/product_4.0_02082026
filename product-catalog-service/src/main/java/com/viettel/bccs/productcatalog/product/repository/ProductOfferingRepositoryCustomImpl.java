@@ -287,7 +287,7 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
     }
 
     @Override
-    public List<ProductOfferingEntity> getListVas(Long offerId) {
+    public List<ProductOfferingEntity> getListVas(Long offerId, Integer type) {
         StringBuilder strQuery = new StringBuilder();
         strQuery.append(" SELECT * FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering ")
                 .append(" WHERE status = '1' AND product_offering_id IN ( ");
@@ -302,7 +302,31 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
         strQuery.append(" AND b.product_spec_char_id = c.product_spec_char_id ");
         strQuery.append(" AND b.product_spec_char_value_id = d.product_spec_char_value_id ");
 
-        strQuery.append(" AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1' ) ");
+        strQuery.append(" AND a.status = '1' AND b.status = '1' AND c.status = '1' AND d.status = '1' ");
+
+        // type=1: chi lay VAS ma quan he (product_offer_relation) co thuoc tinh quan he
+        // (product_offer_relation_detail) code=IS_CONNECTED gia tri 1, VA khong co thuoc tinh
+        // code=VAS_DATA. Thuoc tinh nay gan tren BAN GHI QUAN HE, khong phai tren san pham VAS.
+        if (Integer.valueOf(1).equals(type)) {
+            strQuery.append(" AND EXISTS (SELECT 1 FROM ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_relation_detail rb, ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char rc, ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value rd ")
+                    .append(" WHERE rb.product_offer_relation_id = a.product_offer_relation_id ")
+                    .append(" AND rb.product_spec_char_id = rc.product_spec_char_id ")
+                    .append(" AND rb.product_spec_char_value_id = rd.product_spec_char_value_id ")
+                    .append(" AND rb.status = '1' AND rc.status = '1' AND rd.status = '1' ")
+                    .append(" AND rc.code = 'IS_CONNECTED' AND rd.value = '1') ");
+            strQuery.append(" AND NOT EXISTS (SELECT 1 FROM ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_relation_detail nb, ")
+                    .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char nc ")
+                    .append(" WHERE nb.product_offer_relation_id = a.product_offer_relation_id ")
+                    .append(" AND nb.product_spec_char_id = nc.product_spec_char_id ")
+                    .append(" AND nb.status = '1' AND nc.status = '1' ")
+                    .append(" AND nc.code = 'VAS_DATA') ");
+        }
+
+        strQuery.append(" ) ");
 
         Query query = entityManager.createNativeQuery(strQuery.toString(), ProductOfferingEntity.class);
         query.setParameter("offerId", offerId);

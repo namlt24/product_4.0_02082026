@@ -27,8 +27,16 @@ public class Const {
 
     public static final class STATUS {
         public static final String ACTIVE = "1";
+        public static final String INACTIVE = "0";
 
         private STATUS() {}
+    }
+
+    public static final class SPEC_CHAR_TYPE {
+        /** Loại sản phẩm price plan (product_offer_type_id=200) — xác định qua đối chiếu dữ liệu thật. */
+        public final static Long OFFERING = 200L;
+
+        private SPEC_CHAR_TYPE() {}
     }
 
     public static final class CONDITION {

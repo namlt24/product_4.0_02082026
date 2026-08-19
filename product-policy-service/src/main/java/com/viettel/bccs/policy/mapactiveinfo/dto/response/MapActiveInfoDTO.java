@@ -771,6 +771,11 @@ public class MapActiveInfoDTO {
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$", message = "subGroupCode không được chứa ký tự điều khiển")
     private String subGroupCode;
 
+    @Schema(description = "ID nhân viên", example = "1")
+    @Min(value = 0, message = "staffId phải >= 0")
+    @Max(value = 9999999999L, message = "staffId vượt quá độ dài cột (precision 10)")
+    private Long staffId;
+
     public void setStationCodes(String stationCodes) {
         if (!DataUtil.isNullOrEmpty(stationCodes)) {
             this.stationCodes = stationCodes.trim().replaceAll("\\s+", "");

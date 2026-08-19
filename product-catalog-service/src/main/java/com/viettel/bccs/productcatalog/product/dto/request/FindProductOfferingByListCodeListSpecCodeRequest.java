@@ -12,10 +12,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.util.List;
 
-/**
- * Request cho API findProductOfferingByListCodeListSpecCode — migrate từ mono:
- * ExternalServiceForMbccsImpl.findProductOfferingByListCodeListSpecCode.
- */
+
 @Schema(description = "Request tìm sản phẩm (product_offering) theo danh sách mã đặc tính, tuỳ chọn lọc thêm theo danh sách mã sản phẩm")
 @Data
 @Builder

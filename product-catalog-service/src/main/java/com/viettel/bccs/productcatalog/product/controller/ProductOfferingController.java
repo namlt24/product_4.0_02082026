@@ -6,6 +6,7 @@ import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
 import com.viettel.bccs.productcatalog.product.dto.request.FindProductOfferingByListCodeListSpecCodeRequest;
 import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWSRequest;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferTypeStockDTO;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
 import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
@@ -148,41 +149,6 @@ public class ProductOfferingController {
             @Max(value = 9999999999L, message = "offerTypeId vượt quá độ dài cột (precision 10)")
             Long offerTypeId) {
         return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferType(telecomServiceId, subType, offerTypeId));
-    }
-
-    @GetMapping("/getByTelServiceIdAndSubTypeAndProductOfferTypeId")
-    @Operation(
-            operationId = "getByTelServiceIdAndSubTypeAndProductOfferTypeId",
-            summary = "Lấy danh sách mã mặt hàng cho hệ thống thứ 3",
-            description = "API cung cấp cho hệ thống thứ 3 lấy danh sách mã mặt hàng (mã - tên - ID) đang active, " +
-                    "theo dịch vụ viễn thông + loại thuê bao (bắt buộc), tuỳ chọn lọc thêm theo loại mặt hàng. " +
-                    "Validate telServiceId/subType/productOfferTypeId có hợp lệ (tồn tại thật) hay không trước khi trả kết quả."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
-                            examples = @ExampleObject(name = "success", value = PRODUCT_LIST_EXAMPLE))),
-            @ApiResponse(responseCode = "400", description = "Thiếu tham số bắt buộc, hoặc telServiceId/subType/productOfferTypeId không hợp lệ")
-    })
-    public StandardResponse<List<ProductOfferingDTO>> getByTelServiceIdAndSubTypeAndProductOfferTypeId(
-            @Parameter(description = "ID dịch vụ viễn thông (TELECOM_SERVICE_ID)", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "telServiceId phải >= 1")
-            @Max(value = 9999999999L, message = "telServiceId vượt quá độ dài cột (precision 10)")
-            Long telServiceId,
-
-            @Parameter(description = "Loại thuê bao (SUB_TYPE): 1 trả sau, 2 trả trước", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "subType đúng 1 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{1}$", message = "subType chỉ gồm chữ hoặc số")
-            String subType,
-
-            @Parameter(description = "ID loại mặt hàng (PRODUCT_OFFER_TYPE_ID)", example = "1")
-            @RequestParam(required = false)
-            @Min(value = 1, message = "productOfferTypeId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferTypeId vượt quá độ dài cột (precision 10)")
-            Long productOfferTypeId) {
-        return StandardResponses.success(productOfferingService.getByTelServiceIdAndSubTypeAndProductOfferTypeId(telServiceId, subType, productOfferTypeId));
     }
 
     @GetMapping("/findByCodeOrId")
@@ -391,7 +357,7 @@ public class ProductOfferingController {
                     content = @Content(schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(name = "success", value = SPEC_CHAR_LIST_EXAMPLE)))
     })
-    public StandardResponse<List<ProductSpecCharDTO>> getListPricePlanByOfferId(
+    public StandardResponse<List<ProductOfferingCharacterFullDTO>> getListPricePlanByOfferId(
             @Parameter(description = "ID sản phẩm", example = "500001", required = true)
             @RequestParam
             @Min(value = 1, message = "productOfferingId phải >= 1")
@@ -404,7 +370,8 @@ public class ProductOfferingController {
     @Operation(
             operationId = "getListVas",
             summary = "Lấy danh sách VAS khả dụng cho 1 sản phẩm chính",
-            description = "Trả về danh sách VAS (dịch vụ giá trị gia tăng) được gán cho sản phẩm chính qua bảng quan hệ PRODUCT_OFFER_RELATION, kèm thuộc tính và thông tin quan hệ, cùng typeIndex đánh dấu nhóm VAS loại trừ lẫn nhau (cấu hình qua OptionSet VAS_EXCLUSIVE_GROUP) — VAS cùng typeIndex chỉ được chọn tối đa 1."
+            description = "Trả về danh sách VAS (dịch vụ giá trị gia tăng) được gán cho sản phẩm chính qua bảng quan hệ PRODUCT_OFFER_RELATION, kèm thuộc tính và thông tin quan hệ, cùng typeIndex đánh dấu nhóm VAS loại trừ lẫn nhau (cấu hình qua OptionSet VAS_EXCLUSIVE_GROUP) — VAS cùng typeIndex chỉ được chọn tối đa 1. " +
+                    "Không truyền type: trả nguyên danh sách như hiện tại. type=1: chỉ lấy VAS mà bản ghi quan hệ (product_offer_relation) có thuộc tính quan hệ IS_CONNECTED=1 và không có thuộc tính VAS_DATA."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Thành công",
@@ -416,8 +383,14 @@ public class ProductOfferingController {
             @RequestParam
             @Min(value = 1, message = "offerId phải >= 1")
             @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
-            Long offerId) {
-        return StandardResponses.success(productOfferingService.getListVas(offerId));
+            Long offerId,
+
+            @Parameter(description = "Loại lọc quan hệ VAS. Không truyền: giữ nguyên hành vi mặc định. 1: chỉ lấy VAS có thuộc tính quan hệ IS_CONNECTED=1 và không có thuộc tính VAS_DATA.", example = "1")
+            @RequestParam(required = false)
+            @Min(value = 1, message = "type phải >= 1")
+            @Max(value = 9, message = "type vượt quá giá trị cho phép")
+            Integer type) {
+        return StandardResponses.success(productOfferingService.getListVas(offerId, type));
     }
 
     @PostMapping("/getListStockTypeWS")

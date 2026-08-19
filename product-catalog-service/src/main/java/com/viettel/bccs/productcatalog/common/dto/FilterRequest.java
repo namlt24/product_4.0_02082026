@@ -42,7 +42,13 @@ public class FilterRequest implements Serializable {
             if (value == null || value.isBlank()) {
                 return null;
             }
-            return Operator.valueOf(value.trim());
+            String trimmed = value.trim();
+            for (Operator candidate : Operator.values()) {
+                if (candidate.name().equalsIgnoreCase(trimmed)) {
+                    return candidate;
+                }
+            }
+            return null;
         }
     }
 

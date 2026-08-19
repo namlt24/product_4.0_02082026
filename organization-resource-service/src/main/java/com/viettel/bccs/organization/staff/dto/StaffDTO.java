@@ -668,6 +668,8 @@ public class StaffDTO implements Serializable {
     private String precinct;
     @Schema(description = "Thong tin cua hang", example = "...")
     private com.viettel.bccs.organization.shop.dto.ShopDTO shop;
+    @Schema(description = "Loại kênh của nhân viên có phải kênh điểm bán hiệu lực bán hay không", example = "false")
+    private Boolean isChannelOfSalePoint;
 
     // --- Getters ---
 
@@ -1012,6 +1014,8 @@ public class StaffDTO implements Serializable {
     public void setPositionCode(String positionCode) { this.positionCode = positionCode; }
     public com.viettel.bccs.organization.shop.dto.ShopDTO getShop() { return shop; }
     public void setShop(com.viettel.bccs.organization.shop.dto.ShopDTO shop) { this.shop = shop; }
+    public Boolean getIsChannelOfSalePoint() { return isChannelOfSalePoint; }
+    public void setIsChannelOfSalePoint(Boolean isChannelOfSalePoint) { this.isChannelOfSalePoint = isChannelOfSalePoint; }
 
     @Override
     public String toString() {

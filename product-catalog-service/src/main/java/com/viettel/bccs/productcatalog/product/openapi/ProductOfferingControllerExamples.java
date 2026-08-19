@@ -114,6 +114,16 @@ public final class ProductOfferingControllerExamples {
               ]
             }""";
 
+    public static final String SUB_TYPE_BY_PRODUCT_CODE_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000007",
+              "requestId": "req-0007",
+              "timestamp": "2026-08-20T02:00:00Z",
+              "data": "1"
+            }""";
+
     public static final String STOCK_TYPE_WS_REQUEST_EXAMPLE = """
             {
               "actionCode": "00",

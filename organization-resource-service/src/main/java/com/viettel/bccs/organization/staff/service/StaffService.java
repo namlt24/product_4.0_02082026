@@ -1,6 +1,8 @@
 package com.viettel.bccs.organization.staff.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.organization.channeltype.dto.ChannelTypeDTO;
+import com.viettel.bccs.organization.channeltype.service.ChannelTypeService;
 import com.viettel.bccs.organization.client.OptionSetClient;
 import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
 import com.viettel.bccs.organization.custtype.dto.CustTypeDTO;
@@ -37,11 +39,13 @@ public class StaffService {
     private final ShopService shopService;
     private final OptionSetClient optionSetClient;
     private final CustTypeService custTypeService;
+    private final ChannelTypeService channelTypeService;
 
     public StaffService(StaffRepository staffRepository, ShopRepository shopRepository,
                         StaffMapper staffMapper, ShopMapper shopMapper,
                         @Lazy ShopService shopService,
-                        OptionSetClient optionSetClient, CustTypeService custTypeService) {
+                        OptionSetClient optionSetClient, CustTypeService custTypeService,
+                        ChannelTypeService channelTypeService) {
         this.staffRepository = staffRepository;
         this.shopRepository = shopRepository;
         this.staffMapper = staffMapper;
@@ -49,6 +53,7 @@ public class StaffService {
         this.shopService = shopService;
         this.optionSetClient = optionSetClient;
         this.custTypeService = custTypeService;
+        this.channelTypeService = channelTypeService;
     }
 
     @Cacheable(value = "staffCache", key = "'STAFF:' + #staffId")
@@ -69,6 +74,14 @@ public class StaffService {
                 .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-STAFF-0002", "Không tìm thấy nhân viên với mã: " + staffCode));
     }
 
+    @Transactional(readOnly = true)
+    public StaffDTO findActiveByStaffCodeWithChannelOfSalePoint(String staffCode) {
+        log.info("Truy vấn nhân viên active theo mã kèm cờ isChannelOfSalePoint: {}", staffCode);
+        StaffDTO dto = findActiveByStaffCode(staffCode);
+        dto.setIsChannelOfSalePoint(channelTypeService.isChannelOfSalePoint(dto.getChannelTypeId()));
+        return dto;
+    }
+
     @Cacheable(value = "staffShopFullInfo", key = "'STAFF_SHOP_FULL:' + #staffCode")
     @Transactional(readOnly = true)
     public StaffResponse getStaffShopFullInfo(String staffCode) {
@@ -84,7 +97,7 @@ public class StaffService {
                     shopRepository.findByShopIdAndStatus(dto.getShopId(), Const.STATUS.ACTIVE)
                             .orElse(null));
         }
-        return staffMapper.toResponse(dto, shopResponse);
+        return enrichStaffShopResponse(staffMapper.toResponse(dto, shopResponse), shopResponse);
     }
 
     @Cacheable(value = "staffShopFullInfo", key = "'STAFF_SHOP_FULL_BY_ID:' + #staffId")
@@ -102,7 +115,35 @@ public class StaffService {
                     shopRepository.findByShopIdAndStatus(dto.getShopId(), Const.STATUS.ACTIVE)
                             .orElse(null));
         }
-        return staffMapper.toResponse(dto, shopResponse);
+        return enrichStaffShopResponse(staffMapper.toResponse(dto, shopResponse), shopResponse);
+    }
+
+    private StaffResponse enrichStaffShopResponse(StaffResponse response, ShopResponse shopResponse) {
+        if (response == null) {
+            return null;
+        }
+        if (response.getChannelTypeId() != null) {
+            try {
+                ChannelTypeDTO channelType = channelTypeService.getActiveById(response.getChannelTypeId());
+                if (channelType != null) {
+                    response.setChannelTypeCode(channelType.getCode());
+                    response.setChannelTypeName(channelType.getName());
+                }
+            } catch (BusinessException e) {
+                log.warn("Không tìm thấy loại kênh với id: {}", response.getChannelTypeId());
+            }
+        }
+        if (shopResponse != null && shopResponse.getParentShopId() != null) {
+            response.setShopParentId(shopResponse.getParentShopId());
+            shopRepository.findByShopIdAndStatus(shopResponse.getParentShopId(), Const.STATUS.ACTIVE)
+                    .map(staffMapper::toShopResponse)
+                    .ifPresent(parentShop -> {
+                        response.setShopParentCode(parentShop.getShopCode());
+                        response.setShopParentName(parentShop.getName());
+                    });
+        }
+
+        return response;
     }
 
     @Cacheable(value = "getListStockByStaffCode", key = "'STOCKS:' + #staffCode")

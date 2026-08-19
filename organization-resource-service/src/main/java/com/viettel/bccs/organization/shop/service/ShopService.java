@@ -1,6 +1,7 @@
 package com.viettel.bccs.organization.shop.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.organization.channeltype.service.ChannelTypeService;
 import com.viettel.bccs.organization.shop.dto.ShopDTO;
 import com.viettel.bccs.organization.shop.dto.response.StockCodeResponse;
 import com.viettel.bccs.organization.shop.mapper.ShopMapper;
@@ -29,6 +30,7 @@ public class ShopService {
     private final ShopRepository shopRepository;
     private final ShopMapper shopMapper;
     private final StaffService staffService;
+    private final ChannelTypeService channelTypeService;
 
 
     @Cacheable(value = "shopCache", key = "'SHOP:' + #shopId")
@@ -47,6 +49,14 @@ public class ShopService {
         return shopRepository.findByShopCodeAndStatus(shopCode, Const.STATUS.ACTIVE)
                 .map(shopMapper::toResponse)
                 .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0002", "Không tìm thấy cửa hàng với mã: " + shopCode));
+    }
+
+    @Transactional(readOnly = true)
+    public ShopDTO getActiveByIdWithChannelOfAgent(Long shopId) {
+        log.info("Truy vấn cửa hàng active theo id kèm cờ isChannelOfAgent: {}", shopId);
+        ShopDTO dto = getActiveById(shopId);
+        dto.setIsChannelOfAgent(channelTypeService.isChannelOfAgent(dto.getChannelTypeId()));
+        return dto;
     }
 
 
@@ -77,6 +87,15 @@ public class ShopService {
             return new ArrayList<>();
         }
         return shopRepository.findActiveByShopIds(shopIds).stream()
+                .map(shopMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShopDTO> findActiveByChannelType(Long channelTypeId) {
+        log.info("Truy vấn danh sách cửa hàng active theo loại kênh: {}", channelTypeId);
+        return shopRepository.findAllByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
+                .stream()
                 .map(shopMapper::toResponse)
                 .toList();
     }

@@ -5,6 +5,37 @@ public final class ShopControllerExamples {
     private ShopControllerExamples() {
     }
 
+    public static final String SHOP_SINGLE_WITH_CHANNEL_OF_AGENT_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000015",
+              "requestId": "req-0015",
+              "timestamp": "2026-08-19T02:00:00Z",
+              "data": {
+                "shopId": 12345,
+                "name": "Viettel Store Hà Nội",
+                "parentShopId": 10000,
+                "address": "123 Nguyễn Trãi, Quận 1, TP HCM",
+                "tel": "0909123456",
+                "shopCode": "VTST_HN_001",
+                "shopType": "1",
+                "contactName": "Nguyễn Văn A",
+                "contactTitle": "Giám đốc",
+                "telNumber": "0909123456",
+                "email": "contact@viettel.vn",
+                "province": "HN",
+                "provinceCode": "HN",
+                "channelTypeId": 1,
+                "shopPath": "/HN/VTST_HN_001",
+                "district": "Ba Đình",
+                "precinct": "P1",
+                "areaCode": "HN",
+                "status": "1",
+                "isChannelOfAgent": false
+              }
+            }""";
+
     public static final String SHOP_SINGLE_EXAMPLE = """
             {
               "code": "SUCCESS",

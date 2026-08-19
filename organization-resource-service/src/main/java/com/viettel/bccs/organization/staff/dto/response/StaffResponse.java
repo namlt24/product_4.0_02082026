@@ -117,6 +117,26 @@ public class StaffResponse {
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,150}$", message = "channelTypeName không được chứa ký tự điều khiển")
     private String channelTypeName;
 
+    @Schema(description = "Mã loại kênh", example = "CT01")
+    @Size(max = 50, message = "channelTypeCode tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "channelTypeCode chỉ gồm chữ, số, '_' hoặc '-'")
+    private String channelTypeCode;
+
+    @Schema(description = "ID shop cha (đơn vị quản lý cấp trên)", example = "10000")
+    @Min(value = 0, message = "shopParentId phải >= 0")
+    @Max(value = 9999999999L, message = "shopParentId vượt quá độ dài cột (precision 10)")
+    private Long shopParentId;
+
+    @Schema(description = "Mã shop cha (đơn vị quản lý cấp trên)", example = "VTST_HN")
+    @Size(max = 40, message = "shopParentCode tối đa 40 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "shopParentCode chỉ gồm chữ, số, '_' hoặc '-'")
+    private String shopParentCode;
+
+    @Schema(description = "Tên shop cha (đơn vị quản lý cấp trên)", example = "Viettel Hà Nội")
+    @Size(max = 300, message = "shopParentName tối đa 300 ký tự")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,300}$", message = "shopParentName không được chứa ký tự điều khiển")
+    private String shopParentName;
+
     @Schema(description = "Loại nhân viên", example = "1")
     @Min(value = 0, message = "type phải >= 0")
     @Max(value = 9999999999L, message = "type vượt quá độ dài cột (precision 10)")

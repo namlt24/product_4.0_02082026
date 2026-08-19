@@ -53,6 +53,25 @@ public class ShopController {
         return StandardResponses.success(shopService.getActiveById(shopId));
     }
 
+    @Operation(operationId = "getActiveShopByIdWithChannelOfAgent",
+            summary = "Lấy cửa hàng active theo ID kèm cờ isChannelOfAgent",
+            description = "Tra cứu 1 bản ghi SHOP active theo SHOP_ID và tính thêm trường isChannelOfAgent từ loại kênh của cửa hàng.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = SHOP_SINGLE_WITH_CHANNEL_OF_AGENT_EXAMPLE))),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy cửa hàng với id tương ứng")
+    })
+    @GetMapping("/getActiveByIdWithChannelOfAgent/{shopId}")
+    public StandardResponse<ShopDTO> getActiveByIdWithChannelOfAgent(
+            @Parameter(description = "ID cửa hàng (SHOP_ID)", example = "12345", required = true)
+            @PathVariable
+            @Min(value = 0, message = "shopId phải >= 0")
+            @Max(value = 9999999999L, message = "shopId vượt quá độ dài cột (precision 10)")
+            Long shopId) {
+        return StandardResponses.success(shopService.getActiveByIdWithChannelOfAgent(shopId));
+    }
+
     @Operation(operationId = "getActiveShopByShopCode", summary = "Lấy cửa hàng active theo mã cửa hàng",
             description = "Tra cứu 1 bản ghi SHOP có STATUS active theo SHOP_CODE.")
     @ApiResponses({

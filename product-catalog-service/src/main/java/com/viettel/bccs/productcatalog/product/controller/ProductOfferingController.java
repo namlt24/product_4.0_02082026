@@ -415,6 +415,27 @@ public class ProductOfferingController {
         return StandardResponses.success(stockTypeWSService.getListStockTypeWS(request));
     }
 
+    @GetMapping("/getSubTypeByProductCode")
+    @Operation(operationId = "getSubTypeByProductCode",
+            summary = "Lấy loại thuê bao theo mã mặt hàng cho mBCCS",
+            description = "Tra cứu loại thuê bao (SUB_TYPE trong PRODUCT_OFFERING) theo mã mặt hàng. " +
+                    "Ném lỗi BCCS-CATALOG-PRODUCT-0009 nếu mặt hàng không tồn tại. " +
+                    "Trả về null nếu SUB_TYPE chưa được gán.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = SUB_TYPE_BY_PRODUCT_CODE_EXAMPLE))),
+            @ApiResponse(responseCode = "400", description = "Mã mặt hàng không hợp lệ hoặc mặt hàng không tồn tại")
+    })
+    public StandardResponse<String> getSubTypeByProductCode(
+            @Parameter(description = "Mã mặt hàng (PRODUCT_OFFERING.CODE)", example = "PACKAGE_001", required = true)
+            @RequestParam
+            @Size(min = 1, max = 50, message = "productCode tối đa 50 ký tự")
+            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
+            String productCode) {
+        return StandardResponses.success(productOfferingService.getSubTypeByProductCode(productCode));
+    }
+
     @PostMapping("/findProductOfferingByListCodeListSpecCode")
     @Operation(
             operationId = "findProductOfferingByListCodeListSpecCode",

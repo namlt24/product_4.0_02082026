@@ -5,6 +5,7 @@ import com.viettel.bccs.organization.channeltype.dto.ChannelTypeDTO;
 import com.viettel.bccs.organization.channeltype.mapper.ChannelTypeMapper;
 import com.viettel.bccs.organization.channeltype.repository.ChannelTypeRepository;
 import com.viettel.bccs.organization.utils.Const;
+import com.viettel.bccs.organization.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -26,6 +27,50 @@ public class ChannelTypeService {
         return channelTypeRepository.findByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
                 .map(channelTypeMapper::toDTO)
                 .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CHANNELTYPE-0001", "Không tìm thấy loại kênh với id: " + channelTypeId));
+    }
+
+    /**
+     * Kênh được coi là "kênh điểm bán/hiệu lực bán" khi loại kênh KHÔNG thuộc Viettel (isVtUnit = 2)
+     * và là loại đối tượng chi nhánh (objectType = 2). Không tìm thấy loại kênh hoặc kênh không hợp lệ
+     * đều trả về false.
+     */
+    @Transactional(readOnly = true)
+    public Boolean isChannelOfSalePoint(Long channelTypeId) {
+        if (DataUtil.isNullObject(channelTypeId)) {
+            return false;
+        }
+        ChannelTypeDTO channelTypeDTO;
+        try {
+            channelTypeDTO = getActiveById(channelTypeId);
+        } catch (BusinessException e) {
+            log.warn("Không tìm thấy loại kênh hoạt động, coi như không phải kênh bán: {}", channelTypeId);
+            return false;
+        }
+        if (DataUtil.isNullObject(channelTypeDTO)) {
+            return false;
+        }
+        return DataUtil.safeEqual(Const.CHANNEL_TYPE.IS_NOT_VT_UNIT, channelTypeDTO.getIsVtUnit())
+                && DataUtil.safeEqual(Const.CHANNEL_TYPE.OBJECT_TYPE_STAFF, channelTypeDTO.getObjectType());
+    }
+
+
+    @Transactional(readOnly = true)
+    public Boolean isChannelOfAgent(Long channelTypeId) {
+        if (DataUtil.isNullObject(channelTypeId)) {
+            return false;
+        }
+        ChannelTypeDTO channelTypeDTO;
+        try {
+            channelTypeDTO = getActiveById(channelTypeId);
+        } catch (BusinessException e) {
+            log.warn("Không tìm thấy loại kênh hoạt động, coi như không phải kênh đại lý: {}", channelTypeId);
+            return false;
+        }
+        if (DataUtil.isNullObject(channelTypeDTO)) {
+            return false;
+        }
+        return DataUtil.safeEqual(Const.CHANNEL_TYPE.IS_NOT_VT_UNIT, channelTypeDTO.getIsVtUnit())
+                && DataUtil.safeEqual(Const.CHANNEL_TYPE.OBJECT_TYPE_SHOP, channelTypeDTO.getObjectType());
     }
 
 }

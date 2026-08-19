@@ -72,6 +72,25 @@ public class StaffController {
         return StandardResponses.success(staffService.findActiveByStaffCode(staffCode));
     }
 
+    @Operation(operationId = "findActiveStaffByStaffCodeWithChannelOfSalePoint",
+            summary = "Lấy nhân viên active theo mã kèm cờ isChannelOfSalePoint",
+            description = "Tra cứu 1 bản ghi STAFF active theo STAFF_CODE và tính thêm trường isChannelOfSalePoint từ loại kênh của nhân viên.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = STAFF_DTO_WITH_CHANNEL_OF_SALE_POINT_EXAMPLE))),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy nhân viên với mã tương ứng")
+    })
+    @GetMapping("/findActiveByStaffCodeWithChannelOfSalePoint/{staffCode}")
+    public StandardResponse<StaffDTO> findActiveByStaffCodeWithChannelOfSalePoint(
+            @Parameter(description = "Mã nhân viên (STAFF_CODE)", example = "NV_001", required = true)
+            @PathVariable
+            @Size(max = 40, message = "staffCode tối đa 40 ký tự")
+            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
+            String staffCode) {
+        return StandardResponses.success(staffService.findActiveByStaffCodeWithChannelOfSalePoint(staffCode));
+    }
+
     @Operation(operationId = "getListStockByStaffCode", summary = "Lấy danh sách kho theo mã nhân viên",
             description = "Tra cứu danh sách kho (STOCK) gắn với nhân viên theo STAFF_CODE.")
     @ApiResponses({

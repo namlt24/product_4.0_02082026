@@ -340,6 +340,9 @@ public class ShopDTO {
     @Schema(description = "Ngày sinh", example = "1990-01-01")
     private Date birthday;
 
+    @Schema(description = "Loại kênh của cửa hàng có phải kênh đại lý hiệu lực bán hay không", example = "false")
+    private Boolean isChannelOfAgent;
+
     // --- Getters ---
 
     public Long getShopId() { return shopId; }
@@ -409,6 +412,7 @@ public class ShopDTO {
     public String getStatus() { return status; }
     public String getTurnover() { return turnover; }
     public Date getBirthday() { return birthday; }
+    public Boolean getIsChannelOfAgent() { return isChannelOfAgent; }
 
     // --- Setters ---
 
@@ -479,4 +483,5 @@ public class ShopDTO {
     public void setStatus(String status) { this.status = status; }
     public void setTurnover(String turnover) { this.turnover = turnover; }
     public void setBirthday(Date birthday) { this.birthday = birthday; }
+    public void setIsChannelOfAgent(Boolean isChannelOfAgent) { this.isChannelOfAgent = isChannelOfAgent; }
 }

@@ -255,6 +255,33 @@ CREATE TABLE STAFF_EXT (
     CONSTRAINT PK_STAFF_EXT PRIMARY KEY (STAFF_EXT_ID)
 );
 
+-- Mapping "Kho so chuc nang" (SHOP co CHANNEL_TYPE_ID=8) voi Loai kenh > Cua hang > User (N-N,
+-- 3 muc phan cap tuy chon). Xem yeu cau dactayeucau muc 3.3.4.
+CREATE TABLE STOCK_CHANNEL_MAPPING (
+    STOCK_CHANNEL_MAPPING_ID  NUMBER(10)   NOT NULL,
+    TELECOM_SERVICE_ID        NUMBER(10)   NOT NULL,  -- Loai dich vu (ref TELECOM_SERVICE, cross-service product-catalog)
+    CHANNEL_TYPE_ID           NUMBER(10)   NOT NULL,  -- Loai kenh (ref CHANNEL_TYPE.CHANNEL_TYPE_ID)
+    STOCK_SHOP_ID             NUMBER(10)   NOT NULL,  -- Ma kho so chuc nang = SHOP.SHOP_ID voi CHANNEL_TYPE_ID=8
+    SHOP_ID                   NUMBER(10),             -- Ma cua hang (ref SHOP.SHOP_ID); NULL = mapping muc kenh
+    STAFF_ID                  NUMBER(10),             -- Ma user (ref STAFF.STAFF_ID); NULL = mapping muc kenh/cua hang
+    EFFECT_DATE                DATE        NOT NULL,   -- Ngay hieu luc
+    EXPIRE_DATE                DATE,                   -- Ngay het hieu luc (NULL = khong gioi han)
+    STATUS                    VARCHAR2(1) NOT NULL,   -- '1' Hieu luc / '0' Khong hieu luc
+    CREATE_USER               VARCHAR2(50),
+    CREATE_DATETIME            DATE        NOT NULL,
+    UPDATE_USER                VARCHAR2(50),
+    UPDATE_DATETIME             DATE,
+    CONSTRAINT PK_STOCK_CHANNEL_MAPPING PRIMARY KEY (STOCK_CHANNEL_MAPPING_ID),
+    CONSTRAINT CK_STOCK_CHANNEL_MAP_HIER CHECK (STAFF_ID IS NULL OR SHOP_ID IS NOT NULL)
+);
+
+CREATE INDEX IDX_STOCK_CH_MAP_CHANNEL ON STOCK_CHANNEL_MAPPING (CHANNEL_TYPE_ID);
+CREATE INDEX IDX_STOCK_CH_MAP_STOCK   ON STOCK_CHANNEL_MAPPING (STOCK_SHOP_ID);
+CREATE INDEX IDX_STOCK_CH_MAP_SHOP    ON STOCK_CHANNEL_MAPPING (SHOP_ID);
+CREATE INDEX IDX_STOCK_CH_MAP_STAFF   ON STOCK_CHANNEL_MAPPING (STAFF_ID);
+CREATE INDEX IDX_STOCK_CH_MAP_TELSVC  ON STOCK_CHANNEL_MAPPING (TELECOM_SERVICE_ID);
+CREATE INDEX IDX_STOCK_CH_MAP_GROUP   ON STOCK_CHANNEL_MAPPING (CHANNEL_TYPE_ID, SHOP_ID, STAFF_ID, STOCK_SHOP_ID);
+
 -- ===================== product-catalog-service =====================
 
 CREATE TABLE OPTION_SET (

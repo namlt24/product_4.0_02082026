@@ -55,6 +55,17 @@ public class ProductOfferingService {
                 .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0001", "Product not found with code: " + productCode));
     }
 
+    public String getSubTypeByProductCode(String productCode) {
+        if (DataUtil.isNullOrEmpty(productCode)) {
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0008", "Mã mặt hàng không được để trống");
+        }
+        ProductOfferingResponse response = productOfferingRepository.findByCode(productCode)
+                .map(productOfferingMapper::toResponse)
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0009",
+                        "Mặt hàng " + productCode + " không hợp lệ"));
+        return response.subType();
+    }
+
     @Cacheable(value = "productOfferingCache", key = "'OFFER_ALTER:' + #offerId + ':' + '' + #changeChannel + ':' + #checkStatus")
     public List<ProductOfferingDTO> getListOfferAlterStatus(Long offerId, String changeChannel, boolean checkStatus) {
         return productOfferingRepository.getListOfferAlterStatus(offerId, changeChannel, checkStatus).stream()

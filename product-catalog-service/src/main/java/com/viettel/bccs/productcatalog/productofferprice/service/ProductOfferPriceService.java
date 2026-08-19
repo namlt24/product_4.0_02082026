@@ -13,6 +13,7 @@ import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
 import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
+import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
@@ -60,6 +61,12 @@ public class ProductOfferPriceService {
     private final ProductOfferPriceMapper mapper;
     private final ProductOfferPriceRepository repository;
     private final ProductSpecCharValueService productSpecCharValueService;
+
+    @Cacheable(value = "productOfferPriceCache", key = "'PLEDGE_PRICE:' + #productOfferingId")
+    public List<PledgePriceResponse> getPledgePriceInfoByOfferId(Long productOfferingId) {
+        return productOfferPriceMapper.toPledgePriceResponseList(
+                productOfferPriceRepository.getPledgePriceInfoByOfferId(productOfferingId));
+    }
 
     @Transactional(readOnly = true)
     public ProductOfferPriceDTO getById(Long prodOfferPriceId) {

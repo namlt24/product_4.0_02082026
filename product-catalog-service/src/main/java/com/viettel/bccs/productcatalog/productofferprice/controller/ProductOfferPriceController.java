@@ -2,6 +2,7 @@ package com.viettel.bccs.productcatalog.productofferprice.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.service.ProductOfferPriceService;
@@ -33,6 +34,26 @@ import static com.viettel.bccs.productcatalog.productofferprice.openapi.ProductO
 public class ProductOfferPriceController {
 
     private final ProductOfferPriceService productOfferPriceService;
+
+    @GetMapping("/getPledgePriceInfoByOfferId")
+    @Operation(operationId = "getPledgePriceInfoByOfferId",
+            summary = "Lấy thông tin giá cam kết theo ID mặt hàng",
+            description = "Truy vấn giá tiền, số tiền cam kết, số tháng cam kết và số tháng ứng trước " +
+                    "(PRICE_TYPE_ID=2) từ PRODUCT_OFFER_PRICE theo product_offering_id, " +
+                    "chỉ lấy bản ghi đang active và còn hiệu lực theo ngày hiện tại.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Thành công",
+                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(name = "success", value = PLEDGE_PRICE_EXAMPLE)))
+    })
+    public StandardResponse<List<PledgePriceResponse>> getPledgePriceInfoByOfferId(
+            @Parameter(description = "ID mặt hàng (PRODUCT_OFFERING_ID)", example = "456", required = true)
+            @RequestParam
+            @Min(value = 1, message = "productOfferingId phải >= 1")
+            @Max(value = 9999999999L, message = "productOfferingId vượt quá độ dài cột (precision 10)")
+            Long productOfferingId) {
+        return StandardResponses.success(productOfferPriceService.getPledgePriceInfoByOfferId(productOfferingId));
+    }
 
     @GetMapping("/getById")
     @Operation(

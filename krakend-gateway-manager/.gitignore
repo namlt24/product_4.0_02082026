@@ -1,0 +1,16 @@
+# Backend (Maven)
+backend/target/
+*.class
+
+# Frontend (Angular / Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Env
+.env
+
+# IDE
+.idea/
+*.iml
+.vscode/

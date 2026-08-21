@@ -1,0 +1,177 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Sơ đồ phụ thuộc</h1>
+    <p class="page-subtitle">
+      Endpoint nào gọi ngược vào endpoint nào (qua host trỏ về chính KrakenD) — tự suy ra từ cấu hình, không cần khai báo thêm.
+    </p>
+  </div>
+  <button mat-stroked-button (click)="refresh()">
+    <mat-icon>refresh</mat-icon>
+    Làm mới
+  </button>
+</div>
+
+@if (graph()?.cycleWarnings?.length) {
+  <div class="warning-banner cycle-banner">
+    @for (w of graph()!.cycleWarnings; track w) {
+      <div class="cycle-warning-item">
+        <mat-icon inline="true">error</mat-icon>
+        <span>{{ w }}</span>
+      </div>
+    }
+  </div>
+}
+
+@if (loading()) {
+  <mat-card class="graph-card">
+    <div class="center-state">
+      <mat-spinner diameter="26" />
+      <span>Đang phân tích sơ đồ phụ thuộc...</span>
+    </div>
+  </mat-card>
+} @else if (!graph() || graph()!.nodes.length === 0) {
+  <mat-card class="graph-card">
+    <div class="center-state">
+      <mat-icon class="empty-icon">account_tree</mat-icon>
+      <span>Chưa có endpoint nào.</span>
+    </div>
+  </mat-card>
+} @else {
+  <!-- Thanh cong cu: tim kiem + thong ke, thiet ke de scale toi hang ngan endpoint -->
+  <div class="toolbar-row">
+    <div class="search-box">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="onSearchChange($event)"
+        placeholder="Tìm theo tên hoặc path..."
+      />
+    </div>
+    <div class="summary-chips">
+      <span class="summary-chip">
+        <mat-icon inline="true">account_tree</mat-icon>
+        {{ componentCount() }} cụm liên quan ({{ connectedNodeCount() }} endpoint)
+      </span>
+      <span class="summary-chip summary-chip--muted">
+        <mat-icon inline="true">visibility_off</mat-icon>
+        {{ isolatedCount() }} endpoint độc lập (không gọi/không bị gọi)
+      </span>
+    </div>
+  </div>
+
+  @if (visibleComponentLayouts().length === 0) {
+    <mat-card class="graph-card">
+      <div class="center-state">
+        <mat-icon class="empty-icon">search_off</mat-icon>
+        <span>Không tìm thấy cụm nào khớp "{{ searchTerm() }}".</span>
+      </div>
+    </mat-card>
+  } @else {
+    <div class="legend">
+      <span class="legend-item"><span class="dot dot-normal"></span>Bình thường</span>
+      <span class="legend-item"><span class="dot dot-cycle"></span>Nằm trong vòng lặp</span>
+      <span class="legend-item"><mat-icon inline="true">arrow_downward</mat-icon>Hướng gọi (trên → dưới)</span>
+    </div>
+
+    <!-- Moi cum lien thong = 1 card SVG rieng, KHONG gop chung 1 canvas khong lo -->
+    <div class="component-grid">
+      @for (c of visibleComponentLayouts(); track c.componentId) {
+        <mat-card class="component-card">
+          <div class="component-card-header">
+            <mat-icon inline="true">account_tree</mat-icon>
+            Cụm #{{ c.componentId }} — {{ c.nodeCount }} endpoint
+          </div>
+          <div class="component-canvas-scroller">
+            <svg [attr.width]="c.width" [attr.height]="c.height" [attr.viewBox]="'0 0 ' + c.width + ' ' + c.height">
+              <defs>
+                <marker [attr.id]="'arrow-' + c.componentId" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                </marker>
+                <marker [attr.id]="'arrow-danger-' + c.componentId" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
+                </marker>
+              </defs>
+
+              @for (pe of c.positionedEdges; track pe.edge.fromEndpointId + pe.edge.toEndpointId + pe.edge.viaStepOrder) {
+                <path
+                  [attr.d]="pe.path"
+                  fill="none"
+                  [attr.stroke]="pe.danger ? '#dc2626' : '#94a3b8'"
+                  stroke-width="2"
+                  [attr.marker-end]="pe.danger ? 'url(#arrow-danger-' + c.componentId + ')' : 'url(#arrow-' + c.componentId + ')'"
+                />
+              }
+
+              @for (pn of c.positionedNodes; track pn.node.id) {
+                <foreignObject [attr.x]="pn.x" [attr.y]="pn.y" width="210" height="64">
+                  <div
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    class="graph-node"
+                    [class.graph-node--cycle]="pn.node.inCycle"
+                    [class.graph-node--match]="searchTerm() && (pn.node.name.toLowerCase().includes(searchTerm().toLowerCase()) || pn.node.path.toLowerCase().includes(searchTerm().toLowerCase()))"
+                    (click)="openEndpoint(pn.node)"
+                    [matTooltip]="pn.node.path"
+                  >
+                    <div class="graph-node-top">
+                      <span class="method-chip" [attr.data-method]="pn.node.method">{{ pn.node.method }}</span>
+                      <span class="graph-node-name">{{ pn.node.name }}</span>
+                    </div>
+                    <code class="graph-node-path">{{ pn.node.path }}</code>
+                    <div class="graph-node-badges">
+                      @if (pn.node.callsCount > 0) {
+                        <span class="mini-badge"><mat-icon inline="true">call_made</mat-icon>{{ pn.node.callsCount }}</span>
+                      }
+                      @if (pn.node.usedByCount > 0) {
+                        <span class="mini-badge"><mat-icon inline="true">call_received</mat-icon>{{ pn.node.usedByCount }}</span>
+                      }
+                      @if (pn.node.inCycle) {
+                        <span class="mini-badge mini-badge--danger"><mat-icon inline="true">error</mat-icon>Vòng lặp</span>
+                      }
+                    </div>
+                  </div>
+                </foreignObject>
+              }
+            </svg>
+          </div>
+        </mat-card>
+      }
+    </div>
+  }
+
+  <!-- Danh sach endpoint doc lap - AN MAC DINH, chi hien qua bang co phan trang (khong ve thanh box) -->
+  <mat-card class="isolated-card">
+    <button class="isolated-toggle" (click)="showIsolated.set(!showIsolated())">
+      <mat-icon>{{ showIsolated() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      <span>{{ isolatedCount() }} endpoint không có quan hệ phụ thuộc (ẩn mặc định)</span>
+    </button>
+
+    @if (showIsolated()) {
+      <div class="isolated-table-wrap">
+        <table mat-table [dataSource]="isolatedDataSource" class="full-width">
+          <ng-container matColumnDef="method">
+            <th mat-header-cell *matHeaderCellDef>Method</th>
+            <td mat-cell *matCellDef="let n"><span class="method-chip" [attr.data-method]="n.method">{{ n.method }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="path">
+            <th mat-header-cell *matHeaderCellDef>Path</th>
+            <td mat-cell *matCellDef="let n"><code>{{ n.path }}</code></td>
+          </ng-container>
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Tên</th>
+            <td mat-cell *matCellDef="let n">{{ n.name }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let n">
+              <button mat-icon-button matTooltip="Sửa" (click)="openEndpoint(n)"><mat-icon>edit</mat-icon></button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="isolatedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: isolatedColumns"></tr>
+        </table>
+        <mat-paginator [pageSizeOptions]="[10, 25, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+      </div>
+    }
+  </mat-card>
+}

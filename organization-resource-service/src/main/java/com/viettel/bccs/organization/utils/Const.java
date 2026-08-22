@@ -24,6 +24,5 @@ public class Const {
         public static final String IS_NOT_VT_UNIT = "2"; // Khong thuoc Viettel
         public static final String OBJECT_TYPE_STAFF = "2"; // Chi nhanh
         public static final String OBJECT_TYPE_SHOP = "1"; // Cửa hàng
-        public static final Long STOCK_FUNCTIONAL_CHANNEL = 8L; // Loai kenh "Kho chuc nang rieng"
     }
 }

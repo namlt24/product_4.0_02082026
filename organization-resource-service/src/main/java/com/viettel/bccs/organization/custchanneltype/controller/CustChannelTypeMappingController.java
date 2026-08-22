@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.custchanneltype.dto.CustChannelTypeMappingDTO;
 import com.viettel.bccs.organization.custchanneltype.service.CustChannelTypeMappingService;
+import com.viettel.bccs.organization.utils.RequestValidator;
+import com.viettel.bccs.organization.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,12 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +24,6 @@ import static com.viettel.bccs.organization.custchanneltype.openapi.CustChannelT
 @RestController
 @RequestMapping("/organization-resource-service/v1/cust-channel-type-mapping")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "CustChannelTypeMapping", description = "Tra cứu mapping loại khách hàng - loại kênh (CUST_CHANNEL_TYPE_MAPPING)")
 public class CustChannelTypeMappingController {
 
@@ -56,9 +52,8 @@ public class CustChannelTypeMappingController {
     public StandardResponse<List<CustChannelTypeMappingDTO>> getByChannelTypeId(
             @Parameter(description = "ID loại kênh (CHANNEL_TYPE_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "channelTypeId phải >= 0")
-            @Max(value = 9999999999L, message = "channelTypeId vượt quá độ dài cột (precision 10)")
             Long channelTypeId) {
+        RequestValidator.checkRange(channelTypeId, "channelTypeId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(mappingService.getByChannelTypeId(channelTypeId));
     }
 
@@ -73,15 +68,14 @@ public class CustChannelTypeMappingController {
     @GetMapping("/getByCustTypeAndChannelType")
     public StandardResponse<CustChannelTypeMappingDTO> getByCustTypeAndChannelType(
             @Parameter(description = "Mã loại khách hàng (CUST_TYPE)", example = "PREPAID", required = true)
-            @RequestParam
-            @Size(max = 10, message = "custType tối đa 10 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,10}$", message = "custType chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String custType,
             @Parameter(description = "ID loại kênh (CHANNEL_TYPE_ID)", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "channelTypeId phải >= 0")
-            @Max(value = 9999999999L, message = "channelTypeId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long channelTypeId) {
+        RequestValidator.checkMaxLength(custType, "custType", 10, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(custType, "custType", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
+        RequestValidator.checkRange(channelTypeId, "channelTypeId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(mappingService.getByCustTypeAndChannelType(custType, channelTypeId));
     }
 }

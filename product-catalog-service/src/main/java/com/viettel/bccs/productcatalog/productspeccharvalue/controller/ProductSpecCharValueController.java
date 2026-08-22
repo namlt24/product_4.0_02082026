@@ -4,6 +4,7 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.productspeccharvalue.dto.response.ProductSpecCharValueResponse;
 import com.viettel.bccs.productcatalog.productspeccharvalue.service.ProductSpecCharValueService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,9 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +22,6 @@ import static com.viettel.bccs.productcatalog.productspeccharvalue.openapi.Produ
 @RestController
 @RequestMapping("/product-catalog-service/v1/productspectcharvalue")
 @RequiredArgsConstructor
-@Validated
 public class ProductSpecCharValueController {
 
     private final ProductSpecCharValueService productSpecCharValueService;
@@ -39,8 +37,9 @@ public class ProductSpecCharValueController {
     public StandardResponse<List<ProductSpecCharValueResponse>> findByIds(
             @Parameter(description = "Danh sách ID giá trị thuộc tính sản phẩm", required = true)
             @RequestBody
-            @Size(min = 1, max = 1000, message = "ids tối đa 1000 phần tử")
             List<Long> ids) {
+        RequestValidator.requireNotEmpty(ids, "ids", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(ids, "ids", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
         return StandardResponses.success(productSpecCharValueService.findByIds(ids));
     }
 

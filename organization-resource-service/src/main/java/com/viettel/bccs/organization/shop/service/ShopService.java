@@ -90,13 +90,4 @@ public class ShopService {
                 .map(shopMapper::toResponse)
                 .toList();
     }
-
-    @Transactional(readOnly = true)
-    public List<ShopDTO> findActiveByChannelType(Long channelTypeId) {
-        log.info("Truy vấn danh sách cửa hàng active theo loại kênh: {}", channelTypeId);
-        return shopRepository.findAllByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
-                .stream()
-                .map(shopMapper::toResponse)
-                .toList();
-    }
 }

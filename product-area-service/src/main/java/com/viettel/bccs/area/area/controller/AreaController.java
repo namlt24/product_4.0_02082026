@@ -2,6 +2,8 @@ package com.viettel.bccs.area.area.controller;
 
 import com.viettel.bccs.area.area.dto.response.AreaResponse;
 import com.viettel.bccs.area.area.service.AreaService;
+import com.viettel.bccs.area.utils.RequestValidator;
+import com.viettel.bccs.area.utils.ValidationPatterns;
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,10 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import static com.viettel.bccs.area.area.openapi.AreaControllerExamples.*;
@@ -25,7 +24,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/product-area-service/v1/area")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Area", description = "Tra cứu địa bàn hành chính (tỉnh/quận/phường)")
 public class AreaController {
 
@@ -55,9 +53,10 @@ public class AreaController {
     public StandardResponse<AreaResponse> getByAreaCode(
             @Parameter(description = "Mã địa bàn (AREA_CODE)", example = "A076003005001", required = true)
             @PathVariable
-            @Size(min = 1, max = 200, message = "areaCode tối đa 200 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{1,200}$", message = "areaCode chỉ gồm chữ và số")
             String areaCode) {
+        RequestValidator.requireNotBlank(areaCode, "areaCode", "BCCS-AREA-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(areaCode, "areaCode", 200, "BCCS-AREA-VALIDATE-SIZE");
+        RequestValidator.checkPattern(areaCode, "areaCode", ValidationPatterns.ALPHANUMERIC, "BCCS-AREA-VALIDATE-PATTERN");
         return StandardResponses.success(areaService.getByAreaCode(areaCode));
     }
 
@@ -72,9 +71,9 @@ public class AreaController {
     public StandardResponse<List<AreaResponse>> getByParentCode(
             @Parameter(description = "Mã địa bàn cha (PARENT_CODE)", example = "A076", required = true)
             @PathVariable
-            @Size(max = 200, message = "parentCode tối đa 200 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{0,200}$", message = "parentCode chỉ gồm chữ và số")
             String parentCode) {
+        RequestValidator.checkMaxLength(parentCode, "parentCode", 200, "BCCS-AREA-VALIDATE-SIZE");
+        RequestValidator.checkPattern(parentCode, "parentCode", ValidationPatterns.ALPHANUMERIC, "BCCS-AREA-VALIDATE-PATTERN");
         return StandardResponses.success(areaService.getByParentCode(parentCode));
     }
 
@@ -88,10 +87,11 @@ public class AreaController {
     @GetMapping("/getByProvince")
     public StandardResponse<List<AreaResponse>> getByProvince(
             @Parameter(description = "Mã tỉnh/thành (PROVINCE)", example = "A076", required = true)
-            @RequestParam
-            @Size(max = 50, message = "province tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{0,50}$", message = "province chỉ gồm chữ và số")
+            @RequestParam(required = false)
             String province) {
+        RequestValidator.requireNotBlank(province, "province", "BCCS-AREA-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(province, "province", 50, "BCCS-AREA-VALIDATE-SIZE");
+        RequestValidator.checkPattern(province, "province", ValidationPatterns.ALPHANUMERIC, "BCCS-AREA-VALIDATE-PATTERN");
         return StandardResponses.success(areaService.getByProvince(province));
     }
 }

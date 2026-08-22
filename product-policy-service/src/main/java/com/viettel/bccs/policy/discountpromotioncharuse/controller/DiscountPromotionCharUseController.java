@@ -4,6 +4,7 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.discountpromotioncharuse.dto.response.DiscountPromotionCharUseResponse;
 import com.viettel.bccs.policy.discountpromotioncharuse.service.DiscountPromotionCharUseService;
+import com.viettel.bccs.policy.utils.RequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,10 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +25,6 @@ import static com.viettel.bccs.policy.discountpromotioncharuse.openapi.DiscountP
 @RestController
 @RequestMapping("/product-policy-service/v1/discount-promotion-char-use")
 @RequiredArgsConstructor
-@Validated
 public class DiscountPromotionCharUseController {
 
     private final DiscountPromotionCharUseService service;
@@ -43,9 +40,8 @@ public class DiscountPromotionCharUseController {
     public StandardResponse<DiscountPromotionCharUseResponse> findById(
             @Parameter(description = "Id thuộc tính sử dụng khuyến mãi (DISCOUNT_PROMOTION_CHAR_USE_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "id phải >= 0")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cột (precision 10)")
             Long id) {
+        RequestValidator.checkRange(id, "id", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.findById(id));
     }
 }

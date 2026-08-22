@@ -4,6 +4,7 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeResponse;
 import com.viettel.bccs.productcatalog.productpackagefee.service.ProductPackageFeeService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,12 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,7 +26,6 @@ import static com.viettel.bccs.productcatalog.productpackagefee.openapi.ProductP
 @RestController
 @RequestMapping("/product-catalog-service/v1/product-package-fee")
 @RequiredArgsConstructor
-@Validated
 public class ProductPackageFeeController {
 
     private final ProductPackageFeeService service;
@@ -46,9 +41,8 @@ public class ProductPackageFeeController {
     public StandardResponse<ProductPackageFeeResponse> findById(
             @Parameter(description = "ID phí gói sản phẩm (PRODUCT_PACKAGE_FEE_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 1, message = "id phải >= 1")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cho phép")
             Long id) {
+        RequestValidator.checkRange(id, "id", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findById(id));
     }
 
@@ -63,9 +57,8 @@ public class ProductPackageFeeController {
     public StandardResponse<List<ProductPackageFeeResponse>> getByProductPackageId(
             @Parameter(description = "ID gói sản phẩm (PRODUCT_PACKAGE_ID)", example = "1001", required = true)
             @PathVariable
-            @Min(value = 1, message = "productPackageId phải >= 1")
-            @Max(value = 9999999999L, message = "productPackageId vượt quá độ dài cho phép")
             Long productPackageId) {
+        RequestValidator.checkRange(productPackageId, "productPackageId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findByProductPackageId(productPackageId));
     }
 
@@ -79,10 +72,9 @@ public class ProductPackageFeeController {
     @GetMapping("/getByStatus")
     public StandardResponse<List<ProductPackageFeeResponse>> getByStatus(
             @Parameter(description = "Trạng thái (0/1)", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "status đúng 1 ký tự")
-            @Pattern(regexp = "^[01]$", message = "status chỉ nhận giá trị 0 hoặc 1")
+            @RequestParam(required = false)
             String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-CATALOG-VALIDATE-REQUIRED");
         return StandardResponses.success(service.findByStatus(status));
     }
 
@@ -96,15 +88,13 @@ public class ProductPackageFeeController {
     @GetMapping("/getByProductPackageIdAndStatus")
     public StandardResponse<List<ProductPackageFeeResponse>> getByProductPackageIdAndStatus(
             @Parameter(description = "ID gói sản phẩm (PRODUCT_PACKAGE_ID)", example = "1001", required = true)
-            @RequestParam
-            @Min(value = 1, message = "productPackageId phải >= 1")
-            @Max(value = 9999999999L, message = "productPackageId vượt quá độ dài cho phép")
+            @RequestParam(required = false)
             Long productPackageId,
             @Parameter(description = "Trạng thái (0/1)", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "status đúng 1 ký tự")
-            @Pattern(regexp = "^[01]$", message = "status chỉ nhận giá trị 0 hoặc 1")
+            @RequestParam(required = false)
             String status) {
+        RequestValidator.checkRange(productPackageId, "productPackageId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.requireNotBlank(status, "status", "BCCS-CATALOG-VALIDATE-REQUIRED");
         return StandardResponses.success(service.findByProductPackageIdAndStatus(productPackageId, status));
     }
 
@@ -118,10 +108,9 @@ public class ProductPackageFeeController {
     @GetMapping("/getByPricePolicyId")
     public StandardResponse<List<ProductPackageFeeResponse>> getByPricePolicyId(
             @Parameter(description = "ID chính sách giá (PRICE_POLICY_ID)", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "pricePolicyId phải >= 1")
-            @Max(value = 9999999999L, message = "pricePolicyId vượt quá độ dài cho phép")
+            @RequestParam(required = false)
             Long pricePolicyId) {
+        RequestValidator.checkRange(pricePolicyId, "pricePolicyId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findByPricePolicyId(pricePolicyId));
     }
 
@@ -135,10 +124,9 @@ public class ProductPackageFeeController {
     @GetMapping("/getByPriceTypeId")
     public StandardResponse<List<ProductPackageFeeResponse>> getByPriceTypeId(
             @Parameter(description = "ID loại giá (PRICE_TYPE_ID)", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "priceTypeId phải >= 1")
-            @Max(value = 9999999999L, message = "priceTypeId vượt quá độ dài cho phép")
+            @RequestParam(required = false)
             Long priceTypeId) {
+        RequestValidator.checkRange(priceTypeId, "priceTypeId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findByPriceTypeId(priceTypeId));
     }
 }

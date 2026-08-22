@@ -3,7 +3,6 @@ package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,8 +34,7 @@ public class ChanelTypeIdRequest {
     @Max(value = 9999999999L, message = "shopChanelTypeId vượt quá độ dài cho phép")
     private Long shopChanelTypeId;
 
-    @Schema(description = "ID nhân viên (STAFF_ID) — dùng để server tự resolve thông tin nhân viên/shop", example = "12345", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "staffId không được để trống")
+    @Schema(description = "ID nhân viên (STAFF_ID) — dùng để server tự resolve thông tin nhân viên/shop; bắt buộc, validate thủ công trong MapActiveInfoQuerryService (ném BCCS-POLICY-VALIDATE-0001 nếu thiếu) thay vì Bean Validation", example = "12345", requiredMode = Schema.RequiredMode.REQUIRED)
     @Min(value = 1, message = "staffId phải >= 1")
     @Max(value = 9999999999L, message = "staffId vượt quá độ dài cho phép")
     private Long staffId;

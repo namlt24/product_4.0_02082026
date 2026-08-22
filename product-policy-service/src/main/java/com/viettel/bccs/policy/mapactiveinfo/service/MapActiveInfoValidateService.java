@@ -25,6 +25,8 @@ import com.viettel.bccs.policy.utils.Const.OPTION_SET;
 import com.viettel.bccs.policy.utils.Const.TELECOM_SERVICE_ID;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.MessageUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
+import com.viettel.bccs.policy.utils.ValidationPatterns;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -103,15 +105,47 @@ public class MapActiveInfoValidateService {
                                                         String customerType, String subType, String subGroup, String stationCodes, String payType,
                                                         String technology, int mode, String productOfferType, List<String> lstBusinessNo) {
 
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(actionCode, "actionCode", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkSize(offerIds, "offerIds", 1000, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkMaxLength(promotionCode, "promotionCode", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(promotionCode, "promotionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(captchaAnswer, "captchaAnswer", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(captchaAnswer, "captchaAnswer", ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkRange(telServiceId, "telServiceId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(province, "province", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(province, "province", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(district, "district", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(district, "district", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(precinct, "precinct", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(precinct, "precinct", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(customerGroup, "customerGroup", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(customerGroup, "customerGroup", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(customerType, "customerType", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(customerType, "customerType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(subType, "subType", 4, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(subType, "subType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(subGroup, "subGroup", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(subGroup, "subGroup", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(stationCodes, "stationCodes", 1000, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(stationCodes, "stationCodes", ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(payType, "payType", 1, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(payType, "payType", ValidationPatterns.DIGITS, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(technology, "technology", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(technology, "technology", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkRange(mode, "mode", 0, 9, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(productOfferType, "productOfferType", 20, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productOfferType, "productOfferType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkSize(lstBusinessNo, "lstBusinessNo", 1000, "BCCS-POLICY-VALIDATE-SIZE");
+
         StaffDTO staffDTO = DataUtil.isNullOrEmpty(staffCode) ? null : new StaffDTO(staffCode);
         List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
         MapActiveInfoDTO mapActiveInfo;
         List<ReasonDTO> lstReason;
         List<DiscountPromotionDTO> lstPromotions;
-        if (regReasonId == null) {
-            log.info("regReasonId=null");
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0016");
-        }
+        RequestValidator.requireNotNull(regReasonId, "regReasonId", "BCCS-POLICY-VALIDATE-REQUIRED");
         boolean isCheckMapActiveInfo = mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, telServiceId);
 
 

@@ -5,6 +5,8 @@ import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.shop.dto.ShopDTO;
 import com.viettel.bccs.organization.shop.dto.response.StockCodeResponse;
 import com.viettel.bccs.organization.shop.service.ShopService;
+import com.viettel.bccs.organization.utils.RequestValidator;
+import com.viettel.bccs.organization.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,13 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,7 +25,6 @@ import static com.viettel.bccs.organization.shop.openapi.ShopControllerExamples.
 @RestController
 @RequestMapping("/organization-resource-service/v1/shop")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Shop", description = "Tra cứu thông tin cửa hàng/đại lý (SHOP)")
 public class ShopController {
 
@@ -47,9 +42,8 @@ public class ShopController {
     public StandardResponse<ShopDTO> getActiveById(
             @Parameter(description = "ID cửa hàng (SHOP_ID)", example = "12345", required = true)
             @PathVariable
-            @Min(value = 0, message = "shopId phải >= 0")
-            @Max(value = 9999999999L, message = "shopId vượt quá độ dài cột (precision 10)")
             Long shopId) {
+        RequestValidator.checkRange(shopId, "shopId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(shopService.getActiveById(shopId));
     }
 
@@ -66,9 +60,8 @@ public class ShopController {
     public StandardResponse<ShopDTO> getActiveByIdWithChannelOfAgent(
             @Parameter(description = "ID cửa hàng (SHOP_ID)", example = "12345", required = true)
             @PathVariable
-            @Min(value = 0, message = "shopId phải >= 0")
-            @Max(value = 9999999999L, message = "shopId vượt quá độ dài cột (precision 10)")
             Long shopId) {
+        RequestValidator.checkRange(shopId, "shopId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(shopService.getActiveByIdWithChannelOfAgent(shopId));
     }
 
@@ -84,9 +77,9 @@ public class ShopController {
     public StandardResponse<ShopDTO> getActiveByShopCode(
             @Parameter(description = "Mã cửa hàng (SHOP_CODE)", example = "VTST_HN_001", required = true)
             @PathVariable
-            @Size(max = 40, message = "shopCode tối đa 40 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "shopCode chỉ gồm chữ, số, '_' hoặc '-'")
             String shopCode) {
+        RequestValidator.checkMaxLength(shopCode, "shopCode", 40, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(shopCode, "shopCode", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(shopService.getActiveByShopCode(shopCode));
     }
 
@@ -100,15 +93,15 @@ public class ShopController {
     @GetMapping("/getStockCode")
     public StandardResponse<StockCodeResponse> getStockCode(
             @Parameter(description = "ID chủ sở hữu (shopId/staffId)", example = "12345", required = true)
-            @RequestParam
-            @Min(value = 0, message = "ownerId phải >= 0")
-            @Max(value = Long.MAX_VALUE, message = "ownerId vượt quá giới hạn cho phép")
+            @RequestParam(required = false)
             Long ownerId,
             @Parameter(description = "Loại chủ sở hữu", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "ownerType phải >= 0")
-            @Max(value = 99, message = "ownerType vượt quá giới hạn cho phép")
+            @RequestParam(required = false)
             Integer ownerType) {
+        RequestValidator.requireNotNull(ownerId, "ownerId", "BCCS-ORGANIZATION-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(ownerId, "ownerId", 0L, Long.MAX_VALUE, "BCCS-ORGANIZATION-VALIDATE-RANGE");
+        RequestValidator.requireNotNull(ownerType, "ownerType", "BCCS-ORGANIZATION-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(ownerType, "ownerType", 0, 99, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(shopService.getStockCode(ownerId, ownerType));
     }
 
@@ -125,8 +118,9 @@ public class ShopController {
     public StandardResponse<List<ShopDTO>> findActiveByShopIds(
             @Parameter(description = "Danh sách ID cửa hàng cần truy vấn", required = true)
             @RequestBody
-            @Size(min = 1, max = 1000, message = "shopIds phải có từ 1 đến 1000 phần tử")
-            List<@Valid Long> shopIds) {
+            List<Long> shopIds) {
+        RequestValidator.requireNotEmpty(shopIds, "shopIds", "BCCS-ORGANIZATION-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(shopIds, "shopIds", 1000, "BCCS-ORGANIZATION-VALIDATE-SIZE");
         return StandardResponses.success(shopService.findActiveByShopIds(shopIds));
     }
 }

@@ -13,6 +13,8 @@ import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
 import com.viettel.bccs.productcatalog.product.service.StockTypeWSService;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -21,13 +23,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,7 +33,6 @@ import static com.viettel.bccs.productcatalog.product.openapi.ProductOfferingCon
 @RestController
 @RequestMapping("/product-catalog-service/v1/product")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Product Offering", description = "API quản lý sản phẩm gói cước")
 public class ProductOfferingController {
 
@@ -56,10 +51,11 @@ public class ProductOfferingController {
     @GetMapping("/getByProductCode")
     public StandardResponse<ProductOfferingResponse> getByProductCode(
             @Parameter(description = "Mã sản phẩm", example = "PACKAGE_001", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "productCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String productCode) {
+        RequestValidator.requireNotBlank(productCode, "productCode", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(productCode, "productCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productCode, "productCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferingService.getByProductCode(productCode));
     }
 
@@ -73,19 +69,20 @@ public class ProductOfferingController {
     @GetMapping("/getListOfferAlterStatus")
     public StandardResponse<List<ProductOfferingDTO>> getListOfferAlterStatus(
             @Parameter(description = "ID sản phẩm chính", example = "500001", required = true)
-            @RequestParam
-            @Min(value = 1, message = "offerId phải >= 1")
-            @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long offerId,
 
             @Parameter(description = "Kênh thay đổi (CHANGE_METHOD)", example = "ONLINE", required = true)
-            @RequestParam
-            @Size(min = 1, max = 100, message = "changeChannel tối đa 100 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,100}$", message = "changeChannel chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String changeChannel,
 
             @Parameter(description = "Chỉ lấy bản ghi quan hệ/đặc tính đang active", example = "true")
             @RequestParam boolean checkStatus) {
+        RequestValidator.requireNotNull(offerId, "offerId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(offerId, "offerId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.requireNotBlank(changeChannel, "changeChannel", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(changeChannel, "changeChannel", 100, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(changeChannel, "changeChannel", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferingService.getListOfferAlterStatus(offerId, changeChannel, checkStatus));
     }
 
@@ -103,21 +100,19 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> findByTelecomSubTypeOfferTypeCheckProductStatus(
             @Parameter(description = "ID dịch vụ viễn thông", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "telecomServiceId phải >= 1")
-            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
             Long telecomServiceId,
             @Parameter(description = "Loại thuê bao (1: trả sau, 2: trả trước)", example = "1")
             @RequestParam(required = false)
-            @Size(max = 1, message = "subType đúng 1 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "subType chỉ gồm chữ hoặc số")
             String subType,
             @Parameter(description = "ID loại sản phẩm", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "offerTypeId phải >= 1")
-            @Max(value = 9999999999L, message = "offerTypeId vượt quá độ dài cột (precision 10)")
             Long offerTypeId,
             @Parameter(description = "Lấy sản phẩm đang active (status='1')", example = "true")
             @RequestParam boolean getActiveProduct) {
+        RequestValidator.checkRange(telecomServiceId, "telecomServiceId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(subType, "subType", 1, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(subType, "subType", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkRange(offerTypeId, "offerTypeId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, getActiveProduct));
     }
 
@@ -135,19 +130,17 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> findByTelecomSubTypeOfferType(
             @Parameter(description = "ID dịch vụ viễn thông", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "telecomServiceId phải >= 1")
-            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
             Long telecomServiceId,
             @Parameter(description = "Loại thuê bao (1: trả sau, 2: trả trước)", example = "1")
             @RequestParam(required = false)
-            @Size(max = 1, message = "subType đúng 1 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "subType chỉ gồm chữ hoặc số")
             String subType,
             @Parameter(description = "ID loại sản phẩm", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "offerTypeId phải >= 1")
-            @Max(value = 9999999999L, message = "offerTypeId vượt quá độ dài cột (precision 10)")
             Long offerTypeId) {
+        RequestValidator.checkRange(telecomServiceId, "telecomServiceId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(subType, "subType", 1, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(subType, "subType", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkRange(offerTypeId, "offerTypeId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferType(telecomServiceId, subType, offerTypeId));
     }
 
@@ -165,19 +158,18 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> findByCodeOrId(
             @Parameter(description = "ID sản phẩm", example = "12345")
             @RequestParam(required = false)
-            @Min(value = 1, message = "proOfferId phải >= 1")
-            @Max(value = 9999999999L, message = "proOfferId vượt quá độ dài cột (precision 10)")
             Long proOfferId,
             @Parameter(description = "Mã sản phẩm", example = "PACKAGE_001")
             @RequestParam(required = false)
-            @Size(max = 50, message = "prodOfferCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "prodOfferCode chỉ gồm chữ, số, '_' hoặc '-'")
             String prodOfferCode,
             @Parameter(description = "Trạng thái sản phẩm", example = "1")
             @RequestParam(required = false)
-            @Size(max = 1, message = "status đúng 1 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{0,1}$", message = "status chỉ gồm chữ hoặc số")
             String status) {
+        RequestValidator.checkRange(proOfferId, "proOfferId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(prodOfferCode, "prodOfferCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(prodOfferCode, "prodOfferCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(status, "status", 1, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(status, "status", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferingService.findByCodeOrId(proOfferId, prodOfferCode, status));
     }
 
@@ -196,26 +188,28 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> findByPayTypeWithSpec(
             @Parameter(description = "ID dịch vụ viễn thông (telecom service)", example = "1")
             @RequestParam(required = false)
-            @Size(max = 50, message = "telecomServiceId tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "telecomServiceId chỉ gồm chữ, số, '_' hoặc '-'")
             String telecomServiceId,
 
             @Parameter(description = "Loại thuê bao (payType) - bắt buộc. Ví dụ: 1 (trả trước), 2 (trả sau)", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "payType đúng 1 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{1}$", message = "payType chỉ gồm chữ hoặc số")
+            @RequestParam(required = false)
             String payType,
 
             @Parameter(description = "ID loại sản phẩm (product offer type) - bắt buộc", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "productOfferTypeId tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productOfferTypeId chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String productOfferTypeId,
 
             @Parameter(description = "Danh sách điều kiện lọc theo đặc tính sản phẩm (spec char)")
             @RequestBody(required = false)
-            @Size(max = 100, message = "listProductSpec tối đa 100 phần tử")
             List<FilterRequest> listProductSpec) {
+        RequestValidator.checkMaxLength(telecomServiceId, "telecomServiceId", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(telecomServiceId, "telecomServiceId", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.requireNotBlank(payType, "payType", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(payType, "payType", 1, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(payType, "payType", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.requireNotBlank(productOfferTypeId, "productOfferTypeId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(productOfferTypeId, "productOfferTypeId", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productOfferTypeId, "productOfferTypeId", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkSize(listProductSpec, "listProductSpec", 100, "BCCS-CATALOG-VALIDATE-SIZE");
         return StandardResponses.success(productOfferingService.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId, listProductSpec));
     }
 
@@ -231,22 +225,25 @@ public class ProductOfferingController {
     })
     public StandardResponse<Boolean> checkAttProductOrVasByCode(
             @Parameter(description = "Mã sản phẩm / VAS", example = "300", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "productCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String productCode,
 
             @Parameter(description = "ID loại sản phẩm (product_offer_type_id) - dùng để phân biệt product/VAS", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "productType tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productType chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String productType,
 
             @Parameter(description = "Mã đặc tính cần kiểm tra (product_spec_char.code)", example = "IS_CONNECTED", required = true)
-            @RequestParam
-            @Size(min = 1, max = 200, message = "attributeCode tối đa 200 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,200}$", message = "attributeCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String attributeCode) {
+        RequestValidator.requireNotBlank(productCode, "productCode", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(productCode, "productCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productCode, "productCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.requireNotBlank(productType, "productType", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(productType, "productType", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productType, "productType", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.requireNotBlank(attributeCode, "attributeCode", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(attributeCode, "attributeCode", 200, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(attributeCode, "attributeCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferingService.checkAttProductOrVasByCode(productCode, productType, attributeCode));
     }
 
@@ -262,16 +259,16 @@ public class ProductOfferingController {
     })
     public StandardResponse<Boolean> hasProductAtt(
             @Parameter(description = "ID sản phẩm / VAS (product_offering_id)", example = "400005827", required = true)
-            @RequestParam
-            @Min(value = 1, message = "offerId phải >= 1")
-            @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long offerId,
 
             @Parameter(description = "Mã đặc tính cần kiểm tra (product_spec_char.code)", example = "IS_CONNECTED", required = true)
-            @RequestParam
-            @Size(min = 1, max = 200, message = "attributeCode tối đa 200 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,200}$", message = "attributeCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String attributeCode) {
+        RequestValidator.checkRange(offerId, "offerId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.requireNotBlank(attributeCode, "attributeCode", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(attributeCode, "attributeCode", 200, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(attributeCode, "attributeCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferingService.hasProductAtt(offerId, attributeCode));
     }
 
@@ -291,13 +288,14 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> getListProductOfferingBySpecChars(
             @Parameter(description = "Danh sách mã đặc tính cần lọc (product_spec_char.code)", example = "[\"IS_CONNECTED\", \"DATA_CAP\"]")
             @RequestBody
-            @Size(min = 1, max = 50, message = "specCodes phải có từ 1 đến 50 phần tử")
             List<String> specCodes,
 
             @Parameter(description = "Điều kiện kết hợp: AND (mặc định) hoặc OR", example = "AND")
             @RequestParam(required = false)
-            @Pattern(regexp = "(?i)^(AND|OR)$", message = "condition chỉ được là AND hoặc OR")
             String condition) {
+        RequestValidator.requireNotEmpty(specCodes, "specCodes", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(specCodes, "specCodes", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(condition, "condition", ValidationPatterns.AND_OR, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferingService.getListProductOfferingBySpecChars(specCodes, condition));
     }
 
@@ -316,14 +314,14 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> findByCodesAndProductOfferType(
             @Parameter(description = "Danh sách mã sản phẩm cần tìm", example = "[\"CODE_001\", \"CODE_002\"]")
             @RequestBody
-            @Size(min = 1, max = 1000, message = "codes phải có từ 1 đến 1000 phần tử")
             List<String> codes,
 
             @Parameter(description = "ID loại sản phẩm (product offer type)", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "productOfferTypeId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferTypeId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long productOfferTypeId) {
+        RequestValidator.requireNotEmpty(codes, "codes", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(codes, "codes", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkRange(productOfferTypeId, "productOfferTypeId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferingService.findByCodesAndProductOfferType(codes, productOfferTypeId));
     }
 
@@ -341,8 +339,9 @@ public class ProductOfferingController {
     public StandardResponse<List<ProductOfferingDTO>> findByIds(
             @Parameter(description = "Danh sách ID sản phẩm cần tìm", example = "[12345, 67890]")
             @RequestBody
-            @Size(min = 1, max = 1000, message = "offerIds phải có từ 1 đến 1000 phần tử")
             List<Long> offerIds) {
+        RequestValidator.requireNotEmpty(offerIds, "offerIds", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(offerIds, "offerIds", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
         return StandardResponses.success(productOfferingService.findByIds(offerIds));
     }
 
@@ -359,10 +358,10 @@ public class ProductOfferingController {
     })
     public StandardResponse<List<ProductOfferingCharacterFullDTO>> getListPricePlanByOfferId(
             @Parameter(description = "ID sản phẩm", example = "500001", required = true)
-            @RequestParam
-            @Min(value = 1, message = "productOfferingId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferingId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long productOfferingId) {
+        RequestValidator.requireNotNull(productOfferingId, "productOfferingId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(productOfferingId, "productOfferingId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferCharUseService.getListPricePlanByOfferId(productOfferingId));
     }
 
@@ -380,16 +379,15 @@ public class ProductOfferingController {
     })
     public StandardResponse<List<ProductOfferingDTO>> getListVas(
             @Parameter(description = "ID sản phẩm chính", example = "500001", required = true)
-            @RequestParam
-            @Min(value = 1, message = "offerId phải >= 1")
-            @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long offerId,
 
             @Parameter(description = "Loại lọc quan hệ VAS. Không truyền: giữ nguyên hành vi mặc định. 1: chỉ lấy VAS có thuộc tính quan hệ IS_CONNECTED=1 và không có thuộc tính VAS_DATA.", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "type phải >= 1")
-            @Max(value = 9, message = "type vượt quá giá trị cho phép")
             Integer type) {
+        RequestValidator.requireNotNull(offerId, "offerId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(offerId, "offerId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkRange(type, "type", 1, 9, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferingService.getListVas(offerId, type));
     }
 
@@ -411,29 +409,8 @@ public class ProductOfferingController {
             @ApiResponse(responseCode = "400", description = "Tham số bắt buộc bị thiếu hoặc không hợp lệ"),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy dịch vụ viễn thông / lý do / dịch vụ bán hàng tương ứng")
     })
-    public StandardResponse<List<ProductOfferTypeStockDTO>> getListStockTypeWS(@Valid @RequestBody GetListStockTypeWSRequest request) {
+    public StandardResponse<List<ProductOfferTypeStockDTO>> getListStockTypeWS(@RequestBody GetListStockTypeWSRequest request) {
         return StandardResponses.success(stockTypeWSService.getListStockTypeWS(request));
-    }
-
-    @GetMapping("/getSubTypeByProductCode")
-    @Operation(operationId = "getSubTypeByProductCode",
-            summary = "Lấy loại thuê bao theo mã mặt hàng cho mBCCS",
-            description = "Tra cứu loại thuê bao (SUB_TYPE trong PRODUCT_OFFERING) theo mã mặt hàng. " +
-                    "Ném lỗi BCCS-CATALOG-PRODUCT-0009 nếu mặt hàng không tồn tại. " +
-                    "Trả về null nếu SUB_TYPE chưa được gán.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
-                            examples = @ExampleObject(name = "success", value = SUB_TYPE_BY_PRODUCT_CODE_EXAMPLE))),
-            @ApiResponse(responseCode = "400", description = "Mã mặt hàng không hợp lệ hoặc mặt hàng không tồn tại")
-    })
-    public StandardResponse<String> getSubTypeByProductCode(
-            @Parameter(description = "Mã mặt hàng (PRODUCT_OFFERING.CODE)", example = "PACKAGE_001", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "productCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
-            String productCode) {
-        return StandardResponses.success(productOfferingService.getSubTypeByProductCode(productCode));
     }
 
     @PostMapping("/findProductOfferingByListCodeListSpecCode")
@@ -454,7 +431,7 @@ public class ProductOfferingController {
             @ApiResponse(responseCode = "400", description = "lstSpecCode rỗng hoặc thiếu")
     })
     public StandardResponse<List<ProductOfferingDTO>> findProductOfferingByListCodeListSpecCode(
-            @Valid @RequestBody FindProductOfferingByListCodeListSpecCodeRequest request) {
+            @RequestBody FindProductOfferingByListCodeListSpecCodeRequest request) {
         return StandardResponses.success(productOfferingService.findProductOfferingByListCodeListSpecCode(
                 request.getLstProductOfferCode(), request.getLstSpecCode(), request.getProductOfferType()));
     }

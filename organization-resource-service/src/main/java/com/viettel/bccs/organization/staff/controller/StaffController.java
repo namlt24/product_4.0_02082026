@@ -7,6 +7,8 @@ import com.viettel.bccs.organization.staff.dto.StockDTO;
 import com.viettel.bccs.organization.staff.dto.StaffDTO;
 import com.viettel.bccs.organization.staff.dto.response.StaffResponse;
 import com.viettel.bccs.organization.staff.service.StaffService;
+import com.viettel.bccs.organization.utils.RequestValidator;
+import com.viettel.bccs.organization.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,12 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,7 +27,6 @@ import static com.viettel.bccs.organization.staff.openapi.StaffControllerExample
 @RestController
 @RequestMapping("/organization-resource-service/v1/staff")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Staff", description = "Tra cứu thông tin nhân viên/điểm bán (STAFF)")
 public class StaffController {
 
@@ -48,9 +44,8 @@ public class StaffController {
     public StandardResponse<StaffDTO> getActiveById(
             @Parameter(description = "ID nhân viên (STAFF_ID)", example = "12345", required = true)
             @PathVariable
-            @Min(value = 0, message = "staffId phải >= 0")
-            @Max(value = 9999999999L, message = "staffId vượt quá độ dài cột (precision 10)")
             Long staffId) {
+        RequestValidator.checkRange(staffId, "staffId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(staffService.getActiveById(staffId));
     }
 
@@ -66,9 +61,9 @@ public class StaffController {
     public StandardResponse<StaffDTO> findActiveByStaffCode(
             @Parameter(description = "Mã nhân viên (STAFF_CODE)", example = "NV_001", required = true)
             @PathVariable
-            @Size(max = 40, message = "staffCode tối đa 40 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
             String staffCode) {
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 40, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(staffService.findActiveByStaffCode(staffCode));
     }
 
@@ -85,9 +80,9 @@ public class StaffController {
     public StandardResponse<StaffDTO> findActiveByStaffCodeWithChannelOfSalePoint(
             @Parameter(description = "Mã nhân viên (STAFF_CODE)", example = "NV_001", required = true)
             @PathVariable
-            @Size(max = 40, message = "staffCode tối đa 40 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
             String staffCode) {
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 40, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(staffService.findActiveByStaffCodeWithChannelOfSalePoint(staffCode));
     }
 
@@ -102,9 +97,9 @@ public class StaffController {
     public StandardResponse<List<StockDTO>> getListStockByStaffCode(
             @Parameter(description = "Mã nhân viên (STAFF_CODE)", example = "NV_001", required = true)
             @PathVariable
-            @Size(max = 40, message = "staffCode tối đa 40 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
             String staffCode) {
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 40, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(staffService.getListStockByStaffCode(staffCode));
     }
 
@@ -120,9 +115,9 @@ public class StaffController {
     public StandardResponse<StaffResponse> getStaffShopFullInfo(
             @Parameter(description = "Mã nhân viên (STAFF_CODE)", example = "NV_001", required = true)
             @PathVariable
-            @Size(max = 40, message = "staffCode tối đa 40 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
             String staffCode) {
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 40, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(staffService.getStaffShopFullInfo(staffCode));
     }
 
@@ -139,9 +134,8 @@ public class StaffController {
     public StandardResponse<StaffResponse> getStaffShopFullInfoByStaffId(
             @Parameter(description = "ID nhân viên (STAFF_ID)", example = "12345", required = true)
             @PathVariable
-            @Min(value = 0, message = "staffId phải >= 0")
-            @Max(value = 9999999999L, message = "staffId vượt quá độ dài cột (precision 10)")
             Long staffId) {
+        RequestValidator.checkRange(staffId, "staffId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(staffService.getStaffShopFullInfoByStaffId(staffId));
     }
 
@@ -157,14 +151,14 @@ public class StaffController {
     public StandardResponse<List<CustTypeDTO>> getMappingChannelCustTypeV2(
             @Parameter(description = "Mã nhân viên (STAFF_CODE)", example = "NV_001")
             @RequestParam(required = false)
-            @Size(max = 40, message = "staffCode tối đa 40 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,40}$", message = "staffCode chỉ gồm chữ, số, '_' hoặc '-'")
             String staffCode,
             @Parameter(description = "Loại khách hàng: 1 Cá nhân trong nước, 2 Doanh nghiệp, 3 Nước ngoài", example = "1")
             @RequestParam(required = false)
-            @Size(max = 1, message = "groupType tối đa 1 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,1}$", message = "groupType chỉ gồm chữ, số, '_' hoặc '-'")
             String groupType) {
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 40, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(groupType, "groupType", 1, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(groupType, "groupType", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(staffService.getMappingChannelCustTypeV2(staffCode, groupType));
     }
 }

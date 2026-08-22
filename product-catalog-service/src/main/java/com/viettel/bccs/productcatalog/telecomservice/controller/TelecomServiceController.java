@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.telecomservice.dto.response.TelecomServiceDTO;
 import com.viettel.bccs.productcatalog.telecomservice.service.TelecomServiceService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,10 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import static com.viettel.bccs.productcatalog.telecomservice.openapi.TelecomServiceControllerExamples.*;
@@ -24,7 +23,6 @@ import static com.viettel.bccs.productcatalog.telecomservice.openapi.TelecomServ
 @RestController
 @RequestMapping("/product-catalog-service/v1/telecom-service")
 @RequiredArgsConstructor
-@Validated
 public class TelecomServiceController {
 
     private final TelecomServiceService service;
@@ -42,10 +40,11 @@ public class TelecomServiceController {
     })
     public StandardResponse<TelecomServiceDTO> getTelServiceByAlias(
             @Parameter(description = "Mã alias dịch vụ viễn thông", example = "MOB", required = true)
-            @RequestParam
-            @Size(min = 1, max = 3, message = "alias tối đa 3 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{1,3}$", message = "alias chỉ gồm chữ và số")
+            @RequestParam(required = false)
             String alias) {
+        RequestValidator.requireNotBlank(alias, "alias", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(alias, "alias", 3, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(alias, "alias", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(service.getTelServiceByAlias(alias));
     }
 }

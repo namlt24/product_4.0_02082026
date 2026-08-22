@@ -4,6 +4,7 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.channeltype.dto.ChannelTypeDTO;
 import com.viettel.bccs.organization.channeltype.service.ChannelTypeService;
+import com.viettel.bccs.organization.utils.RequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,10 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import static com.viettel.bccs.organization.channeltype.openapi.ChannelTypeControllerExamples.*;
@@ -23,7 +21,6 @@ import static com.viettel.bccs.organization.channeltype.openapi.ChannelTypeContr
 @RestController
 @RequestMapping("/organization-resource-service/v1/channel-type")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "ChannelType", description = "Tra cứu loại kênh (CHANNEL_TYPE)")
 public class ChannelTypeController {
 
@@ -41,9 +38,8 @@ public class ChannelTypeController {
     public StandardResponse<ChannelTypeDTO> getActiveById(
             @Parameter(description = "ID loại kênh (CHANNEL_TYPE_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "channelTypeId phải >= 0")
-            @Max(value = 9999999999L, message = "channelTypeId vượt quá độ dài cột (precision 10)")
             Long channelTypeId) {
+        RequestValidator.checkRange(channelTypeId, "channelTypeId", 0L, 9999999999L, "BCCS-ORGANIZATION-VALIDATE-RANGE");
         return StandardResponses.success(channelTypeService.getActiveById(channelTypeId));
     }
 

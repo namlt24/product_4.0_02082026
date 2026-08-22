@@ -1,6 +1,5 @@
 package com.viettel.bccs.productcatalog.productofferprice.mapper;
 
-import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
@@ -196,20 +195,6 @@ public class ProductOfferPriceMapper {
      * ProductOfferPriceDTO rỗng chỉ để mang priceEquipment. Do record immutable,
      * tạo bản rỗng tương đương ở đây.
      */
-    public PledgePriceResponse toPledgePriceResponse(ProductOfferPriceEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-        return new PledgePriceResponse(entity.getPrice(), entity.getPledgeAmount(), entity.getPledgeTime(), entity.getPriorPay());
-    }
-
-    public List<PledgePriceResponse> toPledgePriceResponseList(List<ProductOfferPriceEntity> entities) {
-        if (entities == null) {
-            return List.of();
-        }
-        return entities.stream().map(this::toPledgePriceResponse).toList();
-    }
-
     public ProductOfferPriceResponse emptyWithPriceEquipment(Long priceEquipment) {
         return new ProductOfferPriceResponse(
                 null, null, null, null, null, null, null, null, null, null,

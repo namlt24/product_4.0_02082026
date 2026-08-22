@@ -6,6 +6,7 @@ import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
+import com.viettel.bccs.policy.utils.RequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,11 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoQuerryControllerExamples.*;
@@ -26,7 +23,6 @@ import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoQuerryC
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Controller querry thông thường")
 public class MapActiveInfoQuerryController {
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
@@ -42,9 +38,8 @@ public class MapActiveInfoQuerryController {
     public StandardResponse<MapActiveInfoResponse> findById(
             @Parameter(description = "ID bản ghi MAP_ACTIVE_INFO", example = "1", required = true)
             @PathVariable
-            @Min(value = 1, message = "id phải >= 1")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cho phép")
             Long id) {
+        RequestValidator.checkRange(id, "id", 1L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(mapActiveInfoQuerryService.findById(id));
     }
 
@@ -61,7 +56,7 @@ public class MapActiveInfoQuerryController {
                             examples = @ExampleObject(name = "success", value = CHANEL_TYPE_ID_EXAMPLE))),
             @ApiResponse(responseCode = "404", description = "Không tìm thấy nhân viên với staffId tương ứng")
     })
-    public StandardResponse<Long> getChanelTypeIdMapActiveInfo(@Valid @RequestBody ChanelTypeIdRequest request) {
+    public StandardResponse<Long> getChanelTypeIdMapActiveInfo(@RequestBody ChanelTypeIdRequest request) {
         return StandardResponses.success(mapActiveInfoQuerryService.getChanelTypeIdMapActiveInfo(request));
     }
 

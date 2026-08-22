@@ -269,6 +269,42 @@
     "retryable": true,
     "logLevel": "ERROR"
   },
+  "BCCS-POLICY-VALIDATE-REQUIRED": {
+    "code": "BCCS-POLICY-VALIDATE-REQUIRED",
+    "message": "Tham số {0} không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-VALIDATE-SIZE": {
+    "code": "BCCS-POLICY-VALIDATE-SIZE",
+    "message": "Tham số {0} không hợp lệ: {1}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-VALIDATE-RANGE": {
+    "code": "BCCS-POLICY-VALIDATE-RANGE",
+    "message": "Tham số {0} phải nằm trong khoảng {1}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-POLICY-VALIDATE-PATTERN": {
+    "code": "BCCS-POLICY-VALIDATE-PATTERN",
+    "message": "Tham số {0} không đúng định dạng cho phép",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
   "BCCS-POLICY-DISCPROMO-0001": {
     "code": "BCCS-POLICY-DISCPROMO-0001",
     "message": "Không tìm thấy chương trình khuyến mãi giảm giá (discount promotion) với id: {0}",

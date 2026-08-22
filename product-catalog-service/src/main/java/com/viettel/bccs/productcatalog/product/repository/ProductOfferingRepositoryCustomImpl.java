@@ -60,8 +60,12 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
         if (status != null && !status.isEmpty()) {
             sql.append(" AND a.status = :status");
         }
-        appendCondition(sql, "a.product_offering_id = :proOfferId", proOfferId != null && proOfferId > 0);
-        appendCondition(sql, "a.code = :prodOfferCode", prodOfferCode != null && !prodOfferCode.isEmpty());
+        if (proOfferId != null && proOfferId > 0){
+            sql.append(" AND a.pro_offer_id = :proOfferId");
+        }
+        if (prodOfferCode != null && !prodOfferCode.isEmpty()) {
+            sql.append(" AND a.prod_offer_code = :prodOfferCode");
+        }
 
         sql.append(" ORDER BY a.code");
 

@@ -121,22 +121,4 @@ public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceR
         return query.getResultList();
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public List<ProductOfferPriceEntity> getPledgePriceInfoByOfferId(Long productOfferingId) {
-        String sql = """
-            SELECT pop.*
-            FROM BCCS_PRODUCT.PRODUCT_OFFER_PRICE pop
-            WHERE pop.STATUS = '1'
-              AND pop.PRICE_TYPE_ID = 2
-              AND (pop.EFFECT_DATETIME IS NULL OR pop.EFFECT_DATETIME < SYSDATE)
-              AND (pop.EXPIRE_DATETIME IS NULL OR pop.EXPIRE_DATETIME > SYSDATE)
-              AND pop.PRODUCT_OFFERING_ID = :productOfferingId
-            """;
-
-        Query query = entityManager.createNativeQuery(sql, ProductOfferPriceEntity.class);
-        query.setParameter("productOfferingId", productOfferingId);
-        return query.getResultList();
-    }
-
 }

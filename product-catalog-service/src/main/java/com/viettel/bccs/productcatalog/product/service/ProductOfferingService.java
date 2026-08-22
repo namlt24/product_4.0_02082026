@@ -1,6 +1,8 @@
 package com.viettel.bccs.productcatalog.product.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
@@ -27,12 +29,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProductOfferingService {
+
+    private static final Pattern PRODUCT_OFFER_TYPE_DIGITS_PATTERN = Pattern.compile("^[0-9]{0,10}$");
 
     private final ProductOfferingRepository productOfferingRepository;
     private final ProductOfferingMapper productOfferingMapper;
@@ -53,17 +58,6 @@ public class ProductOfferingService {
         return productOfferingRepository.findByCode(productCode)
                 .map(productOfferingMapper::toResponse)
                 .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0001", "Product not found with code: " + productCode));
-    }
-
-    public String getSubTypeByProductCode(String productCode) {
-        if (DataUtil.isNullOrEmpty(productCode)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0008", "Mã mặt hàng không được để trống");
-        }
-        ProductOfferingResponse response = productOfferingRepository.findByCode(productCode)
-                .map(productOfferingMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0009",
-                        "Mặt hàng " + productCode + " không hợp lệ"));
-        return response.subType();
     }
 
     @Cacheable(value = "productOfferingCache", key = "'OFFER_ALTER:' + #offerId + ':' + '' + #changeChannel + ':' + #checkStatus")
@@ -101,6 +95,11 @@ public class ProductOfferingService {
         }
         for (FilterRequest filterRequest : listProductSpec) {
             validateProperty(filterRequest.getProperty());
+            RequestValidator.checkMaxLength(filterRequest.getProperty(), "listProductSpec.property", 100, "BCCS-CATALOG-VALIDATE-SIZE");
+            RequestValidator.checkMaxLength(filterRequest.getValueText(), "listProductSpec.valueText", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filterRequest.getValueText(), "listProductSpec.valueText", ValidationPatterns.FREE_TEXT, "BCCS-CATALOG-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filterRequest.getValueType(), "listProductSpec.valueType", 20, "BCCS-CATALOG-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filterRequest.getValueType(), "listProductSpec.valueType", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
             FilterRequest.Operator operator = filterRequest.getOperator();
             if (operator == null) {
                 continue;
@@ -401,6 +400,11 @@ public class ProductOfferingService {
      */
     public List<ProductOfferingDTO> findProductOfferingByListCodeListSpecCode(
             List<String> lstProductOfferCode, List<String> lstSpecCode, String productOfferType) {
+        RequestValidator.requireNotEmpty(lstSpecCode, "lstSpecCode", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(lstSpecCode, "lstSpecCode", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkSize(lstProductOfferCode, "lstProductOfferCode", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkMaxLength(productOfferType, "productOfferType", 10, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productOfferType, "productOfferType", PRODUCT_OFFER_TYPE_DIGITS_PATTERN, "BCCS-CATALOG-VALIDATE-PATTERN");
         Long productOfferTypeId = DataUtil.isNullOrEmpty(productOfferType)
                 ? Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE
                 : Long.valueOf(productOfferType.trim());

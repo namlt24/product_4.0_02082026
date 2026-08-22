@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.mapping.service.MappingService;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
+import com.viettel.bccs.policy.utils.RequestValidator;
+import com.viettel.bccs.policy.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,12 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +29,6 @@ import static com.viettel.bccs.policy.mapping.openapi.MappingControllerExamples.
 @RestController
 @RequestMapping("/product-policy-service/v1/mapping")
 @RequiredArgsConstructor
-@Validated
 public class MappingController {
 
     private final MappingService service;
@@ -48,9 +44,8 @@ public class MappingController {
     public StandardResponse<List<String>> findSaleServiceCodeByReason(
             @Parameter(description = "Id lý do", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "reasonId phải >= 0")
-            @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cột (precision 10)")
             Long reasonId) {
+        RequestValidator.checkRange(reasonId, "reasonId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.findSaleServiceCodeByReason(reasonId));
     }
 
@@ -65,9 +60,8 @@ public class MappingController {
     public StandardResponse<List<ReasonResponse>> getMappingReasonProductOfferPrice(
             @Parameter(description = "Id gói sản phẩm (product package / sale service)", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "productPackageId phải >= 0")
-            @Max(value = 9999999999L, message = "productPackageId vượt quá độ dài cột (precision 10)")
             Long productPackageId) {
+        RequestValidator.checkRange(productPackageId, "productPackageId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.getMappingReasonProductOfferPrice(productPackageId));
     }
 
@@ -82,24 +76,23 @@ public class MappingController {
     public StandardResponse<String> getSaleServiceCode(
             @Parameter(description = "ID dịch vụ viễn thông", example = "1")
             @RequestParam(required = false)
-            @Min(value = 0, message = "telecomServiceId phải >= 0")
-            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
             Long telecomServiceId,
             @Parameter(description = "Id lý do", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "reasonId phải >= 0")
-            @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long reasonId,
             @Parameter(description = "Mã gói cước", example = "POBAS")
             @RequestParam(required = false)
-            @Size(max = 50, message = "productCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
             String productCode,
             @Parameter(description = "Mã hành động", example = "00")
             @RequestParam(required = false)
-            @Size(max = 10, message = "actionCode tối đa 10 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,10}$", message = "actionCode chỉ gồm chữ, số, '_' hoặc '-'")
             String actionCode) {
+        RequestValidator.checkRange(telecomServiceId, "telecomServiceId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(reasonId, "reasonId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(productCode, "productCode", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productCode, "productCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(actionCode, "actionCode", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
         return StandardResponses.success(service.getSaleServiceCode(telecomServiceId, reasonId, productCode, actionCode));
     }
 }

@@ -29,11 +29,7 @@ public class ChannelTypeService {
                 .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CHANNELTYPE-0001", "Không tìm thấy loại kênh với id: " + channelTypeId));
     }
 
-    /**
-     * Kênh được coi là "kênh điểm bán/hiệu lực bán" khi loại kênh KHÔNG thuộc Viettel (isVtUnit = 2)
-     * và là loại đối tượng chi nhánh (objectType = 2). Không tìm thấy loại kênh hoặc kênh không hợp lệ
-     * đều trả về false.
-     */
+
     @Transactional(readOnly = true)
     public Boolean isChannelOfSalePoint(Long channelTypeId) {
         if (DataUtil.isNullObject(channelTypeId)) {

@@ -17,7 +17,9 @@ import com.viettel.bccs.policy.reason.service.ReasonService;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.MessageUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
+import com.viettel.bccs.policy.utils.ValidationPatterns;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,6 +106,25 @@ public class MapActiveInfoProductService {
         }
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
+        RequestValidator.checkSize(request.getListProductSpec(), "listProductSpec", 200, "BCCS-POLICY-VALIDATE-SIZE");
+        validateFilterRequests(request.getListProductSpec());
+    }
+
+    private void validateFilterRequests(List<FilterRequest> filters) {
+        if (DataUtil.isNullOrEmpty(filters)) {
+            return;
+        }
+        for (FilterRequest filter : filters) {
+            RequestValidator.checkMaxLength(filter.getProperty(), "listProductSpec.property", 100, "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getProperty(), "listProductSpec.property", ValidationPatterns.PROPERTY_CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filter.getEntity(), "listProductSpec.entity", 100, "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getEntity(), "listProductSpec.entity", ValidationPatterns.PROPERTY_CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filter.getValueText(), "listProductSpec.valueText", 1000, "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getValueText(), "listProductSpec.valueText", ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filter.getValueType(), "listProductSpec.valueType", 20, "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getValueType(), "listProductSpec.valueType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkSize(filter.getLstValue(), "listProductSpec.lstValue", 500, "BCCS-POLICY-VALIDATE-SIZE");
+        }
     }
 
     private void validateRequest(GetProductCodeRequest request) {
@@ -113,6 +134,16 @@ public class MapActiveInfoProductService {
         }
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
+        RequestValidator.checkRange(request.getMode(), "mode", 0, 9, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.checkRange(request.getOfferId(), "offerId", 1L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(request.getChangeMethod(), "changeMethod", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(request.getChangeMethod(), "changeMethod", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(request.getTechnology(), "technology", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(request.getTechnology(), "technology", ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(request.getInfraType(), "infraType", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(request.getInfraType(), "infraType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkSize(request.getListProductSpec(), "listProductSpec", 200, "BCCS-POLICY-VALIDATE-SIZE");
+        validateFilterRequests(request.getListProductSpec());
     }
 
 
@@ -134,6 +165,11 @@ public class MapActiveInfoProductService {
         validateMaxLengthParam(payType, 1, "BCCS-POLICY-MAPACTIVE-0012");
         validateMaxLengthParam(actionCode, 10, "BCCS-POLICY-MAPACTIVE-0013");
         validateMaxLengthParam(telecomServiceId, 10, "BCCS-POLICY-MAPACTIVE-0014");
+
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkPattern(payType, "payType", ValidationPatterns.ALPHANUMERIC, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkPattern(telecomServiceId, "telecomServiceId", ValidationPatterns.DIGITS, "BCCS-POLICY-VALIDATE-PATTERN");
     }
 
     private List<ProductOfferingDTO> fetchOfferingsWithSpec(GetProductCodeByMapActiveInfoRequest request) {

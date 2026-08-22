@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.identitytype.dto.IdentityTypeDTO;
 import com.viettel.bccs.organization.identitytype.service.IdentityTypeService;
+import com.viettel.bccs.organization.utils.RequestValidator;
+import com.viettel.bccs.organization.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,10 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,7 +27,6 @@ import static com.viettel.bccs.organization.identitytype.openapi.IdentityTypeCon
 @RestController
 @RequestMapping("/organization-resource-service/v1/identity-type")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "IdentityType", description = "Tra cứu loại giấy tờ (IDENTITY_TYPE)")
 public class IdentityTypeController {
 
@@ -46,9 +44,9 @@ public class IdentityTypeController {
     public StandardResponse<List<IdentityTypeDTO>> getListIdentityType(
             @Parameter(description = "Loại khách hàng", example = "01")
             @RequestParam(required = false)
-            @Size(max = 6, message = "custType tối đa 6 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,6}$", message = "custType chỉ gồm chữ, số, '_' hoặc '-'")
             String custType) {
+        RequestValidator.checkMaxLength(custType, "custType", 6, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(custType, "custType", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(identityTypeService.getListIdentityType(custType));
     }
 
@@ -64,10 +62,11 @@ public class IdentityTypeController {
     })
     public StandardResponse<IdentityTypeDTO> findByIdType(
             @Parameter(description = "Mã loại giấy tờ", example = "IDC", required = true)
-            @RequestParam
-            @Size(min = 1, max = 10, message = "idType tối đa 10 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,10}$", message = "idType chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String idType) {
+        RequestValidator.requireNotBlank(idType, "idType", "BCCS-ORGANIZATION-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(idType, "idType", 10, "BCCS-ORGANIZATION-VALIDATE-SIZE");
+        RequestValidator.checkPattern(idType, "idType", ValidationPatterns.CODE, "BCCS-ORGANIZATION-VALIDATE-PATTERN");
         return StandardResponses.success(identityTypeService.findByIdType(idType));
     }
 }

@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,12 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,7 +26,6 @@ import static com.viettel.bccs.productcatalog.productoffercharuse.openapi.Produc
 @RestController
 @RequestMapping("/product-catalog-service/v1/product-offer-char-use")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Product Offer Char Use", description = "API quản lý đặc tính sản phẩm")
 public class ProductOfferCharUseController {
 
@@ -47,8 +43,9 @@ public class ProductOfferCharUseController {
     public StandardResponse<Map<Long, List<ProductSpecCharDTO>>> getProductSpecCharByOfferingIds(
             @Parameter(description = "Danh sách offering ID cần tra cứu", example = "[\"500001\", \"500002\"]")
             @RequestBody
-            @Size(min = 1, max = 1000, message = "offeringIds phải có từ 1 đến 1000 phần tử")
             List<String> offeringIds) {
+        RequestValidator.requireNotEmpty(offeringIds, "offeringIds", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(offeringIds, "offeringIds", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
         return StandardResponses.success(productOfferCharUseService.getProductSpecCharByOfferingIds(offeringIds));
     }
 
@@ -63,16 +60,17 @@ public class ProductOfferCharUseController {
     })
     public StandardResponse<Optional<String>> getAttributeValue(
             @Parameter(description = "ID sản phẩm", example = "500001", required = true)
-            @RequestParam
-            @Min(value = 1, message = "offerId phải >= 1")
-            @Max(value = 9999999999L, message = "offerId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long offerId,
 
             @Parameter(description = "Mã đặc tính (product_spec_char.code)", example = "MONTHLY_FEE", required = true)
-            @RequestParam
-            @Size(min = 1, max = 200, message = "attributeName tối đa 200 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,200}$", message = "attributeName chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String attributeName) {
+        RequestValidator.requireNotNull(offerId, "offerId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(offerId, "offerId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.requireNotBlank(attributeName, "attributeName", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(attributeName, "attributeName", 200, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(attributeName, "attributeName", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productOfferCharUseService.getAttributeValue(offerId, attributeName));
     }
 }

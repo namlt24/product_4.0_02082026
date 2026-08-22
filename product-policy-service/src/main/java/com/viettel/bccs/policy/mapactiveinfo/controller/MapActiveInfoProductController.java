@@ -13,9 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +25,6 @@ import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoProduct
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Nghiệp vụ đấu nối di động trả trước", description = "API cho nghiệp vụ đấu nối di động trả trước")
 public class MapActiveInfoProductController {
     private final MapActiveInfoProductService mapActiveInfoProductService;
@@ -45,7 +42,7 @@ public class MapActiveInfoProductController {
                             examples = @ExampleObject(name = "success", value = PRODUCT_CODE_LIST_EXAMPLE)))
     })
     public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCodeByMapActiveInfo(
-            @Valid @RequestBody GetProductCodeByMapActiveInfoRequest request) {
+            @RequestBody GetProductCodeByMapActiveInfoRequest request) {
         return StandardResponses.success(GetProductCodeByMapActiveInfoResponse.builder()
                 .productOfferingDTOs(mapActiveInfoProductService.getProductCodeByMapActiveInfo(request))
                 .build());
@@ -64,7 +61,7 @@ public class MapActiveInfoProductController {
                             examples = @ExampleObject(name = "success", value = PRODUCT_CODE_LIST_EXAMPLE)))
     })
     public StandardResponse<GetProductCodeByMapActiveInfoResponse> getProductCode(
-            @Valid @RequestBody GetProductCodeRequest request) {
+            @RequestBody GetProductCodeRequest request) {
         return StandardResponses.success(GetProductCodeByMapActiveInfoResponse.builder()
                 .productOfferingDTOs(mapActiveInfoProductService.getProductCode(request))
                 .build());

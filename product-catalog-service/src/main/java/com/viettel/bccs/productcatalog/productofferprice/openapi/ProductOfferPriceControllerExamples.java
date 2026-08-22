@@ -5,23 +5,6 @@ public final class ProductOfferPriceControllerExamples {
     private ProductOfferPriceControllerExamples() {
     }
 
-    public static final String PLEDGE_PRICE_EXAMPLE = """
-            {
-              "code": "SUCCESS",
-              "message": "Thành công",
-              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000004",
-              "requestId": "req-0004",
-              "timestamp": "2026-08-20T02:00:00Z",
-              "data": [
-                {
-                  "price": 1500000,
-                  "pledgeAmount": 500000,
-                  "pledgeTime": 12,
-                  "priorPay": "3"
-                }
-              ]
-            }""";
-
     public static final String PRICE_DTO_EXAMPLE = """
             {
               "code": "SUCCESS",

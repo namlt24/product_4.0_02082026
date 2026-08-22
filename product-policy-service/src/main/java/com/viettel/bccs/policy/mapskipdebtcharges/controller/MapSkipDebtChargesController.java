@@ -12,9 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,7 +26,6 @@ import static com.viettel.bccs.policy.mapskipdebtcharges.openapi.MapSkipDebtChar
 @RestController
 @RequestMapping("/product-policy-service/v1/map-skip-debt-charges")
 @RequiredArgsConstructor
-@Validated
 public class MapSkipDebtChargesController {
 
     private final MapSkipDebtChargesService service;
@@ -46,7 +43,7 @@ public class MapSkipDebtChargesController {
                             examples = @ExampleObject(name = "success", value = MAP_SKIP_DEBT_CHARGES_FULL_LIST_EXAMPLE)))
     })
     public StandardResponse<List<MapSkipDebtChargesDTOFull>> getMapSkipDebtChargeFullInfo(
-            @Valid @RequestBody List<@Valid MapSkipDebtChargesDTO> mapSkipDebtChargesDTOs) throws Exception {
+            @RequestBody List<MapSkipDebtChargesDTO> mapSkipDebtChargesDTOs) throws Exception {
         return StandardResponses.success(service.getFullInfo(mapSkipDebtChargesDTOs));
     }
 }

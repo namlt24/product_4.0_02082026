@@ -7,6 +7,8 @@ import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.service.ReasonService;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
+import com.viettel.bccs.policy.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,12 +16,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,7 +28,6 @@ import static com.viettel.bccs.policy.reason.openapi.ReasonControllerExamples.*;
 @RestController
 @RequestMapping("/product-policy-service/v1/reason")
 @RequiredArgsConstructor
-@Validated
 public class ReasonController {
 
     private final ReasonService service;
@@ -47,9 +43,8 @@ public class ReasonController {
     public StandardResponse<ReasonResponse> findById(
             @Parameter(description = "ID hình thức hòa mạng (REASON_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "id phải >= 0")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cột (precision 10)")
             Long id) {
+        RequestValidator.checkRange(id, "id", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.findById(id));
     }
 
@@ -63,15 +58,16 @@ public class ReasonController {
     })
     public StandardResponse<Boolean> checkAttReason(
             @Parameter(description = "ID hình thức hòa mạng", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "reasonId phải >= 0")
-            @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long reasonId,
             @Parameter(description = "Mã đặc tính (attribute code)", example = "COLOR", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "attributeCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,50}$", message = "attributeCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String attributeCode) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(reasonId, "reasonId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.requireNotBlank(attributeCode, "attributeCode", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(attributeCode, "attributeCode", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(attributeCode, "attributeCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
         return StandardResponses.success(service.checkAttReason(reasonId, attributeCode));
     }
 
@@ -85,10 +81,10 @@ public class ReasonController {
     })
     public StandardResponse<List<String>> getReasonCharacter(
             @Parameter(description = "ID hình thức hòa mạng", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "reasonId phải >= 0")
-            @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long reasonId) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(reasonId, "reasonId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.getReasonCharacter(reasonId));
     }
 
@@ -102,20 +98,22 @@ public class ReasonController {
     })
     public StandardResponse<Long> getReasonIdByTypeAndCode(
             @Parameter(description = "Mã lý do (REASON_CODE)", example = "2", required = true)
-            @RequestParam
-            @Size(min = 1, max = 20, message = "reasonCode tối đa 20 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,20}$", message = "reasonCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String reasonCode,
             @Parameter(description = "Mã hành động (ACTION_CODE)", example = "00", required = true)
-            @RequestParam
-            @Size(min = 1, max = 10, message = "actionCode tối đa 10 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,10}$", message = "actionCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String actionCode,
             @Parameter(description = "ID dịch vụ viễn thông", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "telecomServiceId phải >= 0")
-            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long telecomServiceId) {
+        RequestValidator.requireNotBlank(reasonCode, "reasonCode", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(reasonCode, "reasonCode", 20, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(reasonCode, "reasonCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.requireNotBlank(actionCode, "actionCode", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(actionCode, "actionCode", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.requireNotNull(telecomServiceId, "telecomServiceId", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(telecomServiceId, "telecomServiceId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.getReasonIdByTypeAndCode(reasonCode, actionCode, telecomServiceId));
     }
 
@@ -130,20 +128,22 @@ public class ReasonController {
     })
     public StandardResponse<List<ReasonDTO>> getListReasonByActionCodeAndTelServiceForAudit(
             @Parameter(description = "Mã hành động (ACTION_CODE)", example = "NEW", required = true)
-            @RequestParam
-            @Size(min = 1, max = 20, message = "actionCode tối đa 20 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,20}$", message = "actionCode chỉ gồm chữ, số, '_' hoặc '-'")
+            @RequestParam(required = false)
             String actionCode,
             @Parameter(description = "ID dịch vụ viễn thông", example = "1", required = true)
-            @RequestParam
-            @Min(value = 0, message = "telServiceId phải >= 0")
-            @Max(value = 9999999999L, message = "telServiceId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long telServiceId,
             @Parameter(description = "Hình thức thanh toán: 1 Trả sau, 2 Trả trước", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "payType đúng 1 ký tự")
-            @Pattern(regexp = "^[12]$", message = "payType chỉ nhận giá trị 1 hoặc 2")
+            @RequestParam(required = false)
             String payType) {
+        RequestValidator.requireNotBlank(actionCode, "actionCode", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(actionCode, "actionCode", 20, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.requireNotNull(telServiceId, "telServiceId", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(telServiceId, "telServiceId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.requireNotBlank(payType, "payType", "BCCS-POLICY-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(payType, "payType", 1, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(payType, "payType", ValidationPatterns.PAY_TYPE_12, "BCCS-POLICY-VALIDATE-PATTERN");
         return StandardResponses.success(service.getListReasonByActionCodeAndTelServiceForAudit(actionCode, telServiceId, payType));
     }
 

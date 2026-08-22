@@ -2,10 +2,11 @@ package com.viettel.bccs.productcatalog.productofferprice.controller;
 
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
-import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.service.ProductOfferPriceService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,12 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,31 +25,10 @@ import static com.viettel.bccs.productcatalog.productofferprice.openapi.ProductO
 @RestController
 @RequestMapping("/product-catalog-service/v1/productofferprice")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Product Offer Price", description = "API quản lý giá bán thiết bị")
 public class ProductOfferPriceController {
 
     private final ProductOfferPriceService productOfferPriceService;
-
-    @GetMapping("/getPledgePriceInfoByOfferId")
-    @Operation(operationId = "getPledgePriceInfoByOfferId",
-            summary = "Lấy thông tin giá cam kết theo ID mặt hàng",
-            description = "Truy vấn giá tiền, số tiền cam kết, số tháng cam kết và số tháng ứng trước " +
-                    "(PRICE_TYPE_ID=2) từ PRODUCT_OFFER_PRICE theo product_offering_id, " +
-                    "chỉ lấy bản ghi đang active và còn hiệu lực theo ngày hiện tại.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
-                            examples = @ExampleObject(name = "success", value = PLEDGE_PRICE_EXAMPLE)))
-    })
-    public StandardResponse<List<PledgePriceResponse>> getPledgePriceInfoByOfferId(
-            @Parameter(description = "ID mặt hàng (PRODUCT_OFFERING_ID)", example = "456", required = true)
-            @RequestParam
-            @Min(value = 1, message = "productOfferingId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferingId vượt quá độ dài cột (precision 10)")
-            Long productOfferingId) {
-        return StandardResponses.success(productOfferPriceService.getPledgePriceInfoByOfferId(productOfferingId));
-    }
 
     @GetMapping("/getById")
     @Operation(
@@ -67,10 +42,10 @@ public class ProductOfferPriceController {
     })
     public StandardResponse<ProductOfferPriceDTO> getById(
             @Parameter(description = "ID giá bán thiết bị", example = "12345", required = true)
-            @RequestParam
-            @Min(value = 1, message = "prodOfferPriceId phải >= 1")
-            @Max(value = 999999999999999L, message = "prodOfferPriceId vượt quá độ dài cột (precision 15)")
+            @RequestParam(required = false)
             Long prodOfferPriceId) {
+        RequestValidator.requireNotNull(prodOfferPriceId, "prodOfferPriceId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(prodOfferPriceId, "prodOfferPriceId", 1L, 999999999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferPriceService.getById(prodOfferPriceId));
     }
 
@@ -87,33 +62,29 @@ public class ProductOfferPriceController {
     public StandardResponse<List<ProductOfferPriceDTO>> getPriceInServicesForPCCC(
             @Parameter(description = "ID gói sản phẩm", example = "123")
             @RequestParam(required = false)
-            @Min(value = 1, message = "productPackageId phải >= 1")
-            @Max(value = 9999999999L, message = "productPackageId vượt quá độ dài cột (precision 10)")
             Long productPackageId,
 
             @Parameter(description = "Mã gói sản phẩm", example = "PKG_001")
             @RequestParam(required = false)
-            @Size(max = 50, message = "productPackageCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "productPackageCode chỉ gồm chữ, số, '_' hoặc '-'")
             String productPackageCode,
 
             @Parameter(description = "ID loại sản phẩm", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "productOfferType phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferType vượt quá độ dài cột (precision 10)")
             Long productOfferType,
 
             @Parameter(description = "ID sản phẩm", example = "456")
             @RequestParam(required = false)
-            @Min(value = 1, message = "productOfferId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferId vượt quá độ dài cột (precision 10)")
             Long productOfferId,
 
             @Parameter(description = "ID chính sách giá", example = "7")
             @RequestParam(required = false)
-            @Min(value = 1, message = "pricePolicy phải >= 1")
-            @Max(value = 9999999999L, message = "pricePolicy vượt quá độ dài cột (precision 10)")
             Long pricePolicy) {
+        RequestValidator.checkRange(productPackageId, "productPackageId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(productPackageCode, "productPackageCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productPackageCode, "productPackageCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkRange(productOfferType, "productOfferType", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkRange(productOfferId, "productOfferId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkRange(pricePolicy, "pricePolicy", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferPriceService.getPriceInServicesForPCCC(
                 productPackageId, productPackageCode, productOfferType, productOfferId, pricePolicy));
     }
@@ -133,33 +104,29 @@ public class ProductOfferPriceController {
     public StandardResponse<List<ProductOfferPriceResponse>> getPriceInServices(
             @Parameter(description = "ID gói sản phẩm", example = "123")
             @RequestParam(required = false)
-            @Min(value = 1, message = "productPackageId phải >= 1")
-            @Max(value = 9999999999L, message = "productPackageId vượt quá độ dài cột (precision 10)")
             Long productPackageId,
 
             @Parameter(description = "Mã gói sản phẩm", example = "PKG_001")
             @RequestParam(required = false)
-            @Size(max = 50, message = "productPackageCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "productPackageCode chỉ gồm chữ, số, '_' hoặc '-'")
             String productPackageCode,
 
             @Parameter(description = "ID loại sản phẩm", example = "1")
             @RequestParam(required = false)
-            @Min(value = 1, message = "productOfferType phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferType vượt quá độ dài cột (precision 10)")
             Long productOfferType,
 
             @Parameter(description = "ID sản phẩm", example = "456")
             @RequestParam(required = false)
-            @Min(value = 1, message = "productOfferId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferId vượt quá độ dài cột (precision 10)")
             Long productOfferId,
 
             @Parameter(description = "ID chính sách giá", example = "7")
             @RequestParam(required = false)
-            @Min(value = 1, message = "pricePolicy phải >= 1")
-            @Max(value = 9999999999L, message = "pricePolicy vượt quá độ dài cột (precision 10)")
             Long pricePolicy) {
+        RequestValidator.checkRange(productPackageId, "productPackageId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(productPackageCode, "productPackageCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productPackageCode, "productPackageCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkRange(productOfferType, "productOfferType", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkRange(productOfferId, "productOfferId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkRange(pricePolicy, "pricePolicy", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferPriceService.getPriceInServices(
                 productPackageId, productPackageCode, productOfferType, productOfferId, pricePolicy));
     }
@@ -176,22 +143,22 @@ public class ProductOfferPriceController {
     })
     public StandardResponse<List<ProductOfferPriceDTO>> getPriceByTypePolicy(
             @Parameter(description = "ID sản phẩm", example = "456", required = true)
-            @RequestParam
-            @Min(value = 1, message = "productOfferId phải >= 1")
-            @Max(value = 9999999999L, message = "productOfferId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long productOfferId,
 
             @Parameter(description = "ID loại giá", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "priceTypeId phải >= 1")
-            @Max(value = 9999999999L, message = "priceTypeId vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long priceTypeId,
 
             @Parameter(description = "ID chính sách giá", example = "7", required = true)
-            @RequestParam
-            @Min(value = 1, message = "pricePolicy phải >= 1")
-            @Max(value = 9999999999L, message = "pricePolicy vượt quá độ dài cột (precision 10)")
+            @RequestParam(required = false)
             Long pricePolicy) {
+        RequestValidator.requireNotNull(productOfferId, "productOfferId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(productOfferId, "productOfferId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.requireNotNull(priceTypeId, "priceTypeId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(priceTypeId, "priceTypeId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.requireNotNull(pricePolicy, "pricePolicy", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(pricePolicy, "pricePolicy", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productOfferPriceService.getPriceByTypePolicy(productOfferId, priceTypeId, pricePolicy));
     }
 

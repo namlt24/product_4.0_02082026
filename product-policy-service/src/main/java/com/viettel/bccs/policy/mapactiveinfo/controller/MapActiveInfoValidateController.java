@@ -11,6 +11,8 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateMapActiveInfoR
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoValidateService;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
+import com.viettel.bccs.policy.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -18,9 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,7 +37,6 @@ import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoValidat
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "Nghiệp vụ đấu nối di động trả trước", description = "API validate cho nghiệp vụ đấu nối di động trả trước")
 public class MapActiveInfoValidateController {
     private final MapActiveInfoValidateService service;
@@ -54,8 +53,11 @@ public class MapActiveInfoValidateController {
     })
     @PostMapping("/validateFollowMapActiveInfoNew")
     public StandardResponse<MapActiveInfoDTO> validateFollowMapActiveInfoNew(
-            @Valid @RequestBody ValidateInputMapActiveInfoRequest request) {
+            @RequestBody ValidateInputMapActiveInfoRequest request) {
         MapActiveInfoDTO mapActiveInfoDTO = new MapActiveInfoDTO();
+
+        RequestValidator.checkMaxLength(request.getProductCode(), "productCode", 50, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(request.getProductCode(), "productCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
 
         List<String> lstBusinessNo = request.getLstBusinessNo();
 

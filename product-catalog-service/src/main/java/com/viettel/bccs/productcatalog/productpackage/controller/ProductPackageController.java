@@ -6,6 +6,8 @@ import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackag
 import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackageResponse;
 import com.viettel.bccs.productcatalog.productpackage.dto.response.SaleServiceAdvanceDTO;
 import com.viettel.bccs.productcatalog.productpackage.service.ProductPackageService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,12 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +31,6 @@ import static com.viettel.bccs.productcatalog.productpackage.openapi.ProductPack
 @RestController
 @RequestMapping("/product-catalog-service/v1/product-package")
 @RequiredArgsConstructor
-@Validated
 public class ProductPackageController {
 
     private final ProductPackageService service;
@@ -50,9 +46,8 @@ public class ProductPackageController {
     public StandardResponse<ProductPackageResponse> findById(
             @Parameter(description = "ID gói sản phẩm (PRODUCT_PACKAGE_ID)", example = "1001", required = true)
             @PathVariable
-            @Min(value = 1, message = "id phải >= 1")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cho phép")
             Long id) {
+        RequestValidator.checkRange(id, "id", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findById(id));
     }
 
@@ -70,9 +65,10 @@ public class ProductPackageController {
     public StandardResponse<List<ProductPackageResponse>> getByCode(
             @Parameter(description = "Mã gói sản phẩm (product_package.code)", example = "PACKAGE_MOBILE_01", required = true)
             @PathVariable
-            @Size(min = 1, max = 50, message = "code tối đa 50 ký tự")
-            @Pattern(regexp = "^[a-zA-Z0-9_]{1,50}$", message = "code chỉ gồm chữ, số hoặc '_'")
             String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(code, "code", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(code, "code", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(service.findByCode(code));
     }
 
@@ -86,10 +82,11 @@ public class ProductPackageController {
     @GetMapping("/getByStatus")
     public StandardResponse<List<ProductPackageResponse>> getByStatus(
             @Parameter(description = "Trạng thái (0/1)", example = "1", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "status đúng 1 ký tự")
-            @Pattern(regexp = "^[01]$", message = "status chỉ nhận giá trị 0 hoặc 1")
+            @RequestParam(required = false)
             String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(status, "status", 1, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(status, "status", ValidationPatterns.DIGITS, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(service.findByStatus(status));
     }
 
@@ -103,10 +100,11 @@ public class ProductPackageController {
     @GetMapping("/getByType")
     public StandardResponse<List<ProductPackageResponse>> getByType(
             @Parameter(description = "Loại gói sản phẩm (1: hàng hoá, 2: dịch vụ bán hàng)", example = "2", required = true)
-            @RequestParam
-            @Size(min = 1, max = 1, message = "type đúng 1 ký tự")
-            @Pattern(regexp = "^[12]$", message = "type chỉ nhận giá trị 1 hoặc 2")
+            @RequestParam(required = false)
             String type) {
+        RequestValidator.requireNotBlank(type, "type", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(type, "type", 1, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(type, "type", ValidationPatterns.DIGITS, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(service.findByType(type));
     }
 
@@ -120,10 +118,9 @@ public class ProductPackageController {
     @GetMapping("/getByTelecomServiceId")
     public StandardResponse<List<ProductPackageResponse>> getByTelecomServiceId(
             @Parameter(description = "ID dịch vụ viễn thông (TELECOM_SERVICE_ID)", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "telecomServiceId phải >= 1")
-            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cho phép")
+            @RequestParam(required = false)
             Long telecomServiceId) {
+        RequestValidator.checkRange(telecomServiceId, "telecomServiceId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findByTelecomServiceId(telecomServiceId));
     }
 
@@ -137,15 +134,15 @@ public class ProductPackageController {
     @GetMapping("/getPackageCodesByProductOfferTypeCount")
     public StandardResponse<List<String>> getPackageCodesByProductOfferTypeCount(
             @Parameter(description = "Loại mặt hàng cần loại trừ", example = "VAS", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "excludeProdOfferType tối đa 50 ký tự")
-            @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{1,50}$", message = "excludeProdOfferType không được chứa ký tự điều khiển")
+            @RequestParam(required = false)
             String excludeProdOfferType,
             @Parameter(description = "Số lượng loại mặt hàng cần lọc")
             @RequestParam(required = false)
-            @Min(value = 0, message = "pNumber phải >= 0")
-            @Max(value = 999, message = "pNumber tối đa 999")
             Integer pNumber) {
+        RequestValidator.requireNotBlank(excludeProdOfferType, "excludeProdOfferType", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(excludeProdOfferType, "excludeProdOfferType", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(excludeProdOfferType, "excludeProdOfferType", ValidationPatterns.FREE_TEXT, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkRange(pNumber, "pNumber", 0, 999, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(service.findPackageCodesByProductOfferTypeCount(excludeProdOfferType, pNumber));
     }
 
@@ -160,10 +157,11 @@ public class ProductPackageController {
     @GetMapping("/getSaleServicesAdvBOBySSCode")
     public StandardResponse<SaleServiceAdvanceDTO> getSaleServicesAdvBOBySSCode(
             @Parameter(description = "Mã dịch vụ bán hàng", example = "SALE_SVC_01", required = true)
-            @RequestParam
-            @Size(min = 1, max = 50, message = "saleServiceCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[a-zA-Z0-9_]{1,50}$", message = "saleServiceCode chỉ gồm chữ, số hoặc '_'")
+            @RequestParam(required = false)
             String saleServiceCode) {
+        RequestValidator.requireNotBlank(saleServiceCode, "saleServiceCode", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(saleServiceCode, "saleServiceCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(saleServiceCode, "saleServiceCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(service.getSaleServicesAdvBOBySSCode(saleServiceCode));
     }
 
@@ -178,15 +176,15 @@ public class ProductPackageController {
     @GetMapping("/getSaleServiceInfo")
     public StandardResponse<ProductPackageDTO> getSaleServiceInfo(
             @Parameter(description = "Id lý do", example = "1", required = true)
-            @RequestParam
-            @Min(value = 1, message = "reasonId phải >= 1")
-            @Max(value = 9999999999L, message = "reasonId vượt quá độ dài cho phép")
+            @RequestParam(required = false)
             Long reasonId,
             @Parameter(description = "Mã nhân viên - dùng để kiểm tra tồn kho theo cửa hàng khi loại mặt hàng yêu cầu checkShopStock")
             @RequestParam(required = false)
-            @Size(max = 50, message = "staffCode tối đa 50 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9._-]{0,50}$", message = "staffCode chỉ gồm chữ, số, '.', '_' hoặc '-'")
             String staffCode) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkRange(reasonId, "reasonId", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
+        RequestValidator.checkMaxLength(staffCode, "staffCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(service.getSaleServiceInfo(reasonId, staffCode));
     }
 }

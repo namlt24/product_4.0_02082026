@@ -313,5 +313,41 @@
     "severity": "ERROR",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-VALIDATE-REQUIRED": {
+    "code": "BCCS-CATALOG-VALIDATE-REQUIRED",
+    "message": "Tham số {0} không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-VALIDATE-SIZE": {
+    "code": "BCCS-CATALOG-VALIDATE-SIZE",
+    "message": "Tham số {0} không hợp lệ: {1}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-VALIDATE-RANGE": {
+    "code": "BCCS-CATALOG-VALIDATE-RANGE",
+    "message": "Tham số {0} phải nằm trong khoảng {1}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-CATALOG-VALIDATE-PATTERN": {
+    "code": "BCCS-CATALOG-VALIDATE-PATTERN",
+    "message": "Tham số {0} không đúng định dạng cho phép",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

@@ -1,7 +1,6 @@
 package com.viettel.bccs.productcatalog.product.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -25,9 +24,9 @@ public class FindProductOfferingByListCodeListSpecCodeRequest implements Seriali
     @Size(max = 1000, message = "lstProductOfferCode tối đa 1000 phần tử")
     private List<String> lstProductOfferCode;
 
-    @Schema(description = "Danh sách mã đặc tính cần khớp (product_spec_char.code) — bắt buộc, ít nhất 1 phần tử",
-            example = "[\"IS_CONNECTED\", \"DATA_CAP\"]")
-    @NotEmpty(message = "lstSpecCode không được rỗng")
+    @Schema(description = "Danh sách mã đặc tính cần khớp (product_spec_char.code) — bắt buộc, ít nhất 1 phần tử; " +
+            "validate thủ công trong ProductOfferingService (ném BCCS-CATALOG-VALIDATE-0001 nếu rỗng) thay vì Bean Validation",
+            example = "[\"IS_CONNECTED\", \"DATA_CAP\"]", requiredMode = Schema.RequiredMode.REQUIRED)
     @Size(max = 1000, message = "lstSpecCode tối đa 1000 phần tử")
     private List<String> lstSpecCode;
 

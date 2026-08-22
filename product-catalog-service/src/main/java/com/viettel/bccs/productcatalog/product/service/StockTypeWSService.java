@@ -17,6 +17,8 @@ import com.viettel.bccs.productcatalog.telecomservice.dto.response.TelecomServic
 import com.viettel.bccs.productcatalog.telecomservice.service.TelecomServiceService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -71,6 +73,15 @@ public class StockTypeWSService {
         if (DataUtil.isNullOrEmpty(serviceType)) {
             throw new BusinessException("BCCS-CATALOG-STOCKTYPE-0004", "serviceType is required");
         }
+
+        RequestValidator.checkMaxLength(actionCode, "actionCode", 10, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(regType, "regType", 20, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(regType, "regType", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(serviceType, "serviceType", 3, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(serviceType, "serviceType", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
+        RequestValidator.checkMaxLength(productCode, "productCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(productCode, "productCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
 
         // Bước 3: dịch serviceType (alias) sang telecomServiceId.
         TelecomServiceDTO telecomServiceDTO = telecomServiceService.getTelServiceByAlias(serviceType);

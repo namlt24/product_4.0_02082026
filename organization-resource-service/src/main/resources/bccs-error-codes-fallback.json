@@ -151,5 +151,41 @@
     "severity": "WARNING",
     "retryable": false,
     "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-VALIDATE-REQUIRED": {
+    "code": "BCCS-ORGANIZATION-VALIDATE-REQUIRED",
+    "message": "Tham số {0} không được để trống",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-VALIDATE-SIZE": {
+    "code": "BCCS-ORGANIZATION-VALIDATE-SIZE",
+    "message": "Tham số {0} không hợp lệ: {1}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-VALIDATE-RANGE": {
+    "code": "BCCS-ORGANIZATION-VALIDATE-RANGE",
+    "message": "Tham số {0} phải nằm trong khoảng {1}",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
+  },
+  "BCCS-ORGANIZATION-VALIDATE-PATTERN": {
+    "code": "BCCS-ORGANIZATION-VALIDATE-PATTERN",
+    "message": "Tham số {0} không đúng định dạng cho phép",
+    "httpStatus": 400,
+    "category": "BUSINESS",
+    "severity": "ERROR",
+    "retryable": false,
+    "logLevel": "WARN"
   }
 }

@@ -6,6 +6,8 @@ import com.viettel.bccs.policy.mapbusinessskipdebt.dto.request.SearchSkipDebtReq
 import com.viettel.bccs.policy.mapbusinessskipdebt.dto.response.MapBusinessSkipDebtResponse;
 import com.viettel.bccs.policy.mapbusinessskipdebt.dto.response.SkipDebtResultResponse;
 import com.viettel.bccs.policy.mapbusinessskipdebt.service.MapBusinessSkipDebtService;
+import com.viettel.bccs.policy.utils.RequestValidator;
+import com.viettel.bccs.policy.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,13 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,7 +27,6 @@ import static com.viettel.bccs.policy.mapbusinessskipdebt.openapi.MapBusinessSki
 @RestController
 @RequestMapping("/product-policy-service/v1/map-business-skip-debt")
 @RequiredArgsConstructor
-@Validated
 public class MapBusinessSkipDebtController {
 
     private final MapBusinessSkipDebtService service;
@@ -59,9 +54,8 @@ public class MapBusinessSkipDebtController {
     public StandardResponse<MapBusinessSkipDebtResponse> findById(
             @Parameter(description = "ID bản ghi", example = "1")
             @PathVariable
-            @Min(value = 0, message = "mapId phải >= 0")
-            @Max(value = 9999999999L, message = "mapId vượt quá độ dài cột (precision 10)")
             Long mapId) {
+        RequestValidator.checkRange(mapId, "mapId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.findById(mapId));
     }
 
@@ -77,14 +71,13 @@ public class MapBusinessSkipDebtController {
     public StandardResponse<List<MapBusinessSkipDebtResponse>> findActiveByActionCodeAndTelecomServiceId(
             @Parameter(description = "Mã hành động", example = "ACT001")
             @RequestParam(required = false)
-            @Size(max = 10, message = "actionCode tối đa 10 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9]{0,10}$", message = "actionCode chỉ gồm chữ và số")
             String actionCode,
             @Parameter(description = "ID dịch vụ viễn thông", example = "100")
             @RequestParam(required = false)
-            @Min(value = 0, message = "telecomServiceId phải >= 0")
-            @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
             Long telecomServiceId) {
+        RequestValidator.checkMaxLength(actionCode, "actionCode", 10, "BCCS-POLICY-VALIDATE-SIZE");
+        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.ALPHANUMERIC, "BCCS-POLICY-VALIDATE-PATTERN");
+        RequestValidator.checkRange(telecomServiceId, "telecomServiceId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(
                 service.findActiveByActionCodeAndTelecomServiceId(actionCode, telecomServiceId));
     }
@@ -100,9 +93,8 @@ public class MapBusinessSkipDebtController {
     public StandardResponse<List<MapBusinessSkipDebtResponse>> findActiveByShopId(
             @Parameter(description = "ID cửa hàng", example = "10")
             @PathVariable
-            @Min(value = 0, message = "shopId phải >= 0")
-            @Max(value = 9999999999L, message = "shopId vượt quá độ dài cột (precision 10)")
             Long shopId) {
+        RequestValidator.checkRange(shopId, "shopId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.findActiveByShopId(shopId));
     }
 
@@ -117,9 +109,8 @@ public class MapBusinessSkipDebtController {
     public StandardResponse<List<MapBusinessSkipDebtResponse>> findActiveByStaffId(
             @Parameter(description = "ID nhân viên", example = "20")
             @PathVariable
-            @Min(value = 0, message = "staffId phải >= 0")
-            @Max(value = 9999999999L, message = "staffId vượt quá độ dài cột (precision 10)")
             Long staffId) {
+        RequestValidator.checkRange(staffId, "staffId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
         return StandardResponses.success(service.findActiveByStaffId(staffId));
     }
 
@@ -141,7 +132,7 @@ public class MapBusinessSkipDebtController {
                     content = @io.swagger.v3.oas.annotations.media.Content(
                             schema = @Schema(implementation = SearchSkipDebtRequest.class)
                     ))
-            @Valid @RequestBody SearchSkipDebtRequest request) {
+            @RequestBody SearchSkipDebtRequest request) {
         return StandardResponses.success(service.searchForAPI(request));
     }
 }

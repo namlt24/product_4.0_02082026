@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetResponse;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,12 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +24,6 @@ import static com.viettel.bccs.productcatalog.optionset.openapi.OptionSetControl
 @RestController
 @RequestMapping("/product-catalog-service/v1/optionset")
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "OptionSet", description = "Tra cứu nhóm option set (danh mục dùng chung)")
 public class OptionSetController {
 
@@ -57,9 +53,8 @@ public class OptionSetController {
     public StandardResponse<OptionSetResponse> getById(
             @Parameter(description = "Id nhóm option set (OPTION_SET_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 0, message = "id phải >= 0")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cột (precision 10)")
             Long id) {
+        RequestValidator.checkRange(id, "id", 0L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(optionSetService.getById(id));
     }
 
@@ -75,9 +70,10 @@ public class OptionSetController {
     public StandardResponse<OptionSetResponse> getByCode(
             @Parameter(description = "Mã nhóm option set (CODE)", example = "CUST_TYPE_GROUP_TYPE", required = true)
             @PathVariable
-            @Size(min = 1, max = 100, message = "code tối đa 100 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,100}$", message = "code chỉ gồm chữ, số, '_' hoặc '-'")
             String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(code, "code", 100, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(code, "code", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(optionSetService.getByCode(code));
     }
 

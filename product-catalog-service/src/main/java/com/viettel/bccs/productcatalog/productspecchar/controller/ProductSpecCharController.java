@@ -4,6 +4,8 @@ import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.productspecchar.dto.response.ProductSpecCharResponse;
 import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
+import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,12 +13,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,7 +23,6 @@ import static com.viettel.bccs.productcatalog.productspecchar.openapi.ProductSpe
 @RestController
 @RequestMapping("/product-catalog-service/v1/productspecchar")
 @RequiredArgsConstructor
-@Validated
 public class ProductSpecCharController {
 
     private final ProductSpecCharService productSpecCharService;
@@ -54,9 +50,8 @@ public class ProductSpecCharController {
     public StandardResponse<ProductSpecCharResponse> getById(
             @Parameter(description = "ID thuộc tính sản phẩm (PRODUCT_SPEC_CHAR_ID)", example = "1", required = true)
             @PathVariable
-            @Min(value = 1, message = "id phải >= 1")
-            @Max(value = 9999999999L, message = "id vượt quá độ dài cho phép")
             Long id) {
+        RequestValidator.checkRange(id, "id", 1L, 9999999999L, "BCCS-CATALOG-VALIDATE-RANGE");
         return StandardResponses.success(productSpecCharService.getById(id));
     }
 
@@ -71,9 +66,10 @@ public class ProductSpecCharController {
     public StandardResponse<ProductSpecCharResponse> getByCode(
             @Parameter(description = "Mã thuộc tính sản phẩm (CODE)", example = "COLOR", required = true)
             @PathVariable
-            @Size(min = 1, max = 200, message = "code tối đa 200 ký tự")
-            @Pattern(regexp = "^[A-Za-z0-9_-]{1,200}$", message = "code chỉ gồm chữ, số, '_' hoặc '-'")
             String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkMaxLength(code, "code", 200, "BCCS-CATALOG-VALIDATE-SIZE");
+        RequestValidator.checkPattern(code, "code", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
         return StandardResponses.success(productSpecCharService.getByCode(code));
     }
 
@@ -88,8 +84,9 @@ public class ProductSpecCharController {
     public StandardResponse<List<ProductSpecCharResponse>> findByIds(
             @Parameter(description = "Danh sách ID thuộc tính sản phẩm", required = true)
             @RequestBody
-            @Size(min = 1, max = 1000, message = "ids tối đa 1000 phần tử")
             List<Long> ids) {
+        RequestValidator.requireNotEmpty(ids, "ids", "BCCS-CATALOG-VALIDATE-REQUIRED");
+        RequestValidator.checkSize(ids, "ids", 1000, "BCCS-CATALOG-VALIDATE-SIZE");
         return StandardResponses.success(productSpecCharService.findByIds(ids));
     }
 

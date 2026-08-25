@@ -21,6 +21,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -87,7 +88,7 @@ class OpenApiComplianceTest {
                 if (!isEndpointMethod(method)) {
                     continue;
                 }
-                if (!method.isAnnotatedWith(Operation.class)) {
+                if (!AnnotatedElementUtils.isAnnotated(method.reflect(), Operation.class)) {
                     violations.add(method.getFullName() + ": thiếu @Operation");
                     continue;
                 }
@@ -111,9 +112,8 @@ class OpenApiComplianceTest {
     }
 
     private static boolean hasSuccessExample(JavaMethod method) {
-        return method.tryGetAnnotationOfType(ApiResponses.class)
-                .map(OpenApiComplianceTest::hasSuccessExample)
-                .orElse(false);
+        ApiResponses apiResponses = AnnotatedElementUtils.findMergedAnnotation(method.reflect(), ApiResponses.class);
+        return apiResponses != null && hasSuccessExample(apiResponses);
     }
 
     private static boolean hasSuccessExample(ApiResponses apiResponses) {

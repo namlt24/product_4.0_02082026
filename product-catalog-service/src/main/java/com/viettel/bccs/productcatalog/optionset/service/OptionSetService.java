@@ -4,6 +4,7 @@ import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetResponse;
 import com.viettel.bccs.productcatalog.optionset.mapper.OptionSetMapper;
 import com.viettel.bccs.productcatalog.optionset.repository.OptionSetRepository;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class OptionSetService {
 
     @Transactional(readOnly = true)
     public OptionSetResponse getByCode(String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-PRODUCT-VALIDATE-0000");
         return optionSetRepository.findByCode(code)
                 .map(optionSetMapper::toResponse)
                 .orElseThrow(() -> new BusinessException("BCCS-CATALOG-OPTION-0001", "Option set not found with code: " + code));

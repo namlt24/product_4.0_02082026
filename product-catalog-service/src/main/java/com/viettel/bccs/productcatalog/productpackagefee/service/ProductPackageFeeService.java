@@ -6,6 +6,7 @@ import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPac
 import com.viettel.bccs.productcatalog.productpackagefee.entity.ProductPackageFeeEntity;
 import com.viettel.bccs.productcatalog.productpackagefee.mapper.ProductPackageFeeMapper;
 import com.viettel.bccs.productcatalog.productpackagefee.repository.ProductPackageFeeRepository;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -48,12 +49,14 @@ public class ProductPackageFeeService {
     }
 
     public List<ProductPackageFeeResponse> findByStatus(String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-PRODUCT-VALIDATE-0000");
         return repository.findByStatus(status).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
 
     public List<ProductPackageFeeResponse> findByProductPackageIdAndStatus(Long productPackageId, String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-PRODUCT-VALIDATE-0000");
         return repository.findByProductPackageIdAndStatus(productPackageId, status).stream()
                 .map(mapper::toResponse)
                 .toList();

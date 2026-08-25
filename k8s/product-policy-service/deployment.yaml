@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-policy-service
+  namespace: bccs
+  labels:
+    app: product-policy-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-policy-service
+  template:
+    metadata:
+      labels:
+        app: product-policy-service
+    spec:
+      containers:
+        - name: product-policy-service
+          image: bccs/product-policy-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8002
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "local"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:oracle:thin:@host.docker.internal:1521/FREEPDB1"
+            - name: REDIS_HOST
+              value: "host.docker.internal"
+            - name: ELASTICSEARCH_URI
+              value: "http://host.docker.internal:9200"
+            - name: BCCS_KAFKA_ENABLED
+              value: "false"
+            - name: BCCS_CACHE_MODE
+              value: "memory-only"
+            - name: BCCS_REDIS_ENABLED
+              value: "false"
+            - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+              value: "false"
+            - name: ORGANIZATION_SERVICE_URL
+              value: "http://organization-resource-service.bccs.svc.cluster.local:8004/organization-resource-service"
+            - name: BCCS_LOGGING_HTTP_INBOUND_COMPLETION_ENABLED
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_REQUEST_BODY
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_RESPONSE_BODY
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_HEADERS
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_SAMPLING_RATE
+              value: "1.0"
+            - name: PRODUCT_CATALOG_SERVICE_URL
+              value: "http://product-catalog-service.bccs.svc.cluster.local:8001/product-catalog-service"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          # startupProbe: cho app toi da 30*10s=300s de khoi dong xong (JVM + Spring context +
+          # ket noi Oracle/Redis/ES qua host.docker.internal). Chua "started" thi readiness/liveness
+          # KHONG bi tinh la fail - tranh bi kubelet giet giua chung khi may dang tai nang.
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8002
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8002
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8002
+            periodSeconds: 20
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-policy-service
+  namespace: bccs
+  labels:
+    app: product-policy-service
+spec:
+  selector:
+    app: product-policy-service
+  ports:
+    - port: 8002
+      targetPort: 8002
+  type: ClusterIP

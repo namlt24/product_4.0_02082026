@@ -15,6 +15,8 @@ public class Const {
         public static final String CUST_TYPE_GROUP_TYPE = "CUST_TYPE_GROUP_TYPE";
         public static final String VAS_EXCLUSIVE_GROUP = "VAS_EXCLUSIVE_GROUP";
 
+        public static final String VIEW_PRODUCT_GROUP_DIDONG = "VIEW_PRODUCT_GROUP_DIDONG";
+
         private OPTION_SET() {}
     }
 

@@ -5,16 +5,7 @@ import com.viettel.bccs.common.error.exception.ValidationException;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
-/**
- * Validate thủ công cho field/param nhận input từ client, thay cho Jakarta Bean Validation
- * (@Size/@Min/@Max/@Pattern/@NotNull/@NotEmpty vẫn giữ trên DTO/param chỉ để sinh Swagger doc và
- * pass OpenApiComplianceTest — KHÔNG còn enforce runtime vì @Valid/@Validated đã được gỡ).
- *
- * <p>Ném {@link ValidationException} với 1 trong 4 mã dùng chung theo loại rule
- * (BCCS-CATALOG-VALIDATE-REQUIRED/SIZE/RANGE/PATTERN), message tham số hoá bằng {0}/{1} nên client
- * luôn nhận được code + message cụ thể ngay ở cấp cao nhất của response, không phải đọc field
- * breakdown trong {@code data[]} như khi để framework tự bắt lỗi.
- */
+
 public final class RequestValidator {
 
     private RequestValidator() {

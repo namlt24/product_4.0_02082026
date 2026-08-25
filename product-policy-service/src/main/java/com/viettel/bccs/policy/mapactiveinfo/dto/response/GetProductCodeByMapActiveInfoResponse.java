@@ -1,6 +1,5 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.response;
 
-import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -22,5 +21,5 @@ public class GetProductCodeByMapActiveInfoResponse {
 
     @Schema(description = "Danh sach goi cuoc")
     @Size(max = 1000, message = "productOfferingDTOs tối đa 1000 phần tử")
-    private List<ProductOfferingDTO> productOfferingDTOs;
+    private List<ProductCodeDTO> productOfferingDTOs;
 }

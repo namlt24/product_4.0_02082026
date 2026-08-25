@@ -25,7 +25,7 @@ public class ReasonClientImpl implements ReasonClient {
         } catch (RuntimeException e) {
             log.error("Error calling getReasonIdByTypeAndCode for reasonCode={}, actionCode={}, telecomServiceId={}",
                     reasonCode, actionCode, telecomServiceId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTP-0001",
                     "Error calling product-policy-service getReasonIdByTypeAndCode for reasonCode=" + reasonCode, e);
         }
     }

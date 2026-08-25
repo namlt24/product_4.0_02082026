@@ -10,6 +10,7 @@ import com.viettel.bccs.organization.staff.dto.StaffDTO;
 import com.viettel.bccs.organization.staff.service.StaffService;
 import com.viettel.bccs.organization.utils.Const;
 import com.viettel.bccs.organization.utils.DataUtil;
+import com.viettel.bccs.organization.utils.RequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,8 @@ public class ShopService {
 
     @Transactional(readOnly = true)
     public StockCodeResponse getStockCode(Long ownerId, Integer ownerType) {
+        RequestValidator.requireNotNull(ownerId, "ownerId", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotNull(ownerType, "ownerType", "BCCS-PRODUCT-VALIDATE-0000");
         if (ownerType == Const.ShopService.OWNER_TYPE_SHOP) {
             ShopDTO shop = getActiveById(ownerId);
             return new StockCodeResponse(shop.getShopCode());
@@ -83,10 +86,20 @@ public class ShopService {
     )
     public List<ShopDTO> findActiveByShopIds(
             @Parameter(description = "Danh sách ID cửa hàng cần truy vấn", required = true) List<Long> shopIds) {
+        RequestValidator.requireNotEmpty(shopIds, "shopIds", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isNullOrEmpty(shopIds)) {
             return new ArrayList<>();
         }
         return shopRepository.findActiveByShopIds(shopIds).stream()
+                .map(shopMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShopDTO> findActiveByChannelType(Long channelTypeId) {
+        log.info("Truy vấn danh sách cửa hàng active theo loại kênh: {}", channelTypeId);
+        return shopRepository.findAllByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
+                .stream()
                 .map(shopMapper::toResponse)
                 .toList();
     }

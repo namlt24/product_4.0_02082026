@@ -5,6 +5,7 @@ import com.viettel.bccs.organization.custtype.dto.CustTypeDTO;
 import com.viettel.bccs.organization.custtype.mapper.CustTypeMapper;
 import com.viettel.bccs.organization.custtype.repository.CustTypeRepository;
 import com.viettel.bccs.organization.utils.Const;
+import com.viettel.bccs.organization.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,6 +25,7 @@ public class CustTypeService {
     @Cacheable(value = "custTypeCache", key = "'CUST_TYPE:' + #custType")
     @Transactional(readOnly = true)
     public CustTypeDTO findActiveByCustType(String custType) {
+        RequestValidator.requireNotBlank(custType, "custType", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Truy vấn loại khách hàng từ DB theo mã: {}", custType);
         return custTypeRepository.findByCustTypeAndStatus(custType, Const.STATUS.ACTIVE)
                 .map(custTypeMapper::toDTO)
@@ -42,6 +44,7 @@ public class CustTypeService {
     @Cacheable(value = "custTypeCache", key = "'MAPPING_CHANNEL_CUST_TYPE:' + #channelTypeId + ':' + #groupType")
     @Transactional(readOnly = true)
     public List<CustTypeDTO> getMappingChannelCustType(Long channelTypeId, String groupType) {
+        RequestValidator.requireNotBlank(groupType, "groupType", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Truy vấn loại khách hàng theo kênh {} và nhóm {}", channelTypeId, groupType);
         return custTypeRepository.getMappingChannelCustType(channelTypeId, groupType)
                 .stream()

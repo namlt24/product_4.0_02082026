@@ -139,7 +139,17 @@ bccs:
       enabled: true
       http-inbound:
         enabled: true
-        completion-enabled: false
+        # Mac dinh false de tranh log qua nhieu o local dev binh thuong (moi request thanh cong deu
+        # sinh 1 dong log). Bat qua env var khi can debug day du ca request thanh cong (vd: dieu tra
+        # loi nghiep vu o service cuoi trong 1 chuoi goi nhieu service qua EFK).
+        completion-enabled: ${BCCS_LOGGING_HTTP_INBOUND_COMPLETION_ENABLED:false}
+        # Capture request/response body de debug (co BccsMaskingService che field nhay cam nhu
+        # password/token). sampling-rate phai >0 thi log-request-body/log-response-body moi co tac
+        # dung (starter dung sampling-rate lam dieu kien bat capture, mac dinh 0.0 = khong capture gi).
+        log-request-body: ${BCCS_LOGGING_HTTP_INBOUND_LOG_REQUEST_BODY:false}
+        log-response-body: ${BCCS_LOGGING_HTTP_INBOUND_LOG_RESPONSE_BODY:false}
+        log-headers: ${BCCS_LOGGING_HTTP_INBOUND_LOG_HEADERS:false}
+        sampling-rate: ${BCCS_LOGGING_HTTP_INBOUND_SAMPLING_RATE:0.0}
       client:
         enabled: true
         feign:

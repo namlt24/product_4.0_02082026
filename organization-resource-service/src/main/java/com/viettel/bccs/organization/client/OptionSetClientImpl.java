@@ -32,7 +32,7 @@ public class OptionSetClientImpl implements OptionSetClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling option set service for code: {}", code, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-RTC-0001",
                     "Error calling product-catalog-service findValueByOptionSetCode for code=" + code, e);
         }
     }

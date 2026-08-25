@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * pass OpenApiComplianceTest — KHÔNG còn enforce runtime vì @Valid/@Validated đã được gỡ).
  *
  * <p>Ném {@link ValidationException} với 1 trong 4 mã dùng chung theo loại rule
- * (BCCS-ORGANIZATION-VALIDATE-REQUIRED/SIZE/RANGE/PATTERN), message tham số hoá bằng {0}/{1} nên
+ * (BCCS-PRODUCT-VALIDATE-0000/0001/0002/0003), message tham số hoá bằng {0}/{1} nên
  * client luôn nhận được code + message cụ thể ngay ở cấp cao nhất của response, không phải đọc
  * field breakdown trong {@code data[]} như khi để framework tự bắt lỗi.
  */

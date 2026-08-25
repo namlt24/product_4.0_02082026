@@ -12,4 +12,6 @@ public interface ProductOfferPriceRepositoryCustom {
 
     List<ProductOfferPriceEntity> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy);
 
+    List<ProductOfferPriceEntity> getPledgePriceInfoByOfferId(Long productOfferingId);
+
 }

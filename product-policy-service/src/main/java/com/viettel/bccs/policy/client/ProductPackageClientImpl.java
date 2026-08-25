@@ -34,7 +34,7 @@ public class ProductPackageClientImpl implements ProductPackageClient {
         } catch (RuntimeException e) {
             log.error("Error calling product-package service for excludeProdOfferType: {}, pNumber: {}",
                     excludeProdOfferType, pNumber, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTC-0001",
                     "Error calling product-catalog-service getPackageCodesByProductOfferTypeCount for excludeProdOfferType="
                             + excludeProdOfferType + ", pNumber=" + pNumber, e);
         }

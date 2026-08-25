@@ -53,7 +53,7 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
     }
 
     @Override
-    public List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOfferCode, String status) {
+public List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOfferCode, String status) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT a.* FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a WHERE 1=1");
 
@@ -61,10 +61,10 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
             sql.append(" AND a.status = :status");
         }
         if (proOfferId != null && proOfferId > 0){
-            sql.append(" AND a.pro_offer_id = :proOfferId");
+            sql.append(" AND a.PRODUCT_OFFERING_ID = :proOfferId");
         }
         if (prodOfferCode != null && !prodOfferCode.isEmpty()) {
-            sql.append(" AND a.prod_offer_code = :prodOfferCode");
+            sql.append(" AND a.CODE = :prodOfferCode");
         }
 
         sql.append(" ORDER BY a.code");
@@ -244,16 +244,19 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
 
 
     @Override
-    public List<ProductOfferingEntity> findBySpecCharCodes(List<String> specCodes, String condition) {
+    public List<ProductOfferingEntity> findBySpecCharCodes(List<String> specCodes, Long productOfferTypeId) {
         StringBuilder sql = new StringBuilder("SELECT a.* FROM ")
                 .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a")
                 .append(" WHERE a.status = '1'");
 
         Map<String, Object> params = new HashMap<>();
 
-        if (Const.CONDITION.OR.equals(condition)) {
-            // OR: mặt hàng chỉ cần khớp ÍT NHẤT 1 trong các specCode -> gộp thành 1 EXISTS duy nhất
-            // với c.code IN (...), tránh JOIN trực tiếp (sẽ ra nhiều dòng trùng offering khi khớp >1 spec).
+        if (productOfferTypeId != null) {
+            sql.append(" AND a.product_offer_type_id = :productOfferTypeId");
+            params.put("productOfferTypeId", productOfferTypeId);
+        }
+
+        for (int i = 0; i < specCodes.size(); i++) {
             sql.append(" AND EXISTS (SELECT 1 FROM ")
                     .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_char_use b, ")
                     .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
@@ -262,26 +265,8 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
                     .append(" AND b.product_spec_char_id = c.product_spec_char_id")
                     .append(" AND d.product_spec_char_value_id = b.product_spec_char_value_id")
                     .append(" AND b.status = '1' AND c.status = '1' AND d.status = '1'")
-                    .append(" AND c.code IN (");
-            for (int i = 0; i < specCodes.size(); i++) {
-                sql.append(i == 0 ? ":specCode0" : ", :specCode" + i);
-                params.put("specCode" + i, specCodes.get(i));
-            }
-            sql.append("))");
-        } else {
-            // AND (mặc định): mặt hàng phải khớp TẤT CẢ specCode -> mỗi specCode 1 EXISTS riêng, nối AND.
-            for (int i = 0; i < specCodes.size(); i++) {
-                sql.append(" AND EXISTS (SELECT 1 FROM ")
-                        .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offer_char_use b, ")
-                        .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
-                        .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value d")
-                        .append(" WHERE b.product_offering_id = a.product_offering_id")
-                        .append(" AND b.product_spec_char_id = c.product_spec_char_id")
-                        .append(" AND d.product_spec_char_value_id = b.product_spec_char_value_id")
-                        .append(" AND b.status = '1' AND c.status = '1' AND d.status = '1'")
-                        .append(" AND c.code = :specCode").append(i).append(")");
-                params.put("specCode" + i, specCodes.get(i));
-            }
+                    .append(" AND c.code = :specCode").append(i).append(")");
+            params.put("specCode" + i, specCodes.get(i));
         }
         sql.append(" ORDER BY a.code");
 

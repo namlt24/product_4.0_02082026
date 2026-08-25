@@ -2,6 +2,7 @@ package com.viettel.bccs.productcatalog.product.mapper;
 
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
+import com.viettel.bccs.productcatalog.product.dto.response.StockOfferingRow;
 import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
 import org.springframework.stereotype.Component;
 
@@ -92,5 +93,28 @@ public class ProductOfferingMapper {
             .isBundle(entity.getIsBundle())
             .sapProductType(entity.getSapProductType())
             .build();
+    }
+
+    /**
+     * Map 1 dong ket qua tho (Object[]) tu native query
+     * {@code ProductOfferingRepositoryCustom.getListStockModelBySaleServiceCode} sang
+     * {@link StockOfferingRow}. Chuyen tu ProductOfferingService sang day de dung dung tang
+     * trach nhiem "Entity/row tho <-> DTO" theo quy uoc cua du an, khong nam o Service.
+     */
+    public StockOfferingRow toStockOfferingRow(Object[] row) {
+        return new StockOfferingRow(
+                toLong(row[0]),
+                toLong(row[1]),
+                row[2] != null ? row[2].toString() : null,
+                row[3] != null ? ((Number) row[3]).shortValue() : null,
+                toLong(row[4]),
+                row[5] != null ? row[5].toString() : null,
+                row[6] != null ? row[6].toString() : null,
+                toLong(row[7])
+        );
+    }
+
+    private static Long toLong(Object value) {
+        return value != null ? ((Number) value).longValue() : null;
     }
 }

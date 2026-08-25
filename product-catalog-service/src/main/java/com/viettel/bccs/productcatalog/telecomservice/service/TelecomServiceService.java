@@ -3,6 +3,7 @@ package com.viettel.bccs.productcatalog.telecomservice.service;
 import com.viettel.bccs.productcatalog.telecomservice.dto.response.TelecomServiceDTO;
 import com.viettel.bccs.productcatalog.telecomservice.mapper.TelecomServiceMapper;
 import com.viettel.bccs.productcatalog.telecomservice.repository.TelecomServiceRepository;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class TelecomServiceService {
     private final TelecomServiceMapper mapper;
 
     public TelecomServiceDTO getTelServiceByAlias(String alias) {
+        RequestValidator.requireNotBlank(alias, "alias", "BCCS-PRODUCT-VALIDATE-0000");
         return mapper.toDto(repository.getTelServiceByAlias(alias));
     }
 }

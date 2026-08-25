@@ -7,9 +7,11 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Repository
 public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
@@ -84,5 +86,46 @@ public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
 
         List<Object> result = query.getResultList();
         return result.isEmpty() ? null : (String) result.get(0);
+    }
+
+    @Override
+    public Map<String, String> getLstMapPackageByActionCodeAndReasonCodes(List<String> reasonCodes, String actionCode) {
+
+        if (DataUtil.isNullOrEmpty(reasonCodes) || DataUtil.isNullOrEmpty(actionCode)) {
+            return Collections.emptyMap();
+        }
+
+        StringBuilder sqlQuery = new StringBuilder();
+
+        sqlQuery.append(" SELECT r.REASON_CODE, m.SALE_SERVICE_CODE ");
+        sqlQuery.append(" FROM MAPPING m, REASON r, ACTION a ");
+
+        sqlQuery.append(" WHERE m.REASON_ID    = r.REASON_ID ");
+        sqlQuery.append(" AND a.REASON_TYPE      = m.ACTION_CODE ");
+        sqlQuery.append(" AND m.STATUS      = 1 ");
+        sqlQuery.append(" AND r.STATUS      = 1 ");
+        sqlQuery.append(" AND a.STATUS      = 1 ");
+        sqlQuery.append(" AND m.TEL_SERVICE_ID IS NOT NULL ");
+
+
+        sqlQuery.append(" AND r.REASON_CODE IN (:reasonCodes) ");
+        sqlQuery.append(" AND a.ACTION_CODE = :actionCode  ");
+
+
+
+        Query query = em.createNativeQuery(sqlQuery.toString());
+
+        query.setParameter("reasonCodes", reasonCodes);
+        query.setParameter("actionCode", actionCode);
+
+
+        List<Object[]> resultList = query.getResultList();
+
+        return resultList.stream()
+                .collect(Collectors.toMap(
+                        row -> DataUtil.safeToString(row[0]),
+                        row -> DataUtil.safeToString(row[1]),
+                        (existing, replacement) -> existing
+                ));
     }
 }

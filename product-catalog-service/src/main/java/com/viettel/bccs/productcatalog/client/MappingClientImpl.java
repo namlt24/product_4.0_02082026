@@ -30,7 +30,7 @@ public class MappingClientImpl implements MappingClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling findSaleServiceCodeByReason for reasonId={}", reasonId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTP-0001",
                     "Error calling product-policy-service findSaleServiceCodeByReason for reasonId=" + reasonId, e);
         }
     }
@@ -45,7 +45,7 @@ public class MappingClientImpl implements MappingClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getMappingReasonProductOfferPrice for productPackageId={}", productPackageId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTP-0001",
                     "Error calling product-policy-service getMappingReasonProductOfferPrice for productPackageId=" + productPackageId, e);
         }
     }
@@ -60,7 +60,7 @@ public class MappingClientImpl implements MappingClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getSaleServiceCode for reasonId={}", reasonId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTP-0001",
                     "Error calling product-policy-service getSaleServiceCode for reasonId=" + reasonId, e);
         }
     }

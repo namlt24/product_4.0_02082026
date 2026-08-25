@@ -20,6 +20,7 @@ import com.viettel.bccs.productcatalog.prodpackproductoffertype.service.ProdPack
 import com.viettel.bccs.productcatalog.prodpackshop.service.ProdPackShopService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -69,6 +70,7 @@ public class ProductPackageService {
 
 
     public List<String> findPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer pNumber) {
+        RequestValidator.requireNotBlank(excludeProdOfferType, "excludeProdOfferType", "BCCS-PRODUCT-VALIDATE-0000");
         if (pNumber == null) {
             return findPackageCodesWithoutCount();
         }
@@ -87,6 +89,7 @@ public class ProductPackageService {
 
     @Cacheable(value = "productPackageCache", key = "'SALE_SVC:' + #saleServiceCode")
     public SaleServiceAdvanceDTO getSaleServicesAdvBOBySSCode(String saleServiceCode) {
+        RequestValidator.requireNotBlank(saleServiceCode, "saleServiceCode", "BCCS-PRODUCT-VALIDATE-0000");
         return getSaleServicesAdvBOBySSCodeCheckStatus(saleServiceCode, true);
     }
 
@@ -95,6 +98,7 @@ public class ProductPackageService {
     }
 
     public List<ProductPackageResponse> findByCode(String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-PRODUCT-VALIDATE-0000");
         List<ProductPackageDTO> dtos = repository.getProductPackageExtra(code, null, true, true, true);
         if (dtos == null) {
             return List.of();
@@ -123,10 +127,12 @@ public class ProductPackageService {
     }
 
     public List<ProductPackageResponse> findByStatus(String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-PRODUCT-VALIDATE-0000");
         return repository.findByStatus(status).stream().map(mapper::toResponse).toList();
     }
 
     public List<ProductPackageResponse> findByType(String type) {
+        RequestValidator.requireNotBlank(type, "type", "BCCS-PRODUCT-VALIDATE-0000");
         return repository.findByType(type).stream().map(mapper::toResponse).toList();
     }
 
@@ -145,6 +151,7 @@ public class ProductPackageService {
     }
 
     public ProductPackageDTO getSaleServiceInfo(Long reasonId, String staffCode) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-PRODUCT-VALIDATE-0000");
         List<String> saleServiceCode = self.findSaleServiceCodeByReasonCached(reasonId);
 
         String firstValidCode = DataUtil.isNullOrEmpty(saleServiceCode) ? null : saleServiceCode.stream()

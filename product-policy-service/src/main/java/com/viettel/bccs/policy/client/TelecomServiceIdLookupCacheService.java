@@ -38,7 +38,7 @@ class TelecomServiceIdLookupCacheService {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getTelServiceByAlias: alias={}", alias, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTC-0001",
                     "Error calling product-catalog-service getTelServiceByAlias for alias=" + alias, e);
         }
     }

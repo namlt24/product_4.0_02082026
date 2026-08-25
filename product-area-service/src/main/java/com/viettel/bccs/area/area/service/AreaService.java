@@ -4,6 +4,7 @@ import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.area.area.dto.response.AreaResponse;
 import com.viettel.bccs.area.area.mapper.AreaMapper;
 import com.viettel.bccs.area.area.repository.AreaRepository;
+import com.viettel.bccs.area.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public AreaResponse getByAreaCode(String areaCode) {
+        RequestValidator.requireNotBlank(areaCode, "areaCode", "BCCS-AREA-VALIDATE-REQUIRED");
         return areaRepository.findByAreaCode(areaCode)
                 .map(areaMapper::toResponse)
                 .orElseThrow(() -> new BusinessException("BCCS-AREA-AREA-0001", "Area not found with code: " + areaCode));
@@ -40,6 +42,7 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public List<AreaResponse> getByProvince(String province) {
+        RequestValidator.requireNotBlank(province, "province", "BCCS-AREA-VALIDATE-REQUIRED");
         return areaRepository.findByProvince(province).stream()
                 .map(areaMapper::toResponse)
                 .toList();

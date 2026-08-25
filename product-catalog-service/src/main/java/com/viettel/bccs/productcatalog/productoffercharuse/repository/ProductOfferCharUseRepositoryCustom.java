@@ -15,4 +15,6 @@ public interface ProductOfferCharUseRepositoryCustom {
 
     List<ProductOfferingCharacterFullDTO> getListPricePlanByOfferId(Long productOfferingId);
 
+    List<Object[]> findProductOfferCharacter(Long productOfferingId);
+
 }

@@ -5,6 +5,7 @@ import com.viettel.bccs.organization.staffext.mapper.StaffExtMapper;
 import com.viettel.bccs.organization.staffext.repository.StaffExtRepository;
 import com.viettel.bccs.organization.utils.Const;
 import com.viettel.bccs.organization.utils.DataUtil;
+import com.viettel.bccs.organization.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class StaffExtService {
 
     @Transactional(readOnly = true)
     public List<StaffExtResponse> getByStaffIdAndStatus(Long staffId, String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Lấy danh sách STAFF_EXT theo staffId: {} và status: {}", staffId, status);
         return staffExtRepository.findByStaffIdAndStatus(staffId, status).stream()
                 .map(staffExtMapper::toResponse)
@@ -38,6 +40,7 @@ public class StaffExtService {
 
     @Transactional(readOnly = true)
     public StaffExtResponse getStaffExtByStaffIDAndKey(Long staffId, String key) {
+        RequestValidator.requireNotBlank(key, "key", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Lấy STAFF_EXT theo staffId: {} và key: {}", staffId, key);
         String checkValue = DataUtil.safeEqual(key, Const.STAFF_EXT_KEY.BUSINESS_SPEC, Const.STAFF_EXT_KEY.BUSINESS_TYPE_STAFF)
                 ? "1" : null;

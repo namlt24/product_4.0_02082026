@@ -25,7 +25,7 @@ public class FindProductOfferingByListCodeListSpecCodeRequest implements Seriali
     private List<String> lstProductOfferCode;
 
     @Schema(description = "Danh sách mã đặc tính cần khớp (product_spec_char.code) — bắt buộc, ít nhất 1 phần tử; " +
-            "validate thủ công trong ProductOfferingService (ném BCCS-CATALOG-VALIDATE-0001 nếu rỗng) thay vì Bean Validation",
+            "validate thủ công trong ProductOfferingService (ném BCCS-PRODUCT-VALIDATE-0001 nếu rỗng) thay vì Bean Validation",
             example = "[\"IS_CONNECTED\", \"DATA_CAP\"]", requiredMode = Schema.RequiredMode.REQUIRED)
     @Size(max = 1000, message = "lstSpecCode tối đa 1000 phần tử")
     private List<String> lstSpecCode;

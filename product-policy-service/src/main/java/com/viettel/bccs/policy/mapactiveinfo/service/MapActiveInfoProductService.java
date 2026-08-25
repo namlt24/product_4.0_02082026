@@ -5,25 +5,24 @@ import com.viettel.bccs.policy.client.*;
 import com.viettel.bccs.policy.client.dto.*;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
-import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
-import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
+
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeByMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoProductVsaleRoles;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.ProductCodeDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
-import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
-import com.viettel.bccs.policy.reason.service.ReasonService;
+import com.viettel.bccs.policy.mapactiveinfo.mapper.ProductCodeMapper;
+
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
-import com.viettel.bccs.policy.utils.MessageUtil;
 import com.viettel.bccs.policy.utils.RequestValidator;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import com.viettel.bccs.policy.utils.ValidationPatterns;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,51 +30,20 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @Transactional(readOnly = true)
+@AllArgsConstructor
 public class MapActiveInfoProductService {
 
-    private final MapActiveInfoRepository repository;
-    private final MapActiveInfoMapper mapper;
     private final OptionSetClient optionSetClient;
     private final StaffShopClient staffShopClient;
-    private final StaffExtClient staffExtClient;
     private final ProductOfferingClient productOfferingClient;
     private final ProductOfferCharUseClient productOfferCharUseClient;
-    private final ReasonService reasonService;
-    private final DiscountPromotionService discountPromotionService;
-    private final TransactionTemplate transactionTemplate;
-    private final MessageUtil messageUtil;
     private final MapActiveInfoQuerryService mapActiveInfoQuerryService;
     private final MapActiveInfoValidateService mapActiveInfoValidateService;
     private final StaffResolveHelper staffResolveHelper;
+    private final ProductCodeMapper productCodeMapper;
 
-    public MapActiveInfoProductService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
-                                       OptionSetClient optionSetClient, StaffShopClient staffShopClient,
-                                       StaffExtClient staffExtClient, ProductOfferingClient productOfferingClient,
-                                       ProductOfferCharUseClient productOfferCharUseClient,
-                                       ReasonService reasonService,
-                                       DiscountPromotionService discountPromotionService,
-                                       TransactionTemplate transactionTemplate,
-                                       MessageUtil messageUtil,
-                                       MapActiveInfoQuerryService mapActiveInfoQuerryService,
-                                       MapActiveInfoValidateService mapActiveInfoValidateService,
-                                       StaffResolveHelper staffResolveHelper) {
-        this.repository = repository;
-        this.mapper = mapper;
-        this.optionSetClient = optionSetClient;
-        this.staffShopClient = staffShopClient;
-        this.staffExtClient = staffExtClient;
-        this.productOfferingClient = productOfferingClient;
-        this.productOfferCharUseClient = productOfferCharUseClient;
-        this.reasonService = reasonService;
-        this.discountPromotionService = discountPromotionService;
-        this.transactionTemplate = transactionTemplate;
-        this.messageUtil = messageUtil;
-        this.mapActiveInfoQuerryService = mapActiveInfoQuerryService;
-        this.mapActiveInfoValidateService = mapActiveInfoValidateService;
-        this.staffResolveHelper = staffResolveHelper;
-    }
 
-    public List<ProductOfferingDTO> getProductCodeByMapActiveInfo(GetProductCodeByMapActiveInfoRequest request) {
+    public List<ProductCodeDTO> getProductCodeByMapActiveInfo(GetProductCodeByMapActiveInfoRequest request) {
         log.info("[getProductCodeByMapActiveInfo] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
                 request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId());
 
@@ -96,7 +64,7 @@ public class MapActiveInfoProductService {
         }
 
         log.info("[getProductCodeByMapActiveInfo] END - {} products returned", products.size());
-        return products;
+        return productCodeMapper.toProductCodeList(products);
     }
 
     private void validateRequest(GetProductCodeByMapActiveInfoRequest request) {
@@ -106,7 +74,6 @@ public class MapActiveInfoProductService {
         }
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
-        RequestValidator.checkSize(request.getListProductSpec(), "listProductSpec", 200, "BCCS-POLICY-VALIDATE-SIZE");
         validateFilterRequests(request.getListProductSpec());
     }
 
@@ -134,15 +101,6 @@ public class MapActiveInfoProductService {
         }
         validateCommonProductCodeParams(request.getStaffCode(), request.getPayType(), request.getActionCode(),
                 request.getTelecomServiceId(), request.getRoleMap());
-        RequestValidator.checkRange(request.getMode(), "mode", 0, 9, "BCCS-POLICY-VALIDATE-RANGE");
-        RequestValidator.checkRange(request.getOfferId(), "offerId", 1L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
-        RequestValidator.checkMaxLength(request.getChangeMethod(), "changeMethod", 10, "BCCS-POLICY-VALIDATE-SIZE");
-        RequestValidator.checkPattern(request.getChangeMethod(), "changeMethod", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-        RequestValidator.checkMaxLength(request.getTechnology(), "technology", 10, "BCCS-POLICY-VALIDATE-SIZE");
-        RequestValidator.checkPattern(request.getTechnology(), "technology", ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
-        RequestValidator.checkMaxLength(request.getInfraType(), "infraType", 10, "BCCS-POLICY-VALIDATE-SIZE");
-        RequestValidator.checkPattern(request.getInfraType(), "infraType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-        RequestValidator.checkSize(request.getListProductSpec(), "listProductSpec", 200, "BCCS-POLICY-VALIDATE-SIZE");
         validateFilterRequests(request.getListProductSpec());
     }
 
@@ -166,10 +124,6 @@ public class MapActiveInfoProductService {
         validateMaxLengthParam(actionCode, 10, "BCCS-POLICY-MAPACTIVE-0013");
         validateMaxLengthParam(telecomServiceId, 10, "BCCS-POLICY-MAPACTIVE-0014");
 
-        RequestValidator.checkPattern(staffCode, "staffCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-        RequestValidator.checkPattern(payType, "payType", ValidationPatterns.ALPHANUMERIC, "BCCS-POLICY-VALIDATE-PATTERN");
-        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-        RequestValidator.checkPattern(telecomServiceId, "telecomServiceId", ValidationPatterns.DIGITS, "BCCS-POLICY-VALIDATE-PATTERN");
     }
 
     private List<ProductOfferingDTO> fetchOfferingsWithSpec(GetProductCodeByMapActiveInfoRequest request) {
@@ -398,7 +352,7 @@ public class MapActiveInfoProductService {
     }
 
 
-    public List<ProductOfferingDTO> getProductCode(GetProductCodeRequest request) {
+    public List<ProductCodeDTO> getProductCode(GetProductCodeRequest request) {
         log.info("[getProductCodeNew] START - staffCode={}, payType={}, actionCode={}, telecomServiceId={}",
                 request.getStaffCode(), request.getPayType(), request.getActionCode(), request.getTelecomServiceId());
 
@@ -412,7 +366,7 @@ public class MapActiveInfoProductService {
                 true, request.getListProductSpec(), request.getInfraType(), null);
 
         log.info("[getProductCodeNew] END - {} products returned", products.size());
-        return products;
+        return productCodeMapper.toProductCodeList(products);
     }
 
     public List<ProductOfferingDTO> getProductCodeCheckStatus(String staffCode, String payType, String actionCode,

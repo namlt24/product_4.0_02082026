@@ -21,7 +21,7 @@ public interface ProductOfferingRepositoryCustom {
 
     boolean hasProductAtt(Long offerId, String attributeCode);
 
-    List<ProductOfferingEntity> findBySpecCharCodes(List<String> specCodes, String condition);
+    List<ProductOfferingEntity> findBySpecCharCodes(List<String> specCodes, Long productOfferTypeId);
 
     List<ProductOfferingEntity> getListVas(Long offerId, Integer type);
 }

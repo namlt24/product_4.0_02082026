@@ -44,4 +44,9 @@ public class GetListStockTypeWSRequest implements Serializable {
     @Size(max = 50, message = "productCode tối đa 50 ký tự")
     @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "productCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String productCode;
+
+    @Schema(description = "Cấu hình hiện thị loại gói trên màn hình chức năng", example = "VIEW_PRODUCT_GROUP_DNTT")
+    @Size(max = 50, message = "Cấu hình hiện thị loại gói tối đa 50 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "Cấu hình hiện thị loại gói chỉ gồm chữ, số, '_' hoặc '-'")
+    private String viewCode;
 }

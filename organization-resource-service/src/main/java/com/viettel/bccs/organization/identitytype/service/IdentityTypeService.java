@@ -8,6 +8,7 @@ import com.viettel.bccs.organization.identitytype.dto.IdentityTypeDTO;
 import com.viettel.bccs.organization.identitytype.mapper.IdentityTypeMapper;
 import com.viettel.bccs.organization.identitytype.repository.IdentityTypeRepository;
 import com.viettel.bccs.organization.utils.Const;
+import com.viettel.bccs.organization.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -38,6 +39,7 @@ public class IdentityTypeService {
     @Cacheable(value = "identityTypeCache", key = "'ID_TYPE:' + #idType")
     @Transactional(readOnly = true)
     public IdentityTypeDTO findByIdType(String idType) {
+        RequestValidator.requireNotBlank(idType, "idType", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Truy vấn loại giấy tờ theo mã: {}", idType);
         return identityTypeRepository.findByIdTypeAndStatus(idType, Const.STATUS.ACTIVE)
                 .map(identityTypeMapper::toDTO)

@@ -28,7 +28,7 @@ public class StaffShopClientImpl implements StaffShopClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getStaffShopFullInfo for staffCode: {}", staffCode, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTR-0001",
                     "Error calling organization-resource-service getStaffShopFullInfo for staffCode=" + staffCode, e);
         }
     }
@@ -44,7 +44,7 @@ public class StaffShopClientImpl implements StaffShopClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getStaffShopFullInfoByStaffId for staffId: {}", staffId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTR-0001",
                     "Error calling organization-resource-service getStaffShopFullInfoByStaffId for staffId=" + staffId, e);
         }
     }

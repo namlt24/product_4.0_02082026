@@ -1,8 +1,12 @@
 package com.viettel.bccs.productcatalog.product.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.client.optionset.OptionItemSnapshot;
+import com.viettel.bccs.client.optionset.OptionSetResolver;
 import com.viettel.bccs.productcatalog.client.MappingClient;
 import com.viettel.bccs.productcatalog.client.ReasonClient;
+import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
+import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWSRequest;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferTypeStockDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingStockDTO;
@@ -17,17 +21,19 @@ import com.viettel.bccs.productcatalog.telecomservice.dto.response.TelecomServic
 import com.viettel.bccs.productcatalog.telecomservice.service.TelecomServiceService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
-import com.viettel.bccs.productcatalog.utils.RequestValidator;
-import com.viettel.bccs.productcatalog.utils.ValidationPatterns;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 
 @Slf4j
@@ -51,12 +57,15 @@ public class StockTypeWSService {
     private final ProductOfferingService productOfferingService;
     private final ProductOfferPriceService productOfferPriceService;
     private final ProductOfferPriceMapper productOfferPriceMapper;
+    private final ObjectProvider<OptionSetResolver> optionSetResolverProvider;
+    private final OptionSetValueService optionSetValueService;
 
     public List<ProductOfferTypeStockDTO> getListStockTypeWS(GetListStockTypeWSRequest request) {
         String actionCode = request.getActionCode();
         String regType = request.getRegType();
         String serviceType = request.getServiceType();
         String productCode = request.getProductCode();
+        String viewCode = request.getViewCode();
 
         // Bước 1: actionCode bắt buộc (đúng như validate ở controller mono).
         if (DataUtil.isNullOrEmpty(actionCode)) {
@@ -74,14 +83,6 @@ public class StockTypeWSService {
             throw new BusinessException("BCCS-CATALOG-STOCKTYPE-0004", "serviceType is required");
         }
 
-        RequestValidator.checkMaxLength(actionCode, "actionCode", 10, "BCCS-CATALOG-VALIDATE-SIZE");
-        RequestValidator.checkPattern(actionCode, "actionCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
-        RequestValidator.checkMaxLength(regType, "regType", 20, "BCCS-CATALOG-VALIDATE-SIZE");
-        RequestValidator.checkPattern(regType, "regType", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
-        RequestValidator.checkMaxLength(serviceType, "serviceType", 3, "BCCS-CATALOG-VALIDATE-SIZE");
-        RequestValidator.checkPattern(serviceType, "serviceType", ValidationPatterns.ALPHANUMERIC, "BCCS-CATALOG-VALIDATE-PATTERN");
-        RequestValidator.checkMaxLength(productCode, "productCode", 50, "BCCS-CATALOG-VALIDATE-SIZE");
-        RequestValidator.checkPattern(productCode, "productCode", ValidationPatterns.CODE, "BCCS-CATALOG-VALIDATE-PATTERN");
 
         // Bước 3: dịch serviceType (alias) sang telecomServiceId.
         TelecomServiceDTO telecomServiceDTO = telecomServiceService.getTelServiceByAlias(serviceType);
@@ -92,9 +93,7 @@ public class StockTypeWSService {
         }
 
         // Bước 4: tìm reasonId theo regType + actionCode (mặc định "00" nếu rỗng) + telecomServiceId.
-        // Lưu ý: actionCode đã được đảm bảo không rỗng ở Bước 1 phía trên (đúng như validate
-        // "bắt buộc" ở controller mono) nên nhánh default "00" hiện không reachable qua API này —
-        // giữ lại y hệt logic gốc để phòng trường hợp actionCode required bị nới lỏng sau này.
+
         String actionCodeForReason = DataUtil.isNullOrEmpty(actionCode) ? Const.ACTION_CODE.SUB_CONNECTION : actionCode;
         Long reasonId = reasonClient.getReasonIdByTypeAndCode(regType, actionCodeForReason, telecomServiceId);
         if (reasonId == null || reasonId == 0L) {
@@ -107,6 +106,8 @@ public class StockTypeWSService {
             throw new BusinessException("BCCS-CATALOG-STOCKTYPE-0007", "saleServiceCode not found or invalid");
         }
 
+        boolean didongFilter = DataUtil.safeEqual(viewCode, Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG);
+
         // Bước 6: danh sách loại hàng hoá của gói.
         List<ProductOfferTypeDTO> productOfferTypes = productOfferTypeService.findBySaleServiceCodeWithProductOffering(saleServiceCode);
         if (DataUtil.isNullOrEmpty(productOfferTypes)) {
@@ -114,7 +115,21 @@ public class StockTypeWSService {
         }
 
         // Bước 7: danh sách mặt hàng của gói (chưa có giá).
-        List<StockOfferingRow> rows = productOfferingService.getListStockModelBySaleServiceCode(saleServiceCode);
+        List<StockOfferingRow> rows;
+        if (didongFilter) {
+            Set<Long> allowedOfferTypeIds = resolveAllowedOfferTypeIds();
+            rows = filterRowsByViewCode(
+                    productOfferingService.getListStockModelBySaleServiceCode(saleServiceCode), allowedOfferTypeIds);
+            if (!allowedOfferTypeIds.isEmpty()) {
+                // Lọc luôn cấp loại hàng hoá: ẩn hẳn các productOfferType ngoài danh sách cho phép (kể cả khi rỗng).
+                productOfferTypes = productOfferTypes.stream()
+                        .filter(type -> type.getProductOfferTypeId() != null
+                                && allowedOfferTypeIds.contains(type.getProductOfferTypeId()))
+                        .toList();
+            }
+        } else {
+            rows = productOfferingService.getListStockModelBySaleServiceCode(saleServiceCode);
+        }
 
         // Bước 8 + 9: tính giá từng mặt hàng rồi nhóm theo productOfferTypeId.
         Map<Long, List<ProductOfferingStockDTO>> offeringsByType = new LinkedHashMap<>();
@@ -134,11 +149,42 @@ public class StockTypeWSService {
                 .toList();
     }
 
-    /**
-     * Bước 8: tính giá cho 1 mặt hàng — nhánh PCCC (telecomServiceId = 241/254) dùng
-     * getPriceInServicesForPCCC, còn lại dùng getPriceInServices (đã bao gồm nhánh con CAM).
-     * Bước 9: gán productTypeName = "Mặt hàng" nếu productOfferTypeId = 7.
-     */
+
+    private Set<Long> resolveAllowedOfferTypeIds() {
+        return resolveFromResolver();
+    }
+
+    private Set<Long> resolveFromResolver() {
+        OptionSetResolver resolver = optionSetResolverProvider.getIfAvailable();
+        Set<Long> allowedOfferTypeIds = new HashSet<>();
+        if (resolver == null) {
+            // Resolver không tồn tại (option-set bị disable) → đọc trực tiếp từ bảng OPTION_SET_VALUE.
+            return resolveFromOptionSetValue();
+        }
+        for (OptionItemSnapshot item : resolver.getActiveItems(Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG)) {
+            if (item.getValue() != null && DataUtil.notNullOrEmpty(item.getValue().asText())) {
+                allowedOfferTypeIds.add(DataUtil.safeToLong(item.getValue().asText()));
+            }
+        }
+        if (allowedOfferTypeIds.isEmpty()) {
+            // Cache resolver trống (không load được từ config-service) → fallback đọc DB.
+            log.warn("OptionSetResolver không có dữ liệu cho [{}], fallback đọc bảng OPTION_SET_VALUE",
+                    Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG);
+            return resolveFromOptionSetValue();
+        }
+        return allowedOfferTypeIds;
+    }
+
+    private Set<Long> resolveFromOptionSetValue() {
+        return optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG).stream()
+                .map(OptionSetValueResponse::value)
+                .filter(Objects::nonNull)
+                .map(String::valueOf)
+                .filter(val -> val.matches("\\d+"))
+                .map(Long::parseLong)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
     private ProductOfferingStockDTO buildOffering(StockOfferingRow row, String saleServiceCode) {
         List<ProductOfferPriceResponse> prices;
         if (TELECOM_SERVICE_PCCC_1.equals(row.telecomServiceId()) || TELECOM_SERVICE_PCCC_2.equals(row.telecomServiceId())) {
@@ -163,5 +209,16 @@ public class StockTypeWSService {
                 row.telecomServiceId(),
                 prices
         );
+    }
+
+    private List<StockOfferingRow> filterRowsByViewCode(List<StockOfferingRow> rows, Set<Long> allowedOfferTypeIds) {
+        if (DataUtil.isNullOrEmpty(rows) || allowedOfferTypeIds.isEmpty()) {
+            // config chưa load / không có giá trị hợp lệ → không lọc, tránh mất mặt hàng
+            return rows;
+        }
+        return rows.stream()
+                .filter(row -> row.productOfferTypeId() != null
+                        && allowedOfferTypeIds.contains(row.productOfferTypeId()))
+                .toList();
     }
 }

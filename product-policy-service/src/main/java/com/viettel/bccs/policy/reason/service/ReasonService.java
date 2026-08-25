@@ -24,6 +24,7 @@ import com.viettel.bccs.policy.reason.entity.ReasonEntity;
 import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
 import com.viettel.bccs.policy.reason.repository.ReasonRepository;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
@@ -83,6 +84,9 @@ public class ReasonService {
 
     public List<ReasonDTO> getListReasonByActionCodeAndTelServiceForAudit(
             String actionCode, Long telServiceId, String payType) {
+        RequestValidator.requireNotBlank(actionCode, "actionCode", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotNull(telServiceId, "telServiceId", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotBlank(payType, "payType", "BCCS-PRODUCT-VALIDATE-0000");
         List<ReasonEntity> entities = repository.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode, telServiceId, payType, null, true, List.of());
         return entities.stream()
                 .map(mapper::toDTO)
@@ -262,6 +266,7 @@ public class ReasonService {
      * chỉ khác: trả về toàn bộ danh sách mã thay vì kiểm tra đúng 1 mã.
      */
     public List<String> getReasonCharacter(Long reasonId) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isNullObject(reasonId)) {
             throw new BusinessException("BCCS-POLICY-REASON-0004", "reasonId is required");
         }
@@ -295,10 +300,15 @@ public class ReasonService {
      * việc xác định "không tồn tại" là lỗi nghiệp vụ do phía gọi (product-catalog-service) quyết định.
      */
     public Long getReasonIdByTypeAndCode(String reasonCode, String actionCode, Long telecomServiceId) {
+        RequestValidator.requireNotBlank(reasonCode, "reasonCode", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotBlank(actionCode, "actionCode", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotNull(telecomServiceId, "telecomServiceId", "BCCS-PRODUCT-VALIDATE-0000");
         return repository.findReasonIdByCodeActionAndTelService(reasonCode, actionCode, telecomServiceId);
     }
 
     public boolean checkAttReason(Long reasonId, String attributeCode) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotBlank(attributeCode, "attributeCode", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isAnyNull(reasonId, attributeCode)) {
             throw new BusinessException("BCCS-POLICY-REASON-0003", "reasonId and attributeCode are required");
         }

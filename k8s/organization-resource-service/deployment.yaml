@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: organization-resource-service
+  namespace: bccs
+  labels:
+    app: organization-resource-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: organization-resource-service
+  template:
+    metadata:
+      labels:
+        app: organization-resource-service
+    spec:
+      containers:
+        - name: organization-resource-service
+          image: bccs/organization-resource-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8004
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "local"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:oracle:thin:@host.docker.internal:1521/FREEPDB1"
+            - name: REDIS_HOST
+              value: "host.docker.internal"
+            - name: ELASTICSEARCH_URI
+              value: "http://host.docker.internal:9200"
+            - name: BCCS_KAFKA_ENABLED
+              value: "false"
+            - name: BCCS_CACHE_MODE
+              value: "memory-only"
+            - name: BCCS_REDIS_ENABLED
+              value: "false"
+            - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+              value: "false"
+            - name: BCCS_LOGGING_HTTP_INBOUND_COMPLETION_ENABLED
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_REQUEST_BODY
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_RESPONSE_BODY
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_HEADERS
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_SAMPLING_RATE
+              value: "1.0"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8004
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8004
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8004
+            periodSeconds: 20
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: organization-resource-service
+  namespace: bccs
+  labels:
+    app: organization-resource-service
+spec:
+  selector:
+    app: organization-resource-service
+  ports:
+    - port: 8004
+      targetPort: 8004
+  type: ClusterIP

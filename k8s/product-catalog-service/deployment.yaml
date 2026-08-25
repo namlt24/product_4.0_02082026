@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-service
+  namespace: bccs
+  labels:
+    app: product-catalog-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-catalog-service
+  template:
+    metadata:
+      labels:
+        app: product-catalog-service
+    spec:
+      containers:
+        - name: product-catalog-service
+          image: bccs/product-catalog-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "local"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:oracle:thin:@host.docker.internal:1521/FREEPDB1"
+            - name: REDIS_HOST
+              value: "host.docker.internal"
+            - name: ELASTICSEARCH_URI
+              value: "http://host.docker.internal:9200"
+            - name: BCCS_KAFKA_ENABLED
+              value: "false"
+            - name: BCCS_CACHE_MODE
+              value: "memory-only"
+            - name: BCCS_REDIS_ENABLED
+              value: "false"
+            - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+              value: "false"
+            - name: ORGANIZATION_SERVICE_URL
+              value: "http://organization-resource-service.bccs.svc.cluster.local:8004/organization-resource-service"
+            - name: PRODUCT_POLICY_SERVICE_URL
+              value: "http://product-policy-service.bccs.svc.cluster.local:8002/product-policy-service"
+            - name: BCCS_LOGGING_HTTP_INBOUND_COMPLETION_ENABLED
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_REQUEST_BODY
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_RESPONSE_BODY
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_LOG_HEADERS
+              value: "true"
+            - name: BCCS_LOGGING_HTTP_INBOUND_SAMPLING_RATE
+              value: "1.0"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8001
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8001
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8001
+            periodSeconds: 20
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-catalog-service
+  namespace: bccs
+  labels:
+    app: product-catalog-service
+spec:
+  selector:
+    app: product-catalog-service
+  ports:
+    - port: 8001
+      targetPort: 8001
+  type: ClusterIP

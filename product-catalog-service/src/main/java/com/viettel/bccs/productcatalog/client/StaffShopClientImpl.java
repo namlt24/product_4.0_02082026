@@ -36,7 +36,7 @@ public class StaffShopClientImpl implements StaffShopClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling findActiveByShopIds for {} shopIds", shopIds.size(), e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTR-0001",
                     "Error calling organization-resource-service findActiveByShopIds for " + shopIds.size() + " shopIds", e);
         }
     }
@@ -52,7 +52,7 @@ public class StaffShopClientImpl implements StaffShopClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getStaffShopFullInfo for staffCode: {}", staffCode, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTR-0001",
                     "Error calling organization-resource-service getStaffShopFullInfo for staffCode=" + staffCode, e);
         }
     }

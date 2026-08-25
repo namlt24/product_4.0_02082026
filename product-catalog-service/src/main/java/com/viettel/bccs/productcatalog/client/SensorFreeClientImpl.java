@@ -29,7 +29,7 @@ public class SensorFreeClientImpl implements SensorFreeClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling checkReasonSensorFee for productPackageId={}", productPackageId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTR-0001",
                     "Error calling organization-resource-service checkReasonSensorFee for productPackageId=" + productPackageId, e);
         }
     }

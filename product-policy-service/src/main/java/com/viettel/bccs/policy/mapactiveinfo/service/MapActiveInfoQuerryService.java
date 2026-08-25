@@ -414,10 +414,7 @@ public class MapActiveInfoQuerryService {
 
     public Long getChanelTypeIdMapActiveInfo(ChanelTypeIdRequest request) {
         Long staffId = request.getStaffId();
-        RequestValidator.requireNotNull(staffId, "staffId", "BCCS-POLICY-VALIDATE-REQUIRED");
-        RequestValidator.checkRange(staffId, "staffId", 1L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
-        RequestValidator.checkRange(request.getShopChanelTypeId(), "shopChanelTypeId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
-        RequestValidator.checkRange(request.getShopId(), "shopId", 0L, 9999999999L, "BCCS-POLICY-VALIDATE-RANGE");
+        RequestValidator.requireNotNull(staffId, "staffId", "BCCS-PRODUCT-VALIDATE-0000");
         StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffId);
         return getChanelTypeIdMapActiveInfo(staffDTO);
     }

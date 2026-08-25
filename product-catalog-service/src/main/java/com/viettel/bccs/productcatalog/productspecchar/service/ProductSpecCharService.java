@@ -6,6 +6,7 @@ import com.viettel.bccs.productcatalog.productspecchar.mapper.ProductSpecCharMap
 import com.viettel.bccs.productcatalog.productspecchar.repository.ProductSpecCharRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class ProductSpecCharService {
 
     @Transactional(readOnly = true)
     public ProductSpecCharResponse getByCode(String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-PRODUCT-VALIDATE-0000");
         return productSpecCharRepository.findByCode(code)
                 .map(productSpecCharMapper::toResponse)
                 .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001", "Product spec char not found with code: " + code));
@@ -42,6 +44,7 @@ public class ProductSpecCharService {
 
     @Transactional(readOnly = true)
     public List<ProductSpecCharResponse> findByIds(List<Long> ids) {
+        RequestValidator.requireNotEmpty(ids, "ids", "BCCS-PRODUCT-VALIDATE-0000");
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }

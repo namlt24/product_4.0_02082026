@@ -29,7 +29,7 @@ public class FreeCamEquipmentClientImpl implements FreeCamEquipmentClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling checkReasonFreeCam for productPackageId={}", productPackageId, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-CTP-0001",
                     "Error calling product-policy-service checkReasonFreeCam for productPackageId=" + productPackageId, e);
         }
     }

@@ -8,17 +8,10 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.request.ValidateInputMapActiveI
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateMapActiveInfoResponse;
+import com.viettel.bccs.policy.mapactiveinfo.openapi.ApiValidateFollowMapActiveInfoNew;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoValidateService;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
-import com.viettel.bccs.policy.utils.RequestValidator;
-import com.viettel.bccs.policy.utils.ValidationPatterns;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,8 +25,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoValidateControllerExamples.*;
-
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
 @RequiredArgsConstructor
@@ -41,23 +32,11 @@ import static com.viettel.bccs.policy.mapactiveinfo.openapi.MapActiveInfoValidat
 public class MapActiveInfoValidateController {
     private final MapActiveInfoValidateService service;
 
-    @Operation(operationId = "validateFollowMapActiveInfoNew",
-            summary = "Validate theo thông tin mapping mới",
-            description = "Kiểm tra thông tin đấu nối theo bản ghi MAP_ACTIVE_INFO khớp nhất với các tiêu chí đầu vào " +
-                    "(staffCode, actionCode, offerIds, promotionCode, regReasonId, telServiceId, địa bàn, loại khách hàng...) " +
-                    "và trả về MapActiveInfoDTO tương ứng.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Thành công",
-                    content = @Content(schema = @Schema(implementation = StandardResponse.class),
-                            examples = @ExampleObject(name = "success", value = VALIDATE_FOLLOW_MAP_ACTIVE_INFO_NEW_EXAMPLE)))
-    })
+    @ApiValidateFollowMapActiveInfoNew
     @PostMapping("/validateFollowMapActiveInfoNew")
     public StandardResponse<MapActiveInfoDTO> validateFollowMapActiveInfoNew(
             @RequestBody ValidateInputMapActiveInfoRequest request) {
         MapActiveInfoDTO mapActiveInfoDTO = new MapActiveInfoDTO();
-
-        RequestValidator.checkMaxLength(request.getProductCode(), "productCode", 50, "BCCS-POLICY-VALIDATE-SIZE");
-        RequestValidator.checkPattern(request.getProductCode(), "productCode", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
 
         List<String> lstBusinessNo = request.getLstBusinessNo();
 
@@ -96,7 +75,7 @@ public class MapActiveInfoValidateController {
                 request.getStationCodes(),
                 request.getPayType(),
                 request.getTechnology(),
-                request.getMode(), null, lstBusinessNo);
+                request.getMode(), null, lstBusinessNo, request.getProductCode());
         if (!DataUtil.isNullOrEmpty(mapActiveInfoDTOs)) {
             mapActiveInfoDTO = mapActiveInfoDTOs.get(0);
         }

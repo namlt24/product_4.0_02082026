@@ -38,7 +38,7 @@ public class ProductOfferCharUseClientImpl implements ProductOfferCharUseClient 
             return Collections.emptyMap();
         } catch (RuntimeException e) {
             log.error("Error calling getProductSpecCharByOfferingIds: offeringIds={}", offeringIds, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTC-0001",
                     "Error calling product-catalog-service getProductSpecCharByOfferingIds for offeringIds=" + offeringIds, e);
         }
     }

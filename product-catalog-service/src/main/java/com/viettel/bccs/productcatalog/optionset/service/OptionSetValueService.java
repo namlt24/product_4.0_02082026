@@ -9,6 +9,7 @@ import com.viettel.bccs.productcatalog.optionset.mapper.OptionSetValueMapper;
 import com.viettel.bccs.productcatalog.optionset.repository.OptionSetValueRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class OptionSetValueService {
 
     @Transactional(readOnly = true)
     public List<OptionSetValueResponse> getByOptionSetIdAndStatus(Long optionSetId, String status) {
+        RequestValidator.requireNotBlank(status, "status", "BCCS-PRODUCT-VALIDATE-0000");
         return optionSetValueRepository.findByOptionSetIdAndStatus(optionSetId, status).stream()
                 .map(optionSetValueMapper::toResponse)
                 .toList();
@@ -44,6 +46,7 @@ public class OptionSetValueService {
 
     @Transactional(readOnly = true)
     public List<OptionSetValueResponse> findByOptionSetCode(String code) {
+        RequestValidator.requireNotBlank(code, "code", "BCCS-PRODUCT-VALIDATE-0000");
         return optionSetValueRepository.findByOptionSetCode(code).stream()
                 .map(optionSetValueMapper::toResponse)
                 .toList();
@@ -51,30 +54,19 @@ public class OptionSetValueService {
 
     @Transactional(readOnly = true)
     public Map<String, List<OptionSetValueResponse>> findByOptionSetCodes(List<String> codes) {
+        RequestValidator.requireNotEmpty(codes, "codes", "BCCS-PRODUCT-VALIDATE-0000");
+        if (codes != null) {
+            for (String code : codes) {
+            }
+        }
         List<Object[]> rows = optionSetValueRepository.findByOptionSetCodes(codes);
         return rows.stream()
                 .map(row -> optionSetValueMapper.toResponse(
-                        buildEntityFromRow(row),
+                        optionSetValueMapper.buildEntityFromRow(row),
                         row[11] != null ? row[11].toString().trim() : null))
                 .toList()
                 .stream()
                 .collect(java.util.stream.Collectors.groupingBy(OptionSetValueResponse::optionSetCode));
-    }
-
-    private OptionSetValueEntity buildEntityFromRow(Object[] row) {
-        return OptionSetValueEntity.builder()
-                .optionSetValueId(row[0] != null ? ((Number) row[0]).longValue() : null)
-                .optionSetId(row[1] != null ? ((Number) row[1]).longValue() : null)
-                .name(row[2] != null ? row[2].toString() : null)
-                .value(row[3] != null ? row[3].toString() : null)
-                .status(row[4] != null ? row[4].toString() : null)
-                .description(row[5] != null ? row[5].toString() : null)
-                .createUser(row[6] != null ? row[6].toString() : null)
-                .createDatetime(row[7] instanceof java.sql.Date d ? d : null)
-                .updateUser(row[8] != null ? row[8].toString() : null)
-                .updateDatetime(row[9] instanceof java.sql.Date d ? d : null)
-                .parentId(row[10] != null ? ((Number) row[10]).longValue() : null)
-                .build();
     }
 
     @Transactional(readOnly = true)
@@ -86,12 +78,15 @@ public class OptionSetValueService {
 
     @Transactional(readOnly = true)
     public String getValueByTwoCodeOption(String optSetCode, String name) {
+        RequestValidator.requireNotBlank(optSetCode, "optSetCode", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotBlank(name, "name", "BCCS-PRODUCT-VALIDATE-0000");
         return optionSetValueRepository.findValueByTwoCodeOption(optSetCode, name);
     }
 
     @Cacheable(value = "subObjectCache",
             key = "'SUB_OBJ:' + #custType + ':' + (#birthDate != null ? #birthDate : 'NULL')")
     public GetSubObjectResponse getSubObject(String custType, String birthDate) {
+        RequestValidator.requireNotBlank(custType, "custType", "BCCS-PRODUCT-VALIDATE-0000");
         GetSubObjectResponse response = new GetSubObjectResponse();
 
         Optional<CustTypeDTO> custTypeOpt = custTypeClient.findActiveByCustType(custType, Const.STATUS.ACTIVE);

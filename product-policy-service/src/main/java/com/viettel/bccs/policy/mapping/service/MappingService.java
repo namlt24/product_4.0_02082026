@@ -7,11 +7,13 @@ import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,10 +28,11 @@ public class MappingService {
         return repository.findSaleServiceCodeByReason(reasonId);
     }
 
-    /**
-     * Migrate từ mono: ProductOfferPriceServiceImpl.getPriceInServices gọi
-     * mappingService.getMappingReasonProductOfferPrice(temp) (temp = productPackageId).
-     */
+    public Map<String, String> getLstMapPackageByActionCodeAndReasonCodes(List<String> reasonCodes, String actionCode) {
+        return repository.getLstMapPackageByActionCodeAndReasonCodes(reasonCodes, actionCode);
+    }
+
+
     public List<ReasonResponse> getMappingReasonProductOfferPrice(Long productPackageId) {
         return repository.getMappingReasonProductOfferPrice(productPackageId)
                 .stream()
@@ -51,6 +54,7 @@ public class MappingService {
      * getListStockTypeWS.
      */
     public String getSaleServiceCode(Long telecomServiceId, Long reasonId, String productCode, String actionCode) {
+        RequestValidator.requireNotNull(reasonId, "reasonId", "BCCS-PRODUCT-VALIDATE-0000");
         if (reasonId == null || reasonId == 0L) {
             return null;
         }

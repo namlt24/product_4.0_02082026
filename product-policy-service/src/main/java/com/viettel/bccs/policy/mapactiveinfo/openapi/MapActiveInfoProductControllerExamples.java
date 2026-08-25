@@ -20,7 +20,7 @@ public final class MapActiveInfoProductControllerExamples {
                     "productOfferingId": 12345,
                     "productOfferTypeId": 1,
                     "telecomServiceId": 1,
-                    "status": "1"
+                    "subType": "1"
                   }
                 ]
               }

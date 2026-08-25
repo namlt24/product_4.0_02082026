@@ -7,6 +7,7 @@ import com.viettel.bccs.productcatalog.productspeccharvalue.mapper.ProductSpecCh
 import com.viettel.bccs.productcatalog.productspeccharvalue.repository.ProductSpecCharValueRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class ProductSpecCharValueService {
 
     @Transactional(readOnly = true)
     public List<ProductSpecCharValueResponse> findByIds(List<Long> ids) {
+        RequestValidator.requireNotEmpty(ids, "ids", "BCCS-PRODUCT-VALIDATE-0000");
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }

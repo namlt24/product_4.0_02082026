@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-area-service
+  namespace: bccs
+  labels:
+    app: product-area-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-area-service
+  template:
+    metadata:
+      labels:
+        app: product-area-service
+    spec:
+      containers:
+        - name: product-area-service
+          image: bccs/product-area-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8003
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "local"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:oracle:thin:@host.docker.internal:1521/FREEPDB1"
+            - name: REDIS_HOST
+              value: "host.docker.internal"
+            - name: ELASTICSEARCH_URI
+              value: "http://host.docker.internal:9200"
+            - name: BCCS_KAFKA_ENABLED
+              value: "false"
+            - name: BCCS_CACHE_MODE
+              value: "memory-only"
+            - name: BCCS_REDIS_ENABLED
+              value: "false"
+            - name: MANAGEMENT_HEALTH_REDIS_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8003
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8003
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8003
+            periodSeconds: 20
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-area-service
+  namespace: bccs
+  labels:
+    app: product-area-service
+spec:
+  selector:
+    app: product-area-service
+  ports:
+    - port: 8003
+      targetPort: 8003
+  type: ClusterIP

@@ -13,6 +13,7 @@ import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
 import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
+import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
@@ -25,6 +26,7 @@ import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCh
 import com.viettel.bccs.productcatalog.productspeccharvalue.service.ProductSpecCharValueService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -61,20 +63,27 @@ public class ProductOfferPriceService {
     private final ProductOfferPriceRepository repository;
     private final ProductSpecCharValueService productSpecCharValueService;
 
+    @Cacheable(value = "productOfferPriceCache", key = "'PLEDGE_PRICE:' + #productOfferingId")
+    public List<PledgePriceResponse> getPledgePriceInfoByOfferId(Long productOfferingId) {
+        RequestValidator.requireNotNull(productOfferingId, "productOfferingId", "BCCS-PRODUCT-VALIDATE-0000");
+        return productOfferPriceMapper.toPledgePriceResponseList(
+                productOfferPriceRepository.getPledgePriceInfoByOfferId(productOfferingId));
+    }
+
     @Transactional(readOnly = true)
     public ProductOfferPriceDTO getById(Long prodOfferPriceId) {
+        RequestValidator.requireNotNull(prodOfferPriceId, "prodOfferPriceId", "BCCS-PRODUCT-VALIDATE-0000");
         return productOfferPriceRepository.findById(prodOfferPriceId)
                 .map(productOfferPriceMapper::toDto)
                 .orElse(null);
     }
 
-    /**
-     * Migrate từ mono: ProductOfferPriceServiceImpl.getPriceByTypePolicy. Lấy danh sách giá bán
-     * đang active của 1 sản phẩm theo loại giá + chính sách giá, còn hiệu lực theo ngày hiện tại,
-     * sắp xếp tăng dần theo giá.
-     */
+
     @Cacheable(value = "productOfferPriceCache", key = "'TYPE_POLICY:' + #productOfferId + ':' + #priceTypeId + ':' + #pricePolicy")
     public List<ProductOfferPriceDTO> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy) {
+        RequestValidator.requireNotNull(productOfferId, "productOfferId", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotNull(priceTypeId, "priceTypeId", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotNull(pricePolicy, "pricePolicy", "BCCS-PRODUCT-VALIDATE-0000");
         return mapper.toDtoBean(repository.getPriceByTypePolicy(productOfferId, priceTypeId, pricePolicy));
     }
 

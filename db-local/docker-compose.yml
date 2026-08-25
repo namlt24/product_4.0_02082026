@@ -36,5 +36,18 @@ services:
       timeout: 5s
       retries: 30
 
+  # Kibana - xem log EFK (index bccs-logs-*) va du lieu nghiep vu tren cung bccs-elasticsearch.
+  # Fluent Bit (chay trong K8s, xem k8s/fluent-bit/) day log vao day qua host.docker.internal:9200.
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: bccs-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 volumes:
   bccs_es_local_data:

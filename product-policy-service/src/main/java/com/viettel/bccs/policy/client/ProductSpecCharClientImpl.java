@@ -31,7 +31,7 @@ public class ProductSpecCharClientImpl implements ProductSpecCharClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling productspecchar/findByIds: ids={}", ids, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTC-0001",
                     "Error calling product-catalog-service productspecchar/findByIds for ids=" + ids, e);
         }
     }
@@ -46,7 +46,7 @@ public class ProductSpecCharClientImpl implements ProductSpecCharClient {
             return Collections.emptyList();
         } catch (RuntimeException e) {
             log.error("Error calling productspectcharvalue/findByIds: ids={}", ids, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTC-0001",
                     "Error calling product-catalog-service productspectcharvalue/findByIds for ids=" + ids, e);
         }
     }

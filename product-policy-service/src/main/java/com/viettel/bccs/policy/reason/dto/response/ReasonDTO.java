@@ -117,4 +117,9 @@ public class ReasonDTO {
     @Size(max = 1000, message = "note tối đa 1000 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "note không được chứa ký tự điều khiển")
     private String note;
+
+    @Schema(description = "Mã dịch vụ bán hàng", example = "DVBH1")
+    @Size(max = 100, message = "Mã dịch vụ bán hàng tối đa 100 ký tự")
+    @Pattern(regexp = "^[A-Za-z0-9._-]{0,50}$", message = "updateUser chỉ gồm chữ, số, '.', '_' hoặc '-'")
+    private String saleServiceCode;
 }

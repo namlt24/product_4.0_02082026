@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface StockChannelMappingRepository extends JpaRepository<StockChannelMappingEntity, Long> {
+public interface StockChannelMappingRepository
+        extends JpaRepository<StockChannelMappingEntity, Long>, StockChannelMappingRepositoryCustom {
 
     List<StockChannelMappingEntity> findAllByStatus(String status);
 

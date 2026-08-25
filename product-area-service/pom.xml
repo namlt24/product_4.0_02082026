@@ -70,4 +70,16 @@
             <version>${springdoc-openapi.version}</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>product-area-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -28,7 +28,7 @@ public class StaffExtClientImpl implements StaffExtClient {
             return null;
         } catch (RuntimeException e) {
             log.error("Error calling getStaffExtByStaffIDAndKey for staffId: {}, key: {}", staffId, key, e);
-            throw new IntegrationException("BCCS-SYS-INT-0001",
+            throw new IntegrationException("BCCS-SYS-PTR-0001",
                     "Error calling organization-resource-service getStaffExtByStaffIDAndKey for staffId=" + staffId + ", key=" + key, e);
         }
     }

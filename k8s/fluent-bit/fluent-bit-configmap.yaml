@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: bccs
+  labels:
+    app: fluent-bit
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         5
+        Log_Level     info
+        Daemon        off
+        Parsers_File  parsers.conf
+        HTTP_Server   On
+        HTTP_Listen   0.0.0.0
+        HTTP_Port     2020
+
+    # Chi lay log container cua cac pod trong namespace "bccs" (4 service BCCS).
+    # Da xac minh thuc te (khong phai doan qua tai lieu): tren Docker Desktop Kubernetes, file tai
+    # /var/log/containers/*.log van ghi theo dinh dang Docker json-file kinh dien
+    # ({"log":"...","stream":"stdout","time":"..."}), KHONG phai dinh dang text CRI nhu cac cluster
+    # containerd thong thuong. Vi vay dung parser "docker" (dinh nghia o parsers.conf), khong dung "cri".
+    # Ten file dang: /var/log/containers/<pod>_<namespace>_<container>-<containerId>.log
+    # Loc bang pattern *_bccs_* de chi lay dung namespace bccs, khong lay log cac pod he thong khac.
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/*_bccs_*.log
+        Parser            docker
+        Tag               kube.*
+        Refresh_Interval  5
+        Mem_Buf_Limit     50MB
+        Skip_Long_Lines   On
+
+    # Gan metadata k8s (pod name, namespace, labels...) + tu parse tiep phan "log" (JSON app tu sinh
+    # theo dinh dang cua bccs-starter-service-base) thanh field JSON con (log_json).
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Merge_Log           On
+        Merge_Log_Key       log_json
+        K8S-Logging.Parser  On
+        K8S-Logging.Exclude Off
+
+    [OUTPUT]
+        Name                es
+        Match               kube.*
+        Host                host.docker.internal
+        Port                9200
+        Logstash_Format     On
+        Logstash_Prefix     bccs-logs
+        Replace_Dots        On
+        Suppress_Type_Name  On
+        Retry_Limit         5
+
+  parsers.conf: |
+    # Dinh nghia parser "docker" tuong minh (khong dua vao built-in cua image) vi Parsers_File trong
+    # [SERVICE] tro thang vao file nay - neu de trong se KHONG co parser nao duoc nap, kien Parser
+    # trong INPUT tham chieu toi mot ten parser khong ton tai va bi bo qua (day chinh la nguyen nhan
+    # log bi long JSON 2 lop khi con dung parser "cri" ma khong dinh nghia no o day).
+    [PARSER]
+        Name         docker
+        Format       json
+        Time_Key     time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep    On

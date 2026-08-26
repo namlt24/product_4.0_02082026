@@ -178,6 +178,10 @@
   font-family: var(--gwm-font-sans);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   overflow: hidden;
+  // Toan bo node bam duoc de mo panel sua (khong chi 3 dong text ben trong) -
+  // handle keo rieng (.drag-handle) tu chan noi bot click cua no de khong mo
+  // panel nham khi chi dinh keo.
+  cursor: pointer;
 
   &:hover {
     border-color: var(--gwm-primary);

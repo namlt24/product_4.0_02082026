@@ -75,7 +75,7 @@
             </marker>
           </defs>
 
-          @for (pe of positionedMappings(); track pe.mapping) {
+          @for (pe of positionedMappings(); track pe.index) {
             <path [attr.d]="pe.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openMappingPanel(pe.index)" />
             <path [attr.d]="pe.path" fill="none" stroke="#818cf8" stroke-width="2.25" marker-end="url(#canvas-arrow)" class="edge-visible" />
             <text [attr.x]="pe.labelX" [attr.y]="pe.labelY" class="edge-label" text-anchor="middle">{{ pe.mapping.targetParamName }}</text>
@@ -95,24 +95,26 @@
             </div>
           </div>
 
-          @for (p of nodeBasePositions(); track p.step; let i = $index) {
+          @for (p of nodeBasePositions(); track p.step.stepOrder; let i = $index) {
             <div
               class="step-node"
               cdkDrag
+              cdkDragBoundary=".canvas-scroller"
               [style.left.px]="p.x"
               [style.top.px]="p.y"
               [style.width.px]="nodeWidth"
               [style.height.px]="nodeHeight"
               (cdkDragMoved)="onNodeDragMoved($event, i)"
               (cdkDragEnded)="onNodeDragEnded($event, i)"
+              (click)="openStepPanel(i)"
             >
               <div class="step-node-top">
-                <mat-icon class="drag-handle" cdkDragHandle inline="true" matTooltip="Kéo để di chuyển">drag_indicator</mat-icon>
+                <mat-icon class="drag-handle" cdkDragHandle inline="true" matTooltip="Kéo để di chuyển" (click)="$event.stopPropagation()">drag_indicator</mat-icon>
                 <span class="method-chip" [attr.data-method]="p.step.method">{{ p.step.method }}</span>
-                <span class="step-node-name" (click)="openStepPanel(i)">{{ p.step.name || ('Step ' + p.step.stepOrder + ' (chưa đặt tên)') }}</span>
+                <span class="step-node-name">{{ p.step.name || ('Step ' + p.step.stepOrder + ' (chưa đặt tên)') }}</span>
               </div>
-              <code class="step-node-url" (click)="openStepPanel(i)">{{ p.step.urlPattern }}</code>
-              <div class="step-node-badges" (click)="openStepPanel(i)">
+              <code class="step-node-url">{{ p.step.urlPattern }}</code>
+              <div class="step-node-badges">
                 <span class="mini-badge mini-badge--muted">Step {{ p.step.stepOrder }}</span>
                 @if (p.step.cacheEnabled) {
                   <span class="mini-badge"><mat-icon inline="true">bolt</mat-icon>{{ p.step.cacheTtlSeconds }}s</span>

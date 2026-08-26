@@ -205,7 +205,21 @@ export class EndpointCanvasComponent implements OnInit {
     return { width: maxX, height: maxY };
   });
 
-  readonly panelOpen = computed(() => this.editingStep !== null || this.editingMapping !== null);
+  /**
+   * QUAN TRONG: KHONG duoc dung computed() o day - editingStep/editingMapping la
+   * field thuong (khong phai signal), computed() chi re-evaluate khi 1 SIGNAL no
+   * doc thay doi. Doc field thuong ben trong computed() khong tao dependency nao
+   * ca -> computed() cache DUY NHAT gia tri lan dau (luon la false, vi luc component
+   * khoi tao ca 2 field deu null) va KHONG BAO GIO tinh lai nua, du sau do click mo
+   * step/mapping that su gan gia tri moi cho editingStep/editingMapping - panel se
+   * render noi dung trong DOM nhung class "side-panel--open" khong bao gio duoc gan,
+   * nen panel nam ngoai man hinh vinh vien (xem CSS transform: translateX(100%)).
+   * Dung method thuong: Angular (zone.js, change detection mac dinh - component nay
+   * khong dung OnPush) tu goi lai moi lan CD chay, luon tra ve gia tri dung hien tai.
+   */
+  panelOpen(): boolean {
+    return this.editingStep !== null || this.editingMapping !== null;
+  }
 
   constructor(
     private readonly api: EndpointApiService,

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { CdkDragEnd, CdkDragMove, DragDropModule } from '@angular/cdk/drag-drop';
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -144,6 +144,9 @@ export class EndpointCanvasComponent implements OnInit {
   editingMapping: FieldMapping | null = null;
   editingMappingIndex: number | null = null;
 
+  /** Tham chieu DOM cua panel - dung de phat hien click RA NGOAI panel (dong panel). */
+  @ViewChild('panelRef') private panelRef?: ElementRef<HTMLElement>;
+
   header: HeaderModel = {
     name: '',
     description: '',
@@ -219,6 +222,28 @@ export class EndpointCanvasComponent implements OnInit {
    */
   panelOpen(): boolean {
     return this.editingStep !== null || this.editingMapping !== null;
+  }
+
+  /**
+   * Bam ra ngoai panel -> dong panel (khong lam mat thay doi chua "Ap dung" - dong
+   * y het nut "Dong", chi la trigger khac). Dung 'mousedown' (KHONG phai 'click'):
+   * mousedown luon xay ra TRUOC 'click' cua chinh target vua bam, nen neu nguoi dung
+   * bam thang sang 1 node/canh khac de mo panel MOI, panel cu bi dong o day truoc,
+   * roi (click)="openStepPanel(...)" cua node do moi chay va mo panel moi - khong bi
+   * dong ngay sau khi vua mo (neu dung 'click' o day se bi loi nay vi 'click' tren
+   * document luon no SAU 'click' tren chinh phan tu duoc bam, do bubbling).
+   */
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentMouseDown(event: MouseEvent): void {
+    if (!this.panelOpen()) return;
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (this.panelRef?.nativeElement.contains(target)) return;
+    // <mat-select>/tooltip cua Angular Material render dropdown qua CDK Overlay,
+    // gan THANG vao <body> (ngoai cay DOM cua panel) - phai bo qua, khong thi chon
+    // 1 option trong dropdown se vo tinh dong panel ngay lap tuc.
+    if (target.closest('.cdk-overlay-container')) return;
+    this.closePanel();
   }
 
   constructor(

@@ -144,7 +144,7 @@
 }
 
 <!-- ============================== Panel truot ben phai ============================== -->
-<aside class="side-panel" [class.side-panel--open]="panelOpen()">
+<aside #panelRef class="side-panel" [class.side-panel--open]="panelOpen()">
   @if (editingStep; as edit) {
     <div class="side-panel-header">
       <h2>Sửa Step {{ (editingStepIndex ?? 0) + 1 }}</h2>

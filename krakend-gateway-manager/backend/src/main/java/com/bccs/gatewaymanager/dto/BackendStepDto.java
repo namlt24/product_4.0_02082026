@@ -1,5 +1,7 @@
 package com.bccs.gatewaymanager.dto;
 
+import com.bccs.gatewaymanager.entity.ConditionOperator;
+import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -49,7 +51,30 @@ public record BackendStepDto(
         /** Vi tri tren canvas "khai bao endpoint keo tha" - null = chua duoc keo tha, FE tu suy auto-layout theo stepOrder. */
         Integer canvasX,
 
-        Integer canvasY
+        Integer canvasY,
+
+        /**
+         * Re nhanh (P1-5) - tat ca nullable, khong khai bao (conditionOperator=null)
+         * = step chay binh thuong theo dung stepOrder ke tiep, khong doi hanh vi cu.
+         * Chi dung STEP_RESPONSE/REQUEST_BODY (khong dung STEP_RESPONSE_ARRAY_AGGREGATE -
+         * so sanh 1 mang khong co y nghia cho dieu kien dung/sai).
+         */
+        FieldMappingSourceType conditionSourceType,
+
+        Integer conditionSourceStepOrder,
+
+        String conditionSourceField,
+
+        ConditionOperator conditionOperator,
+
+        /** Chi dung khi conditionOperator=EQUALS/NOT_EQUALS. */
+        String conditionExpectedValue,
+
+        /** null = neu dieu kien DUNG thi ket thuc chuoi tai day (ket qua step nay la response cuoi cung). */
+        Integer nextStepOrderIfTrue,
+
+        /** null = neu dieu kien SAI thi ket thuc chuoi tai day. */
+        Integer nextStepOrderIfFalse
 ) {
     public BackendStepDto {
         if (cacheTtlSeconds <= 0) {

@@ -22,6 +22,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   BackendStep,
+  CONDITION_OPERATORS,
   emptyEndpoint,
   emptyStep,
   EndpointConfig,
@@ -74,6 +75,9 @@ export class EndpointFormComponent implements OnInit {
   readonly httpMethods = HTTP_METHODS;
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
+  /** Nguon dieu kien chi cho phep Step truoc/Body client - Gop mang khong co y nghia cho 1 dieu kien dung/sai. */
+  readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter((t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE');
+  readonly conditionOperators = CONDITION_OPERATORS;
 
   readonly saving = signal(false);
   readonly isEditMode = signal(false);
@@ -151,6 +155,15 @@ export class EndpointFormComponent implements OnInit {
           this.buildRenameEntry(source, target),
         ),
       ),
+      // Re nhanh (P1-5) - conditionOperator=null la trang thai mac dinh/tat, giu
+      // nguyen hanh vi step binh thuong. Cac field con lai chi co y nghia khi bat.
+      conditionSourceType: [step.conditionSourceType ?? 'STEP_RESPONSE'],
+      conditionSourceStepOrder: [step.conditionSourceStepOrder ?? null],
+      conditionSourceField: [step.conditionSourceField ?? ''],
+      conditionOperator: [step.conditionOperator ?? null],
+      conditionExpectedValue: [step.conditionExpectedValue ?? ''],
+      nextStepOrderIfTrue: [step.nextStepOrderIfTrue ?? null],
+      nextStepOrderIfFalse: [step.nextStepOrderIfFalse ?? null],
     });
   }
 
@@ -216,6 +229,43 @@ export class EndpointFormComponent implements OnInit {
   /** Danh sach so thu tu step hien co - dung cho <mat-select> chon step nguon/dich trong mapping. */
   get availableStepOrders(): number[] {
     return this.stepsArray.controls.map((c) => c.get('stepOrder')!.value as number);
+  }
+
+  // ------------------------------------------------------------------ //
+  // Dieu kien re nhanh (P1-5) - mac dinh AN, chi hien form chi tiet khi bat toggle,
+  // giu UI gon cho da so step khong dung tinh nang nay.
+  // ------------------------------------------------------------------ //
+
+  stepConditionEnabled(index: number): boolean {
+    return !!this.stepsArray.at(index).get('conditionOperator')!.value;
+  }
+
+  toggleStepCondition(index: number, enabled: boolean): void {
+    const group = this.stepsArray.at(index);
+    if (enabled) {
+      group.patchValue({ conditionSourceType: 'STEP_RESPONSE', conditionOperator: 'EXISTS' });
+    } else {
+      // Tat toggle: xoa het field dieu kien de KHONG luu lai gia tri cu (tranh
+      // gui len 1 dieu kien "ma", da tat tren UI nhung van con field trong payload).
+      group.patchValue({
+        conditionSourceType: 'STEP_RESPONSE',
+        conditionSourceStepOrder: null,
+        conditionSourceField: '',
+        conditionOperator: null,
+        conditionExpectedValue: '',
+        nextStepOrderIfTrue: null,
+        nextStepOrderIfFalse: null,
+      });
+    }
+  }
+
+  stepConditionNeedsSourceStep(index: number): boolean {
+    return this.stepsArray.at(index).get('conditionSourceType')!.value !== 'REQUEST_BODY';
+  }
+
+  stepConditionNeedsExpectedValue(index: number): boolean {
+    const op = this.stepsArray.at(index).get('conditionOperator')!.value;
+    return op === 'EQUALS' || op === 'NOT_EQUALS';
   }
 
   // ------------------------------------------------------------------ //
@@ -305,6 +355,29 @@ export class EndpointFormComponent implements OnInit {
       if (src !== null && src > removedOrder) m.get('sourceStepOrder')!.setValue(src - 1);
       if (tgt > removedOrder) m.get('targetStepOrder')!.setValue(tgt - 1);
     }
+
+    // Don dep / dieu chinh dieu kien re nhanh (P1-5) cua CAC STEP CON LAI tham
+    // chieu toi step vua xoa - dung y het cach lam voi mapping o tren: tham
+    // chieu toi step da xoa thi TAT dieu kien do luon (khong con nghia gi ca,
+    // giu lai se bi validate backend chan luc luu voi loi kho hieu), con tham
+    // chieu toi step con lai thi dich stepOrder xuong 1 theo dung phep renumber.
+    this.stepsArray.controls.forEach((ctrl) => {
+      const srcStep = ctrl.get('conditionSourceStepOrder')!.value as number | null;
+      const nextTrue = ctrl.get('nextStepOrderIfTrue')!.value as number | null;
+      const nextFalse = ctrl.get('nextStepOrderIfFalse')!.value as number | null;
+
+      if (srcStep === removedOrder) {
+        this.toggleStepCondition(this.stepsArray.controls.indexOf(ctrl), false);
+        return; // toggleStepCondition da xoa ca nextTrue/nextFalse cua step nay roi
+      }
+      if (srcStep !== null && srcStep > removedOrder) ctrl.get('conditionSourceStepOrder')!.setValue(srcStep - 1);
+
+      if (nextTrue === removedOrder) ctrl.get('nextStepOrderIfTrue')!.setValue(null);
+      else if (nextTrue !== null && nextTrue > removedOrder) ctrl.get('nextStepOrderIfTrue')!.setValue(nextTrue - 1);
+
+      if (nextFalse === removedOrder) ctrl.get('nextStepOrderIfFalse')!.setValue(null);
+      else if (nextFalse !== null && nextFalse > removedOrder) ctrl.get('nextStepOrderIfFalse')!.setValue(nextFalse - 1);
+    });
   }
 
   // ------------------------------------------------------------------ //
@@ -399,6 +472,16 @@ export class EndpointFormComponent implements OnInit {
           .filter((e) => e.source && e.target)
           .map((e) => [e.source, e.target]),
       ),
+      // Re nhanh (P1-5) - conditionOperator null nghia la khong dung, cac field
+      // con lai deu gui null theo (dung UX voi toggleStepCondition() da xoa san
+      // luc tat toggle, o day chi la lop bao ve them).
+      conditionSourceType: s.conditionOperator ? s.conditionSourceType : null,
+      conditionSourceStepOrder: s.conditionOperator ? s.conditionSourceStepOrder || null : null,
+      conditionSourceField: s.conditionOperator ? s.conditionSourceField || null : null,
+      conditionOperator: s.conditionOperator || null,
+      conditionExpectedValue: s.conditionOperator ? s.conditionExpectedValue || null : null,
+      nextStepOrderIfTrue: s.conditionOperator ? s.nextStepOrderIfTrue || null : null,
+      nextStepOrderIfFalse: s.conditionOperator ? s.nextStepOrderIfFalse || null : null,
     }));
 
     const mappings: FieldMapping[] = v.mappings.map((m: any) => ({

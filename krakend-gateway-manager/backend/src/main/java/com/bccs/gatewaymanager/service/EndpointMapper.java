@@ -73,6 +73,13 @@ public class EndpointMapper {
                 .fieldRenameMapping(s.fieldRenameMapping() == null ? new java.util.HashMap<>() : s.fieldRenameMapping())
                 .canvasX(s.canvasX())
                 .canvasY(s.canvasY())
+                .conditionSourceType(s.conditionSourceType())
+                .conditionSourceStepOrder(s.conditionSourceStepOrder())
+                .conditionSourceField(s.conditionSourceField())
+                .conditionOperator(s.conditionOperator())
+                .conditionExpectedValue(s.conditionExpectedValue())
+                .nextStepOrderIfTrue(s.nextStepOrderIfTrue())
+                .nextStepOrderIfFalse(s.nextStepOrderIfFalse())
                 .build()).toList();
         entity.replaceSteps(steps);
     }
@@ -113,7 +120,10 @@ public class EndpointMapper {
                         // da dong), no se nem LazyInitializationException.
                         new ArrayList<>(s.getAllowFields()), new ArrayList<>(s.getDenyFields()),
                         new HashMap<>(s.getFieldRenameMapping()),
-                        s.getCanvasX(), s.getCanvasY()))
+                        s.getCanvasX(), s.getCanvasY(),
+                        s.getConditionSourceType(), s.getConditionSourceStepOrder(), s.getConditionSourceField(),
+                        s.getConditionOperator(), s.getConditionExpectedValue(),
+                        s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse()))
                 .toList();
 
         List<FieldMappingDto> mappings = entity.getMappings().stream()

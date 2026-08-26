@@ -122,6 +122,11 @@
                 @if (p.step.forwardOriginalBody) {
                   <span class="mini-badge"><mat-icon inline="true">call_merge</mat-icon>Body</span>
                 }
+                @if (p.step.conditionOperator) {
+                  <span class="mini-badge mini-badge--branch" matTooltip="Sau step này có rẽ nhánh - xem/sửa trong panel">
+                    <mat-icon inline="true">call_split</mat-icon>Có điều kiện
+                  </span>
+                }
               </div>
             </div>
           }
@@ -248,6 +253,82 @@
             <button mat-icon-button type="button" color="warn" (click)="removeRenameEntry(j)">
               <mat-icon>close</mat-icon>
             </button>
+          </div>
+        }
+      </div>
+
+      <!-- Dieu kien re nhanh (P1-5) - dung y het endpoint-form.component.html (trung lap co chu dich). -->
+      <div class="sub-section">
+        <div class="sub-section-header">
+          <span>Điều kiện rẽ nhánh (tuỳ chọn)</span>
+          <mat-slide-toggle [checked]="stepConditionEnabled()" (change)="toggleStepCondition($event.checked)">Bật</mat-slide-toggle>
+        </div>
+
+        @if (stepConditionEnabled()) {
+          <p class="condition-hint">
+            Sau khi step này chạy xong, kiểm tra 1 điều kiện rồi quyết định gọi step nào tiếp theo.
+          </p>
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Nguồn dữ liệu</mat-label>
+              <mat-select [(ngModel)]="edit.conditionSourceType">
+                @for (t of conditionSourceTypes; track t) {
+                  <mat-option [value]="t">{{ t === 'REQUEST_BODY' ? 'Body của client' : 'Response step trước' }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            @if (stepConditionNeedsSourceStep()) {
+              <mat-form-field appearance="outline" style="flex: 1">
+                <mat-label>Step nguồn</mat-label>
+                <mat-select [(ngModel)]="edit.conditionSourceStepOrder">
+                  @for (o of availableStepOrders; track o) {
+                    <mat-option [value]="o">Step {{ o }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Field</mat-label>
+            <input matInput [(ngModel)]="edit.conditionSourceField" placeholder="vd: status hoặc shop.channelTypeId" />
+          </mat-form-field>
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Toán tử</mat-label>
+              <mat-select [(ngModel)]="edit.conditionOperator">
+                @for (op of conditionOperators; track op) {
+                  <mat-option [value]="op">
+                    {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác' : op === 'EXISTS' ? 'Tồn tại' : 'Không tồn tại' }}
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            @if (stepConditionNeedsExpectedValue()) {
+              <mat-form-field appearance="outline" style="flex: 1">
+                <mat-label>Giá trị mong đợi</mat-label>
+                <input matInput [(ngModel)]="edit.conditionExpectedValue" placeholder="vd: active" />
+              </mat-form-field>
+            }
+          </div>
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Nếu ĐÚNG → chạy</mat-label>
+              <mat-select [(ngModel)]="edit.nextStepOrderIfTrue">
+                <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                @for (o of availableStepOrders; track o) {
+                  <mat-option [value]="o">Step {{ o }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Nếu SAI → chạy</mat-label>
+              <mat-select [(ngModel)]="edit.nextStepOrderIfFalse">
+                <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                @for (o of availableStepOrders; track o) {
+                  <mat-option [value]="o">Step {{ o }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
           </div>
         }
       </div>

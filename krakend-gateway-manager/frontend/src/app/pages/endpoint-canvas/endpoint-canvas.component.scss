@@ -264,6 +264,11 @@
     background: var(--gwm-primary-light);
     color: var(--gwm-primary-dark);
   }
+
+  &--branch {
+    background: var(--gwm-warning-bg);
+    color: var(--gwm-warning);
+  }
 }
 
 .method-chip {
@@ -412,6 +417,12 @@
   color: var(--gwm-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.condition-hint {
+  font-size: 12px;
+  color: var(--gwm-text-secondary);
+  margin: 0 0 10px;
 }
 
 .arrow-icon {

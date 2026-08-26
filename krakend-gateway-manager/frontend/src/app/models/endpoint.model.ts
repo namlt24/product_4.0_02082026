@@ -11,6 +11,9 @@ export type MappingTargetType = 'PATH' | 'QUERY' | 'HEADER' | 'BODY_FIELD';
 /** Nguon du lieu cua 1 FieldMapping. */
 export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'STEP_RESPONSE_ARRAY_AGGREGATE';
 
+/** Toan tu so sanh dung cho dieu kien re nhanh (P1-5) cua 1 BackendStep. */
+export type ConditionOperator = 'EQUALS' | 'NOT_EQUALS' | 'EXISTS' | 'NOT_EXISTS';
+
 export interface FieldRenameMap {
   [sourceField: string]: string;
 }
@@ -54,6 +57,22 @@ export interface BackendStep {
   /** Vi tri tren trang "Canvas mới" (kéo thả trực quan) - null = chưa từng kéo thả, FE tự suy auto-layout theo stepOrder. */
   canvasX?: number | null;
   canvasY?: number | null;
+
+  /**
+   * Rẽ nhánh (P1-5) - tất cả optional, không khai báo (conditionOperator=null/undefined)
+   * = step chạy bình thường theo đúng stepOrder kế tiếp, không đổi hành vi cũ.
+   * Chỉ dùng STEP_RESPONSE/REQUEST_BODY (không dùng STEP_RESPONSE_ARRAY_AGGREGATE).
+   */
+  conditionSourceType?: FieldMappingSourceType | null;
+  conditionSourceStepOrder?: number | null;
+  conditionSourceField?: string | null;
+  conditionOperator?: ConditionOperator | null;
+  /** Chỉ dùng khi conditionOperator=EQUALS/NOT_EQUALS. */
+  conditionExpectedValue?: string | null;
+  /** null = nếu điều kiện ĐÚNG thì kết thúc chuỗi tại đây (kết quả step này là response cuối cùng). */
+  nextStepOrderIfTrue?: number | null;
+  /** null = nếu điều kiện SAI thì kết thúc chuỗi tại đây. */
+  nextStepOrderIfFalse?: number | null;
 }
 
 /** Khai bao "trich xuat 1 gia tri -> bom vao step Y". Xem FieldMappingSourceType cho y nghia cac field con lai. */
@@ -231,8 +250,17 @@ export function emptyStep(stepOrder: number): BackendStep {
     fieldRenameMapping: {},
     canvasX: null,
     canvasY: null,
+    conditionSourceType: null,
+    conditionSourceStepOrder: null,
+    conditionSourceField: null,
+    conditionOperator: null,
+    conditionExpectedValue: null,
+    nextStepOrderIfTrue: null,
+    nextStepOrderIfFalse: null,
   };
 }
+
+export const CONDITION_OPERATORS: ConditionOperator[] = ['EQUALS', 'NOT_EQUALS', 'EXISTS', 'NOT_EXISTS'];
 
 export function emptyMapping(sourceStepOrder: number, targetStepOrder: number): FieldMapping {
   return {

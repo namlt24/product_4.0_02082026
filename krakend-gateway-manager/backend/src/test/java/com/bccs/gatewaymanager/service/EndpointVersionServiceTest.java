@@ -52,7 +52,8 @@ class EndpointVersionServiceTest {
 
     private EndpointResponseDto responseDto(String id, String name, String path) {
         BackendStepDto step = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
-                false, false, 300, null, null, List.of("a"), List.of(), java.util.Map.of(), 100, 200);
+                false, false, 300, null, null, List.of("a"), List.of(), java.util.Map.of(), 100, 200,
+                null, null, null, null, null, null, null);
         return new EndpointResponseDto(id, name, "desc", path, GatewayMethod.GET, true, "json",
                 List.of(step), List.of(), null, null);
     }
@@ -135,7 +136,8 @@ class EndpointVersionServiceTest {
         // Gia lap step DA co id that (nhu khi doc tu DB that) - id nay phai bi bo
         // khi chuyen ve EndpointRequestDto, xem stripStepId().
         BackendStepDto stepWithId = new BackendStepDto("step-id-123", 1, "step1", GatewayMethod.GET, "/x",
-                "up-1", "up", false, false, 300, null, null, List.of("a"), List.of(), java.util.Map.of(), 100, 200);
+                "up-1", "up", false, false, 300, null, null, List.of("a"), List.of(), java.util.Map.of(), 100, 200,
+                null, null, null, null, null, null, null);
         EndpointResponseDto withStepId = new EndpointResponseDto(original.id(), original.name(), original.description(),
                 original.path(), original.method(), original.sequential(), original.outputEncoding(),
                 List.of(stepWithId), original.mappings(), null, null);

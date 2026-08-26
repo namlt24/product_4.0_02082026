@@ -133,6 +133,12 @@
   letter-spacing: 0.03em;
 }
 
+.condition-hint {
+  font-size: 12px;
+  color: var(--gwm-text-secondary);
+  margin: 0 0 10px;
+}
+
 .add-step-btn {
   margin-top: 14px;
   align-self: flex-start;

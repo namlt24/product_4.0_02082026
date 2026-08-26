@@ -4,6 +4,7 @@ import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.EndpointChangeType;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
@@ -59,7 +60,22 @@ class EndpointServiceTest {
 
     private BackendStepDto step(int order) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
-                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null);
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null, null, null, null, null, null);
+    }
+
+    /** Step voi dieu kien re nhanh - dung cho cac test P1-5 (validate next-step-not-exist, cycle...). */
+    private BackendStepDto stepWithBranch(int order, Integer conditionSourceStepOrder, ConditionOperator operator,
+                                           Integer nextIfTrue, Integer nextIfFalse) {
+        return stepWithBranch(order, conditionSourceStepOrder, operator, nextIfTrue, nextIfFalse, "value");
+    }
+
+    private BackendStepDto stepWithBranch(int order, Integer conditionSourceStepOrder, ConditionOperator operator,
+                                           Integer nextIfTrue, Integer nextIfFalse, String conditionExpectedValue) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                FieldMappingSourceType.STEP_RESPONSE, conditionSourceStepOrder, "field", operator, conditionExpectedValue,
+                nextIfTrue, nextIfFalse);
     }
 
     private EndpointRequestDto requestWithMapping(FieldMappingDto mapping) {
@@ -252,5 +268,73 @@ class EndpointServiceTest {
         verify(versionService).deleteAllForEndpoint("ep-1");
         verify(repository).delete(existing);
         verify(registryCache).reload();
+    }
+
+    // ---- P1-5: validate dieu kien re nhanh luc luu ----
+
+    @Test
+    void create_rejectsNextStepOrderIfTrueKhongTonTai() {
+        BackendStepDto s1 = stepWithBranch(1, null, null, 99, null); // step 99 khong ton tai
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of());
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsConditionSourceStepOrderKhongTonTai() {
+        BackendStepDto s1 = stepWithBranch(1, 99, ConditionOperator.EXISTS, 2, null); // sourceStepOrder 99 khong ton tai
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of());
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsEqualsThieuConditionExpectedValue() {
+        BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.EQUALS, 2, null, null); // EQUALS nhung khong co gia tri mong doi
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of());
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsVongLapReNhanh() {
+        // step1 dieu kien luon (gia lap) -> nextStepOrderIfTrue tro VE CHINH NO -> vong lap.
+        BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.EXISTS, 1, null);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1), List.of());
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-BRANCH-CYCLE");
+    }
+
+    @Test
+    void create_boQuaRuleSourceTruocTarget_khiEndpointDungReNhanh() {
+        // FieldMapping "nguoc" (sourceStepOrder=2 >= targetStepOrder=1) - binh
+        // thuong se bi chan GW-003, nhung endpoint nay CO step dung re nhanh (step3)
+        // nen thu tu thuc thi khong con dam bao theo stepOrder nua -> phai CHO QUA
+        // rule nay (dua vao graceful-null luc runtime).
+        FieldMappingDto backwardsMapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "f", null, null,
+                1, MappingTargetType.QUERY, "q", 0);
+        // step3 co dieu kien nhung CA 2 nhanh deu ket thuc (null, null) - khong tao
+        // cycle (1->2->3, step3 khong di dau ca) - chi de kich usesBranching=true.
+        BackendStepDto s3 = stepWithBranch(3, 1, ConditionOperator.EXISTS, null, null);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1), step(2), s3), List.of(backwardsMapping));
+
+        assertThat(service.create(dto)).isNotNull();
     }
 }

@@ -15,9 +15,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   BackendStep,
+  CONDITION_OPERATORS,
+  ConditionOperator,
   emptyStep,
   EndpointConfig,
   FieldMapping,
+  FieldMappingSourceType,
   FIELD_MAPPING_SOURCE_TYPES,
   GatewayInfo,
   HttpMethodType,
@@ -48,6 +51,14 @@ interface StepEditModel {
   allowFieldsText: string;
   denyFieldsText: string;
   renameEntries: { source: string; target: string }[];
+  // Re nhanh (P1-5) - conditionOperator=null la mac dinh/tat, giu nguyen hanh vi step binh thuong.
+  conditionSourceType: FieldMappingSourceType;
+  conditionSourceStepOrder: number | null;
+  conditionSourceField: string;
+  conditionOperator: ConditionOperator | null;
+  conditionExpectedValue: string;
+  nextStepOrderIfTrue: number | null;
+  nextStepOrderIfFalse: number | null;
 }
 
 interface HeaderModel {
@@ -117,6 +128,8 @@ export class EndpointCanvasComponent implements OnInit {
   readonly httpMethods = HTTP_METHODS;
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
+  readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter((t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE');
+  readonly conditionOperators = CONDITION_OPERATORS;
 
   readonly nodeWidth = NODE_W;
   readonly nodeHeight = NODE_H;
@@ -346,6 +359,80 @@ export class EndpointCanvasComponent implements OnInit {
       allowFieldsText: s.allowFields.join(', '),
       denyFieldsText: s.denyFields.join(', '),
       renameEntries: Object.entries(s.fieldRenameMapping ?? {}).map(([source, target]) => ({ source, target })),
+      conditionSourceType: s.conditionSourceType ?? 'STEP_RESPONSE',
+      conditionSourceStepOrder: s.conditionSourceStepOrder ?? null,
+      conditionSourceField: s.conditionSourceField ?? '',
+      conditionOperator: s.conditionOperator ?? null,
+      conditionExpectedValue: s.conditionExpectedValue ?? '',
+      nextStepOrderIfTrue: s.nextStepOrderIfTrue ?? null,
+      nextStepOrderIfFalse: s.nextStepOrderIfFalse ?? null,
+    };
+  }
+
+  // ------------------------------------------------------------------ //
+  // Dieu kien re nhanh (P1-5) - dung y het endpoint-form.component.ts (trung
+  // lap co chu dich, khong dung chung component voi form - xem ly do da ghi
+  // trong plan canvas ban dau).
+  // ------------------------------------------------------------------ //
+
+  stepConditionEnabled(): boolean {
+    return !!this.editingStep?.conditionOperator;
+  }
+
+  toggleStepCondition(enabled: boolean): void {
+    if (!this.editingStep) return;
+    if (enabled) {
+      this.editingStep.conditionSourceType = 'STEP_RESPONSE';
+      this.editingStep.conditionOperator = 'EXISTS';
+    } else {
+      this.editingStep.conditionSourceType = 'STEP_RESPONSE';
+      this.editingStep.conditionSourceStepOrder = null;
+      this.editingStep.conditionSourceField = '';
+      this.editingStep.conditionOperator = null;
+      this.editingStep.conditionExpectedValue = '';
+      this.editingStep.nextStepOrderIfTrue = null;
+      this.editingStep.nextStepOrderIfFalse = null;
+    }
+  }
+
+  stepConditionNeedsSourceStep(): boolean {
+    return this.editingStep?.conditionSourceType !== 'REQUEST_BODY';
+  }
+
+  stepConditionNeedsExpectedValue(): boolean {
+    const op = this.editingStep?.conditionOperator;
+    return op === 'EQUALS' || op === 'NOT_EQUALS';
+  }
+
+  /**
+   * Dieu chinh dieu kien re nhanh cua 1 step CON LAI sau khi xoa step co stepOrder
+   * removedOrder - dung y het cach lam voi Field Mapping (removeStepFromPanel):
+   * tham chieu toi step VUA XOA thi tat dieu kien luon (khong con nghia gi ca),
+   * tham chieu toi step con lai thi dich stepOrder xuong 1.
+   */
+  private reindexStepCondition(step: BackendStep, removedOrder: number): BackendStep {
+    const srcStep = step.conditionSourceStepOrder ?? null;
+    if (srcStep === removedOrder) {
+      return {
+        ...step,
+        conditionSourceStepOrder: null,
+        conditionSourceField: null,
+        conditionOperator: null,
+        conditionExpectedValue: null,
+        nextStepOrderIfTrue: null,
+        nextStepOrderIfFalse: null,
+      };
+    }
+    const shift = (v: number | null | undefined): number | null => {
+      if (v == null) return null;
+      if (v === removedOrder) return null;
+      return v > removedOrder ? v - 1 : v;
+    };
+    return {
+      ...step,
+      conditionSourceStepOrder: srcStep !== null && srcStep > removedOrder ? srcStep - 1 : srcStep,
+      nextStepOrderIfTrue: shift(step.nextStepOrderIfTrue),
+      nextStepOrderIfFalse: shift(step.nextStepOrderIfFalse),
     };
   }
 
@@ -417,6 +504,13 @@ export class EndpointCanvasComponent implements OnInit {
       fieldRenameMapping: Object.fromEntries(
         edit.renameEntries.filter((e) => e.source && e.target).map((e) => [e.source, e.target]),
       ),
+      conditionSourceType: edit.conditionOperator ? edit.conditionSourceType : null,
+      conditionSourceStepOrder: edit.conditionOperator ? edit.conditionSourceStepOrder : null,
+      conditionSourceField: edit.conditionOperator ? edit.conditionSourceField || null : null,
+      conditionOperator: edit.conditionOperator,
+      conditionExpectedValue: edit.conditionOperator ? edit.conditionExpectedValue || null : null,
+      nextStepOrderIfTrue: edit.conditionOperator ? edit.nextStepOrderIfTrue : null,
+      nextStepOrderIfFalse: edit.conditionOperator ? edit.nextStepOrderIfFalse : null,
     };
     this.steps.set(list);
     this.closePanel();
@@ -443,7 +537,8 @@ export class EndpointCanvasComponent implements OnInit {
     const removedOrder = this.steps()[idx].stepOrder;
     const remaining = this.steps()
       .filter((_, i) => i !== idx)
-      .map((s, i) => ({ ...s, stepOrder: i + 1 }));
+      .map((s, i) => ({ ...s, stepOrder: i + 1 }))
+      .map((s) => this.reindexStepCondition(s, removedOrder));
     this.steps.set(remaining);
 
     const remainingMappings = this.mappings()

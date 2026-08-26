@@ -198,6 +198,93 @@
                 }
               </div>
 
+              <!-- Dieu kien re nhanh (P1-5): sau khi step nay chay xong, tuy dieu kien
+                   ma goi 1 step KHAC hoac ket thuc chuoi - mac dinh AN, giu UI gon cho
+                   da so step khong dung tinh nang nay. -->
+              <div class="sub-section">
+                <div class="sub-section-header">
+                  <span>Điều kiện rẽ nhánh (tuỳ chọn)</span>
+                  <mat-slide-toggle
+                    [checked]="stepConditionEnabled(i)"
+                    (change)="toggleStepCondition(i, $event.checked)"
+                  >
+                    Bật
+                  </mat-slide-toggle>
+                </div>
+
+                @if (stepConditionEnabled(i)) {
+                  <p class="condition-hint">
+                    Sau khi Step {{ i + 1 }} chạy xong, kiểm tra 1 điều kiện rồi quyết định gọi Step nào tiếp theo
+                    (thay vì luôn đi theo thứ tự Step kế tiếp).
+                  </p>
+                  <div class="field-row">
+                    <mat-form-field appearance="outline" class="small-field">
+                      <mat-label>Nguồn dữ liệu</mat-label>
+                      <mat-select formControlName="conditionSourceType">
+                        @for (t of conditionSourceTypes; track t) {
+                          <mat-option [value]="t">{{ t === 'REQUEST_BODY' ? 'Body của client' : 'Response step trước' }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    @if (stepConditionNeedsSourceStep(i)) {
+                      <mat-form-field appearance="outline" class="small-field">
+                        <mat-label>Step nguồn</mat-label>
+                        <mat-select formControlName="conditionSourceStepOrder">
+                          @for (o of availableStepOrders; track o) {
+                            <mat-option [value]="o">Step {{ o }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                    }
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>Field</mat-label>
+                      <input matInput formControlName="conditionSourceField" placeholder="vd: status hoặc shop.channelTypeId" />
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="small-field">
+                      <mat-label>Toán tử</mat-label>
+                      <mat-select formControlName="conditionOperator">
+                        @for (op of conditionOperators; track op) {
+                          <mat-option [value]="op">
+                            {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác' : op === 'EXISTS' ? 'Tồn tại' : 'Không tồn tại' }}
+                          </mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+
+                    @if (stepConditionNeedsExpectedValue(i)) {
+                      <mat-form-field appearance="outline">
+                        <mat-label>Giá trị mong đợi</mat-label>
+                        <input matInput formControlName="conditionExpectedValue" placeholder="vd: active" />
+                      </mat-form-field>
+                    }
+                  </div>
+
+                  <div class="field-row">
+                    <mat-form-field appearance="outline" class="small-field">
+                      <mat-label>Nếu ĐÚNG → chạy</mat-label>
+                      <mat-select formControlName="nextStepOrderIfTrue">
+                        <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                        @for (o of availableStepOrders; track o) {
+                          <mat-option [value]="o">Step {{ o }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="small-field">
+                      <mat-label>Nếu SAI → chạy</mat-label>
+                      <mat-select formControlName="nextStepOrderIfFalse">
+                        <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                        @for (o of availableStepOrders; track o) {
+                          <mat-option [value]="o">Step {{ o }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                }
+              </div>
+
               <mat-action-row>
                 <button mat-button type="button" color="warn" (click)="removeStep(i)">
                   <mat-icon>delete</mat-icon> Xoa Step {{ i + 1 }}

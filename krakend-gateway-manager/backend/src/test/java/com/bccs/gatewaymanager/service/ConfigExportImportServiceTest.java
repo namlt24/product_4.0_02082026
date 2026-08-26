@@ -56,7 +56,8 @@ class ConfigExportImportServiceTest {
 
     private BackendStepDto step(String upstreamId, String upstreamName) {
         return new BackendStepDto(null, 1, "s1", GatewayMethod.GET, "/x", upstreamId, upstreamName,
-                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null);
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null, null, null, null, null, null);
     }
 
     private EndpointResponseDto endpointDto(String path, String upstreamId, String upstreamName) {

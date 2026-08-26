@@ -3,6 +3,7 @@ package com.bccs.gatewaymanager.engine;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
@@ -18,8 +19,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Bo may thuc thi composition tai request-time - thay the hoan toan
@@ -42,15 +46,16 @@ public class CompositeOrchestratorEngine {
     /**
      * Thuc thi 1 EndpointConfig cho 1 request that.
      *
-     * Luu y ve "sequential": engine LUON thuc thi cac step TUAN TU trong 1
-     * vong lap Java (khong con khai niem "goi song song" o muc thuc thi nhu
-     * KrakenD truoc day) - co du lieu chinh xac va don gian de debug quan
-     * trong hon toc do trong V1 nay; toi uu hoa goi song song that su (vi du
-     * qua CompletableFuture cho cac step DOC LAP khong phu thuoc du lieu lan
-     * nhau) la huong cai tien co the lam sau, khong chan V1. Co "sequential"
-     * chi con anh huong CACH GOP KET QUA CUOI: true = lay ket qua step cuoi
-     * cung; false = gop tat ca field cua moi step vao 1 object (giu tuong
-     * thich voi endpoint don gian/song song da khai bao truoc day).
+     * Non-sequential: moi step DOC LAP, LUON chay het (khong lien quan gi toi
+     * re nhanh - xem executeSequentialChain()), roi gop ket qua qua
+     * assembleFinalResponse(). Toi uu hoa goi that su song song (vi du qua
+     * CompletableFuture cho cac step khong phu thuoc du lieu lan nhau) la
+     * huong cai tien co the lam sau, khong chan V1 - hien van la 1 vong lap
+     * Java tuan tu, chi khac o cho KHONG doc con tro/dieu kien.
+     *
+     * Sequential (P1-5): xem executeSequentialChain() - moi step co the tu
+     * quyet dinh step TIEP THEO se chay (re nhanh that) thay vi luon la
+     * "stepOrder ke tiep co dinh".
      */
     public JsonNode handle(EndpointResponseDto config, Map<String, String> pathVariables,
                             Map<String, String[]> queryParams, String rawRequestBody) {
@@ -61,12 +66,101 @@ public class CompositeOrchestratorEngine {
                 .sorted((a, b) -> Integer.compare(a.stepOrder(), b.stepOrder()))
                 .toList();
 
-        for (BackendStepDto step : orderedSteps) {
-            JsonNode transformed = executeStep(config, step, ctx);
-            ctx.putStepResult(step.stepOrder(), transformed);
+        if (!config.sequential()) {
+            for (BackendStepDto step : orderedSteps) {
+                JsonNode transformed = executeStep(config, step, ctx);
+                ctx.putStepResult(step.stepOrder(), transformed);
+            }
+            return assembleFinalResponse(orderedSteps, ctx);
         }
 
-        return assembleFinalResponse(config, orderedSteps, ctx);
+        return executeSequentialChain(config, orderedSteps, ctx);
+    }
+
+    /**
+     * Thuc thi chuoi step TUAN TU theo CON TRO (khong phai vong lap for co
+     * dinh) - bat dau tu step co stepOrder NHO NHAT, sau moi step tu hoi
+     * "step tiep theo la gi" qua determineNextStepOrder(). Step KHONG khai
+     * bao dieu kien (conditionOperator=null - dung cho 100% endpoint tu
+     * TRUOC P1-5) tai tao DUNG hanh vi cu: van chay het tat ca step theo
+     * dung thu tu stepOrder tang dan, khong bo sot/doi thu tu gi ca.
+     *
+     * Ket qua tra ve = response cua STEP CUOI CUNG THUC SU chay trong lan
+     * nay - KHAC voi truoc day (luon la step co stepOrder lon nhat), vi voi
+     * re nhanh, chuoi co the ket thuc o BAT KY step nao tuy theo dieu kien.
+     */
+    private JsonNode executeSequentialChain(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
+        Map<Integer, BackendStepDto> stepsByOrder = orderedSteps.stream()
+                .collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
+        List<Integer> allOrders = orderedSteps.stream().map(BackendStepDto::stepOrder).sorted().toList();
+
+        Integer currentOrder = allOrders.isEmpty() ? null : allOrders.get(0);
+        // Chong lap vo han: 1 step KHONG DUOC chay lai trong CUNG 1 request - neu
+        // nextStepOrderIfTrue/False vo tinh (hoac co chu dich sai) tao thanh vong
+        // lap, phai fail-fast tai day thay vi treo request/goi Upstream vo han lan.
+        Set<Integer> executedOrders = new HashSet<>();
+        JsonNode lastResult = null;
+
+        while (currentOrder != null) {
+            if (!executedOrders.add(currentOrder)) {
+                throw new BusinessException("GW-BRANCH-LOOP", "Endpoint '" + config.name()
+                        + "': phat hien vong lap re nhanh khi thuc thi that (step " + currentOrder
+                        + " se bi goi lai) - kiem tra lai cau hinh nextStepOrderIfTrue/nextStepOrderIfFalse.");
+            }
+            BackendStepDto step = stepsByOrder.get(currentOrder);
+            if (step == null) {
+                throw new BusinessException("GW-BRANCH-TARGET-404", "Endpoint '" + config.name()
+                        + "': dieu kien re nhanh tro toi step " + currentOrder + " khong ton tai.");
+            }
+            lastResult = executeStep(config, step, ctx);
+            ctx.putStepResult(currentOrder, lastResult);
+            currentOrder = determineNextStepOrder(step, ctx, allOrders);
+        }
+        return lastResult == null ? objectMapper.createObjectNode() : lastResult;
+    }
+
+    /** Step tiep theo se chay - null = ket thuc chuoi tai day (ket qua step vua chay la response cuoi cung). */
+    private Integer determineNextStepOrder(BackendStepDto step, ExecutionContext ctx, List<Integer> allOrders) {
+        if (step.conditionOperator() == null) {
+            // Khong khai bao dieu kien: next TU NHIEN la stepOrder NHO NHAT con lai
+            // LON HON step hien tai (khong cung "+1", khong doi hoi stepOrder lien
+            // tuc) - day CHINH LA cach tai tao dung 100% hanh vi cu (chay het moi
+            // step theo dung thu tu stepOrder tang dan) cho endpoint khong dung P1-5.
+            return allOrders.stream().filter(o -> o > step.stepOrder()).min(Integer::compareTo).orElse(null);
+        }
+        return evaluateCondition(step, ctx) ? step.nextStepOrderIfTrue() : step.nextStepOrderIfFalse();
+    }
+
+    /**
+     * So sanh 1 field (STEP_RESPONSE/REQUEST_BODY) voi conditionExpectedValue.
+     * Tham chieu toi 1 step CHUA TUNG chay (vi 1 nhanh re khac da di - hoan
+     * toan hop le trong 1 do thi co dieu kien) tra ve null AN TOAN qua
+     * JsonPathUtil.getByDotPath(null, ...) - KHONG throw, coi nhu "khong ton tai".
+     */
+    private boolean evaluateCondition(BackendStepDto step, ExecutionContext ctx) {
+        JsonNode source;
+        if (step.conditionSourceType() == FieldMappingSourceType.REQUEST_BODY) {
+            source = ctx.requestBody();
+        } else {
+            // sourceStepOrder la Integer (nullable) - KHONG duoc goi thang
+            // ctx.getStepResult(int) o day vi auto-unbox null se NPE ngay tai
+            // call site; step chua khai bao du dieu kien (thieu sourceStepOrder)
+            // coi nhu khong co gia tri, khong crash.
+            source = step.conditionSourceStepOrder() == null ? null : ctx.getStepResult(step.conditionSourceStepOrder());
+        }
+        JsonNode value = JsonPathUtil.getByDotPath(source, step.conditionSourceField());
+        boolean exists = value != null && !value.isNull();
+
+        return switch (step.conditionOperator()) {
+            case EXISTS -> exists;
+            case NOT_EXISTS -> !exists;
+            case EQUALS -> exists && conditionValueAsString(value).equals(step.conditionExpectedValue());
+            case NOT_EQUALS -> !exists || !conditionValueAsString(value).equals(step.conditionExpectedValue());
+        };
+    }
+
+    private String conditionValueAsString(JsonNode value) {
+        return value.isTextual() ? value.asText() : value.toString();
     }
 
     private JsonNode executeStep(EndpointResponseDto config, BackendStepDto step, ExecutionContext ctx) {
@@ -197,13 +291,17 @@ public class CompositeOrchestratorEngine {
         return node.isTextual() ? node.asText() : node.toString();
     }
 
-    private JsonNode assembleFinalResponse(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
-        if (config.sequential() || orderedSteps.size() == 1) {
+    /**
+     * Chi con duoc goi cho endpoint KHONG sequential (xem handle()) - sequential
+     * gio di qua executeSequentialChain() rieng, tra ket qua truc tiep.
+     */
+    private JsonNode assembleFinalResponse(List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
+        if (orderedSteps.size() == 1) {
             int lastStepOrder = orderedSteps.get(orderedSteps.size() - 1).stepOrder();
             return ctx.getStepResult(lastStepOrder);
         }
 
-        // Khong sequential + nhieu step doc lap: gop field cua tat ca step vao 1 object,
+        // Nhieu step doc lap: gop field cua tat ca step vao 1 object,
         // dung "group" de long rieng neu duoc khai bao (tranh dam field), step khai bao
         // sau se de len field trung ten cua step truoc (giu dung hanh vi cu).
         ObjectNode merged = objectMapper.createObjectNode();

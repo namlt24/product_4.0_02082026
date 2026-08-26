@@ -151,4 +151,37 @@ public class BackendStep {
 
     @Column(name = "canvas_y")
     private Integer canvasY;
+
+    /**
+     * Re nhanh (P1-5): sau khi step nay chay xong, dua vao 1 dieu kien (so sanh
+     * 1 field lay tu response step truoc/body client) de quyet dinh step TIEP
+     * THEO SE GOI la step nao - KHAC voi hanh vi mac dinh (luon di theo stepOrder
+     * ke tiep). Tat ca nullable, KHONG can @ColumnDefault (giong canvasX/canvasY
+     * o tren) - step khong khai bao dieu kien (conditionOperator=null) van chay
+     * dung 100% hanh vi cu (xem CompositeOrchestratorEngine.determineNextStepOrder()).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condition_source_type")
+    private FieldMappingSourceType conditionSourceType;
+
+    @Column(name = "condition_source_step_order")
+    private Integer conditionSourceStepOrder;
+
+    @Column(name = "condition_source_field")
+    private String conditionSourceField;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condition_operator")
+    private ConditionOperator conditionOperator;
+
+    @Column(name = "condition_expected_value")
+    private String conditionExpectedValue;
+
+    /** null = neu dieu kien DUNG thi ket thuc chuoi tai day (ket qua step nay la response cuoi cung). */
+    @Column(name = "next_step_order_if_true")
+    private Integer nextStepOrderIfTrue;
+
+    /** null = neu dieu kien SAI thi ket thuc chuoi tai day. */
+    @Column(name = "next_step_order_if_false")
+    private Integer nextStepOrderIfFalse;
 }

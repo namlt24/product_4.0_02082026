@@ -102,7 +102,10 @@ public class EndpointVersionService {
         return new BackendStepDto(null, s.stepOrder(), s.name(), s.method(), s.urlPattern(),
                 s.upstreamServiceId(), s.upstreamServiceName(), s.forwardOriginalBody(),
                 s.cacheEnabled(), s.cacheTtlSeconds(), s.group(), s.target(),
-                s.allowFields(), s.denyFields(), s.fieldRenameMapping(), s.canvasX(), s.canvasY());
+                s.allowFields(), s.denyFields(), s.fieldRenameMapping(), s.canvasX(), s.canvasY(),
+                s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
+                s.conditionOperator(), s.conditionExpectedValue(),
+                s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse());
     }
 
     /** Dung khi xoa han 1 endpoint - don toan bo lich su phien ban cua no (khong FK/cascade tu dong, xem EndpointConfigVersion). */

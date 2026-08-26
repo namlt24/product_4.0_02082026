@@ -234,8 +234,16 @@ export class EndpointFormComponent implements OnInit {
 
     const selfUpstream = this.upstreams().find((u) => {
       try {
-        const host = new URL(u.baseHost).hostname;
-        return info.selfHostAliases.some((alias) => alias.toLowerCase() === host.toLowerCase());
+        const url = new URL(u.baseHost);
+        const host = url.hostname;
+        // Khop ca port voi chinh gateway (khong chi hostname) - dung y het logic
+        // DependencyAnalyzer.isSelfHost() ben backend (dung java.net.URI.getPort(),
+        // KHONG tu mac dinh 80/443 khi baseHost thieu port - port thieu = -1 = khong
+        // bao gio khop gatewayPort). Khong tu suy đoán port mac dinh o day de tranh
+        // 2 ben lech logic.
+        const port = url.port ? Number(url.port) : -1;
+        const hostMatches = info.selfHostAliases.some((alias) => alias.toLowerCase() === host.toLowerCase());
+        return hostMatches && port === info.port;
       } catch {
         return false;
       }
@@ -396,8 +404,11 @@ export class EndpointFormComponent implements OnInit {
       targetParamName: m.targetParamName,
     }));
 
+    // Khong gui id trong body: PUT da mang id qua URL path (endpoint-api.service.ts
+    // update(id, payload)), con EndpointRequestDto (Java record) khong co field id -
+    // gui thua se bi Jackson tu choi (fail-on-unknown-properties mac dinh) va Sua
+    // endpoint qua UI se luon loi 500.
     return {
-      id: this.endpointId ?? undefined,
       name: v.name,
       description: v.description,
       path: v.path,

@@ -83,7 +83,7 @@ class CompositeOrchestratorEngineTest {
     }
 
     private void stubCall(UpstreamService upstream, JsonNode response) {
-        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt()))
+        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any()))
                 .thenReturn(response);
     }
 

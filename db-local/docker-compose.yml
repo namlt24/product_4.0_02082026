@@ -49,5 +49,22 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  # APM Server dung chung - nhan trace/transaction tu Elastic APM Java agent gan
+  # vao krakend-gateway-manager (va bat ky service BCCS nao khac sau nay muon dung
+  # lai) qua -javaagent, day vao CHINH bccs-elasticsearch. --strict.perms=false la
+  # co (flag) chuan cua ho Elastic Beats/apm-server khi bind-mount file config tu
+  # host (kiem tra permission file nghiem ngat mac dinh se tu choi chay).
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.15.3
+    container_name: bccs-apm-server
+    command: ["--strict.perms=false"]
+    ports:
+      - "${APM_SERVER_PORT:-8200}:8200"
+    volumes:
+      - ./apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 volumes:
   bccs_es_local_data:

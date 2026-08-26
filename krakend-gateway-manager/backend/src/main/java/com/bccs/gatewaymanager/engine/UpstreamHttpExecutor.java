@@ -1,5 +1,8 @@
 package com.bccs.gatewaymanager.engine;
 
+import com.bccs.gatewaymanager.audit.AuditLogService;
+import com.bccs.gatewaymanager.audit.BodyTruncator;
+import com.bccs.gatewaymanager.audit.HopAuditEvent;
 import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.SystemException;
@@ -18,6 +21,7 @@ import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -29,6 +33,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +63,7 @@ public class UpstreamHttpExecutor {
     private final BulkheadRegistry bulkheadRegistry;
     private final GatewayCacheService cacheService;
     private final ObjectMapper objectMapper;
+    private final AuditLogService auditLogService;
 
     private final Map<String, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
 
@@ -68,55 +74,98 @@ public class UpstreamHttpExecutor {
     private final Map<String, LongAdder> cacheHits = new ConcurrentHashMap<>();
     private final Map<String, LongAdder> cacheMisses = new ConcurrentHashMap<>();
 
+    /** Ket qua 1 lan goi HTTP THAT (khac cache-hit) - giu ca status vi ban than JsonNode khong mang status. */
+    private record HttpCallResult(int status, JsonNode body) {
+    }
+
+    /**
+     * @param stepOrder/stepName chi de ghi audit log (xem HopAuditEvent) - KHONG anh huong hanh vi goi.
+     */
     public JsonNode call(UpstreamService upstream, HttpMethod method, String resolvedUrl,
-                          HttpHeaders headers, JsonNode body, boolean cacheEnabled, int cacheTtlSeconds) {
+                          HttpHeaders headers, JsonNode body, boolean cacheEnabled, int cacheTtlSeconds,
+                          int stepOrder, String stepName) {
+        long startNanos = System.nanoTime();
         boolean cacheable = cacheEnabled && method == HttpMethod.GET;
         String cacheKey = cacheable ? GatewayCacheService.buildKey(upstream.getName(), method.name(), resolvedUrl) : null;
 
-        if (cacheable) {
-            Optional<String> cached = cacheService.get(cacheKey);
-            if (cached.isPresent()) {
-                try {
-                    cacheHits.computeIfAbsent(upstream.getName(), n -> new LongAdder()).increment();
-                    return objectMapper.readTree(cached.get());
-                } catch (Exception e) {
-                    log.warn("Cache gia tri hong cho key={}, bo qua cache: {}", cacheKey, e.getMessage());
+        // Bien tam de xay HopAuditEvent trong finally, du di theo nhanh nao (cache-hit/
+        // that-cong/loi) - JAVA khong cho bien local final duoc gan lai trong try/catch,
+        // nen khai bao thuong (mutable) o day.
+        boolean cacheHit = false;
+        Integer responseStatus = null;
+        String responseBodyForAudit = null;
+        String errorMessage = null;
+        boolean success = true;
+
+        try {
+            if (cacheable) {
+                Optional<String> cached = cacheService.get(cacheKey);
+                if (cached.isPresent()) {
+                    try {
+                        cacheHits.computeIfAbsent(upstream.getName(), n -> new LongAdder()).increment();
+                        cacheHit = true;
+                        responseBodyForAudit = cached.get();
+                        return objectMapper.readTree(cached.get());
+                    } catch (Exception e) {
+                        log.warn("Cache gia tri hong cho key={}, bo qua cache: {}", cacheKey, e.getMessage());
+                        cacheHit = false;
+                    }
+                } else {
+                    cacheMisses.computeIfAbsent(upstream.getName(), n -> new LongAdder()).increment();
                 }
-            } else {
-                cacheMisses.computeIfAbsent(upstream.getName(), n -> new LongAdder()).increment();
             }
-        }
 
-        Supplier<JsonNode> call = () -> doHttpCall(upstream, method, resolvedUrl, headers, body);
+            Supplier<HttpCallResult> callSupplier = () -> doHttpCall(upstream, method, resolvedUrl, headers, body);
+            Supplier<HttpCallResult> decorated = Bulkhead.decorateSupplier(bulkheadFor(upstream), callSupplier);
+            if (upstream.isCircuitBreakerEnabled()) {
+                decorated = CircuitBreaker.decorateSupplier(circuitBreakerFor(upstream), decorated);
+            }
+            if (upstream.isRetryEnabled()) {
+                decorated = Retry.decorateSupplier(retryFor(upstream), decorated);
+            }
 
-        Supplier<JsonNode> decorated = Bulkhead.decorateSupplier(bulkheadFor(upstream), call);
-        if (upstream.isCircuitBreakerEnabled()) {
-            decorated = CircuitBreaker.decorateSupplier(circuitBreakerFor(upstream), decorated);
-        }
-        if (upstream.isRetryEnabled()) {
-            decorated = Retry.decorateSupplier(retryFor(upstream), decorated);
-        }
+            HttpCallResult callResult = decorated.get();
+            responseStatus = callResult.status();
+            responseBodyForAudit = callResult.body().toString();
 
-        JsonNode result = decorated.get();
-
-        if (cacheable) {
-            cacheService.put(cacheKey, result.toString(), cacheTtlSeconds);
+            if (cacheable) {
+                cacheService.put(cacheKey, callResult.body().toString(), cacheTtlSeconds);
+            }
+            return callResult.body();
+        } catch (RuntimeException e) {
+            success = false;
+            errorMessage = e.getMessage();
+            if (e instanceof UpstreamHttpErrorException httpError) {
+                responseStatus = httpError.httpStatus();
+                responseBodyForAudit = httpError.responseBody();
+            }
+            throw e;
+        } finally {
+            long durationMs = (System.nanoTime() - startNanos) / 1_000_000;
+            BodyTruncator.Result requestBodyResult = BodyTruncator.truncate(body == null ? null : body.toString());
+            BodyTruncator.Result responseBodyResult = BodyTruncator.truncate(responseBodyForAudit);
+            HopAuditEvent event = new HopAuditEvent(
+                    MDC.get("requestId"), stepOrder, stepName, upstream.getName(), method.name(), resolvedUrl,
+                    requestBodyResult.body(), requestBodyResult.truncated(),
+                    responseStatus,
+                    responseBodyResult.body(), responseBodyResult.truncated(),
+                    durationMs, cacheHit, success, errorMessage, Instant.now());
+            auditLogService.recordHop(event);
         }
-        return result;
     }
 
-    private JsonNode doHttpCall(UpstreamService upstream, HttpMethod method, String resolvedUrl,
-                                 HttpHeaders headers, JsonNode body) {
+    private HttpCallResult doHttpCall(UpstreamService upstream, HttpMethod method, String resolvedUrl,
+                                       HttpHeaders headers, JsonNode body) {
         RestTemplate restTemplate = restTemplateFor(upstream);
         try {
             String bodyString = body == null ? null : body.toString();
             ResponseEntity<String> response = restTemplate.exchange(
                     resolvedUrl, method, new HttpEntity<>(bodyString, headers), String.class);
             String responseBody = response.getBody();
-            if (responseBody == null || responseBody.isBlank()) {
-                return objectMapper.createObjectNode();
-            }
-            return objectMapper.readTree(responseBody);
+            JsonNode parsed = (responseBody == null || responseBody.isBlank())
+                    ? objectMapper.createObjectNode()
+                    : objectMapper.readTree(responseBody);
+            return new HttpCallResult(response.getStatusCode().value(), parsed);
         } catch (RestClientResponseException e) {
             // Upstream tra ve HTTP loi that su (4xx/5xx) - giu nguyen status/body de client
             // phan biet duoc "input sai"/"upstream bao loi nghiep vu" thay vi 1 mã 500 chung.

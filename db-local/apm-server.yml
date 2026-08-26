@@ -1,0 +1,15 @@
+# APM Server dev - nhan trace/transaction tu Elastic APM Java agent (gan vao
+# krakend-gateway-manager qua -javaagent, xem krakend-gateway-manager/backend/Dockerfile),
+# day vao CHINH bccs-elasticsearch dang dung chung cho log/nghiep vu khac.
+apm-server:
+  host: "0.0.0.0:8200"
+  rum:
+    enabled: false
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+
+setup.kibana:
+  host: "http://kibana:5601"
+
+logging.level: info

@@ -104,6 +104,48 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Ghi log co cau truc (audit request/hop) thang vao Elasticsearch dung chung
+             cua he thong BCCS (xem db-local/docker-compose.yml - bccs-elasticsearch 8.15.3)
+             - dung dung version client khop version server de giam rui ro lech version,
+             KHONG dung lai 8.4.3 ma product-policy-service dang dung (client noi bo rieng
+             cua ho, khong ap dung o day). Client nay dung jakarta.json (JSON-P) de serialize,
+             DOC LAP voi Jackson cua app (tranh dung cham voi viec repo dang dung xen ke
+             tools.jackson/com.fasterxml.jackson). -->
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>8.15.3</version>
+        </dependency>
+        <!-- elasticsearch-java can dung 1 JsonpMapper - dung JacksonJsonpMapper (huong dan
+             chinh thuc cua Elastic), can jackson-databind CLASSIC (com.fasterxml.jackson,
+             Jackson 2.x) - day la 1 artifact HOAN TOAN KHAC voi tools.jackson (Jackson 3)
+             app dang dung cho Spring MVC, khong dung chung namespace/package nen khong xung
+             dot classpath, chi la 2 cay Jackson doc lap cung ton tai. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- JacksonJsonpMapper KHONG tu dang ky module java.time (Instant...) mac dinh -
+             thieu module nay se lam moi lan bulk index audit log loi ngam (fail-open nen
+             KHONG lam sap traffic that, nhung log se rong hoan toan ma khong ro nguyen
+             nhan neu khong them dependency nay + dang ky trong ElasticsearchConfig). -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- API goi trace.id hien tai (link audit log sang APM trace) - Elastic thiet ke
+             module nay de LUON an toan dua vao du an dung: cac phuong thuc tra ve gia
+             tri no-op/null neu KHONG co Java agent that su duoc gan qua -javaagent (xem
+             backend/Dockerfile) - khong throw, khong can if/reflection thu cong. Rieng
+             biet voi ban than agent (agent la 1 file .jar tai rieng, gan bang -javaagent,
+             KHONG phai dependency Maven). -->
+        <dependency>
+            <groupId>co.elastic.apm</groupId>
+            <artifactId>apm-agent-api</artifactId>
+            <version>1.56.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

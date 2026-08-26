@@ -1,0 +1,234 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Tra cứu Log</h1>
+    <p class="page-subtitle">
+      Log request/hop thật của Gateway (Elasticsearch) - lọc theo thời điểm, trạng thái, nội dung; bấm 1 dòng để xem waterfall từng hop.
+    </p>
+  </div>
+</div>
+
+<mat-card class="filter-card">
+  <mat-card-content>
+    <div class="filter-row">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Từ thời điểm</mat-label>
+        <input matInput type="datetime-local" [(ngModel)]="fromLocal" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Đến thời điểm</mat-label>
+        <input matInput type="datetime-local" [(ngModel)]="toLocal" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field filter-field--sm">
+        <mat-label>Trạng thái</mat-label>
+        <mat-select [(ngModel)]="status">
+          <mat-option value="">Tất cả</mat-option>
+          <mat-option value="SUCCESS">Thành công</mat-option>
+          <mat-option value="ERROR">Lỗi</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Endpoint path</mat-label>
+        <input matInput [(ngModel)]="endpointPath" placeholder="vd: /v1/staff/full-info" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Tìm trong nội dung request</mat-label>
+        <input matInput [(ngModel)]="bodyContains" placeholder="vd: staffId hoặc 1 giá trị cụ thể" />
+      </mat-form-field>
+    </div>
+
+    <div class="filter-actions">
+      <button mat-flat-button color="primary" type="button" [disabled]="loading()" (click)="runSearch()">
+        <mat-icon>search</mat-icon>
+        Tìm kiếm
+      </button>
+      <button mat-stroked-button type="button" [disabled]="loading()" (click)="resetFilters()">
+        <mat-icon>restart_alt</mat-icon>
+        Đặt lại (24h gần nhất)
+      </button>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+@if (loadError(); as err) {
+  <div class="warning-banner">
+    <mat-icon inline="true">error_outline</mat-icon>
+    {{ err }}
+  </div>
+}
+
+<div class="table-card">
+  @if (loading()) {
+    <div class="loading-row">
+      <mat-spinner diameter="22" />
+      <span>Đang tra cứu...</span>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">search_off</mat-icon>
+      <h3>Không có log nào khớp bộ lọc</h3>
+      <p>Thử mở rộng khoảng thời gian hoặc bỏ bớt điều kiện lọc.</p>
+    </div>
+  } @else {
+    <table mat-table [dataSource]="items()" multiTemplateDataRows class="full-width gwm-table">
+      <ng-container matColumnDef="timestamp">
+        <th mat-header-cell *matHeaderCellDef>Thời điểm</th>
+        <td mat-cell *matCellDef="let row">{{ formatTimestamp(row.timestamp) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="endpoint">
+        <th mat-header-cell *matHeaderCellDef>Endpoint</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="method-chip" [attr.data-method]="row.clientMethod">{{ row.clientMethod }}</span>
+          <code class="path-code">{{ row.clientPath }}</code>
+          @if (row.endpointName) {
+            <div class="ep-desc">{{ row.endpointName }}</div>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Trạng thái</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="status-pill" [attr.data-status]="row.status">
+            <mat-icon inline="true">{{ row.status === 'SUCCESS' ? 'check_circle' : 'error' }}</mat-icon>
+            {{ row.status === 'SUCCESS' ? 'Thành công' : 'Lỗi' }}
+          </span>
+          @if (row.httpStatus) {
+            <span class="http-status">HTTP {{ row.httpStatus }}</span>
+          }
+          @if (row.errorCode) {
+            <div class="error-code" [matTooltip]="row.errorMessage ?? ''">{{ row.errorCode }}</div>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="duration">
+        <th mat-header-cell *matHeaderCellDef>Thời gian xử lý</th>
+        <td mat-cell *matCellDef="let row">{{ row.durationMs }} ms</td>
+      </ng-container>
+
+      <ng-container matColumnDef="expand">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button [matTooltip]="expandedRequestId() === row.requestId ? 'Thu gọn' : 'Xem chi tiết hop'" (click)="toggleExpand(row)">
+            <mat-icon>{{ expandedRequestId() === row.requestId ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="detail">
+        <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length">
+          @if (expandedRequestId() === row.requestId) {
+            <div class="detail-panel">
+              @if (row.requestBody) {
+                <div class="detail-block">
+                  <div class="detail-block-title">
+                    <mat-icon inline="true">input</mat-icon>
+                    Request body (client → gateway)
+                    @if (row.requestBodyTruncated) {
+                      <span class="truncated-hint">(đã cắt bớt)</span>
+                    }
+                  </div>
+                  <pre class="detail-pre">{{ row.requestBody }}</pre>
+                </div>
+              }
+              @if (row.traceId) {
+                <div class="trace-hint">
+                  <mat-icon inline="true">timeline</mat-icon>
+                  APM trace: <code>{{ row.traceId }}</code>
+                </div>
+              }
+
+              @if (hopsLoading()) {
+                <div class="loading-row small">
+                  <mat-spinner diameter="18" />
+                  <span>Đang tải hop...</span>
+                </div>
+              } @else if (hopsError()) {
+                <div class="warning-banner small">{{ hopsError() }}</div>
+              } @else if (currentHops().length === 0) {
+                <p class="empty-hint">Request này không gọi hop nào (không có BackendStep, hoặc lỗi trước khi tới bước gọi Upstream).</p>
+              } @else {
+                <div class="hop-waterfall">
+                  @for (hop of currentHops(); track hop.stepOrder) {
+                    <div class="hop-item" [class.hop-item--error]="!hop.success">
+                      <div class="hop-header">
+                        <span class="hop-order">#{{ hop.stepOrder }}</span>
+                        <span class="hop-name">{{ hop.stepName }}</span>
+                        <span class="method-chip" [attr.data-method]="hop.method">{{ hop.method }}</span>
+                        @if (hop.cacheHit) {
+                          <span class="cache-hit-chip" matTooltip="Trả từ cache Redis - không gọi Upstream thật lần này">
+                            <mat-icon inline="true">bolt</mat-icon>cache hit
+                          </span>
+                        }
+                        <span class="spacer"></span>
+                        @if (hop.responseStatus) {
+                          <span class="http-status" [class.http-status--error]="!hop.success">HTTP {{ hop.responseStatus }}</span>
+                        }
+                        <span class="hop-duration">{{ hop.durationMs }} ms</span>
+                      </div>
+                      <code class="resolved-url">{{ hop.resolvedUrl }}</code>
+                      @if (hop.errorMessage) {
+                        <div class="hop-error">{{ hop.errorMessage }}</div>
+                      }
+                      <div class="hop-bodies">
+                        @if (hop.requestBody) {
+                          <div class="detail-block">
+                            <div class="detail-block-title">
+                              Request → Upstream
+                              @if (hop.requestBodyTruncated) {
+                                <span class="truncated-hint">(đã cắt bớt)</span>
+                              }
+                            </div>
+                            <pre class="detail-pre">{{ hop.requestBody }}</pre>
+                          </div>
+                        }
+                        @if (hop.responseBody) {
+                          <div class="detail-block">
+                            <div class="detail-block-title">
+                              Response ← Upstream
+                              @if (hop.responseBodyTruncated) {
+                                <span class="truncated-hint">(đã cắt bớt)</span>
+                              }
+                            </div>
+                            <pre class="detail-pre">{{ hop.responseBody }}</pre>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" class="data-row" (click)="toggleExpand(row)"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['detail']" class="detail-row" [class.detail-row--open]="expandedRequestId() === row.requestId"></tr>
+    </table>
+
+    <div class="pagination-row">
+      <span class="range-label">{{ rangeLabel }}</span>
+      <span class="spacer"></span>
+      <mat-form-field appearance="outline" class="page-size-field">
+        <mat-select [ngModel]="size()" (ngModelChange)="onPageSizeChange($event)">
+          @for (opt of pageSizeOptions; track opt) {
+            <mat-option [value]="opt">{{ opt }} / trang</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <button mat-icon-button [disabled]="page() === 0" (click)="changePage(-1)" matTooltip="Trang trước">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button mat-icon-button [disabled]="(page() + 1) * size() >= total()" (click)="changePage(1)" matTooltip="Trang sau">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  }
+</div>

@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.engine;
 
+import com.bccs.gatewaymanager.audit.AuditLogService;
 import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.sun.net.httpserver.HttpServer;
@@ -36,7 +37,7 @@ class UpstreamHttpExecutorTest {
     private final BulkheadRegistry bulkheadRegistry = BulkheadRegistry.ofDefaults();
     private final UpstreamHttpExecutor executor = new UpstreamHttpExecutor(
             circuitBreakerRegistry, retryRegistry, bulkheadRegistry,
-            Mockito.mock(GatewayCacheService.class), new JsonMapper());
+            Mockito.mock(GatewayCacheService.class), new JsonMapper(), Mockito.mock(AuditLogService.class));
 
     private HttpServer server;
 
@@ -104,7 +105,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc", port), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class)
                 .satisfies(e -> {
                     UpstreamHttpExecutor.UpstreamHttpErrorException ex = (UpstreamHttpExecutor.UpstreamHttpErrorException) e;
@@ -132,7 +133,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-4xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         assertThat(hitCount.get()).isEqualTo(1);
@@ -153,7 +154,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-5xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         // maxAttempts(3) trong retryFor() - 5xx co the la loi tam thoi nen VAN duoc retry.
@@ -168,7 +169,7 @@ class UpstreamHttpExecutorTest {
         } // socket dong ngay sau khi lay port trong - dam bao khong co gi lang nghe tai day
 
         assertThatThrownBy(() -> executor.call(upstream("svc", closedPort), HttpMethod.GET,
-                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300))
+                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
     }
 
@@ -202,13 +203,14 @@ class UpstreamHttpExecutorTest {
             return null;
         }).when(cacheService).put(Mockito.anyString(), Mockito.anyString(), Mockito.anyInt());
         UpstreamHttpExecutor cachingExecutor = new UpstreamHttpExecutor(
-                circuitBreakerRegistry, retryRegistry, bulkheadRegistry, cacheService, new JsonMapper());
+                circuitBreakerRegistry, retryRegistry, bulkheadRegistry, cacheService, new JsonMapper(),
+                Mockito.mock(AuditLogService.class));
 
         UpstreamService up = upstream("svc-cache", port);
         String url = "http://localhost:" + port + "/x";
 
-        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60);
-        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60);
+        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step");
+        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step");
 
         assertThat(first.get("value").asLong()).isEqualTo(1L);
         assertThat(second.get("value").asLong()).isEqualTo(1L);
@@ -230,8 +232,8 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
         String url = "http://localhost:" + port + "/x";
 
-        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300);
-        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300);
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step");
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step");
 
         assertThat(hitCount.get()).isEqualTo(2); // cacheEnabled=false - khong lan nao duoc cache
     }

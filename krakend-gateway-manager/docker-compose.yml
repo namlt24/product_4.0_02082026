@@ -70,6 +70,18 @@ services:
       GATEWAY_RATE_LIMIT_ENABLED: ${GATEWAY_RATE_LIMIT_ENABLED:-true}
       GATEWAY_RATE_LIMIT_WINDOW_SECONDS: ${GATEWAY_RATE_LIMIT_WINDOW_SECONDS:-60}
       GATEWAY_RATE_LIMIT_MAX_REQUESTS: ${GATEWAY_RATE_LIMIT_MAX_REQUESTS:-300}
+      # Audit log (request/hop) day vao Elasticsearch CHUNG cua BCCS (db-local,
+      # port 9200 publish ra host) - dung y het cach Oracle da lam, khong join
+      # chung network voi db-local. Xem AuditLogService/LogSearchService.
+      GATEWAY_AUDIT_ENABLED: ${GATEWAY_AUDIT_ENABLED:-true}
+      GATEWAY_AUDIT_ES_HOST: host.docker.internal
+      GATEWAY_AUDIT_ES_PORT: ${ES_PORT:-9200}
+      # Elastic APM Java agent (gan qua -javaagent, xem Dockerfile) - APM Server
+      # cung o db-local (port 8200 publish ra host).
+      ELASTIC_APM_SERVICE_NAME: krakend-gateway-manager
+      ELASTIC_APM_SERVER_URL: http://host.docker.internal:${APM_SERVER_PORT:-8200}
+      ELASTIC_APM_ENVIRONMENT: local
+      ELASTIC_APM_APPLICATION_PACKAGES: com.bccs.gatewaymanager
     ports:
       - "8080:8080"     # ca control plane (/api/**) lan data plane (traffic that) tren cung port
     networks:

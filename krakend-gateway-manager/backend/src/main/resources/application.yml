@@ -73,6 +73,15 @@ gatewaymanager:
     enabled: ${GATEWAY_RATE_LIMIT_ENABLED:true}
     window-seconds: ${GATEWAY_RATE_LIMIT_WINDOW_SECONDS:60}
     max-requests: ${GATEWAY_RATE_LIMIT_MAX_REQUESTS:300}
+  # Audit log (request/hop) day vao Elasticsearch dung chung cua he thong BCCS
+  # (xem db-local/docker-compose.yml - bccs-elasticsearch) - phuc vu trang
+  # "Tra cuu Log". host/port ket noi qua host.docker.internal (dung y het cach
+  # Oracle da lam) vi khong join chung network voi db-local.
+  audit:
+    enabled: ${GATEWAY_AUDIT_ENABLED:true}
+    elasticsearch:
+      host: ${GATEWAY_AUDIT_ES_HOST:localhost}
+      port: ${GATEWAY_AUDIT_ES_PORT:9200}
 
 # Resilience4j: dependency moi, dang ky dong theo TEN Upstream Service tai
 # runtime (xem UpstreamHttpExecutor) - cac gia tri default duoi day ap dung

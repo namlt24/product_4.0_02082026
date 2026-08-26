@@ -17,5 +17,11 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/gateway-manager.jar app.jar
+# Elastic APM Java agent - tu dong instrument RestTemplate (UpstreamHttpExecutor)
+# + HTTP server transaction (DynamicDispatcherController), KHONG can sua code app
+# them gi ca. Tai truc tiep qua ADD (Docker tu download qua HTTPS - image alpine
+# nay khong co san curl/wget) - dung KHOP version voi co.elastic.apm:apm-agent-api
+# trong pom.xml (agent + API cung 1 phien ban, tranh lech).
+ADD https://repo1.maven.org/maven2/co/elastic/apm/elastic-apm-agent/1.56.0/elastic-apm-agent-1.56.0.jar /app/elastic-apm-agent.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-javaagent:/app/elastic-apm-agent.jar", "-XX:+UseContainerSupport", "-jar", "app.jar"]

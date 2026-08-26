@@ -67,5 +67,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/upstream-health/upstream-health.component').then((m) => m.UpstreamHealthComponent),
   },
+  {
+    path: 'logs',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/log-search/log-search.component').then((m) => m.LogSearchComponent),
+  },
   { path: '**', redirectTo: 'endpoints' },
 ];

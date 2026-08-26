@@ -17,6 +17,23 @@
       <mat-icon>dashboard_customize</mat-icon>
       Canvas mới
     </a>
+    <button mat-stroked-button [disabled]="exporting()" (click)="exportConfig()" matTooltip="Tải cấu hình hiện tại về file .json">
+      @if (exporting()) {
+        <mat-spinner diameter="16" class="btn-spinner" />
+      } @else {
+        <mat-icon>file_download</mat-icon>
+      }
+      Xuất cấu hình
+    </button>
+    <button mat-stroked-button [disabled]="importing()" (click)="triggerImport()" matTooltip="Nạp lại từ file .json đã xuất trước đó">
+      @if (importing()) {
+        <mat-spinner diameter="16" class="btn-spinner" />
+      } @else {
+        <mat-icon>file_upload</mat-icon>
+      }
+      Nhập cấu hình
+    </button>
+    <input #importFileInput type="file" accept="application/json,.json" hidden (change)="onImportFileSelected($event)" />
     <button mat-flat-button color="primary" [disabled]="deploying()" (click)="validateAndReload()" class="deploy-btn">
       @if (deploying()) {
         <mat-spinner diameter="16" class="btn-spinner" />
@@ -169,6 +186,9 @@
             </a>
             <a mat-icon-button matTooltip="Lịch sử phiên bản" [routerLink]="['/endpoints', ep.id, 'versions']">
               <mat-icon>history</mat-icon>
+            </a>
+            <a mat-icon-button matTooltip="Thử ngay &amp; OpenAPI" [routerLink]="['/endpoints', ep.id, 'api']">
+              <mat-icon>play_circle</mat-icon>
             </a>
             <button mat-icon-button matTooltip="Xoá" class="danger-icon-btn" (click)="remove(ep)">
               <mat-icon>delete_outline</mat-icon>

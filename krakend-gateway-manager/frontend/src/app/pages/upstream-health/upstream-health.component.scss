@@ -1,0 +1,145 @@
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--gwm-text-secondary);
+  text-decoration: none;
+  margin-bottom: 8px;
+
+  &:hover {
+    color: var(--gwm-primary);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.center-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0;
+  color: var(--gwm-text-secondary);
+  font-size: 14px;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--gwm-text-muted);
+
+  .empty-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--gwm-text-muted);
+  }
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.health-card {
+  padding: 16px;
+}
+
+.health-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.upstream-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--gwm-text);
+}
+
+.state-chip {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+  background: var(--gwm-bg);
+  color: var(--gwm-text-secondary);
+
+  &[data-state='CLOSED'] {
+    background: var(--gwm-success-bg);
+    color: var(--gwm-success);
+  }
+  &[data-state='OPEN'],
+  &[data-state='FORCED_OPEN'] {
+    background: var(--gwm-danger-bg);
+    color: var(--gwm-danger);
+  }
+  &[data-state='HALF_OPEN'] {
+    background: var(--gwm-warning-bg);
+    color: var(--gwm-warning);
+  }
+}
+
+.base-host {
+  display: block;
+  font-size: 11.5px;
+  color: var(--gwm-text-muted);
+  margin-bottom: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-row {
+  display: flex;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gwm-border);
+  margin-top: 10px;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
+.metric {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric-label {
+  font-size: 10.5px;
+  color: var(--gwm-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.metric-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--gwm-text);
+  font-variant-numeric: tabular-nums;
+}

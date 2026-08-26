@@ -1,6 +1,8 @@
 package com.bccs.gatewaymanager.controller;
 
+import com.bccs.gatewaymanager.dto.UpstreamHealthDto;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
+import com.bccs.gatewaymanager.service.UpstreamHealthService;
 import com.bccs.gatewaymanager.service.UpstreamServiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +18,17 @@ import java.util.List;
 public class UpstreamServiceController {
 
     private final UpstreamServiceService service;
+    private final UpstreamHealthService healthService;
 
     @GetMapping
     public ResponseEntity<List<UpstreamServiceDto>> list() {
         return ResponseEntity.ok(service.list());
+    }
+
+    /** Dashboard suc khoe: trang thai circuit breaker + hit-rate cache Redis cua tung Upstream. */
+    @GetMapping("/health")
+    public ResponseEntity<List<UpstreamHealthDto>> health() {
+        return ResponseEntity.ok(healthService.healthSnapshot());
     }
 
     @GetMapping("/{id}")

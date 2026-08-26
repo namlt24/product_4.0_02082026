@@ -1,0 +1,166 @@
+.page-header {
+  margin-bottom: 20px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--gwm-text-secondary);
+  text-decoration: none;
+  margin-bottom: 8px;
+
+  &:hover {
+    color: var(--gwm-primary);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.path-code {
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 12.5px;
+  color: var(--gwm-primary-dark);
+}
+
+.method-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+  background: #64748b;
+  margin-right: 4px;
+
+  &[data-method='GET'] { background: #059669; }
+  &[data-method='POST'] { background: #2563eb; }
+  &[data-method='PUT'] { background: #d97706; }
+  &[data-method='DELETE'] { background: #dc2626; }
+  &[data-method='PATCH'] { background: #7c3aed; }
+}
+
+.center-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0;
+  color: var(--gwm-text-secondary);
+  font-size: 14px;
+
+  &.small {
+    padding: 16px 4px;
+    font-size: 13px;
+  }
+}
+
+.section-card {
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px !important;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.empty-hint {
+  color: var(--gwm-text-muted);
+  font-size: 13px;
+}
+
+// ---------------------------------------------------------------------------
+// Ket qua "Thu ngay"
+// ---------------------------------------------------------------------------
+.result-block {
+  margin-top: 14px;
+  border-radius: var(--gwm-radius-md);
+  border: 1px solid;
+  overflow: hidden;
+
+  &--success {
+    border-color: var(--gwm-success-border);
+    background: var(--gwm-success-bg);
+  }
+
+  &--error {
+    border-color: var(--gwm-danger-border);
+    background: var(--gwm-danger-bg);
+  }
+
+  pre {
+    margin: 0;
+    padding: 12px 14px;
+    background: var(--gwm-surface);
+    font-size: 12px;
+    font-family: var(--gwm-font-mono, monospace);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+
+  .result-block--success & {
+    color: var(--gwm-success);
+  }
+  .result-block--error & {
+    color: var(--gwm-danger);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// OpenAPI spec viewer
+// ---------------------------------------------------------------------------
+.spec-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.spec-pre {
+  margin: 0;
+  padding: 14px;
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-md);
+  font-size: 12px;
+  font-family: var(--gwm-font-mono, monospace);
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+  color: var(--gwm-text);
+}

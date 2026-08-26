@@ -1,8 +1,11 @@
 package com.bccs.gatewaymanager.controller;
 
+import com.bccs.gatewaymanager.dto.ConfigExportDto;
+import com.bccs.gatewaymanager.dto.ConfigImportResultDto;
 import com.bccs.gatewaymanager.dto.DeployResultDto;
 import com.bccs.gatewaymanager.dto.GatewayInfoDto;
 import com.bccs.gatewaymanager.exception.BusinessException;
+import com.bccs.gatewaymanager.service.ConfigExportImportService;
 import com.bccs.gatewaymanager.service.DependencyAnalyzer;
 import com.bccs.gatewaymanager.service.EndpointRegistryCache;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,6 +37,7 @@ public class ConfigController {
 
     private final DependencyAnalyzer dependencyAnalyzer;
     private final EndpointRegistryCache registryCache;
+    private final ConfigExportImportService exportImportService;
 
     @Value("${server.port}")
     private int gatewayPort;
@@ -69,5 +74,17 @@ public class ConfigController {
         String selfBaseUrl = "http://localhost:" + gatewayPort;
         List<String> aliases = selfHostAliases.stream().map(String::trim).collect(Collectors.toList());
         return ResponseEntity.ok(new GatewayInfoDto(gatewayPort, selfBaseUrl, aliases));
+    }
+
+    /** Xuat toan bo cau hinh (Upstream + Endpoint) - dung backup hoac review qua Pull Request. */
+    @GetMapping("/export")
+    public ResponseEntity<ConfigExportDto> export() {
+        return ResponseEntity.ok(exportImportService.export());
+    }
+
+    /** Nap lai 1 bundle da xuat - UPSERT (khop Upstream theo ten, Endpoint theo path), khong bao gio xoa gi. */
+    @PostMapping("/import")
+    public ResponseEntity<ConfigImportResultDto> importConfig(@RequestBody ConfigExportDto bundle) {
+        return ResponseEntity.ok(exportImportService.importConfig(bundle));
     }
 }

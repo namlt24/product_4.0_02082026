@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -13,7 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
-import { DependencyGraph, EndpointConfig, GraphNode } from '../../models/endpoint.model';
+import { ConfigExportBundle, DependencyGraph, EndpointConfig, GraphNode } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
 
 /** Man hinh danh sach Endpoint: tim kiem, xoa, validate cau hinh (canh bao vong lap). */
@@ -43,7 +43,11 @@ export class EndpointListComponent implements OnInit {
   readonly endpoints = signal<EndpointConfig[]>([]);
   readonly loading = signal(false);
   readonly deploying = signal(false);
+  readonly exporting = signal(false);
+  readonly importing = signal(false);
   searchTerm = '';
+
+  @ViewChild('importFileInput') private importFileInput?: ElementRef<HTMLInputElement>;
 
   /** Thong ke nhanh cho thanh tren cung - tinh lai tu dong moi khi danh sach thay doi. */
   readonly compositeCount = computed(
@@ -143,5 +147,84 @@ export class EndpointListComponent implements OnInit {
         this.snackBar.open(msg, 'Dong', { duration: 5000 });
       },
     });
+  }
+
+  // ------------------------------------------------------------------ //
+  // Export / Import cau hinh (P1) - backup, review qua Pull Request.
+  // ------------------------------------------------------------------ //
+
+  exportConfig(): void {
+    this.exporting.set(true);
+    this.api.exportConfig().subscribe({
+      next: (bundle) => {
+        this.exporting.set(false);
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gwm-config-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.snackBar.open(`Đã xuất ${bundle.upstreams.length} upstream + ${bundle.endpoints.length} endpoint.`, 'Đóng', { duration: 3000 });
+      },
+      error: () => {
+        this.exporting.set(false);
+        this.snackBar.open('Xuất cấu hình thất bại.', 'Đóng', { duration: 3000 });
+      },
+    });
+  }
+
+  triggerImport(): void {
+    this.importFileInput?.nativeElement.click();
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // cho phep chon lai DUNG file do lan nua (change event khong ban neu gia tri giong het lan truoc)
+    if (!file) return;
+
+    file
+      .text()
+      .then((text) => {
+        let bundle: ConfigExportBundle;
+        try {
+          bundle = JSON.parse(text);
+        } catch {
+          this.snackBar.open('File không phải JSON hợp lệ.', 'Đóng', { duration: 3000 });
+          return;
+        }
+        if (
+          !confirm(
+            `Nhập cấu hình từ file (${bundle.upstreams?.length ?? 0} upstream, ${bundle.endpoints?.length ?? 0} endpoint)?\n\n` +
+              `Upstream khớp theo TÊN và Endpoint khớp theo PATH sẽ được CẬP NHẬT, còn lại sẽ được TẠO MỚI - không có gì bị xoá.`,
+          )
+        ) {
+          return;
+        }
+        this.importing.set(true);
+        this.api.importConfig(bundle).subscribe({
+          next: (result) => {
+            this.importing.set(false);
+            const warningNote = result.warnings.length > 0 ? ` (${result.warnings.length} cảnh báo - xem console)` : '';
+            if (result.warnings.length > 0) {
+              console.warn('Cảnh báo khi import cấu hình:', result.warnings);
+            }
+            this.snackBar.open(
+              `Đã nhập: ${result.upstreamsCreated} upstream mới, ${result.upstreamsUpdated} upstream cập nhật, ` +
+                `${result.endpointsCreated} endpoint mới, ${result.endpointsUpdated} endpoint cập nhật${warningNote}.`,
+              'Đóng',
+              { duration: 6000 },
+            );
+            this.fetch(this.searchTerm);
+            this.fetchGraph();
+          },
+          error: (err) => {
+            this.importing.set(false);
+            this.snackBar.open(err?.error?.message ?? 'Nhập cấu hình thất bại.', 'Đóng', { duration: 4000 });
+          },
+        });
+      })
+      .catch(() => this.snackBar.open('Không đọc được file.', 'Đóng', { duration: 3000 }));
   }
 }

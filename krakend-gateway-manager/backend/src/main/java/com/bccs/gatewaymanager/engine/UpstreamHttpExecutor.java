@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
 /**
@@ -60,6 +61,13 @@ public class UpstreamHttpExecutor {
 
     private final Map<String, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
 
+    // Dem hit/miss cache THEO TEN UPSTREAM (khong theo tung key rieng - qua nhieu key
+    // se ton bo nho vo ich) - phuc vu man hinh "Dashboard suc khoe Upstream". Dat o day
+    // (khong phai GatewayCacheService) vi upstream.getName() da co san tai day, tranh
+    // GatewayCacheService phai parse nguoc ten upstream tu chuoi key.
+    private final Map<String, LongAdder> cacheHits = new ConcurrentHashMap<>();
+    private final Map<String, LongAdder> cacheMisses = new ConcurrentHashMap<>();
+
     public JsonNode call(UpstreamService upstream, HttpMethod method, String resolvedUrl,
                           HttpHeaders headers, JsonNode body, boolean cacheEnabled, int cacheTtlSeconds) {
         boolean cacheable = cacheEnabled && method == HttpMethod.GET;
@@ -69,10 +77,13 @@ public class UpstreamHttpExecutor {
             Optional<String> cached = cacheService.get(cacheKey);
             if (cached.isPresent()) {
                 try {
+                    cacheHits.computeIfAbsent(upstream.getName(), n -> new LongAdder()).increment();
                     return objectMapper.readTree(cached.get());
                 } catch (Exception e) {
                     log.warn("Cache gia tri hong cho key={}, bo qua cache: {}", cacheKey, e.getMessage());
                 }
+            } else {
+                cacheMisses.computeIfAbsent(upstream.getName(), n -> new LongAdder()).increment();
             }
         }
 
@@ -137,6 +148,17 @@ public class UpstreamHttpExecutor {
         circuitBreakerRegistry.remove(upstreamName);
         retryRegistry.remove(upstreamName);
         bulkheadRegistry.remove(upstreamName);
+    }
+
+    /** Dung cho UpstreamHealthService - 0 neu upstream chua tung co lan cache-eligible nao. */
+    public long cacheHitCount(String upstreamName) {
+        LongAdder a = cacheHits.get(upstreamName);
+        return a == null ? 0 : a.sum();
+    }
+
+    public long cacheMissCount(String upstreamName) {
+        LongAdder a = cacheMisses.get(upstreamName);
+        return a == null ? 0 : a.sum();
     }
 
     private RestTemplate restTemplateFor(UpstreamService upstream) {

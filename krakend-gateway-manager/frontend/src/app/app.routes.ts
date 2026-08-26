@@ -50,6 +50,12 @@ export const routes: Routes = [
       import('./pages/endpoint-versions/endpoint-versions.component').then((m) => m.EndpointVersionsComponent),
   },
   {
+    path: 'endpoints/:id/api',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/endpoint-api-details/endpoint-api-details.component').then((m) => m.EndpointApiDetailsComponent),
+  },
+  {
     path: 'dependency-graph',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -60,6 +66,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/upstream-services/upstream-services.component').then((m) => m.UpstreamServicesComponent),
+  },
+  {
+    path: 'upstreams/health',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/upstream-health/upstream-health.component').then((m) => m.UpstreamHealthComponent),
   },
   { path: '**', redirectTo: 'endpoints' },
 ];

@@ -152,6 +152,45 @@ export interface GatewayInfo {
   selfHostAliases: string[];
 }
 
+/** Suc khoe 1 Upstream Service tai thoi diem goi API - xem UpstreamHealthDto o backend. */
+export interface UpstreamHealth {
+  id: string;
+  name: string;
+  baseHost: string;
+  circuitBreakerEnabled: boolean;
+  circuitState: string;
+  failureRatePercent: number;
+  bufferedCalls: number;
+  cacheHits: number;
+  cacheMisses: number;
+  /** -1 = chua co du lieu (chua tung goi qua step cacheEnabled nao), khac 0% that su. */
+  cacheHitRate: number;
+}
+
+/** Payload "Thu ngay" - xem EndpointTryRequestDto o backend. */
+export interface EndpointTryRequest {
+  pathVariables: Record<string, string>;
+  queryParams: Record<string, string>;
+  body: string | null;
+}
+
+/** Bundle Export/Import cau hinh - xem ConfigExportDto o backend. */
+export interface ConfigExportBundle {
+  schemaVersion: string;
+  exportedAt: string;
+  upstreams: UpstreamService[];
+  endpoints: EndpointConfig[];
+}
+
+/** Ket qua 1 lan Import - xem ConfigImportResultDto o backend. */
+export interface ConfigImportResult {
+  upstreamsCreated: number;
+  upstreamsUpdated: number;
+  endpointsCreated: number;
+  endpointsUpdated: number;
+  warnings: string[];
+}
+
 export const HTTP_METHODS: HttpMethodType[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 export const MAPPING_TARGET_TYPES: MappingTargetType[] = ['PATH', 'QUERY', 'HEADER', 'BODY_FIELD'];
 export const FIELD_MAPPING_SOURCE_TYPES: FieldMappingSourceType[] = [

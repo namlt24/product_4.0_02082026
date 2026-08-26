@@ -1,0 +1,70 @@
+<div class="page-header">
+  <div>
+    <a class="back-link" routerLink="/upstreams">
+      <mat-icon inline="true">arrow_back</mat-icon>
+      Upstream Services
+    </a>
+    <h1 class="page-title">Sức khoẻ Upstream</h1>
+    <p class="page-subtitle">
+      Trạng thái circuit breaker (trong bộ nhớ, mất khi restart) + tỉ lệ cache hit của từng Upstream đã đăng ký.
+    </p>
+  </div>
+  <button mat-stroked-button (click)="fetch()">
+    <mat-icon>refresh</mat-icon>
+    Làm mới
+  </button>
+</div>
+
+@if (loading()) {
+  <div class="center-state">
+    <mat-spinner diameter="26" />
+    <span>Đang tải...</span>
+  </div>
+} @else if (items().length === 0) {
+  <mat-card class="empty-card">
+    <mat-icon class="empty-icon">dns</mat-icon>
+    <span>Chưa có Upstream Service nào.</span>
+  </mat-card>
+} @else {
+  <div class="health-grid">
+    @for (h of items(); track h.id) {
+      <mat-card class="health-card">
+        <div class="health-card-header">
+          <span class="upstream-name">{{ h.name }}</span>
+          <span class="state-chip" [attr.data-state]="h.circuitState">{{ stateLabel(h.circuitState) }}</span>
+        </div>
+        <code class="base-host">{{ h.baseHost }}</code>
+
+        <div class="metric-row">
+          <div class="metric">
+            <span class="metric-label">Circuit breaker</span>
+            <span class="metric-value">{{ h.circuitBreakerEnabled ? 'Đang bật' : 'Đang tắt' }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Tỉ lệ lỗi</span>
+            <span class="metric-value">{{ h.failureRatePercent < 0 ? 'Chưa có dữ liệu' : (h.failureRatePercent | number: '1.0-1') + '%' }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Lượt gọi gần nhất</span>
+            <span class="metric-value">{{ h.bufferedCalls }}</span>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric">
+            <span class="metric-label">Cache hit</span>
+            <span class="metric-value">{{ h.cacheHits }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cache miss</span>
+            <span class="metric-value">{{ h.cacheMisses }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Tỉ lệ hit</span>
+            <span class="metric-value">{{ cacheHitRateLabel(h) }}</span>
+          </div>
+        </div>
+      </mat-card>
+    }
+  </div>
+}

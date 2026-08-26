@@ -2,11 +2,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ConfigExportBundle,
+  ConfigImportResult,
   DependencyGraph,
   DeployResult,
   EndpointConfig,
+  EndpointTryRequest,
   EndpointVersionSummary,
   GatewayInfo,
+  UpstreamHealth,
   UpstreamService,
 } from '../models/endpoint.model';
 
@@ -80,6 +84,29 @@ export class EndpointApiService {
 
   rollbackVersion(endpointId: string, versionId: string): Observable<EndpointConfig> {
     return this.http.post<EndpointConfig>(`${this.endpointsUrl}/${endpointId}/versions/${versionId}/rollback`, {});
+  }
+
+  // ---- P1: Thu ngay / OpenAPI / Suc khoe Upstream / Export-Import ----
+
+  /** Goi that qua Control Plane, dung dung composite engine - xem EndpointTryService o backend. */
+  tryEndpoint(endpointId: string, req: EndpointTryRequest): Observable<unknown> {
+    return this.http.post(`${this.endpointsUrl}/${endpointId}/try`, req);
+  }
+
+  getOpenApiSpec(endpointId: string): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(`${this.endpointsUrl}/${endpointId}/openapi`);
+  }
+
+  getUpstreamHealth(): Observable<UpstreamHealth[]> {
+    return this.http.get<UpstreamHealth[]>(`${this.upstreamsUrl}/health`);
+  }
+
+  exportConfig(): Observable<ConfigExportBundle> {
+    return this.http.get<ConfigExportBundle>(`${this.configUrl}/export`);
+  }
+
+  importConfig(bundle: ConfigExportBundle): Observable<ConfigImportResult> {
+    return this.http.post<ConfigImportResult>(`${this.configUrl}/import`, bundle);
   }
 
   // ---- Upstream Services (backend that, dang ky 1 lan, dung chung cho nhieu BackendStep) ----

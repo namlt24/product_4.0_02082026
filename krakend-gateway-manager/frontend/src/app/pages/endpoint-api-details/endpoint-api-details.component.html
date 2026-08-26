@@ -1,0 +1,113 @@
+<div class="page-header">
+  <a class="back-link" [routerLink]="['/endpoints', endpoint()?.id, 'edit']">
+    <mat-icon inline="true">arrow_back</mat-icon>
+    Quay lại Sửa Endpoint
+  </a>
+  <h1 class="page-title">Thử ngay &amp; OpenAPI</h1>
+  <p class="page-subtitle">
+    @if (endpoint(); as ep) {
+      <span class="method-chip" [attr.data-method]="ep.method">{{ ep.method }}</span>
+      <code class="path-code">{{ ep.path }}</code> — <strong>{{ ep.name }}</strong>
+    } @else {
+      Đang tải...
+    }
+  </p>
+</div>
+
+@if (loading()) {
+  <div class="center-state">
+    <mat-spinner diameter="26" />
+    <span>Đang tải endpoint...</span>
+  </div>
+} @else {
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon inline="true">play_circle</mat-icon> Thử ngay</mat-card-title>
+      <mat-card-subtitle>
+        Gọi thật qua chính composite engine (không phải giả lập) - kết quả đúng 100% những gì client thật sẽ nhận.
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (pathParamRows().length > 0) {
+        <div class="field-row">
+          @for (row of pathParamRows(); track row.key) {
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Path param: {{ row.key }}</mat-label>
+              <input matInput [(ngModel)]="row.value" [placeholder]="'giá trị cho {' + row.key + '}'" />
+            </mat-form-field>
+          }
+        </div>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Body (JSON, tuỳ chọn)</mat-label>
+        <textarea matInput rows="5" [(ngModel)]="requestBody" placeholder='{"staffId": 102137}'></textarea>
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" type="button" [disabled]="trying()" (click)="runTry()">
+        @if (trying()) {
+          <mat-spinner diameter="18" class="btn-spinner" />
+        } @else {
+          <mat-icon>send</mat-icon>
+        }
+        Gửi yêu cầu
+      </button>
+
+      @if (tryResult(); as result) {
+        <div class="result-block result-block--success">
+          <div class="result-header">
+            <mat-icon inline="true">check_circle</mat-icon>
+            <span>Thành công @if (tryStatus()) { (HTTP {{ tryStatus() }}) }</span>
+          </div>
+          <pre>{{ result }}</pre>
+        </div>
+      }
+      @if (tryError(); as error) {
+        <div class="result-block result-block--error">
+          <div class="result-header">
+            <mat-icon inline="true">error</mat-icon>
+            <span>Lỗi @if (tryStatus()) { (HTTP {{ tryStatus() }}) }</span>
+          </div>
+          <pre>{{ error }}</pre>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon inline="true">description</mat-icon> OpenAPI Spec</mat-card-title>
+      <mat-card-subtitle>
+        Tự sinh, "best-effort" - response body là <code>type: object</code> chung vì phụ thuộc response thật của
+        Upstream lúc chạy, path param/request body suy được chính xác hơn từ cấu hình.
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (loadingSpec()) {
+        <div class="center-state small">
+          <mat-spinner diameter="20" />
+          <span>Đang sinh OpenAPI spec...</span>
+        </div>
+      } @else {
+        <!-- "as" chi duoc phep tren @if CHINH (khong duoc tren @else if) - tach thanh
+             2 khoi @if doc lap thay vi 1 chuoi @if/@else if. -->
+        @if (specError(); as err) {
+          <p class="empty-hint">{{ err }}</p>
+        }
+        @if (!specError() && specJson(); as spec) {
+          <div class="spec-actions">
+            <button mat-stroked-button type="button" (click)="copySpec()">
+              <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+              {{ copied() ? 'Đã sao chép' : 'Sao chép' }}
+            </button>
+            <button mat-stroked-button type="button" (click)="downloadSpec()">
+              <mat-icon>download</mat-icon>
+              Tải xuống .json
+            </button>
+          </div>
+          <pre class="spec-pre"><code>{{ spec }}</code></pre>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+}

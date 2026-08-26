@@ -15,8 +15,11 @@ public record FieldMappingDto(
 
         @NotNull FieldMappingSourceType sourceType,
 
-        /** Bat buoc khi sourceType=STEP_RESPONSE hoac STEP_RESPONSE_ARRAY_AGGREGATE, bo qua khi REQUEST_BODY. */
-        Integer sourceStepOrder,
+        /**
+         * Bat buoc khi sourceType=STEP_RESPONSE hoac STEP_RESPONSE_ARRAY_AGGREGATE, bo qua khi REQUEST_BODY.
+         * @Min(1) chi ap dung khi co gia tri (Integer nullable) - khong pha case REQUEST_BODY (null).
+         */
+        @Min(1) Integer sourceStepOrder,
 
         /** Bat buoc khi sourceType=STEP_RESPONSE hoac REQUEST_BODY. */
         String sourceField,

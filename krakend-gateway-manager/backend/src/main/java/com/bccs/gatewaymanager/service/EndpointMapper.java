@@ -44,11 +44,6 @@ public class EndpointMapper {
         return entity;
     }
 
-    /** Dung cho endpoint preview "chua luu" (POST /api/endpoints/preview) - khong dung Builder.default id ngau nhien la du, khong dong bo DB. */
-    public EndpointConfig toTransientEntity(EndpointRequestDto dto) {
-        return toEntity(dto);
-    }
-
     /** Cap nhat entity da co (giu nguyen id) tu request DTO khi PUT. */
     public void updateEntity(EndpointConfig entity, EndpointRequestDto dto) {
         entity.setName(dto.name());

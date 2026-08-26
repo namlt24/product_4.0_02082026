@@ -31,6 +31,13 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+        # Tranh N+1 query khi EndpointMapper/DependencyAnalyzer duyet cac quan he LAZY
+        # (steps, mappings, BackendStep.upstreamService, cac @ElementCollection) - Hibernate
+        # tu gop nhieu lan lazy-load thanh 1 query "IN (...)" theo batch thay vi tung
+        # query rieng le. Dung batch-size (khong phai @EntityGraph/JOIN FETCH) vi steps
+        # va mappings deu la @OneToMany tren cung EndpointConfig - JOIN FETCH ca 2 trong
+        # 1 query se dinh MultipleBagFetchException cua Hibernate.
+        default_batch_fetch_size: 50
   jackson:
     default-property-inclusion: non_null
   data:
@@ -48,7 +55,15 @@ management:
 # Cau hinh rieng cua Gateway Manager
 gatewaymanager:
   gateway:
-    self-host-aliases: localhost,127.0.0.1,gateway-manager-backend
+    # Phai khop dung ten service/container that trong docker-compose.yml (service
+    # "backend", container_name "gwm-backend") - sai ten se khien DependencyAnalyzer.
+    # isSelfHost() khong nhan dien duoc Upstream tu tro vao chinh gateway, bo sot
+    # canh bao vong lap phu thuoc that.
+    self-host-aliases: localhost,127.0.0.1,backend,gwm-backend
+  # API key bao ve Control Plane (/api/**) - xem ApiKeyAuthFilter. Gia tri mac dinh
+  # chi dung cho dev cuc bo; MOI truong that PHAI set qua env var GATEWAY_ADMIN_API_KEY
+  # (xem docker-compose.yml), khong duoc dung gia tri mac dinh nay.
+  admin-api-key: ${GATEWAY_ADMIN_API_KEY:changeme-local-dev}
 
 # Resilience4j: dependency moi, dang ky dong theo TEN Upstream Service tai
 # runtime (xem UpstreamHttpExecutor) - cac gia tri default duoi day ap dung

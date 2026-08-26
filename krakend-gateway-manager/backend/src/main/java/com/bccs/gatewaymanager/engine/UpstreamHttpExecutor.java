@@ -24,6 +24,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
@@ -102,10 +104,37 @@ public class UpstreamHttpExecutor {
                 return objectMapper.createObjectNode();
             }
             return objectMapper.readTree(responseBody);
+        } catch (RestClientResponseException e) {
+            // Upstream tra ve HTTP loi that su (4xx/5xx) - giu nguyen status/body de client
+            // phan biet duoc "input sai"/"upstream bao loi nghiep vu" thay vi 1 mã 500 chung.
+            log.warn("Upstream '{}' [{} {}] tra ve HTTP {}: {}", upstream.getName(), method, resolvedUrl,
+                    e.getStatusCode().value(), e.getResponseBodyAsString());
+            throw new UpstreamHttpErrorException(upstream.getName(), e.getStatusCode().value(), e.getResponseBodyAsString());
+        } catch (ResourceAccessException e) {
+            // Connect timeout / read timeout / connection refused - ha tang that su co van
+            // de, khac han "upstream tra loi 4xx/5xx" o tren.
+            log.warn("Loi ket noi Upstream '{}' [{} {}]: {}", upstream.getName(), method, resolvedUrl, e.getMessage());
+            throw new UpstreamTimeoutException(upstream.getName(), e);
         } catch (Exception e) {
             log.warn("Loi goi Upstream '{}' [{} {}]: {}", upstream.getName(), method, resolvedUrl, e.getMessage());
             throw new UpstreamCallException(upstream.getName(), e);
         }
+    }
+
+    /**
+     * Xoa RestTemplate/CircuitBreaker/Retry/Bulkhead da tao san cho 1 Upstream (theo
+     * ten) - goi khi UpstreamServiceService.update()/delete() doi cau hinh, vi
+     * cac cache/registry o tren chi tao instance 1 LAN DAU (computeIfAbsent/
+     * registry.xxx(name, supplier) bo qua supplier moi neu instance da ton tai) -
+     * khong xoa thi doi timeout/threshold xong se KHONG co hieu luc cho toi khi
+     * restart app. Chi can remove(), khong can replace(): lan goi tiep theo se tu
+     * rebuild voi cau hinh moi nhat tu DB qua computeIfAbsent/circuitBreaker(...).
+     */
+    public void invalidate(String upstreamName) {
+        restTemplateCache.remove(upstreamName);
+        circuitBreakerRegistry.remove(upstreamName);
+        retryRegistry.remove(upstreamName);
+        bulkheadRegistry.remove(upstreamName);
     }
 
     private RestTemplate restTemplateFor(UpstreamService upstream) {
@@ -143,10 +172,37 @@ public class UpstreamHttpExecutor {
                 .build());
     }
 
-    /** Boc loi goi Upstream (timeout/connection refused/HTTP error) thanh 1 kieu chung de engine xu ly. */
+    /** Boc loi goi Upstream khong xac dinh duoc nguyen nhan cu the (khac 2 loai duoi day) thanh 1 kieu chung de engine xu ly. */
     public static class UpstreamCallException extends SystemException {
         public UpstreamCallException(String upstreamName, Throwable cause) {
             super("Loi goi Upstream Service '" + upstreamName + "': " + cause.getMessage(), cause);
+        }
+    }
+
+    /** Upstream tra ve HTTP loi that su (4xx/5xx) - giu status + body goc de GlobalExceptionHandler map ra ma loi phan biet duoc. */
+    public static class UpstreamHttpErrorException extends SystemException {
+        private final int httpStatus;
+        private final String responseBody;
+
+        public UpstreamHttpErrorException(String upstreamName, int httpStatus, String responseBody) {
+            super("Upstream '" + upstreamName + "' tra ve HTTP " + httpStatus + ": " + responseBody);
+            this.httpStatus = httpStatus;
+            this.responseBody = responseBody;
+        }
+
+        public int httpStatus() {
+            return httpStatus;
+        }
+
+        public String responseBody() {
+            return responseBody;
+        }
+    }
+
+    /** Timeout ket noi/doc du lieu hoac connection refused toi Upstream - ha tang that su co van de, khac loi nghiep vu 4xx/5xx. */
+    public static class UpstreamTimeoutException extends SystemException {
+        public UpstreamTimeoutException(String upstreamName, Throwable cause) {
+            super("Upstream '" + upstreamName + "' khong phan hoi kip thoi (timeout/connection refused): " + cause.getMessage(), cause);
         }
     }
 }

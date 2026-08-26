@@ -27,10 +27,6 @@ public class ExecutionContext {
         return pathVariables;
     }
 
-    public Map<String, String[]> queryParams() {
-        return queryParams;
-    }
-
     public JsonNode requestBody() {
         return requestBody;
     }
@@ -41,9 +37,5 @@ public class ExecutionContext {
 
     public JsonNode getStepResult(int stepOrder) {
         return stepResults.get(stepOrder);
-    }
-
-    public JsonNode lastStepResult(int lastStepOrder) {
-        return stepResults.get(lastStepOrder);
     }
 }

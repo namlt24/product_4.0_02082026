@@ -29,4 +29,8 @@ public interface EndpointConfigRepository extends JpaRepository<EndpointConfig, 
     List<EndpointConfig> search(@Param("q") String q);
 
     List<EndpointConfig> findAllByOrderByUpdatedAtDesc();
+
+    /** Dem so BackendStep (thuoc bat ky endpoint nao) dang tham chieu 1 Upstream Service - dung de chan xoa Upstream con dang dung. */
+    @Query("select count(s) from EndpointConfig e join e.steps s where s.upstreamService.id = :upstreamId")
+    long countStepsByUpstreamId(@Param("upstreamId") String upstreamId);
 }

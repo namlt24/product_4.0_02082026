@@ -20,6 +20,7 @@ public class EndpointService {
     private final EndpointConfigRepository repository;
     private final EndpointMapper mapper;
     private final EndpointRegistryCache registryCache;
+    private final DependencyAnalyzer dependencyAnalyzer;
 
     @Transactional(readOnly = true)
     public List<EndpointResponseDto> list(String search) {
@@ -43,6 +44,7 @@ public class EndpointService {
         EndpointConfig entity = mapper.toEntity(dto);
         EndpointConfig saved = repository.save(entity);
         EndpointResponseDto result = mapper.toResponseDto(saved);
+        rejectIfCyclic();
         registryCache.reload();
         log.info("Da tao endpoint moi: {} {}", saved.getMethod(), saved.getPath());
         return result;
@@ -58,6 +60,7 @@ public class EndpointService {
         mapper.updateEntity(entity, dto);
         EndpointConfig saved = repository.save(entity);
         EndpointResponseDto result = mapper.toResponseDto(saved);
+        rejectIfCyclic();
         registryCache.reload();
         log.info("Da cap nhat endpoint: {} {}", saved.getMethod(), saved.getPath());
         return result;
@@ -76,7 +79,23 @@ public class EndpointService {
                 .orElseThrow(() -> new BusinessException("GW-404", "Khong tim thay endpoint id=" + id));
     }
 
-    /** Kiem tra: stepOrder phai bat dau tu 1, khong trung, va mapping phai tham chieu step co that. */
+    /**
+     * Chan luu (rollback @Transactional) neu cau hinh hien tai (sau khi save) tao
+     * thanh 1 vong lap phu thuoc giua cac endpoint (A goi nguoc B, B goi lai A...).
+     * Goi TRUOC registryCache.reload() - la thoi diem endpoint thuc su "len live" -
+     * de vong lap khong bao gio duoc kich hoat qua duong CRUD binh thuong (truoc day
+     * chi POST /api/config/deploy rieng biet moi kiem tra, CRUD thuong bo qua hoan
+     * toan cho du comment cua ConfigController tung khang dinh sai la "bi chan han").
+     */
+    private void rejectIfCyclic() {
+        List<String> warnings = dependencyAnalyzer.detectCycleWarningsOnly();
+        if (!warnings.isEmpty()) {
+            throw new BusinessException("GW-CYCLE",
+                    "Phat hien vong lap phu thuoc giua cac endpoint. " + String.join(" | ", warnings));
+        }
+    }
+
+    /** Kiem tra: stepOrder phai bat dau tu 1, khong trung, va mapping phai tham chieu step co that + hop le. */
     private void validateStepOrders(EndpointRequestDto dto) {
         var orders = dto.steps().stream().map(com.bccs.gatewaymanager.dto.BackendStepDto::stepOrder).toList();
         if (orders.stream().distinct().count() != orders.size()) {
@@ -92,6 +111,24 @@ public class EndpointService {
                 }
                 if (m.targetStepOrder() > maxOrder) {
                     throw new BusinessException("GW-003", "FieldMapping tham chieu step khong ton tai (max step = " + maxOrder + ").");
+                }
+                // sourceStepOrder phai < targetStepOrder (dung invariant FieldMapping da tu ghi
+                // chu) - step nguon phai chay TRUOC step dich, neu khong ket qua se luon null
+                // luc runtime (engine thuc thi tuan tu, step sau moi thay du lieu step truoc).
+                if (needsSourceStep && m.sourceStepOrder() != null && m.sourceStepOrder() >= m.targetStepOrder()) {
+                    throw new BusinessException("GW-003", "FieldMapping co sourceStepOrder (" + m.sourceStepOrder()
+                            + ") phai nho hon targetStepOrder (" + m.targetStepOrder() + ") - step nguon phai chay truoc step dich.");
+                }
+                if ((m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
+                        || m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY)
+                        && (m.sourceField() == null || m.sourceField().isBlank())) {
+                    throw new BusinessException("GW-003", "FieldMapping (sourceType=" + m.sourceType() + ") thieu sourceField.");
+                }
+                if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE_ARRAY_AGGREGATE
+                        && ((m.sourceArrayField() == null || m.sourceArrayField().isBlank())
+                            || (m.sourceElementField() == null || m.sourceElementField().isBlank()))) {
+                    throw new BusinessException("GW-003",
+                            "FieldMapping (sourceType=STEP_RESPONSE_ARRAY_AGGREGATE) thieu sourceArrayField/sourceElementField.");
                 }
             }
         }

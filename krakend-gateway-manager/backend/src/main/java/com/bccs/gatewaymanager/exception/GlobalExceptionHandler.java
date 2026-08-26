@@ -1,5 +1,7 @@
 package com.bccs.gatewaymanager.exception;
 
+import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor.UpstreamHttpErrorException;
+import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor.UpstreamTimeoutException;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
         log.warn("Business error [{}]: {}", ex.getErrorCode(), ex.getMessage());
         return ResponseEntity.badRequest().body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage()));
+    }
+
+    /** Upstream that su tra ve HTTP loi (4xx/5xx) - phan biet voi loi ha tang chung, tra 502 kem ma loi cu the. */
+    @ExceptionHandler(UpstreamHttpErrorException.class)
+    public ResponseEntity<ErrorResponse> handleUpstreamHttpError(UpstreamHttpErrorException ex) {
+        log.warn("Upstream HTTP error: {}", ex.getMessage());
+        String errorCode = ex.httpStatus() >= 500 ? "GW-UPSTREAM-5XX" : "GW-UPSTREAM-4XX";
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ErrorResponse.of(errorCode, ex.getMessage()));
+    }
+
+    /** Upstream khong phan hoi kip (timeout/connection refused) - khac loi nghiep vu upstream tra ve. */
+    @ExceptionHandler(UpstreamTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleUpstreamTimeout(UpstreamTimeoutException ex) {
+        log.warn("Upstream timeout: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(ErrorResponse.of("GW-UPSTREAM-TIMEOUT", ex.getMessage()));
     }
 
     @ExceptionHandler(SystemException.class)

@@ -1,0 +1,345 @@
+<div class="page-header">
+  <a class="back-link" routerLink="/endpoints">
+    <mat-icon inline="true">arrow_back</mat-icon>
+    Endpoints
+  </a>
+  <h1 class="page-title">{{ isEditMode() ? 'Sửa Endpoint (Canvas)' : 'Endpoint mới (Canvas)' }}</h1>
+  <p class="page-subtitle">
+    Kéo thả node để bố trí các Backend Step, bấm vào node/đường nối để sửa chi tiết trong panel bên phải.
+    Dùng chung dữ liệu với màn hình Endpoint dạng form - lưu ở đâu cũng có hiệu lực ngay.
+  </p>
+</div>
+
+@if (loading()) {
+  <div class="center-state">
+    <mat-spinner diameter="26" />
+    <span>Đang tải endpoint...</span>
+  </div>
+} @else {
+  <!-- ============================== Thong tin Endpoint (header) ============================== -->
+  <mat-card class="header-card">
+    <mat-card-content>
+      <div class="field-row">
+        <mat-form-field appearance="outline" style="flex: 2">
+          <mat-label>Tên endpoint</mat-label>
+          <input matInput [(ngModel)]="header.name" placeholder="vd: User Orders (composite)" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 3">
+          <mat-label>Mô tả</mat-label>
+          <input matInput [(ngModel)]="header.description" />
+        </mat-form-field>
+      </div>
+      <div class="field-row">
+        <mat-form-field appearance="outline" style="flex: 2">
+          <mat-label>Path (URL client gọi)</mat-label>
+          <input matInput [(ngModel)]="header.path" placeholder="/v1/user-orders" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Method</mat-label>
+          <mat-select [(ngModel)]="header.method">
+            @for (m of httpMethods; track m) {
+              <mat-option [value]="m">{{ m }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Output encoding</mat-label>
+          <input matInput [(ngModel)]="header.outputEncoding" placeholder="json" />
+        </mat-form-field>
+        <mat-slide-toggle [(ngModel)]="header.sequential" class="sequential-toggle">Sequential</mat-slide-toggle>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ============================== Canvas ============================== -->
+  <div class="canvas-toolbar">
+    <button mat-stroked-button type="button" (click)="addStep()">
+      <mat-icon>add</mat-icon> Thêm Step
+    </button>
+    <button mat-stroked-button type="button" (click)="openNewMappingPanel()">
+      <mat-icon>add_link</mat-icon> Thêm Field Mapping
+    </button>
+    <span class="canvas-hint">
+      <mat-icon inline="true">info</mat-icon>
+      Kéo node để sắp xếp · Bấm node/đường nối để sửa · Vị trí được lưu cùng endpoint
+    </span>
+  </div>
+
+  <mat-card class="canvas-card">
+    <div class="canvas-scroller">
+      <div class="canvas-sizer" [style.width.px]="canvasSize().width" [style.height.px]="canvasSize().height">
+        <svg class="edge-layer" [attr.width]="canvasSize().width" [attr.height]="canvasSize().height" [attr.viewBox]="'0 0 ' + canvasSize().width + ' ' + canvasSize().height">
+          <defs>
+            <marker id="canvas-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1" />
+            </marker>
+          </defs>
+
+          @for (pe of positionedMappings(); track pe.mapping) {
+            <path [attr.d]="pe.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openMappingPanel(pe.index)" />
+            <path [attr.d]="pe.path" fill="none" stroke="#818cf8" stroke-width="2.25" marker-end="url(#canvas-arrow)" class="edge-visible" />
+            <text [attr.x]="pe.labelX" [attr.y]="pe.labelY" class="edge-label" text-anchor="middle">{{ pe.mapping.targetParamName }}</text>
+          }
+        </svg>
+
+        <div class="canvas-node-layer">
+          <!-- Node "Client Request" - co dinh, khong keo duoc - la diem xuat phat cua mapping REQUEST_BODY -->
+          <div class="client-node" [style.left.px]="clientNodeX" [style.top.px]="clientNodeY" [style.width.px]="nodeWidth" [style.height.px]="nodeHeight">
+            <div class="client-node-top">
+              <mat-icon inline="true">person</mat-icon>
+              <span>Client Request</span>
+            </div>
+            <div class="client-node-body">
+              <span class="method-chip" [attr.data-method]="header.method">{{ header.method }}</span>
+              <code>{{ header.path || '/' }}</code>
+            </div>
+          </div>
+
+          @for (p of nodeBasePositions(); track p.step; let i = $index) {
+            <div
+              class="step-node"
+              cdkDrag
+              [style.left.px]="p.x"
+              [style.top.px]="p.y"
+              [style.width.px]="nodeWidth"
+              [style.height.px]="nodeHeight"
+              (cdkDragMoved)="onNodeDragMoved($event, i)"
+              (cdkDragEnded)="onNodeDragEnded($event, i)"
+            >
+              <div class="step-node-top">
+                <mat-icon class="drag-handle" cdkDragHandle inline="true" matTooltip="Kéo để di chuyển">drag_indicator</mat-icon>
+                <span class="method-chip" [attr.data-method]="p.step.method">{{ p.step.method }}</span>
+                <span class="step-node-name" (click)="openStepPanel(i)">{{ p.step.name || ('Step ' + p.step.stepOrder + ' (chưa đặt tên)') }}</span>
+              </div>
+              <code class="step-node-url" (click)="openStepPanel(i)">{{ p.step.urlPattern }}</code>
+              <div class="step-node-badges" (click)="openStepPanel(i)">
+                <span class="mini-badge mini-badge--muted">Step {{ p.step.stepOrder }}</span>
+                @if (p.step.cacheEnabled) {
+                  <span class="mini-badge"><mat-icon inline="true">bolt</mat-icon>{{ p.step.cacheTtlSeconds }}s</span>
+                }
+                @if (p.step.forwardOriginalBody) {
+                  <span class="mini-badge"><mat-icon inline="true">call_merge</mat-icon>Body</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </mat-card>
+
+  <div class="save-bar">
+    <button mat-button type="button" (click)="cancel()">Huỷ</button>
+    <button mat-raised-button color="primary" type="button" [disabled]="saving()" (click)="save()">
+      @if (saving()) {
+        <mat-spinner diameter="18" class="btn-spinner" />
+      } @else {
+        <mat-icon>save</mat-icon>
+      }
+      Lưu
+    </button>
+  </div>
+}
+
+<!-- ============================== Panel truot ben phai ============================== -->
+<aside class="side-panel" [class.side-panel--open]="panelOpen()">
+  @if (editingStep; as edit) {
+    <div class="side-panel-header">
+      <h2>Sửa Step {{ (editingStepIndex ?? 0) + 1 }}</h2>
+      <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="side-panel-body">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tên step</mat-label>
+        <input matInput [(ngModel)]="edit.name" placeholder="vd: Auth Service - lấy thông tin user" />
+      </mat-form-field>
+
+      <div class="field-row">
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Method</mat-label>
+          <mat-select [(ngModel)]="edit.method">
+            @for (m of httpMethods; track m) {
+              <mat-option [value]="m">{{ m }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 2">
+          <mat-label>URL pattern (path tới backend)</mat-label>
+          <input matInput [(ngModel)]="edit.urlPattern" placeholder="/api/v1/users/{{ '{' }}userId{{ '}' }}" />
+        </mat-form-field>
+      </div>
+
+      @if (otherEndpoints().length > 0) {
+        <mat-form-field appearance="outline" class="full-width endpoint-picker">
+          <mat-label>Hoặc chọn nhanh 1 endpoint gateway khác</mat-label>
+          <mat-select (selectionChange)="pickEndpoint($event.value)">
+            @for (other of otherEndpoints(); track other.id) {
+              <mat-option [value]="other.id">
+                <span class="picker-method" [attr.data-method]="other.method">{{ other.method }}</span>
+                {{ other.name }} — {{ other.path }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>account_tree</mat-icon>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Upstream Service (backend đã đăng ký)</mat-label>
+        <mat-select [(ngModel)]="edit.upstreamServiceId">
+          @for (u of upstreams(); track u.id) {
+            <mat-option [value]="u.id">{{ u.name }} — {{ u.baseHost }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-slide-toggle [(ngModel)]="edit.forwardOriginalBody" class="block-toggle">
+        Forward body gốc của client
+      </mat-slide-toggle>
+
+      <div class="field-row toggle-row">
+        <mat-slide-toggle [(ngModel)]="edit.cacheEnabled">Cache Redis cho step này (chỉ GET)</mat-slide-toggle>
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>TTL (giây)</mat-label>
+          <input matInput type="number" [(ngModel)]="edit.cacheTtlSeconds" />
+        </mat-form-field>
+      </div>
+
+      <div class="field-row">
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Group (tuỳ chọn)</mat-label>
+          <input matInput [(ngModel)]="edit.group" placeholder="vd: auth" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Target (bóc vỏ field, tuỳ chọn)</mat-label>
+          <input matInput [(ngModel)]="edit.target" placeholder="vd: data" />
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Allow fields (whitelist, tuỳ chọn)</mat-label>
+        <input matInput [(ngModel)]="edit.allowFieldsText" placeholder="id, name, email" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Deny fields (blacklist, tuỳ chọn)</mat-label>
+        <input matInput [(ngModel)]="edit.denyFieldsText" placeholder="internal_debug_info" />
+      </mat-form-field>
+
+      <div class="sub-section">
+        <div class="sub-section-header">
+          <span>Đổi tên field (rename trước khi merge)</span>
+          <button mat-stroked-button type="button" (click)="addRenameEntry()">
+            <mat-icon>add</mat-icon> Thêm
+          </button>
+        </div>
+        @for (entry of edit.renameEntries; track $index; let j = $index) {
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Field gốc</mat-label>
+              <input matInput [(ngModel)]="entry.source" placeholder="id" />
+            </mat-form-field>
+            <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Field mới</mat-label>
+              <input matInput [(ngModel)]="entry.target" placeholder="user_id" />
+            </mat-form-field>
+            <button mat-icon-button type="button" color="warn" (click)="removeRenameEntry(j)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="side-panel-footer">
+      <button mat-button type="button" color="warn" (click)="removeStepFromPanel()">
+        <mat-icon>delete</mat-icon> Xoá Step
+      </button>
+      <span class="spacer"></span>
+      <button mat-button type="button" (click)="closePanel()">Đóng</button>
+      <button mat-flat-button color="primary" type="button" (click)="applyStepPanel()">Áp dụng</button>
+    </div>
+  }
+
+  @if (editingMapping; as m) {
+    <div class="side-panel-header">
+      <h2>{{ editingMappingIndex === null ? 'Field Mapping mới' : 'Sửa Field Mapping' }}</h2>
+      <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="side-panel-body">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nguồn dữ liệu</mat-label>
+        <mat-select [(ngModel)]="m.sourceType">
+          @for (t of sourceTypes; track t) {
+            <mat-option [value]="t">
+              {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : 'Gộp mảng (response step trước)' }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (mappingNeedsSourceStep()) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Step nguồn</mat-label>
+          <mat-select [(ngModel)]="m.sourceStepOrder">
+            @for (o of availableStepOrders; track o) {
+              <mat-option [value]="o">Step {{ o }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      @if (mappingUsesSourceField()) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ m.sourceType === 'REQUEST_BODY' ? 'Field trong body client' : 'Field trong response' }}</mat-label>
+          <input matInput [(ngModel)]="m.sourceField" placeholder="vd: telecomServiceId hoặc data.id" />
+        </mat-form-field>
+      }
+
+      @if (mappingUsesArrayAggregate()) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Đường dẫn tới mảng</mat-label>
+          <input matInput [(ngModel)]="m.sourceArrayField" placeholder="vd: data" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Field lấy từ mỗi phần tử</mat-label>
+          <input matInput [(ngModel)]="m.sourceElementField" placeholder="vd: code" />
+        </mat-form-field>
+      }
+
+      <mat-icon class="arrow-icon center-arrow">trending_flat</mat-icon>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Step đích</mat-label>
+        <mat-select [(ngModel)]="m.targetStepOrder">
+          @for (o of availableStepOrders; track o) {
+            <mat-option [value]="o">Step {{ o }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Bơm vào</mat-label>
+        <mat-select [(ngModel)]="m.targetType">
+          @for (t of mappingTargetTypes; track t) {
+            <mat-option [value]="t">{{ t }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tên param/token/header/field đích</mat-label>
+        <input matInput [(ngModel)]="m.targetParamName" placeholder="userId" />
+      </mat-form-field>
+    </div>
+    <div class="side-panel-footer">
+      @if (editingMappingIndex !== null) {
+        <button mat-button type="button" color="warn" (click)="removeMappingFromPanel()">
+          <mat-icon>delete</mat-icon> Xoá
+        </button>
+      }
+      <span class="spacer"></span>
+      <button mat-button type="button" (click)="closePanel()">Đóng</button>
+      <button mat-flat-button color="primary" type="button" (click)="applyMappingPanel()">Áp dụng</button>
+    </div>
+  }
+</aside>

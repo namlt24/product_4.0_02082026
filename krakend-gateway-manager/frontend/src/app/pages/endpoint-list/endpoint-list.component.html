@@ -13,6 +13,10 @@
       <mat-icon>account_tree</mat-icon>
       Sơ đồ phụ thuộc
     </a>
+    <a mat-stroked-button routerLink="/endpoints/new/canvas">
+      <mat-icon>dashboard_customize</mat-icon>
+      Canvas mới
+    </a>
     <button mat-flat-button color="primary" [disabled]="deploying()" (click)="validateAndReload()" class="deploy-btn">
       @if (deploying()) {
         <mat-spinner diameter="16" class="btn-spinner" />
@@ -74,6 +78,10 @@
       <a mat-flat-button color="primary" routerLink="/endpoints/new">
         <mat-icon>add</mat-icon>
         Tạo Endpoint mới
+      </a>
+      <a mat-stroked-button routerLink="/endpoints/new/canvas">
+        <mat-icon>dashboard_customize</mat-icon>
+        Tạo bằng Canvas
       </a>
     </div>
   } @else {
@@ -155,6 +163,9 @@
             </button>
             <a mat-icon-button matTooltip="Khai báo endpoint kéo thả" [routerLink]="['/endpoints', ep.id, 'mapping-order']">
               <mat-icon>swap_vert</mat-icon>
+            </a>
+            <a mat-icon-button matTooltip="Sửa bằng Canvas" [routerLink]="['/endpoints', ep.id, 'canvas']">
+              <mat-icon>dashboard_customize</mat-icon>
             </a>
             <button mat-icon-button matTooltip="Xoá" class="danger-icon-btn" (click)="remove(ep)">
               <mat-icon>delete_outline</mat-icon>

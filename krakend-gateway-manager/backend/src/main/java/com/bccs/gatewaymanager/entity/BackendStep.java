@@ -138,4 +138,17 @@ public class BackendStep {
     @Column(name = "target_field")
     @Builder.Default
     private Map<String, String> fieldRenameMapping = new HashMap<>();
+
+    /**
+     * Vi tri X/Y tren canvas "khai bao endpoint keo tha" (trang endpoint-canvas) -
+     * null = chua tung duoc keo tha thu cong, frontend tu suy auto-layout theo
+     * stepOrder. Nullable, KHONG can @ColumnDefault (khac cacheEnabled/cacheTtlSeconds
+     * o tren - 2 cot nay KHONG NOT NULL nen Hibernate ALTER TABLE them cot vao bang
+     * da co du lieu luon an toan, khong can gia tri mac dinh).
+     */
+    @Column(name = "canvas_x")
+    private Integer canvasX;
+
+    @Column(name = "canvas_y")
+    private Integer canvasY;
 }

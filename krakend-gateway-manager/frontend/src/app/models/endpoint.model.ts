@@ -51,6 +51,9 @@ export interface BackendStep {
   allowFields: string[];
   denyFields: string[];
   fieldRenameMapping: FieldRenameMap;
+  /** Vi tri tren trang "Canvas mới" (kéo thả trực quan) - null = chưa từng kéo thả, FE tự suy auto-layout theo stepOrder. */
+  canvasX?: number | null;
+  canvasY?: number | null;
 }
 
 /** Khai bao "trich xuat 1 gia tri -> bom vao step Y". Xem FieldMappingSourceType cho y nghia cac field con lai. */
@@ -174,6 +177,8 @@ export function emptyStep(stepOrder: number): BackendStep {
     allowFields: [],
     denyFields: [],
     fieldRenameMapping: {},
+    canvasX: null,
+    canvasY: null,
   };
 }
 

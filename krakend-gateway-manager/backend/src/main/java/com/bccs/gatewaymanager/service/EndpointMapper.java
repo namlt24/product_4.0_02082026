@@ -71,6 +71,8 @@ public class EndpointMapper {
                 .allowFields(s.allowFields() == null ? List.of() : s.allowFields())
                 .denyFields(s.denyFields() == null ? List.of() : s.denyFields())
                 .fieldRenameMapping(s.fieldRenameMapping() == null ? new java.util.HashMap<>() : s.fieldRenameMapping())
+                .canvasX(s.canvasX())
+                .canvasY(s.canvasY())
                 .build()).toList();
         entity.replaceSteps(steps);
     }
@@ -110,7 +112,8 @@ public class EndpointMapper {
                         // serialize response SAU KHI @Transactional cua service da ket thuc (session
                         // da dong), no se nem LazyInitializationException.
                         new ArrayList<>(s.getAllowFields()), new ArrayList<>(s.getDenyFields()),
-                        new HashMap<>(s.getFieldRenameMapping())))
+                        new HashMap<>(s.getFieldRenameMapping()),
+                        s.getCanvasX(), s.getCanvasY()))
                 .toList();
 
         List<FieldMappingDto> mappings = entity.getMappings().stream()

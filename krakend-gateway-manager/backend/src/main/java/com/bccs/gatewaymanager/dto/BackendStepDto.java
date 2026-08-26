@@ -44,7 +44,12 @@ public record BackendStepDto(
 
         List<String> denyFields,
 
-        Map<String, String> fieldRenameMapping
+        Map<String, String> fieldRenameMapping,
+
+        /** Vi tri tren canvas "khai bao endpoint keo tha" - null = chua duoc keo tha, FE tu suy auto-layout theo stepOrder. */
+        Integer canvasX,
+
+        Integer canvasY
 ) {
     public BackendStepDto {
         if (cacheTtlSeconds <= 0) {

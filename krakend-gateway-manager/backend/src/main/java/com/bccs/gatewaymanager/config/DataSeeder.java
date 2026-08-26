@@ -60,7 +60,8 @@ public class DataSeeder implements CommandLineRunner {
                 null,                         // target: khong can boc vo, response Auth Service khong bi wrap
                 List.of("id", "name", "email"), // allow: chi giu 3 field can thiet
                 List.of(),
-                Map.of("id", "user_id")        // rename "id" -> "user_id" cho ro nghia truoc khi chain
+                Map.of("id", "user_id"),       // rename "id" -> "user_id" cho ro nghia truoc khi chain
+                null, null                     // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
         );
 
         // Step 2: goi Order Service, dung user_id trich xuat tu step 1 lam query param
@@ -74,7 +75,8 @@ public class DataSeeder implements CommandLineRunner {
                 null,                         // target: khong can boc vo
                 List.of(),
                 List.of("internal_debug_info"), // deny: loai field noi bo truoc khi tra ve client
-                Map.of()
+                Map.of(),
+                null, null                     // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
         );
 
         // Chain: field "user_id" tu response step 1 -> query param "userId" cua step 2

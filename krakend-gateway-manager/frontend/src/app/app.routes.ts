@@ -32,6 +32,18 @@ export const routes: Routes = [
       import('./pages/mapping-order/mapping-order.component').then((m) => m.MappingOrderComponent),
   },
   {
+    path: 'endpoints/new/canvas',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/endpoint-canvas/endpoint-canvas.component').then((m) => m.EndpointCanvasComponent),
+  },
+  {
+    path: 'endpoints/:id/canvas',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/endpoint-canvas/endpoint-canvas.component').then((m) => m.EndpointCanvasComponent),
+  },
+  {
     path: 'dependency-graph',
     canActivate: [authGuard],
     loadComponent: () =>

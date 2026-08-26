@@ -56,12 +56,6 @@ export const routes: Routes = [
       import('./pages/endpoint-api-details/endpoint-api-details.component').then((m) => m.EndpointApiDetailsComponent),
   },
   {
-    path: 'dependency-graph',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./pages/dependency-graph/dependency-graph.component').then((m) => m.DependencyGraphComponent),
-  },
-  {
     path: 'upstreams',
     canActivate: [authGuard],
     loadComponent: () =>

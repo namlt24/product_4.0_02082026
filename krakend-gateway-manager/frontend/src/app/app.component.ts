@@ -43,10 +43,6 @@ import { AuthService } from './services/auth.service';
               <mat-icon inline="true">dns</mat-icon>
               Upstream Services
             </a>
-            <a class="nav-link" routerLink="/dependency-graph" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
-              <mat-icon inline="true">account_tree</mat-icon>
-              Sơ đồ phụ thuộc
-            </a>
           </nav>
 
           <span class="spacer"></span>

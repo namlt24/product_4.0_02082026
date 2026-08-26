@@ -57,7 +57,7 @@ krakend-gateway-manager/
 └── frontend/                 # Angular 18 standalone
     └── src/app/pages/
         ├── endpoint-list/, endpoint-form/   # khai báo Endpoint + Field Mapping
-        ├── upstream-services/                # đăng ký backend thật (host/timeout/resilience/cache)
+        ├── upstream-services/                # đăng ký backend thật (host/timeout/resilience)
         └── dependency-graph/                 # sơ đồ endpoint nào gọi endpoint nào
 ```
 
@@ -80,15 +80,17 @@ docker compose up -d --build
 
 Mỗi backend thật (`organization-resource-service`, `product-catalog-service`...)
 đăng ký 1 lần qua trang **Upstream Services**: `baseHost`, timeout, circuit
-breaker (bật/ngưỡng lỗi), retry (chỉ nên bật nếu backend chỉ đọc dữ liệu),
-cache Redis (chỉ áp dụng cho GET).
+breaker (bật/ngưỡng lỗi), retry (chỉ nên bật nếu backend chỉ đọc dữ liệu).
+Cache Redis **không** cấu hình ở đây — xem `BackendStep` bên dưới.
 
 ### `EndpointConfig` → nhiều `BackendStep` + nhiều `FieldMapping`
 
 - Mỗi `BackendStep` = 1 lần gọi ra `UpstreamService` đã đăng ký, theo thứ tự
   `stepOrder`. `target` để "bóc vỏ" field (vd `data` — chuẩn `StandardResponse`
   của BCCS). `forwardOriginalBody` = lấy nguyên body client làm nền cho body
-  gửi đi step này.
+  gửi đi step này. `cacheEnabled`/`cacheTtlSeconds` (chỉ GET) cache **riêng
+  cho step này** — 1 Upstream có thể bị nhiều step gọi tới nhiều hàm/path
+  khác nhau, không phải hàm nào cũng nên cache.
 - Mỗi `FieldMapping` = "lấy 1 giá trị từ đâu, bơm vào đâu":
   - **Nguồn** (`sourceType`): `STEP_RESPONSE` (response step trước, hỗ trợ
     dot-notation lồng nhau vd `shop.channelTypeId`), `REQUEST_BODY` (đọc thẳng
@@ -131,9 +133,11 @@ Step 3: product-catalog-service /v1/product/checkProductAttByRuleType
 
 ## 6. Resilience & hiệu năng
 
-- **Redis cache-aside**: chỉ cache GET khi `UpstreamService.cacheEnabled=true`,
-  key = tên Upstream + URL + query đã resolve, TTL jitter ±15% chống cache
-  stampede.
+- **Redis cache-aside**: chỉ cache GET khi `BackendStep.cacheEnabled=true`
+  (cấu hình riêng theo từng step, không phải theo Upstream — 1 Upstream có
+  thể bị nhiều step gọi tới nhiều hàm khác nhau), key = tên Upstream + URL +
+  query đã resolve, TTL (từ `BackendStep.cacheTtlSeconds`) jitter ±15% chống
+  cache stampede.
 - **Resilience4j** (circuit breaker/retry/bulkhead): tạo động theo **tên**
   từng Upstream Service tại runtime (không dùng annotation tĩnh vì backend
   đích được chọn động theo cấu hình DB). Xem trạng thái qua

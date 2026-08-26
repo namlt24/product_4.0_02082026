@@ -41,18 +41,21 @@ public class DataSeeder implements CommandLineRunner {
 
         UpstreamServiceDto authUpstream = upstreamServiceService.create(new UpstreamServiceDto(
                 null, "auth-service", "Demo - dich vu xac thuc/user",
-                "http://auth-service:8081", 1000, 3000, true, 50, true, false, 300, null, null));
+                "http://auth-service:8081", 1000, 3000, true, 50, true, null, null));
 
         UpstreamServiceDto orderUpstream = upstreamServiceService.create(new UpstreamServiceDto(
                 null, "order-service", "Demo - dich vu don hang",
-                "http://order-service:8082", 1000, 3000, true, 50, true, false, 300, null, null));
+                "http://order-service:8082", 1000, 3000, true, 50, true, null, null));
 
-        // Step 1: goi Auth Service lay thong tin user hien tai -> co field "id"
+        // Step 1: goi Auth Service lay thong tin user hien tai -> co field "id".
+        // Demo cache Redis BAT o day (TTL 60s) - thong tin user it doi trong thoi gian ngan
+        // nen hop ly de cache; step 2 (don hang) giu TAT vi du lieu doi lien tuc hon.
         BackendStepDto step1 = new BackendStepDto(
                 null, 1, "Auth Service - lay thong tin user", GatewayMethod.GET,
                 "/api/v1/users/{userId}",
                 authUpstream.id(), authUpstream.name(),
                 false,
+                true, 60,                     // cacheEnabled, cacheTtlSeconds - demo cache theo tung step
                 "auth",                       // group: tranh dam field khi merge voi step 2
                 null,                         // target: khong can boc vo, response Auth Service khong bi wrap
                 List.of("id", "name", "email"), // allow: chi giu 3 field can thiet
@@ -66,6 +69,7 @@ public class DataSeeder implements CommandLineRunner {
                 "/api/v1/orders",
                 orderUpstream.id(), orderUpstream.name(),
                 false,
+                false, 300,                   // cacheEnabled, cacheTtlSeconds - tat vi don hang doi lien tuc
                 null,
                 null,                         // target: khong can boc vo
                 List.of(),

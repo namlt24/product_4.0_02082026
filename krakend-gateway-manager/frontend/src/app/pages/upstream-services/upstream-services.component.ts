@@ -16,8 +16,11 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
 
 /**
  * Man hinh dang ky Upstream Service (backend that) - dung 1 lan, tai su dung
- * o nhieu BackendStep. Day la noi dat host/timeout/circuit-breaker/cache cho
- * tung backend, thay vi go tay tren tung step nhu truoc day.
+ * o nhieu BackendStep. Day la noi dat host/timeout/circuit-breaker cho tung
+ * backend, thay vi go tay tren tung step nhu truoc day. Cache Redis KHONG con
+ * cau hinh o day - xem toggle "Cache Redis cho step nay" trong form tung
+ * BackendStep (endpoint-form.component.html), vi khong phai ham nao goi toi
+ * Upstream nay cung nen cache.
  */
 @Component({
   selector: 'app-upstream-services',
@@ -40,7 +43,7 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
   styleUrl: './upstream-services.component.scss',
 })
 export class UpstreamServicesComponent implements OnInit {
-  readonly displayedColumns = ['name', 'baseHost', 'timeouts', 'resilience', 'cache', 'actions'];
+  readonly displayedColumns = ['name', 'baseHost', 'timeouts', 'resilience', 'actions'];
   readonly upstreams = signal<UpstreamService[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -71,8 +74,6 @@ export class UpstreamServicesComponent implements OnInit {
       circuitBreakerEnabled: [u.circuitBreakerEnabled],
       failureRateThreshold: [u.failureRateThreshold, [Validators.min(1), Validators.max(100)]],
       retryEnabled: [u.retryEnabled],
-      cacheEnabled: [u.cacheEnabled],
-      cacheTtlSeconds: [u.cacheTtlSeconds, [Validators.min(1)]],
     });
   }
 

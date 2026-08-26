@@ -3,6 +3,7 @@ package com.bccs.gatewaymanager.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +61,7 @@ public class BackendStep {
 
     /**
      * Backend that duoc goi o step nay - dang ky 1 lan qua UpstreamService,
-     * mang theo host/timeout/circuit-breaker/cache. Thay the hoan toan danh
+     * mang theo host/timeout/circuit-breaker. Thay the hoan toan danh
      * sach "hosts" go tay truoc day.
      */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -75,6 +76,28 @@ public class BackendStep {
     @Builder.Default
     @Column(name = "forward_original_body", nullable = false)
     private boolean forwardOriginalBody = false;
+
+    /**
+     * Cache Redis (cache-aside) cho step nay - CHI ap dung khi method=GET (xem
+     * UpstreamHttpExecutor.call()). Dat o cap step (khong phai cap UpstreamService)
+     * vi 1 Upstream bi nhieu step goi toi nhieu ham/path khac nhau, khong phai
+     * ham nao cung nen cache (vi du ham tra du lieu doi lien tuc khong nen cache
+     * du dung chung Upstream voi 1 ham khac tra du lieu tinh).
+     */
+    @Builder.Default
+    @Column(name = "cache_enabled", nullable = false)
+    @ColumnDefault("false")
+    private boolean cacheEnabled = false;
+
+    /**
+     * TTL cache (giay), chi co y nghia khi cacheEnabled=true. @ColumnDefault de
+     * Hibernate sinh DDL kem DEFAULT khi ALTER TABLE them cot vao bang da co du
+     * lieu (Oracle tu choi them cot NOT NULL khong DEFAULT vao bang khong rong).
+     */
+    @Builder.Default
+    @Column(name = "cache_ttl_seconds", nullable = false)
+    @ColumnDefault("300")
+    private int cacheTtlSeconds = 300;
 
     /**
      * Ten field can "boc vo" (unwrap) trong response truoc khi ap dung mapping/allow/deny/group

@@ -1,6 +1,7 @@
 package com.bccs.gatewaymanager.dto;
 
 import com.bccs.gatewaymanager.entity.GatewayMethod;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,6 +30,11 @@ public record BackendStepDto(
         /** true = lay nguyen body goc cua client lam nen truoc khi ap BODY_FIELD mapping. */
         boolean forwardOriginalBody,
 
+        /** Cache Redis rieng cho step nay (chi GET) - xem BackendStep.cacheEnabled. */
+        boolean cacheEnabled,
+
+        @Min(1) @Max(86400) int cacheTtlSeconds,
+
         String group,
 
         /** Ten field can "boc vo" response truoc khi mapping/allow/deny/group, vi du "data" (StandardResponse). */
@@ -40,4 +46,9 @@ public record BackendStepDto(
 
         Map<String, String> fieldRenameMapping
 ) {
+    public BackendStepDto {
+        if (cacheTtlSeconds <= 0) {
+            cacheTtlSeconds = 300;
+        }
+    }
 }

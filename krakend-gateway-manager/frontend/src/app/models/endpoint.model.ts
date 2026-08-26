@@ -26,8 +26,6 @@ export interface UpstreamService {
   circuitBreakerEnabled: boolean;
   failureRateThreshold: number;
   retryEnabled: boolean;
-  cacheEnabled: boolean;
-  cacheTtlSeconds: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -44,6 +42,9 @@ export interface BackendStep {
   upstreamServiceName?: string | null;
   /** true = lay nguyen body goc cua client lam nen truoc khi ap BODY_FIELD mapping. */
   forwardOriginalBody: boolean;
+  /** Cache Redis rieng cho step nay (chi GET) - moi Upstream bi nhieu step goi toi nhieu ham khac nhau, khong phai ham nao cung nen cache. */
+  cacheEnabled: boolean;
+  cacheTtlSeconds: number;
   group?: string | null;
   /** Ten field can "boc vo" response truoc khi mapping/allow/deny, vi du "data" (StandardResponse cua BCCS). */
   target?: string | null;
@@ -164,6 +165,8 @@ export function emptyStep(stepOrder: number): BackendStep {
     upstreamServiceId: '',
     upstreamServiceName: '',
     forwardOriginalBody: false,
+    cacheEnabled: false,
+    cacheTtlSeconds: 300,
     group: '',
     target: '',
     allowFields: [],
@@ -195,7 +198,5 @@ export function emptyUpstreamService(): UpstreamService {
     circuitBreakerEnabled: true,
     failureRateThreshold: 50,
     retryEnabled: true,
-    cacheEnabled: false,
-    cacheTtlSeconds: 300,
   };
 }

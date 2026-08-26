@@ -86,7 +86,8 @@ public class CompositeOrchestratorEngine {
         JsonNode body = buildBody(step, mappingsForStep, ctx);
 
         HttpMethod httpMethod = HttpMethod.valueOf(step.method().name());
-        JsonNode rawResponse = upstreamHttpExecutor.call(upstream, httpMethod, resolvedUrl, headers, body);
+        JsonNode rawResponse = upstreamHttpExecutor.call(upstream, httpMethod, resolvedUrl, headers, body,
+                step.cacheEnabled(), step.cacheTtlSeconds());
 
         JsonNode unwrapped = (step.target() == null || step.target().isBlank())
                 ? rawResponse

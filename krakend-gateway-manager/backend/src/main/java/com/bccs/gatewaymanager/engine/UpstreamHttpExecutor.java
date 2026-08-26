@@ -36,10 +36,12 @@ import java.util.function.Supplier;
 
 /**
  * Thuc su thuc hien 1 lan goi HTTP ra Upstream, boc trong Redis cache-aside
- * (chi cho GET + upstream.cacheEnabled) va Resilience4j CircuitBreaker/Retry/
- * Bulkhead - tat ca dat TEN THEO upstream.getName(), tao dong tai lan goi dau
- * (khong the dung @CircuitBreaker/@Cacheable tinh vi backend duoc chon dong
- * theo cau hinh DB, khong phai theo chu ky method co dinh).
+ * (chi cho GET + cacheEnabled cua tung BackendStep - xem tham so call(), KHONG
+ * phai cua UpstreamService, vi 1 Upstream bi nhieu step goi toi nhieu ham/path
+ * khac nhau, khong phai ham nao cung nen cache) va Resilience4j CircuitBreaker/
+ * Retry/Bulkhead - rieng 3 cai nay van dat TEN THEO upstream.getName(), tao
+ * dong tai lan goi dau (khong the dung @CircuitBreaker/@Cacheable tinh vi
+ * backend duoc chon dong theo cau hinh DB, khong phai theo chu ky method co dinh).
  *
  * Thu tu boc decorator (dung khuyen nghi Resilience4j): Bulkhead trong cung,
  * CircuitBreaker boc ngoai Bulkhead, Retry boc ngoai cung - de moi lan retry
@@ -59,8 +61,8 @@ public class UpstreamHttpExecutor {
     private final Map<String, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
 
     public JsonNode call(UpstreamService upstream, HttpMethod method, String resolvedUrl,
-                          HttpHeaders headers, JsonNode body) {
-        boolean cacheable = upstream.isCacheEnabled() && method == HttpMethod.GET;
+                          HttpHeaders headers, JsonNode body, boolean cacheEnabled, int cacheTtlSeconds) {
+        boolean cacheable = cacheEnabled && method == HttpMethod.GET;
         String cacheKey = cacheable ? GatewayCacheService.buildKey(upstream.getName(), method.name(), resolvedUrl) : null;
 
         if (cacheable) {
@@ -87,7 +89,7 @@ public class UpstreamHttpExecutor {
         JsonNode result = decorated.get();
 
         if (cacheable) {
-            cacheService.put(cacheKey, result.toString(), upstream.getCacheTtlSeconds());
+            cacheService.put(cacheKey, result.toString(), cacheTtlSeconds);
         }
         return result;
     }

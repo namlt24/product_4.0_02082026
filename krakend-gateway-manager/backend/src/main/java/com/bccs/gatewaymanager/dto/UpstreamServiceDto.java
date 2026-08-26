@@ -28,10 +28,6 @@ public record UpstreamServiceDto(
 
         boolean retryEnabled,
 
-        boolean cacheEnabled,
-
-        @Min(1) @Max(86400) int cacheTtlSeconds,
-
         Instant createdAt,
 
         Instant updatedAt
@@ -40,6 +36,5 @@ public record UpstreamServiceDto(
         if (connectTimeoutMs <= 0) connectTimeoutMs = 1000;
         if (readTimeoutMs <= 0) readTimeoutMs = 3000;
         if (failureRateThreshold <= 0) failureRateThreshold = 50;
-        if (cacheTtlSeconds <= 0) cacheTtlSeconds = 300;
     }
 }

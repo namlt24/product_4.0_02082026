@@ -83,7 +83,7 @@ class UpstreamServiceServiceTest {
         lenient().when(repository.existsByNameAndIdNot(any(), any())).thenReturn(false);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         UpstreamServiceDto dto = new UpstreamServiceDto(null, "old-name", null, "http://x:8080",
-                5000, 5000, true, 60, true, true, 120, Instant.now(), Instant.now());
+                5000, 5000, true, 60, true, Instant.now(), Instant.now());
 
         service.update("up-1", dto);
 
@@ -96,7 +96,7 @@ class UpstreamServiceServiceTest {
         lenient().when(repository.existsByNameAndIdNot(any(), any())).thenReturn(false);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         UpstreamServiceDto dto = new UpstreamServiceDto(null, "new-name", null, "http://x:8080",
-                5000, 5000, true, 60, true, true, 120, Instant.now(), Instant.now());
+                5000, 5000, true, 60, true, Instant.now(), Instant.now());
 
         service.update("up-1", dto);
 

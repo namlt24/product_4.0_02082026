@@ -64,6 +64,8 @@ public class EndpointMapper {
                 .urlPattern(s.urlPattern())
                 .upstreamService(findUpstreamOrThrow(s.upstreamServiceId()))
                 .forwardOriginalBody(s.forwardOriginalBody())
+                .cacheEnabled(s.cacheEnabled())
+                .cacheTtlSeconds(s.cacheTtlSeconds())
                 .group(s.group())
                 .target(s.target())
                 .allowFields(s.allowFields() == null ? List.of() : s.allowFields())
@@ -99,7 +101,8 @@ public class EndpointMapper {
                 .map(s -> new BackendStepDto(
                         s.getId(), s.getStepOrder(), s.getName(), s.getMethod(), s.getUrlPattern(),
                         s.getUpstreamService().getId(), s.getUpstreamService().getName(),
-                        s.isForwardOriginalBody(), s.getGroup(), s.getTarget(),
+                        s.isForwardOriginalBody(), s.isCacheEnabled(), s.getCacheTtlSeconds(),
+                        s.getGroup(), s.getTarget(),
                         // Cac @ElementCollection la LAZY - phai materialize (copy) ra collection
                         // Java thuong NGAY TRONG luc con transaction, neu khong DTO se giu tham
                         // chieu toi PersistentBag/PersistentMap con song cua Hibernate; khi Jackson

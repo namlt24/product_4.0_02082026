@@ -204,6 +204,20 @@
   &[data-method='PATCH'] { background: #7c3aed; }
 }
 
+// Hang toggle + field TTL nho ben canh (vi du cache Redis cua 1 step) - dung
+// chung layout voi trang Upstream Services (upstream-services.component.scss)
+// nhung phai khai bao lai o day vi Angular scope style theo tung component.
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.small-field {
+  flex: 0 1 180px;
+}
+
 .mapping-row {
   display: flex;
   gap: 10px;

@@ -12,8 +12,11 @@ import java.util.UUID;
  * Dang ky 1 lan cho 1 backend that (vi du "product-catalog-service"). Cac
  * BackendStep tham chieu toi day thay vi tu go host/timeout rieng le - tranh
  * lap lai cau hinh tren tung step, va la noi dat ten cho Resilience4j
- * CircuitBreaker/Retry/Bulkhead + namespace cache Redis (dung chung 1 ten =
- * upstream.name cho ca 3 - xem CompositeOrchestratorEngine).
+ * CircuitBreaker/Retry/Bulkhead (dung upstream.name lam ten instance - xem
+ * UpstreamHttpExecutor). Cache Redis KHONG con cau hinh o day - moi Upstream
+ * bi nhieu BackendStep goi toi nhieu ham/path khac nhau, khong phai ham nao
+ * cung nen cache, nen cache duoc chuyen xuong tung BackendStep (xem
+ * BackendStep.cacheEnabled/cacheTtlSeconds).
  */
 @Entity
 @Table(name = "upstream_service", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
@@ -63,14 +66,6 @@ public class UpstreamService {
     @Builder.Default
     @Column(name = "retry_enabled", nullable = false)
     private boolean retryEnabled = true;
-
-    @Builder.Default
-    @Column(name = "cache_enabled", nullable = false)
-    private boolean cacheEnabled = false;
-
-    @Builder.Default
-    @Column(name = "cache_ttl_seconds", nullable = false)
-    private int cacheTtlSeconds = 300;
 
     @CreationTimestamp
     @Column(updatable = false)

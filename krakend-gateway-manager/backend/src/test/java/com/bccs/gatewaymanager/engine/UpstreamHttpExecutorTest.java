@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
@@ -58,7 +59,6 @@ class UpstreamHttpExecutorTest {
                 .readTimeoutMs(1000)
                 .circuitBreakerEnabled(false)
                 .retryEnabled(retryEnabled)
-                .cacheEnabled(false)
                 .build();
     }
 
@@ -104,7 +104,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc", port), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class)
                 .satisfies(e -> {
                     UpstreamHttpExecutor.UpstreamHttpErrorException ex = (UpstreamHttpExecutor.UpstreamHttpErrorException) e;
@@ -132,7 +132,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-4xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         assertThat(hitCount.get()).isEqualTo(1);
@@ -153,7 +153,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-5xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         // maxAttempts(3) trong retryFor() - 5xx co the la loi tam thoi nen VAN duoc retry.
@@ -168,7 +168,71 @@ class UpstreamHttpExecutorTest {
         } // socket dong ngay sau khi lay port trong - dam bao khong co gi lang nghe tai day
 
         assertThatThrownBy(() -> executor.call(upstream("svc", closedPort), HttpMethod.GET,
-                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null))
+                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
+    }
+
+    // ---- Cache Redis gio cau hinh theo tung BackendStep (tham so cacheEnabled/cacheTtlSeconds
+    // cua call()), khong con theo UpstreamService - test xac nhan lan goi thu 2 cung URL voi
+    // cacheEnabled=true KHONG cham toi HttpServer that (lay tu cache), con cacheEnabled=false
+    // thi lan nao cung goi that. ----
+
+    @Test
+    void call_cacheEnabled_secondCallWithSameUrlHitsCacheNotServer() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            hitCount.incrementAndGet();
+            byte[] body = "{\"value\":1}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+
+        // GatewayCacheService that su luu/tra gia tri (khong mock rong nhu field "executor" dung
+        // chung o tren) - dung 1 map in-memory don gian thay Redis that cho du test nay.
+        var fakeCache = new java.util.concurrent.ConcurrentHashMap<String, String>();
+        GatewayCacheService cacheService = Mockito.mock(GatewayCacheService.class);
+        Mockito.when(cacheService.get(Mockito.anyString()))
+                .thenAnswer(inv -> java.util.Optional.ofNullable(fakeCache.get(inv.getArgument(0))));
+        Mockito.doAnswer(inv -> {
+            fakeCache.put(inv.getArgument(0), inv.getArgument(1));
+            return null;
+        }).when(cacheService).put(Mockito.anyString(), Mockito.anyString(), Mockito.anyInt());
+        UpstreamHttpExecutor cachingExecutor = new UpstreamHttpExecutor(
+                circuitBreakerRegistry, retryRegistry, bulkheadRegistry, cacheService, new JsonMapper());
+
+        UpstreamService up = upstream("svc-cache", port);
+        String url = "http://localhost:" + port + "/x";
+
+        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60);
+        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60);
+
+        assertThat(first.get("value").asLong()).isEqualTo(1L);
+        assertThat(second.get("value").asLong()).isEqualTo(1L);
+        assertThat(hitCount.get()).isEqualTo(1); // lan 2 phai lay tu cache, khong cham server that
+    }
+
+    @Test
+    void call_cacheDisabled_everyCallHitsServer() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            hitCount.incrementAndGet();
+            byte[] body = "{\"value\":1}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        String url = "http://localhost:" + port + "/x";
+
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300);
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300);
+
+        assertThat(hitCount.get()).isEqualTo(2); // cacheEnabled=false - khong lan nao duoc cache
     }
 }

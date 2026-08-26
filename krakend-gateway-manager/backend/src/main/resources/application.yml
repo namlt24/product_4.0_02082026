@@ -1,0 +1,80 @@
+server:
+  # Backend gio la CA control plane (/api/**) LAN data plane (traffic that qua
+  # DynamicDispatcherController) tren CUNG 1 port - khong con container KrakenD
+  # rieng nua. Giu 8080 (tung la port KrakenD) de app goi vao khong doi URL.
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: krakend-gateway-manager
+  datasource:
+    # Dung CHUNG 1 Oracle instance + CHUNG schema voi cac service BCCS (khong con
+    # Postgres rieng nua) - theo dung lua chon cua nguoi dung. Bang cua Gateway
+    # Manager (endpoint_config, upstream_service...) nam CHUNG schema BCCS_PRODUCT,
+    # da xac nhan khong trung ten voi bat ky bang nghiep vu that nao (xem
+    # db-local/init/01_schema.sql) truoc khi chon huong nay.
+    url: jdbc:oracle:thin:@//${DB_HOST:host.docker.internal}:${DB_PORT:1521}/${DB_NAME:FREEPDB1}
+    username: ${DB_USER:BCCS_PRODUCT}
+    password: ${DB_PASSWORD:BCCS_PRODUCT123}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    # Khong can khai database-platform ro rang - Hibernate 6 tu nhan dien OracleDialect
+    # tu chinh driver JDBC (khai them se bi WARN deprecation).
+    hibernate:
+      # dev/demo: tu dong tao/cap nhat schema. Production nen chuyen sang Flyway/Liquibase.
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  jackson:
+    default-property-inclusion: non_null
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers,circuitbreakerevents
+
+# Cau hinh rieng cua Gateway Manager
+gatewaymanager:
+  gateway:
+    self-host-aliases: localhost,127.0.0.1,gateway-manager-backend
+
+# Resilience4j: dependency moi, dang ky dong theo TEN Upstream Service tai
+# runtime (xem UpstreamHttpExecutor) - cac gia tri default duoi day ap dung
+# khi mot Upstream chua co entry rieng.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 5
+  bulkhead:
+    configs:
+      default:
+        max-concurrent-calls: 20
+        max-wait-duration: 500ms
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 200ms
+
+logging:
+  level:
+    com.bccs.gatewaymanager: INFO
+    org.hibernate.SQL: WARN

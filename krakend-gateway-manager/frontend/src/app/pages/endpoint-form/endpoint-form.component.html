@@ -1,0 +1,321 @@
+<div class="page-header">
+  <a class="back-link" routerLink="/endpoints">
+    <mat-icon inline="true">arrow_back</mat-icon>
+    Endpoints
+  </a>
+  <h1 class="page-title">{{ isEditMode() ? 'Sửa Endpoint' : 'Endpoint mới' }}</h1>
+  <p class="page-subtitle">
+    Khai báo endpoint gateway, các backend step gọi tuần tự và cách chain dữ liệu giữa chúng.
+  </p>
+</div>
+
+<form [formGroup]="form" class="form-layout">
+  <div class="form-column">
+    <!-- ============================== 1. Thong tin Endpoint ============================== -->
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><span class="step-badge">1</span>Thông tin Endpoint Gateway</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="field-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Ten endpoint</mat-label>
+            <input matInput formControlName="name" placeholder="vd: User Orders (composite)" />
+          </mat-form-field>
+        </div>
+
+        <div class="field-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Mo ta</mat-label>
+            <textarea matInput formControlName="description" rows="2"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="field-row">
+          <mat-form-field appearance="outline" style="flex: 2">
+            <mat-label>Path (URL client goi)</mat-label>
+            <input matInput formControlName="path" placeholder="/v1/user-orders" />
+            <mat-hint>Phai bat dau bang "/"</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" style="flex: 1">
+            <mat-label>Method</mat-label>
+            <mat-select formControlName="method">
+              @for (m of httpMethods; track m) {
+                <mat-option [value]="m">{{ m }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" style="flex: 1">
+            <mat-label>Output encoding</mat-label>
+            <input matInput formControlName="outputEncoding" placeholder="json" />
+          </mat-form-field>
+        </div>
+
+        <mat-slide-toggle formControlName="sequential">
+          Sequential (goi tuan tu nhieu backend - bat buoc neu co &gt; 1 step va can chain du lieu)
+        </mat-slide-toggle>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ============================== 2. Backend Steps ============================== -->
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><span class="step-badge">2</span>Backend Services (Steps)</mat-card-title>
+        <mat-card-subtitle>Khai bao tung backend se duoc goi tuan tu, theo dung thu tu Step 1, Step 2, ...</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-accordion multi formArrayName="steps">
+          @for (stepGroup of stepsArray.controls; track stepGroup; let i = $index) {
+            <mat-expansion-panel [formGroupName]="i" [expanded]="true">
+              <mat-expansion-panel-header>
+                <mat-panel-title>Step {{ i + 1 }} — {{ stepGroup.get('name')?.value || '(chua dat ten)' }}</mat-panel-title>
+                <mat-panel-description>{{ stepGroup.get('method')?.value }} {{ stepGroup.get('urlPattern')?.value }}</mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <div class="field-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Ten step</mat-label>
+                  <input matInput formControlName="name" placeholder="vd: Auth Service - lay thong tin user" />
+                </mat-form-field>
+              </div>
+
+              <div class="field-row">
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Method</mat-label>
+                  <mat-select formControlName="method">
+                    @for (m of httpMethods; track m) {
+                      <mat-option [value]="m">{{ m }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" style="flex: 2">
+                  <mat-label>URL pattern (path toi backend)</mat-label>
+                  <input matInput formControlName="urlPattern" placeholder="/api/v1/users/{{ '{' }}userId{{ '}' }}" />
+                  <mat-hint>Token dang {{ '{' }}token{{ '}' }} trung ten path-param cua endpoint se duoc engine tu dong forward</mat-hint>
+                </mat-form-field>
+              </div>
+
+              @if (otherEndpoints().length > 0) {
+                <div class="field-row">
+                  <mat-form-field appearance="outline" class="full-width endpoint-picker">
+                    <mat-label>Hoặc chọn nhanh 1 endpoint gateway khác (tự điền Upstream + URL pattern)</mat-label>
+                    <mat-select (selectionChange)="pickEndpoint(i, $event.value)">
+                      @for (other of otherEndpoints(); track other.id) {
+                        <mat-option [value]="other.id">
+                          <span class="picker-method" [attr.data-method]="other.method">{{ other.method }}</span>
+                          {{ other.name }} — {{ other.path }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matPrefix>account_tree</mat-icon>
+                  </mat-form-field>
+                </div>
+              }
+
+              <div class="field-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Upstream Service (backend đã đăng ký)</mat-label>
+                  <mat-select formControlName="upstreamServiceId">
+                    @for (u of upstreams(); track u.id) {
+                      <mat-option [value]="u.id">{{ u.name }} — {{ u.baseHost }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="field-row">
+                <mat-slide-toggle formControlName="forwardOriginalBody">
+                  Forward body gốc của client (lấy nguyên body request làm nền trước khi áp Field Mapping loại
+                  "Body Field")
+                </mat-slide-toggle>
+              </div>
+
+              <div class="field-row">
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Group (namespace, tuy chon)</mat-label>
+                  <input matInput formControlName="group" placeholder="vd: auth" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Target (bóc vỏ field, tuỳ chọn)</mat-label>
+                  <input matInput formControlName="target" placeholder="vd: data (StandardResponse của BCCS)" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Allow fields (whitelist, tuỳ chọn)</mat-label>
+                  <input matInput formControlName="allowFieldsText" placeholder="id, name, email" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Deny fields (blacklist, tuỳ chọn)</mat-label>
+                  <input matInput formControlName="denyFieldsText" placeholder="internal_debug_info" />
+                </mat-form-field>
+              </div>
+
+              <div class="field-note">
+                <mat-icon inline="true">info</mat-icon>
+                <span>
+                  <strong>Target</strong> dùng khi backend bọc dữ liệu thật trong 1 field (ví dụ
+                  <code>data</code> — đúng chuẩn <code>StandardResponse</code> của BCCS). Nhập tên field đó
+                  để engine tự "bóc vỏ" trước khi áp dụng mapping/allow/deny và trước khi step sau
+                  trích xuất field qua chain.
+                </span>
+              </div>
+
+              <!-- Doi ten field truoc khi merge -->
+              <div class="sub-section">
+                <div class="sub-section-header">
+                  <span>Doi ten field (rename truoc khi merge)</span>
+                  <button mat-stroked-button type="button" (click)="addRenameEntry(i)">
+                    <mat-icon>add</mat-icon> Them
+                  </button>
+                </div>
+                @for (entry of renameEntries(i).controls; track entry; let j = $index) {
+                  <div class="field-row" [formGroup]="renameEntryGroup(i, j)">
+                    <mat-form-field appearance="outline" style="flex: 1">
+                      <mat-label>Field goc</mat-label>
+                      <input matInput formControlName="source" placeholder="id" />
+                    </mat-form-field>
+                    <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+                    <mat-form-field appearance="outline" style="flex: 1">
+                      <mat-label>Field moi</mat-label>
+                      <input matInput formControlName="target" placeholder="user_id" />
+                    </mat-form-field>
+                    <button mat-icon-button type="button" color="warn" (click)="removeRenameEntry(i, j)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                }
+              </div>
+
+              <mat-action-row>
+                <button mat-button type="button" color="warn" (click)="removeStep(i)">
+                  <mat-icon>delete</mat-icon> Xoa Step {{ i + 1 }}
+                </button>
+              </mat-action-row>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
+
+        <button mat-stroked-button type="button" class="add-step-btn" (click)="addStep()">
+          <mat-icon>add</mat-icon> Them Backend Step
+        </button>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ============================== 3. Field Mapping ============================== -->
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><span class="step-badge">3</span>Field Mapping (trích xuất giá trị → bơm vào step)</mat-card-title>
+        <mat-card-subtitle>
+          Nguồn: response của step trước, hoặc chính body của client, hoặc gộp 1 field của từng phần tử
+          trong 1 mảng response thành mảng mới.
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content formArrayName="mappings">
+        @for (mappingGroup of mappingsArray.controls; track mappingGroup; let i = $index) {
+          <div class="mapping-row" [formGroupName]="i">
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Nguồn dữ liệu</mat-label>
+              <mat-select formControlName="sourceType">
+                @for (t of sourceTypes; track t) {
+                  <mat-option [value]="t">
+                    {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : 'Gộp mảng (response step trước)' }}
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            @if (mappingNeedsSourceStep(i)) {
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Step nguồn</mat-label>
+                <mat-select formControlName="sourceStepOrder">
+                  @for (o of availableStepOrders; track o) {
+                    <mat-option [value]="o">Step {{ o }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+
+            @if (mappingUsesSourceField(i)) {
+              <mat-form-field appearance="outline">
+                <mat-label>{{ mappingGroup.get('sourceType')?.value === 'REQUEST_BODY' ? 'Field trong body client' : 'Field trong response' }}</mat-label>
+                <input matInput formControlName="sourceField" placeholder="vd: telecomServiceId hoặc data.id" />
+              </mat-form-field>
+            }
+
+            @if (mappingUsesArrayAggregate(i)) {
+              <mat-form-field appearance="outline">
+                <mat-label>Đường dẫn tới mảng</mat-label>
+                <input matInput formControlName="sourceArrayField" placeholder="vd: data" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Field lấy từ mỗi phần tử</mat-label>
+                <input matInput formControlName="sourceElementField" placeholder="vd: code" />
+              </mat-form-field>
+            }
+
+            <mat-icon class="arrow-icon">trending_flat</mat-icon>
+
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Step đích</mat-label>
+              <mat-select formControlName="targetStepOrder">
+                @for (o of availableStepOrders; track o) {
+                  <mat-option [value]="o">Step {{ o }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Bơm vào</mat-label>
+              <mat-select formControlName="targetType">
+                @for (t of mappingTargetTypes; track t) {
+                  <mat-option [value]="t">{{ t }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tên param/token/header/field đích</mat-label>
+              <input matInput formControlName="targetParamName" placeholder="userId" />
+            </mat-form-field>
+
+            <button mat-icon-button type="button" color="warn" (click)="removeMapping(i)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+
+        @if (mappingsArray.length === 0) {
+          <p class="empty-hint">Chua co mapping nao. Neu endpoint chi co 1 step, khong can khai bao.</p>
+        }
+
+        <button mat-stroked-button type="button" (click)="addMapping()">
+          <mat-icon>add</mat-icon> Them Field Mapping
+        </button>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- ============================== Cot phai: Actions ============================== -->
+  <div class="preview-column">
+    <mat-card class="sticky-card">
+      <mat-card-content>
+        <p class="empty-hint">
+          Lưu = có hiệu lực ngay lập tức, không cần bước "Deploy" riêng nữa.
+        </p>
+      </mat-card-content>
+      <mat-card-actions align="end">
+        <button mat-button type="button" (click)="cancel()">Huy</button>
+        <button mat-raised-button color="primary" type="button" [disabled]="saving()" (click)="save()">
+          @if (saving()) {
+            <mat-spinner diameter="18" class="btn-spinner" />
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          Luu
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</form>

@@ -1,0 +1,88 @@
+# ===========================================================================
+# Gateway Manager - full stack (Dynamic Composite API Orchestrator)
+#
+# Kien truc: backend GIO CHINH LA gateway thuc thi traffic that (khong con
+# container KrakenD/Gravitee rieng nao ca - CompositeOrchestratorEngine doc
+# EndpointConfig/BackendStep/FieldMapping/UpstreamService tu Oracle, cache
+# trong-process, thuc thi composition truc tiep tai request-time).
+#
+#   Browser --/api/**--> [frontend :4200] --/api/**--> [backend :8080] --> Redis (cache)
+#   App/Client -----------------------------------------> [backend :8080] --> Upstream that
+#                                                              |
+#                                                          (JDBC)
+#                                                              v
+#                                          Oracle CHUNG voi cac service BCCS
+#                                          (chay rieng qua db-local/docker-compose.yml,
+#                                          khong phai container trong file nay - goi qua
+#                                          host.docker.internal:1521, schema BCCS_PRODUCT)
+#
+# Chay: docker compose up -d (yeu cau db-local da chay truoc - xem ../db-local/README.md)
+# UI:            http://localhost:4200
+# Gateway thuc thi (data plane, App/Client goi vao):  http://localhost:8080
+# ===========================================================================
+
+services:
+
+  # Redis RIENG cho gateway nay (khong dung chung bccs-redis cua db-local) -
+  # tach biet de cache gateway khong canh tranh tai nguyen voi cache nghiep vu
+  # cua cac service khac, dung tinh than "bulkhead" (xem UpstreamHttpExecutor).
+  redis:
+    image: redis:7-alpine
+    container_name: gwm-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gwm-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gwm-backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Oracle CHUNG voi BCCS - chay qua db-local (container bccs-oracle, port
+      # 1521 publish ra host), backend goi ngUOc ra host qua host.docker.internal.
+      # Dung CHUNG schema BCCS_PRODUCT (khong tao user/schema rieng).
+      DB_HOST: host.docker.internal
+      DB_PORT: 1521
+      DB_NAME: ${DB_NAME:-FREEPDB1}
+      DB_USER: ${DB_USER:-BCCS_PRODUCT}
+      DB_PASSWORD: ${DB_PASSWORD:-BCCS_PRODUCT123}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"     # ca control plane (/api/**) lan data plane (traffic that) tren cung port
+    networks:
+      - gwm-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gwm-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    networks:
+      - gwm-net
+
+networks:
+  gwm-net:
+    driver: bridge
+
+volumes:
+  redisdata:

@@ -1,0 +1,215 @@
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gwm-text-secondary);
+  text-decoration: none;
+  margin-bottom: 10px;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: var(--gwm-primary);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Form dang ky/sua Upstream
+// ---------------------------------------------------------------------------
+.form-card {
+  margin-bottom: 20px;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.small-field {
+  flex: 0 1 180px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+mat-card-actions {
+  padding: 12px 16px !important;
+  border-top: 1px solid var(--gwm-border);
+  margin: 0 !important;
+}
+
+// ---------------------------------------------------------------------------
+// Table card (giong endpoint-list, khong the dung chung vi Angular scope
+// style theo tung component)
+// ---------------------------------------------------------------------------
+.table-card {
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-lg);
+  box-shadow: var(--gwm-shadow-sm);
+  overflow: hidden;
+}
+
+.gwm-table {
+  width: 100%;
+
+  ::ng-deep .mat-mdc-header-row {
+    background: #fbfcfe;
+  }
+
+  ::ng-deep .mat-mdc-header-cell {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gwm-text-muted);
+    border-bottom-color: var(--gwm-border);
+  }
+
+  ::ng-deep .mat-mdc-cell {
+    border-bottom-color: var(--gwm-border);
+    font-size: 13.5px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  ::ng-deep .mat-mdc-row:last-child .mat-mdc-cell {
+    border-bottom: none;
+  }
+}
+
+.gwm-row {
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background: #fafbff;
+  }
+}
+
+.path-code {
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 12.5px;
+  color: var(--gwm-primary-dark);
+}
+
+.ep-name {
+  font-weight: 600;
+  color: var(--gwm-text);
+}
+
+.ep-desc {
+  font-size: 12px;
+  color: var(--gwm-text-muted);
+  margin-top: 1px;
+}
+
+.depend-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.depend-none {
+  color: var(--gwm-text-muted);
+}
+
+.mini-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  color: var(--gwm-text-secondary);
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.danger-icon-btn {
+  color: var(--gwm-text-muted);
+
+  &:hover {
+    color: var(--gwm-danger);
+  }
+}
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 0;
+  color: var(--gwm-text-secondary);
+  font-size: 13.5px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+
+  .empty-icon {
+    font-size: 44px;
+    width: 44px;
+    height: 44px;
+    color: var(--gwm-text-muted);
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+  }
+
+  p {
+    color: var(--gwm-text-secondary);
+    font-size: 13.5px;
+    margin: 0 0 20px;
+  }
+}

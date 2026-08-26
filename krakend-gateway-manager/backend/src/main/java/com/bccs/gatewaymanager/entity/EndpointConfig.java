@@ -1,0 +1,110 @@
+package com.bccs.gatewaymanager.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Dinh nghia mot endpoint duoc expose boi KrakenD Gateway.
+ *
+ * - Neu chi co 1 step trong {@link #steps}: day la reverse-proxy don gian.
+ * - Neu co nhieu step va {@link #sequential} = true: day la composite API,
+ *   KrakenD se goi tuan tu tung backend, cho phep step sau tham chieu du lieu
+ *   tu response cua step truoc thong qua {@link FieldMapping}.
+ */
+@Entity
+@Table(name = "endpoint_config", uniqueConstraints = @UniqueConstraint(columnNames = "path"))
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ToString(exclude = {"steps", "mappings"})
+public class EndpointConfig {
+
+    @Id
+    @Builder.Default
+    private String id = UUID.randomUUID().toString();
+
+    /** Ten goi nho de hien thi tren UI, khong anh huong toi krakend.json. */
+    @Column(nullable = false)
+    private String name;
+
+    private String description;
+
+    /** Duong dan endpoint client se goi, vi du: /v1/user-orders */
+    @Column(nullable = false)
+    private String path;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private GatewayMethod method;
+
+    /** true = sequential composite API (goi tuan tu nhieu backend + chain field). */
+    @Builder.Default
+    @Column(name = "is_sequential", nullable = false)
+    private boolean sequential = false;
+
+    @Builder.Default
+    @Column(name = "output_encoding")
+    private String outputEncoding = "json";
+
+    @JsonIgnore
+    @Builder.Default
+    @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("stepOrder ASC")
+    private List<BackendStep> steps = new ArrayList<>();
+
+    @JsonIgnore
+    @Builder.Default
+    @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<FieldMapping> mappings = new ArrayList<>();
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    private Instant updatedAt;
+
+    // --- helper de giu quan he 2 chieu nhat quan khi build tu DTO ---
+
+    public void addStep(BackendStep step) {
+        step.setEndpointConfig(this);
+        this.steps.add(step);
+    }
+
+    public void addMapping(FieldMapping mapping) {
+        mapping.setEndpointConfig(this);
+        this.mappings.add(mapping);
+    }
+
+    public void replaceSteps(List<BackendStep> newSteps) {
+        this.steps.clear();
+        newSteps.forEach(this::addStep);
+    }
+
+    public void replaceMappings(List<FieldMapping> newMappings) {
+        this.mappings.clear();
+        newMappings.forEach(this::addMapping);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof EndpointConfig other)) return false;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+}

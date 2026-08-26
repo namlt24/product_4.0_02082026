@@ -1,0 +1,195 @@
+@use '@angular/material' as mat;
+
+// ============================================================================
+// Design tokens - he thong mau/spacing/shadow dung chung toan app.
+// Muc tieu: cam giac "modern dev tool" (Linear/Vercel/Stripe dashboard) -
+// nen sang, border mong thay vi shadow nang, mau accent co chu dich ro rang.
+// ============================================================================
+:root {
+  --gwm-primary: #4f46e5;
+  --gwm-primary-dark: #3730a3;
+  --gwm-primary-light: #eef2ff;
+  --gwm-accent: #0891b2;
+  --gwm-accent-light: #ecfeff;
+
+  --gwm-bg: #f8fafc;
+  --gwm-surface: #ffffff;
+  --gwm-border: #e2e8f0;
+  --gwm-border-strong: #cbd5e1;
+
+  --gwm-text: #0f172a;
+  --gwm-text-secondary: #475569;
+  --gwm-text-muted: #94a3b8;
+
+  --gwm-success: #059669;
+  --gwm-success-bg: #ecfdf5;
+  --gwm-success-border: #a7f3d0;
+  --gwm-warning: #b45309;
+  --gwm-warning-bg: #fffbeb;
+  --gwm-warning-border: #fde68a;
+  --gwm-danger: #dc2626;
+  --gwm-danger-bg: #fef2f2;
+  --gwm-danger-border: #fecaca;
+  --gwm-info: #2563eb;
+  --gwm-info-bg: #eff6ff;
+
+  --gwm-radius-sm: 6px;
+  --gwm-radius-md: 10px;
+  --gwm-radius-lg: 16px;
+
+  --gwm-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --gwm-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.07);
+  --gwm-shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+
+  --gwm-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gwm-font-mono: 'JetBrains Mono', 'Fira Code', Consolas, Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--gwm-font-sans);
+  background: var(--gwm-bg);
+  color: var(--gwm-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+// Angular Material core + theme. Dung palette built-in (indigo/cyan) de tranh
+// rui ro tu palette tuy chinh sai cau truc M2 - phan "chat" cua giao dien nam
+// o design token + CSS rieng ben duoi, khong phu thuoc vao Material theme.
+@include mat.core();
+
+$gwm-primary-palette: mat.m2-define-palette(mat.$m2-indigo-palette, 600, 400, 800);
+$gwm-accent-palette: mat.m2-define-palette(mat.$m2-cyan-palette, 800, 600, 900);
+$gwm-warn-palette: mat.m2-define-palette(mat.$m2-red-palette, 600);
+
+$gwm-theme: mat.m2-define-light-theme((
+  color: (
+    primary: $gwm-primary-palette,
+    accent: $gwm-accent-palette,
+    warn: $gwm-warn-palette,
+  ),
+  typography: mat.m2-define-typography-config(
+    $font-family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  ),
+  density: 0,
+));
+
+@include mat.all-component-themes($gwm-theme);
+
+// ----------------------------------------------------------------------------
+// Typography scale
+// ----------------------------------------------------------------------------
+h1, h2, h3, h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--gwm-text);
+  margin: 0 0 4px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--gwm-text-secondary);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+code, pre {
+  font-family: var(--gwm-font-mono);
+}
+
+// ----------------------------------------------------------------------------
+// Card - vien mong + shadow rat nhe, bo goc lon hon mac dinh Material
+// ----------------------------------------------------------------------------
+.mat-mdc-card {
+  margin-bottom: 20px;
+  border-radius: var(--gwm-radius-lg) !important;
+  border: 1px solid var(--gwm-border);
+  box-shadow: var(--gwm-shadow-sm) !important;
+}
+
+.mat-mdc-card-header {
+  padding-bottom: 4px !important;
+}
+
+.mat-mdc-card-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+.mat-mdc-card-subtitle {
+  font-size: 13px !important;
+  color: var(--gwm-text-secondary) !important;
+}
+
+// ----------------------------------------------------------------------------
+// Button - bo goc nhat quan, chu khong hoa toan bo (mac dinh Material)
+// ----------------------------------------------------------------------------
+.mat-mdc-raised-button, .mat-mdc-stroked-button, .mat-mdc-button, .mat-mdc-icon-button {
+  border-radius: var(--gwm-radius-sm) !important;
+}
+
+.mat-mdc-raised-button, .mat-mdc-stroked-button, .mat-mdc-unelevated-button {
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.mat-mdc-raised-button:not(.mat-mdc-button-disabled) {
+  box-shadow: var(--gwm-shadow-sm) !important;
+}
+
+// ----------------------------------------------------------------------------
+// Warning banner
+// ----------------------------------------------------------------------------
+.warning-banner {
+  background: var(--gwm-warning-bg);
+  border: 1px solid var(--gwm-warning-border);
+  border-radius: var(--gwm-radius-md);
+  padding: 12px 16px;
+  margin: 8px 0 16px;
+}
+
+.field-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.full-width {
+  width: 100%;
+}
+
+// ----------------------------------------------------------------------------
+// Scrollbar - tinh te hon mac dinh trinh duyet, hop voi tong the sang mau
+// ----------------------------------------------------------------------------
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gwm-border-strong);
+  border-radius: 20px;
+  border: 2px solid var(--gwm-bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gwm-text-muted);
+}

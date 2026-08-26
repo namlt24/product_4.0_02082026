@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- 4.0.8: cung nhanh Spring Boot 4.x ma bccs-build-parent noi bo dang dung
+             (xac nhan qua log that cua product-catalog-service: spring-boot-maven-
+             plugin:4.0.7) - ban nay ho tro repackage bytecode JDK 25 dung ("Unsupported
+             class file major version 69" chi xay ra voi 3.3.4 cu). -->
+        <version>4.0.8</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.bccs</groupId>
+    <artifactId>krakend-gateway-manager</artifactId>
+    <version>1.0.0</version>
+    <name>krakend-gateway-manager</name>
+    <description>Dynamic Composite API Orchestrator - Control Plane + Gateway thuc thi (khong con phu thuoc KrakenD/Gravitee)</description>
+    <packaging>jar</packaging>
+
+    <properties>
+        <!-- Spring Boot 4.0.8 ho tro repackage bytecode JDK 25 dung - dich thang
+             len 25, khong con can gh-compile bytecode 21 nhu truoc. Docker build
+             (xem Dockerfile) doi tuong ung sang JDK 25. -->
+        <java.version>25</java.version>
+        <lombok.version>1.18.46</lombok.version>
+    </properties>
+
+    <dependencies>
+        <!-- REST API -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Boot 4: RestTemplateBuilder da tach khoi starter-web, chuyen sang
+             module rieng spring-boot-restclient (package moi org.springframework.boot.
+             restclient.RestTemplateBuilder) - can khai bao tuong minh de UpstreamHttpExecutor
+             dung duoc RestTemplateBuilder nhu truoc. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+
+        <!-- Persistence: luu cau hinh Endpoint / BackendStep / FieldMapping / UpstreamService -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Redis: cache-aside cho cac lan goi GET toi Upstream (xem GatewayCacheService) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Resilience4j: circuit breaker/retry/bulkhead theo tung Upstream (xem UpstreamHttpExecutor).
+             Project nay doc lap (khong ke thua bccs-build-parent) nen khong vuong rang buoc
+             "chi dung BCCS starter" cua 6 service nen tang - them thoai mai.
+             Dung ban -spring-boot4 (khong phai -spring-boot3) de khop Spring Boot 4.x. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot4</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+
+        <!-- Validation cho request DTO -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Dung chung Oracle instance + schema BCCS_PRODUCT voi cac service BCCS
+             (khong con Postgres rieng nua). -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <version>23.6.0.24.10</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <!-- Ghi de version quan ly boi spring-boot-starter-parent: ban cu hon
+                 khong ho tro annotation processor tren JDK moi (vi du JDK 25), khien
+                 Lombok "im lang" khong sinh code (getter/setter/@Slf4j...) ma khong
+                 bao loi ro rang. Dung ban moi nhat tuong thich JDK hien tai. -->
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>gateway-manager</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- Truoc JDK 25: javac tu do tim annotation processor (Lombok) tren
+                         classpath thong thuong, chi in WARNING la mot ban release tuong lai
+                         co the tat kha nang nay tru khi khai bao ro processor path rieng.
+                         JDK 25 chinh la "ban release tuong lai" do - no BO HAN co che tu do,
+                         khien Lombok "im lang" khong sinh getter/setter/@Slf4j... ma khong bao
+                         loi ro rang (da xac nhan bang cach chay truc tiep javac voi va khong
+                         voi processorpath rieng). Khai bao annotationProcessorPaths tuong minh
+                         la fix dung (khong phai workaround) - day cung la cach lam duoc khuyen
+                         nghi chung, khong phu thuoc hanh vi tu do sap bi go bo cua javac. -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

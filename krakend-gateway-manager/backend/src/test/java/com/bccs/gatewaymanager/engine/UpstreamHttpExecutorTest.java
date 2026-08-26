@@ -47,13 +47,17 @@ class UpstreamHttpExecutorTest {
     }
 
     private UpstreamService upstream(String name, int port) {
+        return upstream(name, port, false);
+    }
+
+    private UpstreamService upstream(String name, int port, boolean retryEnabled) {
         return UpstreamService.builder()
                 .name(name)
                 .baseHost("http://localhost:" + port)
                 .connectTimeoutMs(500)
                 .readTimeoutMs(1000)
                 .circuitBreakerEnabled(false)
-                .retryEnabled(false)
+                .retryEnabled(retryEnabled)
                 .cacheEnabled(false)
                 .build();
     }
@@ -107,6 +111,53 @@ class UpstreamHttpExecutorTest {
                     assertThat(ex.httpStatus()).isEqualTo(404);
                     assertThat(ex.responseBody()).contains("not found");
                 });
+    }
+
+    // ---- Regression tim thay sau khi them UpstreamHttpErrorException: retryFor() truoc do
+    // van retry ca loi 4xx (khong bao gio thanh cong du thu lai), gay cham + tang tai vo ich
+    // len upstream. Ca 2 test duoi day dung chung 1 dem so lan HttpServer nhan request that. ----
+
+    @Test
+    void call_upstream4xxWithRetryEnabled_isNotRetried() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            hitCount.incrementAndGet();
+            byte[] body = "bad request".getBytes();
+            exchange.sendResponseHeaders(400, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+
+        assertThatThrownBy(() -> executor.call(upstream("svc-4xx", port, true), HttpMethod.GET,
+                "http://localhost:" + port + "/x", new HttpHeaders(), null))
+                .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
+
+        assertThat(hitCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void call_upstream5xxWithRetryEnabled_isRetriedUpToMaxAttempts() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            hitCount.incrementAndGet();
+            byte[] body = "boom".getBytes();
+            exchange.sendResponseHeaders(500, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+
+        assertThatThrownBy(() -> executor.call(upstream("svc-5xx", port, true), HttpMethod.GET,
+                "http://localhost:" + port + "/x", new HttpHeaders(), null))
+                .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
+
+        // maxAttempts(3) trong retryFor() - 5xx co the la loi tam thoi nen VAN duoc retry.
+        assertThat(hitCount.get()).isEqualTo(3);
     }
 
     @Test

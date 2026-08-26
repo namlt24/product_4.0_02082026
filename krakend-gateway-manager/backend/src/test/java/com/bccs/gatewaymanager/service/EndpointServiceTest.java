@@ -62,6 +62,39 @@ class EndpointServiceTest {
                 List.of(step(1), step(2)), List.of(mapping));
     }
 
+    // ---- Ha thap rui ro phat sinh tu fix auth: path Data Plane khong duoc trung tien to /api hoac /actuator ----
+    // (ApiKeyAuthFilter dang ky theo Servlet urlPattern "/api/*" - khop MOI request bat dau
+    // bang /api bat ke Spring MVC se route no toi controller nao, nen 1 endpoint composite
+    // dat path "/api/orders" se vo tinh bi doi API key du muc dich la Data Plane khong auth).
+
+    @Test
+    void create_rejectsPathStartingWithApi() {
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/api/orders", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-001");
+    }
+
+    @Test
+    void create_rejectsPathStartingWithActuator() {
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/actuator/custom", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-001");
+    }
+
+    @Test
+    void create_allowsPathThatOnlyContainsApiAsSegmentNotPrefix() {
+        // "/apinormal" khong phai "/api" hay "/api/..." - khong bi chan (chi chan dung tien to).
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/apinormal", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+        assertThat(service.create(dto)).isNotNull();
+    }
+
     // ---- Finding #6: validate sourceStepOrder < targetStepOrder + required source fields ----
 
     @Test

@@ -167,9 +167,23 @@ public class UpstreamHttpExecutor {
         return retryRegistry.retry(upstream.getName(), () -> RetryConfig.custom()
                 .maxAttempts(3)
                 .intervalFunction(IntervalFunction.ofExponentialRandomBackoff(Duration.ofMillis(200), 2.0, 0.5))
-                // Khong retry khi circuit breaker da mo (fail fast that su, khong doi backoff vo ich).
-                .ignoreExceptions(CallNotPermittedException.class)
+                // retryOnException thay vi ignoreExceptions co dinh: KHONG retry khi circuit
+                // breaker da mo (fail fast that su, khong doi backoff vo ich) VA khong retry
+                // khi upstream tra ve 4xx that su (loi do client/du lieu sai, retry lai van
+                // se tra ve dung 4xx do, chi ton them ~600ms-1s + tang tai vo ich len upstream
+                // moi lan). Van RETRY cho 5xx/timeout - nhung truong hop co the la tam thoi.
+                .retryOnException(UpstreamHttpExecutor::isRetryable)
                 .build());
+    }
+
+    private static boolean isRetryable(Throwable e) {
+        if (e instanceof CallNotPermittedException) {
+            return false;
+        }
+        if (e instanceof UpstreamHttpErrorException httpError) {
+            return httpError.httpStatus() >= 500;
+        }
+        return true;
     }
 
     /** Boc loi goi Upstream khong xac dinh duoc nguyen nhan cu the (khac 2 loai duoi day) thanh 1 kieu chung de engine xu ly. */

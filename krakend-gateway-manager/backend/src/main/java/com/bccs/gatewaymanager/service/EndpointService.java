@@ -37,6 +37,7 @@ public class EndpointService {
 
     @Transactional
     public EndpointResponseDto create(EndpointRequestDto dto) {
+        rejectReservedPath(dto.path());
         validateStepOrders(dto);
         if (repository.existsByPath(dto.path())) {
             throw new BusinessException("GW-001", "Path '" + dto.path() + "' da ton tai o mot endpoint khac.");
@@ -52,6 +53,7 @@ public class EndpointService {
 
     @Transactional
     public EndpointResponseDto update(String id, EndpointRequestDto dto) {
+        rejectReservedPath(dto.path());
         validateStepOrders(dto);
         EndpointConfig entity = findOrThrow(id);
         if (repository.existsByPathAndIdNot(dto.path(), id)) {
@@ -72,6 +74,24 @@ public class EndpointService {
         repository.delete(entity);
         registryCache.reload();
         log.info("Da xoa endpoint: {} {}", entity.getMethod(), entity.getPath());
+    }
+
+    /**
+     * Chan dat path cua 1 Data Plane endpoint trung tien to danh cho Control
+     * Plane (/api) hoac Actuator (/actuator). ApiKeyAuthFilter dang ky theo
+     * urlPattern Servlet "/api/*" (khop TAT CA request bat dau bang /api,
+     * KHONG can biet Spring MVC se route no toi controller nao) - neu admin
+     * lo dat 1 endpoint composite tai path "/api/orders" chang han, request
+     * cua client that se bi ApiKeyAuthFilter tu choi 401 truoc khi toi duoc
+     * DynamicDispatcherController, du muc dich la Data Plane KHONG auth.
+     * Chan ngay luc luu se an toan hon xu ly muon o tang filter.
+     */
+    private void rejectReservedPath(String path) {
+        if (path != null && (path.equals("/api") || path.startsWith("/api/")
+                || path.equals("/actuator") || path.startsWith("/actuator/"))) {
+            throw new BusinessException("GW-001",
+                    "Path '" + path + "' bi cam vi trung tien to danh rieng cho Control Plane (/api) hoac Actuator (/actuator).");
+        }
     }
 
     private EndpointConfig findOrThrow(String id) {

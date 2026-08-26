@@ -68,7 +68,9 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
   styles: [
     `
       .login-wrap {
-        min-height: calc(100vh - 60px);
+        /* app.component.ts an han toolbar (60px) tren /login qua @if (!isLoginPage())
+           - khong con can tru 60px nhu khi toolbar van chiem cho o cac trang khac. */
+        min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;

@@ -1,50 +1,67 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
+import { AuthService } from './services/auth.service';
 
-/** Shell goc cua ung dung: toolbar sang mau + router-outlet. */
+/** Shell goc cua ung dung: toolbar sang mau + router-outlet. An toolbar o /login (chua dang nhap, chua co gi de dieu huong toi). */
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, MatButtonModule],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule,
+  ],
   template: `
-    <header class="app-toolbar">
-      <div class="toolbar-inner">
-        <a class="brand" routerLink="/endpoints">
-          <span class="brand-mark">
-            <mat-icon>hub</mat-icon>
-          </span>
-          <span class="brand-text">
-            <span class="brand-name">Gateway Manager</span>
-            <span class="brand-tag">Dynamic Composite API Orchestrator</span>
-          </span>
-        </a>
-
-        <nav class="toolbar-nav">
-          <a class="nav-link" routerLink="/endpoints" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
-            <mat-icon inline="true">list_alt</mat-icon>
-            Endpoints
+    @if (!isLoginPage()) {
+      <header class="app-toolbar">
+        <div class="toolbar-inner">
+          <a class="brand" routerLink="/endpoints">
+            <span class="brand-mark">
+              <mat-icon>hub</mat-icon>
+            </span>
+            <span class="brand-text">
+              <span class="brand-name">Gateway Manager</span>
+              <span class="brand-tag">Dynamic Composite API Orchestrator</span>
+            </span>
           </a>
-          <a class="nav-link" routerLink="/upstreams" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
-            <mat-icon inline="true">dns</mat-icon>
-            Upstream Services
-          </a>
-          <a class="nav-link" routerLink="/dependency-graph" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
-            <mat-icon inline="true">account_tree</mat-icon>
-            Sơ đồ phụ thuộc
-          </a>
-        </nav>
 
-        <span class="spacer"></span>
+          <nav class="toolbar-nav">
+            <a class="nav-link" routerLink="/endpoints" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
+              <mat-icon inline="true">list_alt</mat-icon>
+              Endpoints
+            </a>
+            <a class="nav-link" routerLink="/upstreams" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
+              <mat-icon inline="true">dns</mat-icon>
+              Upstream Services
+            </a>
+            <a class="nav-link" routerLink="/dependency-graph" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">
+              <mat-icon inline="true">account_tree</mat-icon>
+              Sơ đồ phụ thuộc
+            </a>
+          </nav>
 
-        <a mat-flat-button color="primary" class="new-endpoint-btn" routerLink="/endpoints/new">
-          <mat-icon>add</mat-icon>
-          Endpoint mới
-        </a>
-      </div>
-    </header>
+          <span class="spacer"></span>
+
+          <a mat-flat-button color="primary" class="new-endpoint-btn" routerLink="/endpoints/new">
+            <mat-icon>add</mat-icon>
+            Endpoint mới
+          </a>
+
+          <button mat-icon-button matTooltip="Đăng xuất" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+          </button>
+        </div>
+      </header>
+    }
 
     <main class="app-content">
       <router-outlet />
@@ -168,4 +185,21 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     `,
   ],
 })
-export class AppComponent {}
+export class AppComponent {
+  readonly isLoginPage = signal(false);
+
+  constructor(
+    private readonly router: Router,
+    private readonly auth: AuthService,
+  ) {
+    this.isLoginPage.set(this.router.url.startsWith('/login'));
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe((e) => {
+      this.isLoginPage.set((e as NavigationEnd).urlAfterRedirects.startsWith('/login'));
+    });
+  }
+
+  logout(): void {
+    this.auth.clearKey();
+    this.router.navigate(['/login']);
+  }
+}

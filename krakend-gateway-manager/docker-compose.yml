@@ -65,6 +65,11 @@ services:
       # API key bao ve Control Plane (/api/**) - xem ApiKeyAuthFilter. BAT BUOC dat
       # qua .env khi chay that (khong dung default "changeme-local-dev" cua app).
       GATEWAY_ADMIN_API_KEY: ${GATEWAY_ADMIN_API_KEY:-changeme-local-dev}
+      # Rate limit Data Plane - xem RateLimitFilter/RateLimitService. Gia tri
+      # mac dinh (300 req/60s moi IP) hop ly cho dev/demo, chinh qua .env neu can.
+      GATEWAY_RATE_LIMIT_ENABLED: ${GATEWAY_RATE_LIMIT_ENABLED:-true}
+      GATEWAY_RATE_LIMIT_WINDOW_SECONDS: ${GATEWAY_RATE_LIMIT_WINDOW_SECONDS:-60}
+      GATEWAY_RATE_LIMIT_MAX_REQUESTS: ${GATEWAY_RATE_LIMIT_MAX_REQUESTS:-300}
     ports:
       - "8080:8080"     # ca control plane (/api/**) lan data plane (traffic that) tren cung port
     networks:

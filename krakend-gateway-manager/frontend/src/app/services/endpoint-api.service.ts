@@ -5,6 +5,7 @@ import {
   DependencyGraph,
   DeployResult,
   EndpointConfig,
+  EndpointVersionSummary,
   GatewayInfo,
   UpstreamService,
 } from '../models/endpoint.model';
@@ -65,6 +66,20 @@ export class EndpointApiService {
   /** Thong tin gateway (port, host alias) - dung de tu dien Endpoint Picker. */
   getGatewayInfo(): Observable<GatewayInfo> {
     return this.http.get<GatewayInfo>(`${this.configUrl}/gateway-info`);
+  }
+
+  // ---- Lich su phien ban (xem EndpointVersionService o backend) ----
+
+  listVersions(endpointId: string): Observable<EndpointVersionSummary[]> {
+    return this.http.get<EndpointVersionSummary[]>(`${this.endpointsUrl}/${endpointId}/versions`);
+  }
+
+  getVersion(endpointId: string, versionId: string): Observable<EndpointConfig> {
+    return this.http.get<EndpointConfig>(`${this.endpointsUrl}/${endpointId}/versions/${versionId}`);
+  }
+
+  rollbackVersion(endpointId: string, versionId: string): Observable<EndpointConfig> {
+    return this.http.post<EndpointConfig>(`${this.endpointsUrl}/${endpointId}/versions/${versionId}/rollback`, {});
   }
 
   // ---- Upstream Services (backend that, dang ky 1 lan, dung chung cho nhieu BackendStep) ----

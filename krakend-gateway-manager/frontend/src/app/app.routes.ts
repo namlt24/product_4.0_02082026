@@ -44,6 +44,12 @@ export const routes: Routes = [
       import('./pages/endpoint-canvas/endpoint-canvas.component').then((m) => m.EndpointCanvasComponent),
   },
   {
+    path: 'endpoints/:id/versions',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/endpoint-versions/endpoint-versions.component').then((m) => m.EndpointVersionsComponent),
+  },
+  {
     path: 'dependency-graph',
     canActivate: [authGuard],
     loadComponent: () =>

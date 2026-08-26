@@ -2,6 +2,7 @@ package com.bccs.gatewaymanager.service;
 
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
+import com.bccs.gatewaymanager.entity.EndpointChangeType;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
@@ -21,6 +22,7 @@ public class EndpointService {
     private final EndpointMapper mapper;
     private final EndpointRegistryCache registryCache;
     private final DependencyAnalyzer dependencyAnalyzer;
+    private final EndpointVersionService versionService;
 
     @Transactional(readOnly = true)
     public List<EndpointResponseDto> list(String search) {
@@ -47,12 +49,29 @@ public class EndpointService {
         EndpointResponseDto result = mapper.toResponseDto(saved);
         rejectIfCyclic();
         registryCache.reload();
+        versionService.recordSnapshot(saved, EndpointChangeType.CREATED);
         log.info("Da tao endpoint moi: {} {}", saved.getMethod(), saved.getPath());
         return result;
     }
 
     @Transactional
     public EndpointResponseDto update(String id, EndpointRequestDto dto) {
+        return update(id, dto, EndpointChangeType.UPDATED);
+    }
+
+    /**
+     * Khoi phuc endpoint id ve dung noi dung cua 1 phien ban cu (xem
+     * EndpointVersionService) - chay qua CUNG duong validate/save/cycle-check
+     * voi sua tay binh thuong (chi khac changeType de danh dau ro trong lich
+     * su la 1 lan Khoi phuc, khong phai 1 lan sua thu cong).
+     */
+    @Transactional
+    public EndpointResponseDto rollback(String id, String versionId) {
+        EndpointRequestDto dto = versionService.toRequestDtoForRollback(id, versionId);
+        return update(id, dto, EndpointChangeType.ROLLED_BACK);
+    }
+
+    private EndpointResponseDto update(String id, EndpointRequestDto dto, EndpointChangeType changeType) {
         rejectReservedPath(dto.path());
         validateStepOrders(dto);
         EndpointConfig entity = findOrThrow(id);
@@ -64,13 +83,15 @@ public class EndpointService {
         EndpointResponseDto result = mapper.toResponseDto(saved);
         rejectIfCyclic();
         registryCache.reload();
-        log.info("Da cap nhat endpoint: {} {}", saved.getMethod(), saved.getPath());
+        versionService.recordSnapshot(saved, changeType);
+        log.info("Da cap nhat endpoint ({}): {} {}", changeType, saved.getMethod(), saved.getPath());
         return result;
     }
 
     @Transactional
     public void delete(String id) {
         EndpointConfig entity = findOrThrow(id);
+        versionService.deleteAllForEndpoint(id);
         repository.delete(entity);
         registryCache.reload();
         log.info("Da xoa endpoint: {} {}", entity.getMethod(), entity.getPath());

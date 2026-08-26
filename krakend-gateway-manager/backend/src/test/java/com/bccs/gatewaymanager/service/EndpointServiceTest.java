@@ -4,6 +4,7 @@ import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.entity.EndpointChangeType;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
@@ -17,10 +18,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,12 +40,14 @@ class EndpointServiceTest {
     private EndpointRegistryCache registryCache;
     @Mock
     private DependencyAnalyzer dependencyAnalyzer;
+    @Mock
+    private EndpointVersionService versionService;
 
     private EndpointService service;
 
     @BeforeEach
     void setUp() {
-        service = new EndpointService(repository, mapper, registryCache, dependencyAnalyzer);
+        service = new EndpointService(repository, mapper, registryCache, dependencyAnalyzer, versionService);
         lenient().when(repository.existsByPath(any())).thenReturn(false);
         lenient().when(mapper.toEntity(any())).thenReturn(EndpointConfig.builder().id("ep-1").build());
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -151,6 +156,7 @@ class EndpointServiceTest {
                 .isEqualTo("GW-CYCLE");
 
         verify(registryCache, never()).reload();
+        verify(versionService, never()).recordSnapshot(any(), any());
     }
 
     @Test
@@ -166,6 +172,7 @@ class EndpointServiceTest {
                 .isEqualTo("GW-CYCLE");
 
         verify(registryCache, never()).reload();
+        verify(versionService, never()).recordSnapshot(any(), any());
     }
 
     @Test
@@ -173,6 +180,77 @@ class EndpointServiceTest {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(step(1)), List.of());
         service.create(dto);
+        verify(registryCache).reload();
+    }
+
+    // ---- P0-4: versioning + rollback ----
+
+    @Test
+    void create_success_recordsSnapshotAsCreated() {
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+
+        service.create(dto);
+
+        verify(versionService).recordSnapshot(any(EndpointConfig.class), eq(EndpointChangeType.CREATED));
+    }
+
+    @Test
+    void update_success_recordsSnapshotAsUpdated() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+
+        service.update("ep-1", dto);
+
+        verify(versionService).recordSnapshot(any(EndpointConfig.class), eq(EndpointChangeType.UPDATED));
+    }
+
+    @Test
+    void rollback_dungLaiUpdate_vaGhiVersionTagRolledBack() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        EndpointRequestDto snapshotDto = new EndpointRequestDto("n-cu", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+        when(versionService.toRequestDtoForRollback("ep-1", "v-1")).thenReturn(snapshotDto);
+
+        EndpointResponseDto result = service.rollback("ep-1", "v-1");
+
+        assertThat(result).isNotNull();
+        verify(versionService).toRequestDtoForRollback("ep-1", "v-1");
+        verify(versionService).recordSnapshot(any(EndpointConfig.class), eq(EndpointChangeType.ROLLED_BACK));
+        verify(registryCache).reload();
+    }
+
+    @Test
+    void rollback_khiSnapshotViPhamValidate_khongApDungGiCa() {
+        // Snapshot cu tro toi path "/api/legacy" (gia su tung hop le o thoi diem do,
+        // nay bi cam) - rollback phai chay lai DUNG validate nhu sua tay, khong duoc
+        // bo qua chi vi noi dung lay tu 1 phien ban da tung luu thanh cong truoc day.
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        lenient().when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        EndpointRequestDto badSnapshot = new EndpointRequestDto("n", null, "/api/legacy", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of());
+        when(versionService.toRequestDtoForRollback("ep-1", "v-1")).thenReturn(badSnapshot);
+
+        assertThatThrownBy(() -> service.rollback("ep-1", "v-1"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-001");
+
+        verify(versionService, never()).recordSnapshot(any(), any());
+    }
+
+    @Test
+    void delete_xoaVersionTruocKhiXoaEndpoint() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+
+        service.delete("ep-1");
+
+        verify(versionService).deleteAllForEndpoint("ep-1");
+        verify(repository).delete(existing);
         verify(registryCache).reload();
     }
 }

@@ -167,6 +167,9 @@
             <a mat-icon-button matTooltip="Sửa bằng Canvas" [routerLink]="['/endpoints', ep.id, 'canvas']">
               <mat-icon>dashboard_customize</mat-icon>
             </a>
+            <a mat-icon-button matTooltip="Lịch sử phiên bản" [routerLink]="['/endpoints', ep.id, 'versions']">
+              <mat-icon>history</mat-icon>
+            </a>
             <button mat-icon-button matTooltip="Xoá" class="danger-icon-btn" (click)="remove(ep)">
               <mat-icon>delete_outline</mat-icon>
             </button>

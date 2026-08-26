@@ -89,6 +89,19 @@ export interface EndpointConfig {
   updatedAt?: string;
 }
 
+export type EndpointChangeType = 'CREATED' | 'UPDATED' | 'ROLLED_BACK';
+
+/** 1 dong trong "Lich su phien ban" cua 1 Endpoint - xem EndpointVersionSummaryDto o backend. */
+export interface EndpointVersionSummary {
+  id: string;
+  versionNumber: number;
+  changeType: EndpointChangeType;
+  name: string;
+  path: string;
+  method: HttpMethodType;
+  createdAt: string;
+}
+
 export interface DeployResult {
   success: boolean;
   message: string;

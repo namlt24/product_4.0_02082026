@@ -1,0 +1,115 @@
+<div class="page-header">
+  <a class="back-link" [routerLink]="['/endpoints', endpoint()?.id, 'edit']">
+    <mat-icon inline="true">arrow_back</mat-icon>
+    Quay lại Sửa Endpoint
+  </a>
+  <h1 class="page-title">Lịch sử phiên bản</h1>
+  <p class="page-subtitle">
+    @if (endpoint(); as ep) {
+      Toàn bộ lần lưu (tạo mới/cập nhật/khôi phục) của <strong>{{ ep.name }}</strong>
+      (<code class="path-code">{{ ep.path }}</code>). Khôi phục 1 phiên bản cũ tạo ra 1 phiên bản MỚI
+      giống hệt nội dung đó - có hiệu lực ngay, không mất lịch sử.
+    } @else {
+      Đang tải...
+    }
+  </p>
+</div>
+
+@if (loading()) {
+  <div class="center-state">
+    <mat-spinner diameter="26" />
+    <span>Đang tải lịch sử phiên bản...</span>
+  </div>
+} @else if (versions().length === 0) {
+  <mat-card class="empty-card">
+    <mat-icon class="empty-icon">history</mat-icon>
+    <span>Chưa có lịch sử nào.</span>
+  </mat-card>
+} @else {
+  <div class="version-list">
+    @for (v of versions(); track v.id) {
+      <mat-card class="version-card">
+        <div class="version-row">
+          <span class="version-badge">#{{ v.versionNumber }}</span>
+          <span class="change-chip" [attr.data-type]="v.changeType">{{ changeTypeLabel(v.changeType) }}</span>
+          @if (isLatest(v)) {
+            <span class="latest-chip">Hiện tại</span>
+          }
+          <div class="version-info">
+            <span class="method-chip" [attr.data-method]="v.method">{{ v.method }}</span>
+            <code class="path-code">{{ v.path }}</code>
+            <span class="version-name">{{ v.name }}</span>
+          </div>
+          <span class="version-time">{{ v.createdAt | date: 'dd/MM/yyyy HH:mm:ss' }}</span>
+          <div class="version-actions">
+            <button mat-stroked-button type="button" (click)="toggleDetail(v)">
+              <mat-icon>{{ expandedVersionId() === v.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+              Xem
+            </button>
+            @if (!isLatest(v)) {
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                [disabled]="rollingBackId() === v.id"
+                (click)="rollback(v)"
+              >
+                @if (rollingBackId() === v.id) {
+                  <mat-spinner diameter="16" class="btn-spinner" />
+                } @else {
+                  <mat-icon>restore</mat-icon>
+                }
+                Khôi phục
+              </button>
+            }
+          </div>
+        </div>
+
+        @if (expandedVersionId() === v.id) {
+          <div class="version-detail">
+            @if (loadingDetail()) {
+              <div class="center-state small">
+                <mat-spinner diameter="20" />
+                <span>Đang tải chi tiết...</span>
+              </div>
+            } @else {
+              <!-- "as" chi duoc phep tren @if CHINH (khong duoc tren @else if) - xen
+                   1 @if long vao trong @else de van gan duoc bien d. -->
+              @if (expandedDetail(); as d) {
+                @if (d.description) {
+                  <p class="detail-description">{{ d.description }}</p>
+                }
+                <div class="detail-section">
+                  <div class="detail-section-title">Backend Steps ({{ d.steps.length }})</div>
+                  @for (s of d.steps; track s.stepOrder) {
+                    <div class="detail-step-row">
+                      <span class="step-badge-mini">{{ s.stepOrder }}</span>
+                      <span class="method-chip" [attr.data-method]="s.method">{{ s.method }}</span>
+                      <code>{{ s.urlPattern }}</code>
+                      <span class="detail-step-name">{{ s.name }}</span>
+                      @if (s.cacheEnabled) {
+                        <span class="mini-badge"><mat-icon inline="true">bolt</mat-icon>{{ s.cacheTtlSeconds }}s</span>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (d.mappings.length > 0) {
+                  <div class="detail-section">
+                    <div class="detail-section-title">Field Mapping ({{ d.mappings.length }})</div>
+                    @for (m of d.mappings; track $index) {
+                      <div class="detail-mapping-row">
+                        <span>{{ sourceLabel(m) }}</span>
+                        <mat-icon inline="true">trending_flat</mat-icon>
+                        <span>{{ targetLabel(m) }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              }
+            }
+          </div>
+        }
+      </mat-card>
+    }
+  </div>
+}

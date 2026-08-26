@@ -3,8 +3,10 @@ package com.bccs.gatewaymanager.controller;
 import com.bccs.gatewaymanager.dto.DependencyGraphDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
+import com.bccs.gatewaymanager.dto.EndpointVersionSummaryDto;
 import com.bccs.gatewaymanager.service.DependencyAnalyzer;
 import com.bccs.gatewaymanager.service.EndpointService;
+import com.bccs.gatewaymanager.service.EndpointVersionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ public class EndpointController {
 
     private final EndpointService endpointService;
     private final DependencyAnalyzer dependencyAnalyzer;
+    private final EndpointVersionService versionService;
 
     @GetMapping
     public ResponseEntity<List<EndpointResponseDto>> list(@RequestParam(required = false) String q) {
@@ -55,5 +58,24 @@ public class EndpointController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         endpointService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ---- Lich su phien ban (xem EndpointVersionService) ----
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<List<EndpointVersionSummaryDto>> listVersions(@PathVariable String id) {
+        return ResponseEntity.ok(versionService.listVersions(id));
+    }
+
+    /** Xem truoc noi dung 1 phien ban cu (chua ap dung gi) - dung truoc khi bam Khoi phuc. */
+    @GetMapping("/{id}/versions/{versionId}")
+    public ResponseEntity<EndpointResponseDto> getVersion(@PathVariable String id, @PathVariable String versionId) {
+        return ResponseEntity.ok(versionService.getVersionDetail(id, versionId));
+    }
+
+    /** Khoi phuc endpoint id ve noi dung cua versionId - chay qua dung validate/cycle-check nhu sua tay. */
+    @PostMapping("/{id}/versions/{versionId}/rollback")
+    public ResponseEntity<EndpointResponseDto> rollback(@PathVariable String id, @PathVariable String versionId) {
+        return ResponseEntity.ok(endpointService.rollback(id, versionId));
     }
 }

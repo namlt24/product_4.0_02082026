@@ -64,6 +64,15 @@ gatewaymanager:
   # chi dung cho dev cuc bo; MOI truong that PHAI set qua env var GATEWAY_ADMIN_API_KEY
   # (xem docker-compose.yml), khong duoc dung gia tri mac dinh nay.
   admin-api-key: ${GATEWAY_ADMIN_API_KEY:changeme-local-dev}
+  # Rate limit Data Plane (bao ve Upstream that phia sau) - xem RateLimitFilter/
+  # RateLimitService. max-requests la so request toi da MOI client (theo IP) duoc
+  # phep trong window-seconds giay; vuot qua se bi tu choi 429 cho toi khi window
+  # het han. 300 req/60s (~5 req/s trung binh) la muc mac dinh vua du rong cho
+  # test tay/tich hop binh thuong nhung van chan duoc spam/vong lap that su.
+  rate-limit:
+    enabled: ${GATEWAY_RATE_LIMIT_ENABLED:true}
+    window-seconds: ${GATEWAY_RATE_LIMIT_WINDOW_SECONDS:60}
+    max-requests: ${GATEWAY_RATE_LIMIT_MAX_REQUESTS:300}
 
 # Resilience4j: dependency moi, dang ky dong theo TEN Upstream Service tai
 # runtime (xem UpstreamHttpExecutor) - cac gia tri default duoi day ap dung

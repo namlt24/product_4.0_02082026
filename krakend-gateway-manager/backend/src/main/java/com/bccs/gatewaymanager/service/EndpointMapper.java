@@ -85,6 +85,7 @@ public class EndpointMapper {
                 .targetStepOrder(m.targetStepOrder())
                 .targetType(m.targetType())
                 .targetParamName(m.targetParamName())
+                .mappingOrder(m.mappingOrder())
                 .build()).toList();
         entity.replaceMappings(mappings);
     }
@@ -116,7 +117,8 @@ public class EndpointMapper {
                 .map(m -> new FieldMappingDto(
                         m.getId(), m.getSourceType(), m.getSourceStepOrder(), m.getSourceField(),
                         m.getSourceArrayField(), m.getSourceElementField(),
-                        m.getTargetStepOrder(), m.getTargetType(), m.getTargetParamName()))
+                        m.getTargetStepOrder(), m.getTargetType(), m.getTargetParamName(),
+                        m.getMappingOrder()))
                 .toList();
 
         return new EndpointResponseDto(

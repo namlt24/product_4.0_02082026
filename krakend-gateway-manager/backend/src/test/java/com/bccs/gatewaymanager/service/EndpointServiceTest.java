@@ -100,7 +100,7 @@ class EndpointServiceTest {
     @Test
     void create_rejectsMappingWhenSourceStepOrderNotBeforeTargetStepOrder() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "a", null, null,
-                1, MappingTargetType.QUERY, "a");
+                1, MappingTargetType.QUERY, "a", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -110,7 +110,7 @@ class EndpointServiceTest {
     @Test
     void create_rejectsBlankSourceFieldForStepResponse() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "  ", null, null,
-                2, MappingTargetType.QUERY, "a");
+                2, MappingTargetType.QUERY, "a", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -120,7 +120,7 @@ class EndpointServiceTest {
     @Test
     void create_rejectsBlankArrayAggregateFields() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_AGGREGATE, 1,
-                null, "", "code", 2, MappingTargetType.BODY_FIELD, "a");
+                null, "", "code", 2, MappingTargetType.BODY_FIELD, "a", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -130,7 +130,7 @@ class EndpointServiceTest {
     @Test
     void create_validMapping_succeeds() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "code", null, null,
-                2, MappingTargetType.QUERY, "a");
+                2, MappingTargetType.QUERY, "a", 0);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
         verify(registryCache).reload();

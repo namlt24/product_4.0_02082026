@@ -62,9 +62,14 @@ public class EndpointConfig {
     @OrderBy("stepOrder ASC")
     private List<BackendStep> steps = new ArrayList<>();
 
+    // @OrderBy("mappingOrder ASC") - dung de trang "Khai bao endpoint keo tha" doc/luu thu tu
+    // on dinh; thu tu nay KHONG anh huong CompositeOrchestratorEngine (ap tat ca mapping cua
+    // 1 step cung luc, khong tuan tu). Truoc khi them dong nay, thu tu doc von da khong xac
+    // dinh/tuy DB nen day khong phai thay doi hanh vi man hinh cu dang phu thuoc vao.
     @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("mappingOrder ASC")
     private List<FieldMapping> mappings = new ArrayList<>();
 
     @CreationTimestamp

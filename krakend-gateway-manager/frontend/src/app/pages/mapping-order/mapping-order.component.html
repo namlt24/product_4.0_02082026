@@ -1,0 +1,62 @@
+<div class="page-header">
+  <a class="back-link" [routerLink]="['/endpoints', endpoint()?.id, 'edit']">
+    <mat-icon inline="true">arrow_back</mat-icon>
+    Quay lại Sửa Endpoint
+  </a>
+  <h1 class="page-title">Khai báo endpoint kéo thả</h1>
+  <p class="page-subtitle">
+    @if (endpoint(); as ep) {
+      Sắp xếp lại thứ tự hiển thị Field Mapping của <strong>{{ ep.name }}</strong>
+      (<code class="path-code">{{ ep.path }}</code>) — chỉ để dễ đọc/tổ chức, không ảnh hưởng cách engine xử lý.
+      Muốn sửa nội dung 1 mapping, quay lại trang Sửa Endpoint.
+    } @else {
+      Đang tải...
+    }
+  </p>
+</div>
+
+@if (loading()) {
+  <div class="center-state">
+    <mat-spinner diameter="26" />
+    <span>Đang tải danh sách Field Mapping...</span>
+  </div>
+} @else if (mappings().length === 0) {
+  <mat-card class="empty-card">
+    <mat-icon class="empty-icon">swap_vert</mat-icon>
+    <span>Endpoint này chưa có Field Mapping nào để sắp xếp.</span>
+  </mat-card>
+} @else {
+  <mat-card class="board-card">
+    <mat-card-content
+      cdkDropList
+      class="drag-list"
+      (cdkDropListDropped)="drop($event)"
+    >
+      @for (m of mappings(); track m; let i = $index) {
+        <div class="drag-row" cdkDrag>
+          <mat-icon class="drag-handle" cdkDragHandle matTooltip="Kéo để sắp xếp">drag_indicator</mat-icon>
+          <span class="drag-index">{{ i + 1 }}</span>
+          <div class="drag-body">
+            <span class="drag-source">{{ sourceLabel(m) }}</span>
+            <mat-icon class="drag-arrow" inline="true">trending_flat</mat-icon>
+            <span class="drag-target">{{ targetLabel(m) }}</span>
+          </div>
+          <div class="drag-preview" *cdkDragPreview>
+            {{ sourceLabel(m) }} → {{ targetLabel(m) }}
+          </div>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <div class="save-bar">
+    <button mat-flat-button color="primary" [disabled]="saving()" (click)="save()">
+      @if (saving()) {
+        <mat-spinner diameter="18" class="btn-spinner" />
+      } @else {
+        <mat-icon>save</mat-icon>
+      }
+      Lưu thứ tự
+    </button>
+  </div>
+}

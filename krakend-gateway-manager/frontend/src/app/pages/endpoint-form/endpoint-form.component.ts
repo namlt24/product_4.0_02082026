@@ -168,6 +168,9 @@ export class EndpointFormComponent implements OnInit {
       targetStepOrder: [m.targetStepOrder, Validators.required],
       targetType: [m.targetType, Validators.required],
       targetParamName: [m.targetParamName, Validators.required],
+      // Khong gan UI o man hinh nay - chi giu nguyen gia tri da tai de KHONG lam mat thu tu
+      // da sap xep qua trang "Khai bao endpoint keo tha" khi luu lai tu day (xem toPayload()).
+      mappingOrder: [m.mappingOrder ?? 0],
     });
   }
 
@@ -332,6 +335,7 @@ export class EndpointFormComponent implements OnInit {
         targetStepOrder: target,
         targetType: 'QUERY',
         targetParamName: '',
+        mappingOrder: this.mappingsArray.length,
       }),
     );
   }
@@ -406,6 +410,7 @@ export class EndpointFormComponent implements OnInit {
       targetStepOrder: m.targetStepOrder,
       targetType: m.targetType,
       targetParamName: m.targetParamName,
+      mappingOrder: m.mappingOrder,
     }));
 
     // Khong gui id trong body: PUT da mang id qua URL path (endpoint-api.service.ts

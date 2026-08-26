@@ -153,6 +153,9 @@
             <button mat-icon-button matTooltip="Sửa" (click)="edit(ep)">
               <mat-icon>edit</mat-icon>
             </button>
+            <a mat-icon-button matTooltip="Khai báo endpoint kéo thả" [routerLink]="['/endpoints', ep.id, 'mapping-order']">
+              <mat-icon>swap_vert</mat-icon>
+            </a>
             <button mat-icon-button matTooltip="Xoá" class="danger-icon-btn" (click)="remove(ep)">
               <mat-icon>delete_outline</mat-icon>
             </button>

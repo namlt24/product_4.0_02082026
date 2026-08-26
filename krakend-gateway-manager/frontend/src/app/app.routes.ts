@@ -26,6 +26,12 @@ export const routes: Routes = [
       import('./pages/endpoint-form/endpoint-form.component').then((m) => m.EndpointFormComponent),
   },
   {
+    path: 'endpoints/:id/mapping-order',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/mapping-order/mapping-order.component').then((m) => m.MappingOrderComponent),
+  },
+  {
     path: 'dependency-graph',
     canActivate: [authGuard],
     loadComponent: () =>

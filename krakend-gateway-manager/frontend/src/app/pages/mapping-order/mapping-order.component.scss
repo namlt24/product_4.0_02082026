@@ -1,0 +1,146 @@
+.path-code {
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 12.5px;
+  color: var(--gwm-primary-dark);
+}
+
+.center-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0;
+  color: var(--gwm-text-secondary);
+  font-size: 14px;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--gwm-text-muted);
+
+  .empty-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--gwm-text-muted);
+  }
+}
+
+.board-card {
+  padding: 4px 0;
+}
+
+.drag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// ---------------------------------------------------------------------------
+// Hang keo tha - dung CDK cdkDrag/cdkDragHandle, style bang tay theo dung
+// token mau/border cua project (khong dua vao global vi Angular scope theo
+// tung component).
+// ---------------------------------------------------------------------------
+.drag-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-md);
+  cursor: default;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &.cdk-drag-preview {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+    border-color: var(--gwm-primary);
+  }
+
+  &.cdk-drag-placeholder {
+    opacity: 0.35;
+  }
+}
+
+.drag-list.cdk-drop-list-dragging .drag-row:not(.cdk-drag-placeholder) {
+  transition: transform 0.2s ease;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--gwm-text-muted);
+  flex-shrink: 0;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.drag-index {
+  font-family: var(--gwm-font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gwm-primary-dark);
+  background: var(--gwm-primary-light);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.drag-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  min-width: 0;
+}
+
+.drag-source {
+  color: var(--gwm-text);
+  font-weight: 600;
+}
+
+.drag-arrow {
+  color: var(--gwm-text-muted);
+}
+
+.drag-target {
+  color: var(--gwm-text-secondary);
+  font-family: var(--gwm-font-mono, monospace);
+  font-size: 12.5px;
+}
+
+.drag-preview {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-primary);
+  border-radius: var(--gwm-radius-md);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  font-size: 13.5px;
+  color: var(--gwm-text);
+}
+
+.save-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}

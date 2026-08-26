@@ -80,7 +80,7 @@ public class DataSeeder implements CommandLineRunner {
         // Chain: field "user_id" tu response step 1 -> query param "userId" cua step 2
         FieldMappingDto chain = new FieldMappingDto(
                 null, FieldMappingSourceType.STEP_RESPONSE, 1, "user_id", null, null,
-                2, MappingTargetType.QUERY, "userId");
+                2, MappingTargetType.QUERY, "userId", 0);
 
         // Path endpoint PHAI khai bao {userId} vi Step 1 dung token nay trong url_pattern -
         // engine chi tu dong forward path-param khi ten token khop giua endpoint va backend.

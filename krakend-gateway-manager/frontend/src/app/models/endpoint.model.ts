@@ -68,6 +68,8 @@ export interface FieldMapping {
   targetStepOrder: number;
   targetType: MappingTargetType;
   targetParamName: string;
+  /** Vi tri hien thi khi sap xep (trang "Khai bao endpoint keo tha") - KHONG anh huong hanh vi engine. */
+  mappingOrder: number;
 }
 
 export interface EndpointConfig {
@@ -185,6 +187,7 @@ export function emptyMapping(sourceStepOrder: number, targetStepOrder: number): 
     targetStepOrder,
     targetType: 'QUERY',
     targetParamName: '',
+    mappingOrder: 0,
   };
 }
 

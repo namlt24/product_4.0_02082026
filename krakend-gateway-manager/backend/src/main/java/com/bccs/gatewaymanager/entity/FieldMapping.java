@@ -3,6 +3,7 @@ package com.bccs.gatewaymanager.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.UUID;
 
@@ -83,4 +84,16 @@ public class FieldMapping {
     /** Ten path token / query param / header o step dich. */
     @Column(name = "target_param_name", nullable = false)
     private String targetParamName;
+
+    /**
+     * Vi tri hien thi khi sap xep (trang "Khai bao endpoint keo tha") - KHONG
+     * anh huong hanh vi engine (CompositeOrchestratorEngine ap tat ca mapping
+     * cua 1 step cung luc, khong tuan tu theo thu tu nay). Bang field_mapping
+     * da co du lieu that nen can @ColumnDefault de Hibernate sinh DDL kem
+     * DEFAULT khi ALTER TABLE them cot (dung mau da verify voi BackendStep.cacheEnabled).
+     */
+    @Builder.Default
+    @Column(name = "mapping_order", nullable = false)
+    @ColumnDefault("0")
+    private int mappingOrder = 0;
 }

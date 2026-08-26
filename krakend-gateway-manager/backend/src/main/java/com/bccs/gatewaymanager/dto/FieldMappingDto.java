@@ -34,7 +34,14 @@ public record FieldMappingDto(
 
         @NotNull MappingTargetType targetType,
 
-        @NotBlank String targetParamName
+        @NotBlank String targetParamName,
+
+        /**
+         * Vi tri hien thi khi sap xep (trang "Khai bao endpoint keo tha") - KHONG anh huong
+         * hanh vi engine. Payload cu (chua biet field nay, vi du tu 1 client/test cu) thieu
+         * field nay se duoc Jackson mac dinh 0 (int primitive, khong throw).
+         */
+        int mappingOrder
 ) {
     public FieldMappingDto {
         if (sourceType == null) {

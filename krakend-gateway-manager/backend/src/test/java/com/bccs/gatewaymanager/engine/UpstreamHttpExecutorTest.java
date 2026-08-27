@@ -105,7 +105,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc", port), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class)
                 .satisfies(e -> {
                     UpstreamHttpExecutor.UpstreamHttpErrorException ex = (UpstreamHttpExecutor.UpstreamHttpErrorException) e;
@@ -133,7 +133,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-4xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         assertThat(hitCount.get()).isEqualTo(1);
@@ -154,7 +154,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-5xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         // maxAttempts(3) trong retryFor() - 5xx co the la loi tam thoi nen VAN duoc retry.
@@ -169,7 +169,7 @@ class UpstreamHttpExecutorTest {
         } // socket dong ngay sau khi lay port trong - dam bao khong co gi lang nghe tai day
 
         assertThatThrownBy(() -> executor.call(upstream("svc", closedPort), HttpMethod.GET,
-                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300, 1, "test-step"))
+                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
     }
 
@@ -209,8 +209,8 @@ class UpstreamHttpExecutorTest {
         UpstreamService up = upstream("svc-cache", port);
         String url = "http://localhost:" + port + "/x";
 
-        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step");
-        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step");
+        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step", null, null);
+        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step", null, null);
 
         assertThat(first.get("value").asLong()).isEqualTo(1L);
         assertThat(second.get("value").asLong()).isEqualTo(1L);
@@ -232,9 +232,43 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
         String url = "http://localhost:" + port + "/x";
 
-        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step");
-        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step");
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null);
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null);
 
         assertThat(hitCount.get()).isEqualTo(2); // cacheEnabled=false - khong lan nao duoc cache
+    }
+
+    // ---- Override connectTimeout/readTimeout rieng theo BackendStep - xac nhan HANH VI THAT
+    // (RestTemplate that su bi timeout som hon), khong chi "co luu tham so". ----
+
+    @Test
+    void call_stepOverrideReadTimeoutNgan_timeoutSomHonMacDinhUpstream() throws IOException {
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/slow", exchange -> {
+            try {
+                Thread.sleep(400); // cham hon readTimeoutMs override (100ms) nhung nhanh hon mac dinh Upstream (3000ms)
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            byte[] body = "{\"ok\":true}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        UpstreamService up = UpstreamService.builder()
+                .name("svc-slow").baseHost("http://localhost:" + port)
+                .connectTimeoutMs(500).readTimeoutMs(3000) // mac dinh Upstream: du cham de KHONG timeout trong 400ms
+                .circuitBreakerEnabled(false).retryEnabled(false).build();
+        String url = "http://localhost:" + port + "/slow";
+
+        // Khong override (null, null) - dung readTimeoutMs=3000 cua Upstream, 400ms cham cua server VAN thanh cong.
+        JsonNode result = executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null);
+        assertThat(result.get("ok").asBoolean()).isTrue();
+
+        // Override readTimeoutMs=100ms (ngan hon 400ms server can) - PHAI timeout, du CUNG 1 Upstream/URL o tren van thanh cong.
+        assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "test-step-2", null, 100))
+                .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
     }
 }

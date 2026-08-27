@@ -69,6 +69,7 @@ class CompositeOrchestratorEngineTest {
                                  Integer conditionSourceStepOrder, String conditionSourceField, String conditionExpectedValue) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
                 conditionSourceType, conditionSourceStepOrder, conditionSourceField, operator, conditionExpectedValue,
                 nextIfTrue, nextIfFalse);
     }
@@ -83,7 +84,7 @@ class CompositeOrchestratorEngineTest {
     }
 
     private void stubCall(UpstreamService upstream, JsonNode response) {
-        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any()))
+        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
                 .thenReturn(response);
     }
 
@@ -250,5 +251,40 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.NOT_EXISTS, FieldMappingSourceType.STEP_RESPONSE, 1, "field", null);
         JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
         assertThat(result.get("r").asText()).isEqualTo("not-exists-true");
+    }
+
+    // ---- Override connectTimeoutMs/readTimeoutMs theo tung BackendStep - engine phai CHUYEN
+    // DUNG gia tri (hoac null) tu step xuong upstreamHttpExecutor.call(), khong tu y doi. ----
+
+    @Test
+    void step_coOverrideTimeout_duocChuyenDungXuongUpstreamHttpExecutor() {
+        stubCall(up1, json("{\"v\":1}"));
+        BackendStepDto stepWithOverride = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                750, 5000, // connectTimeoutMs/readTimeoutMs override rieng cho step nay
+                null, null, null, null, null, null, null);
+
+        engine.handle(endpoint(true, stepWithOverride), Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<Integer> connectCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
+        org.mockito.ArgumentCaptor<Integer> readCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(),
+                any(), connectCaptor.capture(), readCaptor.capture());
+        assertThat(connectCaptor.getValue()).isEqualTo(750);
+        assertThat(readCaptor.getValue()).isEqualTo(5000);
+    }
+
+    @Test
+    void step_khongOverrideTimeout_chuyenNullXuongUpstreamHttpExecutor() {
+        stubCall(up1, json("{\"v\":1}"));
+
+        engine.handle(endpoint(true, plainStep(1, "u1")), Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<Integer> connectCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
+        org.mockito.ArgumentCaptor<Integer> readCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(),
+                any(), connectCaptor.capture(), readCaptor.capture());
+        assertThat(connectCaptor.getValue()).isNull();
+        assertThat(readCaptor.getValue()).isNull();
     }
 }

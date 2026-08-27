@@ -61,6 +61,7 @@ class EndpointServiceTest {
     private BackendStepDto step(int order) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
                 null, null, null, null, null, null, null);
     }
 
@@ -74,6 +75,7 @@ class EndpointServiceTest {
                                            Integer nextIfTrue, Integer nextIfFalse, String conditionExpectedValue) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
                 FieldMappingSourceType.STEP_RESPONSE, conditionSourceStepOrder, "field", operator, conditionExpectedValue,
                 nextIfTrue, nextIfFalse);
     }

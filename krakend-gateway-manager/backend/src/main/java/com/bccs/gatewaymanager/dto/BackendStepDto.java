@@ -53,6 +53,11 @@ public record BackendStepDto(
 
         Integer canvasY,
 
+        /** Override rieng cho step nay - null = dung mac dinh cua UpstreamService (xem BackendStep.connectTimeoutMs). */
+        @Min(100) @Max(60000) Integer connectTimeoutMs,
+
+        @Min(100) @Max(60000) Integer readTimeoutMs,
+
         /**
          * Re nhanh (P1-5) - tat ca nullable, khong khai bao (conditionOperator=null)
          * = step chay binh thuong theo dung stepOrder ke tiep, khong doi hanh vi cu.

@@ -62,6 +62,7 @@ public class DataSeeder implements CommandLineRunner {
                 List.of(),
                 Map.of("id", "user_id"),       // rename "id" -> "user_id" cho ro nghia truoc khi chain
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
+                null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
                 null, null, null, null, null, null, null // dieu kien re nhanh: khong dung trong endpoint demo nay
         );
 
@@ -78,6 +79,7 @@ public class DataSeeder implements CommandLineRunner {
                 List.of("internal_debug_info"), // deny: loai field noi bo truoc khi tra ve client
                 Map.of(),
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
+                null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
                 null, null, null, null, null, null, null // dieu kien re nhanh: khong dung trong endpoint demo nay
         );
 

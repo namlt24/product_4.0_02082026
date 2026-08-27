@@ -97,7 +97,10 @@ Cache Redis **không** cấu hình ở đây — xem `BackendStep` bên dưới.
   của BCCS). `forwardOriginalBody` = lấy nguyên body client làm nền cho body
   gửi đi step này. `cacheEnabled`/`cacheTtlSeconds` (chỉ GET) cache **riêng
   cho step này** — 1 Upstream có thể bị nhiều step gọi tới nhiều hàm/path
-  khác nhau, không phải hàm nào cũng nên cache.
+  khác nhau, không phải hàm nào cũng nên cache. Tương tự, `connectTimeoutMs`/
+  `readTimeoutMs` (tuỳ chọn, để trống = dùng đúng mặc định của `UpstreamService`)
+  cho phép override timeout **riêng cho step này** — hữu ích khi 1 Upstream có
+  cả hàm nhanh (lookup) lẫn hàm chậm (report/tổng hợp).
 - Mỗi `FieldMapping` = "lấy 1 giá trị từ đâu, bơm vào đâu":
   - **Nguồn** (`sourceType`): `STEP_RESPONSE` (response step trước, hỗ trợ
     dot-notation lồng nhau vd `shop.channelTypeId`), `REQUEST_BODY` (đọc thẳng

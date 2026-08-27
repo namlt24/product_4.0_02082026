@@ -145,6 +145,17 @@
 
               <div class="field-row">
                 <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Connect timeout riêng (ms, tuỳ chọn)</mat-label>
+                  <input matInput type="number" formControlName="connectTimeoutMs" placeholder="để trống = dùng theo Upstream Service" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Read timeout riêng (ms, tuỳ chọn)</mat-label>
+                  <input matInput type="number" formControlName="readTimeoutMs" placeholder="để trống = dùng theo Upstream Service" />
+                </mat-form-field>
+              </div>
+
+              <div class="field-row">
+                <mat-form-field appearance="outline" style="flex: 1">
                   <mat-label>Group (namespace, tuy chon)</mat-label>
                   <input matInput formControlName="group" placeholder="vd: auth" />
                 </mat-form-field>

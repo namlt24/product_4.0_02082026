@@ -153,6 +153,20 @@ public class BackendStep {
     private Integer canvasY;
 
     /**
+     * Override connectTimeout/readTimeout cua UpstreamService RIENG cho step nay -
+     * null = dung dung mac dinh cua UpstreamService (hanh vi cu, khong doi). Dat o
+     * cap step (khong phai UpstreamService) vi cung 1 Upstream co the co ham nhanh
+     * (lookup don gian) va ham cham (report/tong hop) khac han nhau - dung chung 1
+     * timeout cho ca 2 la khong hop ly (xem UpstreamHttpExecutor.restTemplateFor()).
+     * Nullable, KHONG can @ColumnDefault (giong canvasX/canvasY o tren).
+     */
+    @Column(name = "connect_timeout_ms")
+    private Integer connectTimeoutMs;
+
+    @Column(name = "read_timeout_ms")
+    private Integer readTimeoutMs;
+
+    /**
      * Re nhanh (P1-5): sau khi step nay chay xong, dua vao 1 dieu kien (so sanh
      * 1 field lay tu response step truoc/body client) de quyet dinh step TIEP
      * THEO SE GOI la step nao - KHAC voi hanh vi mac dinh (luon di theo stepOrder

@@ -58,6 +58,10 @@ export interface BackendStep {
   canvasX?: number | null;
   canvasY?: number | null;
 
+  /** Override connect/read timeout RIÊNG cho step này - null/để trống = dùng mặc định của Upstream Service. */
+  connectTimeoutMs?: number | null;
+  readTimeoutMs?: number | null;
+
   /**
    * Rẽ nhánh (P1-5) - tất cả optional, không khai báo (conditionOperator=null/undefined)
    * = step chạy bình thường theo đúng stepOrder kế tiếp, không đổi hành vi cũ.
@@ -250,6 +254,8 @@ export function emptyStep(stepOrder: number): BackendStep {
     fieldRenameMapping: {},
     canvasX: null,
     canvasY: null,
+    connectTimeoutMs: null,
+    readTimeoutMs: null,
     conditionSourceType: null,
     conditionSourceStepOrder: null,
     conditionSourceField: null,

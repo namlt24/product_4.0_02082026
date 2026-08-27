@@ -46,6 +46,9 @@ interface StepEditModel {
   forwardOriginalBody: boolean;
   cacheEnabled: boolean;
   cacheTtlSeconds: number;
+  /** Override timeout rieng cho step nay - null = dung mac dinh cua Upstream Service. */
+  connectTimeoutMs: number | null;
+  readTimeoutMs: number | null;
   group: string;
   target: string;
   allowFieldsText: string;
@@ -354,6 +357,8 @@ export class EndpointCanvasComponent implements OnInit {
       forwardOriginalBody: s.forwardOriginalBody ?? false,
       cacheEnabled: s.cacheEnabled ?? false,
       cacheTtlSeconds: s.cacheTtlSeconds ?? 300,
+      connectTimeoutMs: s.connectTimeoutMs ?? null,
+      readTimeoutMs: s.readTimeoutMs ?? null,
       group: s.group ?? '',
       target: s.target ?? '',
       allowFieldsText: s.allowFields.join(', '),
@@ -497,6 +502,8 @@ export class EndpointCanvasComponent implements OnInit {
       forwardOriginalBody: edit.forwardOriginalBody,
       cacheEnabled: edit.cacheEnabled,
       cacheTtlSeconds: edit.cacheTtlSeconds,
+      connectTimeoutMs: edit.connectTimeoutMs || null,
+      readTimeoutMs: edit.readTimeoutMs || null,
       group: edit.group || null,
       target: edit.target || null,
       allowFields: splitCsv(edit.allowFieldsText),

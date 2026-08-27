@@ -108,6 +108,7 @@ public class ConfigExportImportService {
                             resolvedUpstreamId, s.upstreamServiceName(), s.forwardOriginalBody(), s.cacheEnabled(),
                             s.cacheTtlSeconds(), s.group(), s.target(), s.allowFields(), s.denyFields(),
                             s.fieldRenameMapping(), s.canvasX(), s.canvasY(),
+                            s.connectTimeoutMs(), s.readTimeoutMs(),
                             // Dieu kien re nhanh (P1-5) giu nguyen tu bundle - la du lieu cau hinh
                             // thuan tuy (tham chieu stepOrder trong CUNG endpoint), khong gan voi
                             // moi truong nguon nhu upstreamServiceId nen khong can resolve lai gi.

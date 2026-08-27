@@ -73,6 +73,8 @@ public class EndpointMapper {
                 .fieldRenameMapping(s.fieldRenameMapping() == null ? new java.util.HashMap<>() : s.fieldRenameMapping())
                 .canvasX(s.canvasX())
                 .canvasY(s.canvasY())
+                .connectTimeoutMs(s.connectTimeoutMs())
+                .readTimeoutMs(s.readTimeoutMs())
                 .conditionSourceType(s.conditionSourceType())
                 .conditionSourceStepOrder(s.conditionSourceStepOrder())
                 .conditionSourceField(s.conditionSourceField())
@@ -121,6 +123,7 @@ public class EndpointMapper {
                         new ArrayList<>(s.getAllowFields()), new ArrayList<>(s.getDenyFields()),
                         new HashMap<>(s.getFieldRenameMapping()),
                         s.getCanvasX(), s.getCanvasY(),
+                        s.getConnectTimeoutMs(), s.getReadTimeoutMs(),
                         s.getConditionSourceType(), s.getConditionSourceStepOrder(), s.getConditionSourceField(),
                         s.getConditionOperator(), s.getConditionExpectedValue(),
                         s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse()))

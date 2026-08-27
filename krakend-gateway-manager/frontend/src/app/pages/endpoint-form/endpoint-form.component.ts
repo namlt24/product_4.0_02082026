@@ -146,6 +146,9 @@ export class EndpointFormComponent implements OnInit {
       forwardOriginalBody: [step.forwardOriginalBody ?? false],
       cacheEnabled: [step.cacheEnabled ?? false],
       cacheTtlSeconds: [step.cacheTtlSeconds ?? 300, [Validators.min(1)]],
+      // Override timeout rieng cho step nay - de trong (null) = dung mac dinh cua Upstream Service.
+      connectTimeoutMs: [step.connectTimeoutMs ?? null, [Validators.min(100), Validators.max(60000)]],
+      readTimeoutMs: [step.readTimeoutMs ?? null, [Validators.min(100), Validators.max(60000)]],
       group: [step.group ?? ''],
       target: [step.target ?? ''],
       allowFieldsText: [step.allowFields.join(', ')],
@@ -463,6 +466,8 @@ export class EndpointFormComponent implements OnInit {
       forwardOriginalBody: s.forwardOriginalBody,
       cacheEnabled: s.cacheEnabled,
       cacheTtlSeconds: s.cacheTtlSeconds,
+      connectTimeoutMs: s.connectTimeoutMs || null,
+      readTimeoutMs: s.readTimeoutMs || null,
       group: s.group || null,
       target: s.target || null,
       allowFields: splitCsv(s.allowFieldsText),

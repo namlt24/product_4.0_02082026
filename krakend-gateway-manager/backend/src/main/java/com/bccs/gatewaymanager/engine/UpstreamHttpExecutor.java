@@ -65,7 +65,17 @@ public class UpstreamHttpExecutor {
     private final ObjectMapper objectMapper;
     private final AuditLogService auditLogService;
 
-    private final Map<String, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
+    private final Map<RestTemplateKey, RestTemplate> restTemplateCache = new ConcurrentHashMap<>();
+
+    /**
+     * RestTemplate cua Spring bake connectTimeout/readTimeout NGAY LUC BUILD qua
+     * RestTemplateBuilder (khong sua duoc per-request) - nen key cache phai gom
+     * ca 2 gia tri timeout HIEU LUC (khong chi ten upstream) de 1 BackendStep co
+     * the override rieng ma khong anh huong RestTemplate dung chung cua cac step
+     * khac cung Upstream nhung khong override (xem restTemplateFor()).
+     */
+    private record RestTemplateKey(String upstreamName, int connectMs, int readMs) {
+    }
 
     // Dem hit/miss cache THEO TEN UPSTREAM (khong theo tung key rieng - qua nhieu key
     // se ton bo nho vo ich) - phuc vu man hinh "Dashboard suc khoe Upstream". Dat o day
@@ -80,10 +90,12 @@ public class UpstreamHttpExecutor {
 
     /**
      * @param stepOrder/stepName chi de ghi audit log (xem HopAuditEvent) - KHONG anh huong hanh vi goi.
+     * @param stepConnectTimeoutMs/stepReadTimeoutMs override rieng cua BackendStep - null = dung
+     *        dung mac dinh cua UpstreamService (xem BackendStep.connectTimeoutMs/readTimeoutMs).
      */
     public JsonNode call(UpstreamService upstream, HttpMethod method, String resolvedUrl,
                           HttpHeaders headers, JsonNode body, boolean cacheEnabled, int cacheTtlSeconds,
-                          int stepOrder, String stepName) {
+                          int stepOrder, String stepName, Integer stepConnectTimeoutMs, Integer stepReadTimeoutMs) {
         long startNanos = System.nanoTime();
         boolean cacheable = cacheEnabled && method == HttpMethod.GET;
         String cacheKey = cacheable ? GatewayCacheService.buildKey(upstream.getName(), method.name(), resolvedUrl) : null;
@@ -115,7 +127,8 @@ public class UpstreamHttpExecutor {
                 }
             }
 
-            Supplier<HttpCallResult> callSupplier = () -> doHttpCall(upstream, method, resolvedUrl, headers, body);
+            Supplier<HttpCallResult> callSupplier = () ->
+                    doHttpCall(upstream, method, resolvedUrl, headers, body, stepConnectTimeoutMs, stepReadTimeoutMs);
             Supplier<HttpCallResult> decorated = Bulkhead.decorateSupplier(bulkheadFor(upstream), callSupplier);
             if (upstream.isCircuitBreakerEnabled()) {
                 decorated = CircuitBreaker.decorateSupplier(circuitBreakerFor(upstream), decorated);
@@ -155,8 +168,9 @@ public class UpstreamHttpExecutor {
     }
 
     private HttpCallResult doHttpCall(UpstreamService upstream, HttpMethod method, String resolvedUrl,
-                                       HttpHeaders headers, JsonNode body) {
-        RestTemplate restTemplate = restTemplateFor(upstream);
+                                       HttpHeaders headers, JsonNode body,
+                                       Integer stepConnectTimeoutMs, Integer stepReadTimeoutMs) {
+        RestTemplate restTemplate = restTemplateFor(upstream, stepConnectTimeoutMs, stepReadTimeoutMs);
         try {
             String bodyString = body == null ? null : body.toString();
             ResponseEntity<String> response = restTemplate.exchange(
@@ -193,7 +207,11 @@ public class UpstreamHttpExecutor {
      * rebuild voi cau hinh moi nhat tu DB qua computeIfAbsent/circuitBreaker(...).
      */
     public void invalidate(String upstreamName) {
-        restTemplateCache.remove(upstreamName);
+        // Sau khi them override timeout theo BackendStep, 1 Upstream co the co
+        // NHIEU RestTemplate da cache (moi (connectMs, readMs) hieu luc khac nhau
+        // la 1 key rieng - xem RestTemplateKey) - phai xoa HET cac key thuoc
+        // upstream nay, khong chi 1 key co dinh nhu truoc.
+        restTemplateCache.keySet().removeIf(key -> key.upstreamName().equals(upstreamName));
         circuitBreakerRegistry.remove(upstreamName);
         retryRegistry.remove(upstreamName);
         bulkheadRegistry.remove(upstreamName);
@@ -210,12 +228,15 @@ public class UpstreamHttpExecutor {
         return a == null ? 0 : a.sum();
     }
 
-    private RestTemplate restTemplateFor(UpstreamService upstream) {
+    private RestTemplate restTemplateFor(UpstreamService upstream, Integer stepConnectTimeoutMs, Integer stepReadTimeoutMs) {
         // Spring Boot 4 (spring-boot-restclient): setConnectTimeout/setReadTimeout doi ten
         // thanh connectTimeout/readTimeout (bo tien to "set", theo quy uoc builder moi).
-        return restTemplateCache.computeIfAbsent(upstream.getName(), name -> new RestTemplateBuilder()
-                .connectTimeout(Duration.ofMillis(upstream.getConnectTimeoutMs()))
-                .readTimeout(Duration.ofMillis(upstream.getReadTimeoutMs()))
+        int effectiveConnectMs = stepConnectTimeoutMs != null ? stepConnectTimeoutMs : upstream.getConnectTimeoutMs();
+        int effectiveReadMs = stepReadTimeoutMs != null ? stepReadTimeoutMs : upstream.getReadTimeoutMs();
+        RestTemplateKey key = new RestTemplateKey(upstream.getName(), effectiveConnectMs, effectiveReadMs);
+        return restTemplateCache.computeIfAbsent(key, k -> new RestTemplateBuilder()
+                .connectTimeout(Duration.ofMillis(k.connectMs()))
+                .readTimeout(Duration.ofMillis(k.readMs()))
                 .build());
     }
 

@@ -12,10 +12,13 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
--- Cap nhat 2026-08-27: them 'QUERY_PARAM' vao CHECK constraint cua
+-- Cap nhat 2026-08-27 (lan 1): them 'QUERY_PARAM' vao CHECK constraint cua
 -- FIELD_MAPPING.SOURCE_TYPE (doi ten sang FIELD_MAPPING_SOURCE_TYPE_CHK, khong
 -- con la ten SYS_C#### tu dong nua) - xem README.md muc 8 "Gioi han hien tai"
 -- ve viec ddl-auto=update KHONG tu noi CHECK constraint cho enum da co san.
+-- Cap nhat 2026-08-27 (lan 2): them CONNECT_TIMEOUT_MS/READ_TIMEOUT_MS vao
+-- BACKEND_STEP (tinh nang override timeout theo tung step) - lan trich xuat
+-- truoc do (lan 1) da bo sot 2 cot nay.
 --
 -- Thu tu tao bang theo dung phu thuoc FK (bang cha truoc, bang con sau).
 -- Ten constraint/index giu NGUYEN theo dung Hibernate da tu sinh tren may hien
@@ -94,6 +97,10 @@ CREATE TABLE "BACKEND_STEP"
 	"CONDITION_SOURCE_TYPE" VARCHAR2(255 CHAR),
 	"NEXT_STEP_ORDER_IF_FALSE" NUMBER(10,0),
 	"NEXT_STEP_ORDER_IF_TRUE" NUMBER(10,0),
+	-- Override connectTimeout/readTimeout rieng cho step nay (nullable, khong
+	-- @ColumnDefault - xem BackendStep.java) - null = dung mac dinh UpstreamService.
+	"CONNECT_TIMEOUT_MS" NUMBER(10,0),
+	"READ_TIMEOUT_MS" NUMBER(10,0),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS'))) ENABLE,

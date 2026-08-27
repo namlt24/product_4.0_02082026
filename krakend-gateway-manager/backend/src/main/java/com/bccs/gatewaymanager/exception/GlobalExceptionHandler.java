@@ -7,9 +7,12 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -68,6 +71,40 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of("VALIDATION_ERROR", message));
+    }
+
+    // ---- Loi do CLIENT tu gui sai (body/param) - truoc day KHONG co handler
+    // rieng nen roi thang xuong handleUnknown() ben duoi -> tra ve 500
+    // UNKNOWN_ERROR du 100% la loi phia client gui sai, khong phai loi he
+    // thong. Ap dung cho ca Control Plane (/api/**, vi du EndpointController
+    // nhan @RequestBody sai JSON) lan cac tham so @RequestParam/@PathVariable
+    // co kieu (vi du LogSearchController.searchRequests nhan "from"/"to" kieu
+    // Instant - client truyen chuoi khong phai ngay thang hop le se roi vao day). ----
+
+    /** Body request khong doc duoc thanh JSON (sai cu phap, thieu dau ngoac...). */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleBodyNotReadable(HttpMessageNotReadableException ex) {
+        log.warn("Body request khong hop le: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("INVALID_REQUEST_BODY", "Body request khong hop le (JSON sai cu phap hoac thieu truong)."));
+    }
+
+    /** Thieu 1 @RequestParam bat buoc (khong co "required = false"/defaultValue). */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex) {
+        log.warn("Thieu tham so bat buoc: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("MISSING_PARAMETER", "Thieu tham so bat buoc: " + ex.getParameterName()));
+    }
+
+    /** @RequestParam/@PathVariable dung kieu nhung gia tri client gui khong ep duoc (vi du "from=abc" cho kieu Instant). */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.warn("Tham so sai kieu du lieu: {}", ex.getMessage());
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "?";
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("INVALID_PARAMETER_TYPE",
+                        "Tham so '" + ex.getName() + "' sai kieu du lieu (can kieu " + requiredType + ")."));
     }
 
     @ExceptionHandler(Exception.class)

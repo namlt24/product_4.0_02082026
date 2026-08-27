@@ -59,10 +59,24 @@ public class DynamicDispatcherController {
         long startNanos = System.nanoTime();
         String requestPath = request.getRequestURI();
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
-        PathContainer pathContainer = PathContainer.parsePath(requestPath);
 
         try {
-            for (EndpointResponseDto config : registryCache.all()) {
+            // Buoc 1: tra O(1) qua HashMap cho path "tinh" (khong co {param}) - da
+            // so endpoint thuc te roi vao nhom nay (xem EndpointRegistryCache.findExact()).
+            // Truoc day dispatch() luon quet TUYEN TINH toan bo danh sach endpoint
+            // (kem PathPattern.matches() cho tung phan tu) du path khong he co
+            // {param} - O(n)/request, thanh diem nghen that su khi so endpoint len
+            // toi hang nghin. Khong can PathContainer.parsePath() o nhanh nay.
+            EndpointResponseDto exact = registryCache.findExact(method.name(), requestPath);
+            if (exact != null) {
+                return execute(exact, Map.of(), request, requestId, method, requestPath, startNanos);
+            }
+
+            // Buoc 2: fallback quet tuan tu, nhung CHI tren nhom co {param} trong
+            // path (registryCache.patternEndpoints() - nho hon han toan bo danh
+            // sach endpoint trong thuc te).
+            PathContainer pathContainer = PathContainer.parsePath(requestPath);
+            for (EndpointResponseDto config : registryCache.patternEndpoints()) {
                 if (!config.method().name().equals(method.name())) {
                     continue;
                 }
@@ -71,16 +85,7 @@ public class DynamicDispatcherController {
                     continue;
                 }
                 Map<String, String> pathVariables = pattern.matchAndExtract(pathContainer).getUriVariables();
-                String rawBody = readBody(request);
-                try {
-                    JsonNode result = engine.handle(config, pathVariables, request.getParameterMap(), rawBody);
-                    recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
-                    return ResponseEntity.ok(result);
-                } catch (RuntimeException e) {
-                    recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "ERROR",
-                            resolveHttpStatus(e), resolveErrorCode(e), e.getMessage());
-                    throw e;
-                }
+                return execute(config, pathVariables, request, requestId, method, requestPath, startNanos);
             }
 
             log.debug("Khong tim thay EndpointConfig khop voi {} {}", method, requestPath);
@@ -88,6 +93,21 @@ public class DynamicDispatcherController {
                     .body(Map.of("error", "GW-NOT-FOUND", "message", "Khong co endpoint nao khop voi " + method + " " + requestPath));
         } finally {
             MDC.remove("requestId");
+        }
+    }
+
+    /** Thuc thi 1 EndpointConfig da khop (qua O(1) hoac fallback pattern) + ghi audit ca 2 nhanh thanh cong/loi. */
+    private ResponseEntity<?> execute(EndpointResponseDto config, Map<String, String> pathVariables, HttpServletRequest request,
+                                       String requestId, HttpMethod method, String requestPath, long startNanos) throws Exception {
+        String rawBody = readBody(request);
+        try {
+            JsonNode result = engine.handle(config, pathVariables, request.getParameterMap(), rawBody);
+            recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "ERROR",
+                    resolveHttpStatus(e), resolveErrorCode(e), e.getMessage());
+            throw e;
         }
     }
 

@@ -272,7 +272,13 @@ export class EndpointFormComponent implements OnInit {
 
   stepConditionNeedsExpectedValue(index: number): boolean {
     const op = this.stepsArray.at(index).get('conditionOperator')!.value;
-    return op === 'EQUALS' || op === 'NOT_EQUALS';
+    return op !== 'EXISTS' && op !== 'NOT_EXISTS';
+  }
+
+  /** 4 toan tu so sanh SO (>,>=,<,<=) - doi input sang type="number" cho de nhap, validate chac chan van o backend. */
+  stepConditionExpectedValueIsNumeric(index: number): boolean {
+    const op = this.stepsArray.at(index).get('conditionOperator')!.value;
+    return op === 'GREATER_THAN' || op === 'GREATER_THAN_OR_EQUAL' || op === 'LESS_THAN' || op === 'LESS_THAN_OR_EQUAL';
   }
 
   // ------------------------------------------------------------------ //

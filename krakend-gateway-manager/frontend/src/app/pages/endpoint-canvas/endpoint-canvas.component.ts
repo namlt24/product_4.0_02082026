@@ -409,7 +409,13 @@ export class EndpointCanvasComponent implements OnInit {
 
   stepConditionNeedsExpectedValue(): boolean {
     const op = this.editingStep?.conditionOperator;
-    return op === 'EQUALS' || op === 'NOT_EQUALS';
+    return op !== 'EXISTS' && op !== 'NOT_EXISTS';
+  }
+
+  /** 4 toan tu so sanh SO (>,>=,<,<=) - doi input sang type="number" cho de nhap, validate chac chan van o backend. */
+  stepConditionExpectedValueIsNumeric(): boolean {
+    const op = this.editingStep?.conditionOperator;
+    return op === 'GREATER_THAN' || op === 'GREATER_THAN_OR_EQUAL' || op === 'LESS_THAN' || op === 'LESS_THAN_OR_EQUAL';
   }
 
   /**

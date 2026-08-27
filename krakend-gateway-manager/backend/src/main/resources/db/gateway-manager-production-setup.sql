@@ -30,6 +30,12 @@
 --   10.207.252.17 vi may dev khong ra duoc mang noi bo do - khong phai loi
 --   du lieu).
 --
+-- Cap nhat 2026-08-27: them 4 toan tu so sanh so (GREATER_THAN,
+-- GREATER_THAN_OR_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL) vao CHECK constraint
+-- cua BACKEND_STEP.CONDITION_OPERATOR (dong bo voi ddl-gateway-manager.sql) -
+-- khong anh huong du lieu THAT o tren, ca 4 BACKEND_STEP that hien co deu
+-- CONDITION_OPERATOR=NULL (khong dung re nhanh).
+--
 -- HUONG DAN DUNG tren production:
 --   1. sqlplus/SQLcl vao dung schema, SET DEFINE OFF truoc (URL_PATTERN co
 --      ky tu "&", khong tat se bi hoi "Enter value for..." va hong cau lenh).
@@ -180,7 +186,7 @@ CREATE TABLE "BACKEND_STEP"
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
-	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS'))) ENABLE,
+	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS','GREATER_THAN','GREATER_THAN_OR_EQUAL','LESS_THAN','LESS_THAN_OR_EQUAL'))) ENABLE,
 	 CHECK ((condition_source_type in ('STEP_RESPONSE','REQUEST_BODY','STEP_RESPONSE_ARRAY_AGGREGATE'))) ENABLE,
 	 CONSTRAINT "BACKEND_STEP_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKRTN26VYRBRFLYH5FA838XWTL2" FOREIGN KEY ("ENDPOINT_ID")

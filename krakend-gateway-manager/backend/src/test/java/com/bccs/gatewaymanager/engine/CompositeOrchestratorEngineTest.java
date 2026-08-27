@@ -127,17 +127,35 @@ class CompositeOrchestratorEngineTest {
     void reNhanh_dieuKienDung_diTheoNhanhTrue_boQuaNhanhFalse() {
         stubCall(up1, json("{\"status\":\"active\"}"));
         stubCall(up2, json("{\"branch\":\"true-path\"}"));
-        // CHI 2 step - step2 KHONG khai bao dieu kien nen la "natural next" cuoi
-        // cung (khong con step nao co stepOrder lon hon 2) - neu them step3 vao
-        // day, step2 (khong dieu kien) se TU DONG "roi tiep" sang step3 dung theo
-        // natural-next (dung thiet ke, khong phai bug) - phai tranh nham lan do
-        // trong chinh test nay bang cach khong tao step3.
         BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.EQUALS, FieldMappingSourceType.STEP_RESPONSE, 1, "status", "active");
         EndpointResponseDto config = endpoint(true, s1, plainStep(2, "u2"));
 
         JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
 
         assertThat(result.get("branch").asText()).isEqualTo("true-path");
+    }
+
+    @Test
+    void reNhanh_2NhanhLoaiTruLanNhau_khongCoConditionOperatorRieng_CHI_chayDungMOTNhanh() {
+        // Regression test: bug phat hien khi verify "Numeric Branch Demo" - step2/step3 la
+        // 2 "nhanh la" (branch leaf) LOAI TRU LAN NHAU, CA HAI deu KHONG khai bao
+        // conditionOperator rieng (dung y het cach "Re nhanh Demo - Channel Type theo
+        // StaffId" da seed truoc P1-5). TRUOC FIX: sau khi vao dung nhanh TRUE (step2),
+        // engine tu dong "roi tiep" sang step3 (stepOrder lon hon ke tiep) theo quy tac
+        // natural-next -> goi NHAM ca 2 nhanh, tra ve nham ket qua nhanh FALSE. SAU FIX:
+        // step2/step3 la dich cua nhanh re -> KHONG duoc tu dong roi tiep, dung dung tai
+        // nhanh vua duoc chon.
+        stubCall(up1, json("{\"status\":\"active\"}"));
+        stubCall(up2, json("{\"branch\":\"true-path\"}"));
+        BackendStepDto s1 = step(1, "u1", 2, 3, ConditionOperator.EQUALS, FieldMappingSourceType.STEP_RESPONSE, 1, "status", "active");
+        EndpointResponseDto config = endpoint(true, s1, plainStep(2, "u2"), plainStep(3, "u3"));
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("branch").asText()).isEqualTo("true-path");
+        // Nhanh FALSE (up3) KHONG duoc goi - chi 1 trong 2 nhanh loai tru lan nhau duoc chay.
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
+                .call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
     }
 
     @Test
@@ -253,6 +271,68 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.NOT_EXISTS, FieldMappingSourceType.STEP_RESPONSE, 1, "field", null);
         JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
         assertThat(result.get("r").asText()).isEqualTo("not-exists-true");
+    }
+
+    // ---- 4 toan tu so sanh SO moi them (>,>=,<,<=) - dung cho case "response <=3 goi X voi
+    // tham so A, >3 goi CUNG X voi tham so B" (2 step rieng, cung 1 co che re nhanh da co). ----
+
+    @Test
+    void operator_GREATER_THAN_dungKhiSoJsonThatLonHon() {
+        stubCall(up1, json("{\"count\":5}"));
+        stubCall(up2, json("{\"r\":\"gt-true\"}"));
+        BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.GREATER_THAN, FieldMappingSourceType.STEP_RESPONSE, 1, "count", "3");
+        JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
+        assertThat(result.get("r").asText()).isEqualTo("gt-true");
+    }
+
+    @Test
+    void operator_GREATER_THAN_saiKhiSoNhoHonHoacBang() {
+        stubCall(up1, json("{\"count\":3}"));
+        BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.GREATER_THAN, FieldMappingSourceType.STEP_RESPONSE, 1, "count", "3");
+        JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
+        // false -> nextStepOrderIfFalse = null -> ket thuc tai step1
+        assertThat(result.get("count").asInt()).isEqualTo(3);
+    }
+
+    @Test
+    void operator_LESS_THAN_OR_EQUAL_dungKhiSoBang() {
+        stubCall(up1, json("{\"count\":3}"));
+        stubCall(up2, json("{\"r\":\"lte-true\"}"));
+        BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.LESS_THAN_OR_EQUAL, FieldMappingSourceType.STEP_RESPONSE, 1, "count", "3");
+        JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
+        assertThat(result.get("r").asText()).isEqualTo("lte-true");
+    }
+
+    @Test
+    void operator_GREATER_THAN_OR_EQUAL_dungVoiGiaTriDangChuoiSo() {
+        // "count" tra ve dang CHUOI (vd tu 1 API tra text) - van phai parse duoc thanh so.
+        stubCall(up1, json("{\"count\":\"5\"}"));
+        stubCall(up2, json("{\"r\":\"gte-true\"}"));
+        BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.GREATER_THAN_OR_EQUAL, FieldMappingSourceType.STEP_RESPONSE, 1, "count", "5");
+        JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
+        assertThat(result.get("r").asText()).isEqualTo("gte-true");
+    }
+
+    @Test
+    void operator_LESS_THAN_giaTriResponseKhongTonTai_traFalseKhongThrow() {
+        stubCall(up1, json("{}")); // khong co field "count"
+        BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.LESS_THAN, FieldMappingSourceType.STEP_RESPONSE, 1, "count", "3");
+        JsonNode result = engine.handle(endpoint(true, s1, plainStep(2, "u2")), Map.of(), Map.of(), null);
+        // khong throw, coi nhu false (giong het cach EQUALS xu ly "exists") - ket thuc
+        // tai step1, response goc van la {} (khong co field "count").
+        assertThat(result.size()).isEqualTo(0);
+    }
+
+    @Test
+    void operator_GREATER_THAN_giaTriResponseKhongPhaiSo_throwBusinessException() {
+        stubCall(up1, json("{\"count\":\"khong-phai-so\"}"));
+        BackendStepDto s1 = step(1, "u1", 2, null, ConditionOperator.GREATER_THAN, FieldMappingSourceType.STEP_RESPONSE, 1, "count", "3");
+        EndpointResponseDto config = endpoint(true, s1, plainStep(2, "u2"));
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-CONDITION-NOT-NUMERIC");
     }
 
     // ---- Override connectTimeoutMs/readTimeoutMs theo tung BackendStep - engine phai CHUYEN

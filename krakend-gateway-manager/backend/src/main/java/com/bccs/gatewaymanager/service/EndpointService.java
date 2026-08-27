@@ -212,14 +212,39 @@ public class EndpointService {
                         + "': dieu kien re nhanh (sourceType=STEP_RESPONSE) thieu conditionSourceStepOrder hop le.");
             }
             if (s.conditionOperator() != null
-                    && (s.conditionOperator() == com.bccs.gatewaymanager.entity.ConditionOperator.EQUALS
-                        || s.conditionOperator() == com.bccs.gatewaymanager.entity.ConditionOperator.NOT_EQUALS)
+                    && s.conditionOperator() != com.bccs.gatewaymanager.entity.ConditionOperator.EXISTS
+                    && s.conditionOperator() != com.bccs.gatewaymanager.entity.ConditionOperator.NOT_EXISTS
                     && (s.conditionExpectedValue() == null || s.conditionExpectedValue().isBlank())) {
                 throw new BusinessException("GW-003", "Step '" + s.name()
                         + "': dieu kien re nhanh (" + s.conditionOperator() + ") thieu conditionExpectedValue.");
             }
+            // 4 toan tu so sanh SO (>,>=,<,<=): conditionExpectedValue BAT BUOC parse
+            // duoc thanh so - khac EQUALS/NOT_EQUALS chap nhan bat ky chuoi nao.
+            if (isNumericConditionOperator(s.conditionOperator())
+                    && s.conditionExpectedValue() != null && !s.conditionExpectedValue().isBlank()
+                    && !isParsableAsNumber(s.conditionExpectedValue())) {
+                throw new BusinessException("GW-003", "Step '" + s.name()
+                        + "': dieu kien re nhanh (" + s.conditionOperator() + ") can conditionExpectedValue la SO, nhung dang la '"
+                        + s.conditionExpectedValue() + "'.");
+            }
         }
         detectBranchCycle(dto);
+    }
+
+    private static boolean isNumericConditionOperator(com.bccs.gatewaymanager.entity.ConditionOperator op) {
+        return op == com.bccs.gatewaymanager.entity.ConditionOperator.GREATER_THAN
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.GREATER_THAN_OR_EQUAL
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN_OR_EQUAL;
+    }
+
+    private static boolean isParsableAsNumber(String value) {
+        try {
+            Double.parseDouble(value);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /**

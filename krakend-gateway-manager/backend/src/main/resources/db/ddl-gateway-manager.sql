@@ -19,6 +19,15 @@
 -- Cap nhat 2026-08-27 (lan 2): them CONNECT_TIMEOUT_MS/READ_TIMEOUT_MS vao
 -- BACKEND_STEP (tinh nang override timeout theo tung step) - lan trich xuat
 -- truoc do (lan 1) da bo sot 2 cot nay.
+-- Cap nhat 2026-08-27 (lan 4): them 4 toan tu so sanh so (GREATER_THAN,
+-- GREATER_THAN_OR_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL) vao CHECK constraint
+-- cua BACKEND_STEP.CONDITION_OPERATOR - dung cho re nhanh so (vd "response
+-- step truoc <=3 thi goi nhanh A, >3 thi goi nhanh B"). Tren DB DA CO bang
+-- nay, chay tay: ALTER TABLE backend_step DROP CONSTRAINT <ten hien tai
+-- - vd SYS_C#### hoac backend_step_condition_op_chk>; ALTER TABLE
+-- backend_step ADD CONSTRAINT backend_step_condition_op_chk CHECK
+-- (condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS',
+-- 'GREATER_THAN','GREATER_THAN_OR_EQUAL','LESS_THAN','LESS_THAN_OR_EQUAL'));
 --
 -- Thu tu tao bang theo dung phu thuoc FK (bang cha truoc, bang con sau).
 -- Ten constraint/index giu NGUYEN theo dung Hibernate da tu sinh tren may hien
@@ -167,7 +176,7 @@ CREATE TABLE "BACKEND_STEP"
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
-	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS'))) ENABLE,
+	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS','GREATER_THAN','GREATER_THAN_OR_EQUAL','LESS_THAN','LESS_THAN_OR_EQUAL'))) ENABLE,
 	 CHECK ((condition_source_type in ('STEP_RESPONSE','REQUEST_BODY','STEP_RESPONSE_ARRAY_AGGREGATE'))) ENABLE,
 	 CONSTRAINT "BACKEND_STEP_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKRTN26VYRBRFLYH5FA838XWTL2" FOREIGN KEY ("ENDPOINT_ID")

@@ -332,6 +332,41 @@ class EndpointServiceTest {
                 .isEqualTo("GW-003");
     }
 
+    // ---- 4 toan tu so sanh SO moi them (>,>=,<,<=): conditionExpectedValue BAT BUOC la so ----
+
+    @Test
+    void create_rejectsGreaterThanThieuConditionExpectedValue() {
+        BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.GREATER_THAN, 2, null, null);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of());
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsLessThanOrEqualConditionExpectedValueKhongPhaiSo() {
+        BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.LESS_THAN_OR_EQUAL, 2, null, "abc");
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of());
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_greaterThanConditionExpectedValueLaSoHopLe_thanhCong() {
+        BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.GREATER_THAN, 2, null, "3");
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of());
+
+        assertThat(service.create(dto)).isNotNull();
+    }
+
     @Test
     void create_rejectsVongLapReNhanh() {
         // step1 dieu kien luon (gia lap) -> nextStepOrderIfTrue tro VE CHINH NO -> vong lap.

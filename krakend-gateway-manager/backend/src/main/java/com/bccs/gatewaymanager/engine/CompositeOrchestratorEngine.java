@@ -22,8 +22,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Bo may thuc thi composition tai request-time - thay the hoan toan
@@ -93,6 +95,14 @@ public class CompositeOrchestratorEngine {
         Map<Integer, BackendStepDto> stepsByOrder = orderedSteps.stream()
                 .collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
         List<Integer> allOrders = orderedSteps.stream().map(BackendStepDto::stepOrder).sorted().toList();
+        // Tap hop stepOrder la DICH cua it nhat 1 nhanh re (duoc step khac tro toi qua
+        // nextStepOrderIfTrue/nextStepOrderIfFalse) - dung de xu ly dung "nhanh la" trong
+        // determineNextStepOrder() (xem javadoc o do).
+        Set<Integer> branchTargetOrders = orderedSteps.stream()
+                .filter(s -> s.conditionOperator() != null)
+                .flatMap(s -> Stream.of(s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
         Integer currentOrder = allOrders.isEmpty() ? null : allOrders.get(0);
         // Chong lap vo han: 1 step KHONG DUOC chay lai trong CUNG 1 request - neu
@@ -114,18 +124,35 @@ public class CompositeOrchestratorEngine {
             }
             lastResult = executeStep(config, step, ctx);
             ctx.putStepResult(currentOrder, lastResult);
-            currentOrder = determineNextStepOrder(step, ctx, allOrders);
+            currentOrder = determineNextStepOrder(step, ctx, allOrders, branchTargetOrders);
         }
         return lastResult == null ? objectMapper.createObjectNode() : lastResult;
     }
 
-    /** Step tiep theo se chay - null = ket thuc chuoi tai day (ket qua step vua chay la response cuoi cung). */
-    private Integer determineNextStepOrder(BackendStepDto step, ExecutionContext ctx, List<Integer> allOrders) {
+    /**
+     * Step tiep theo se chay - null = ket thuc chuoi tai day (ket qua step vua
+     * chay la response cuoi cung).
+     */
+    private Integer determineNextStepOrder(BackendStepDto step, ExecutionContext ctx, List<Integer> allOrders, Set<Integer> branchTargetOrders) {
         if (step.conditionOperator() == null) {
-            // Khong khai bao dieu kien: next TU NHIEN la stepOrder NHO NHAT con lai
-            // LON HON step hien tai (khong cung "+1", khong doi hoi stepOrder lien
-            // tuc) - day CHINH LA cach tai tao dung 100% hanh vi cu (chay het moi
-            // step theo dung thu tu stepOrder tang dan) cho endpoint khong dung P1-5.
+            if (branchTargetOrders.contains(step.stepOrder())) {
+                // Step nay LA DICH cua 1 nhanh re (co step khac tro toi qua
+                // nextStepOrderIfTrue/nextStepOrderIfFalse) nhung BAN THAN no khong
+                // khai bao dieu kien rieng -> day la 1 "nhanh la" (branch leaf), PHAI
+                // DUNG LAI tai day. Neu ap dung "next tu nhien theo stepOrder tang dan"
+                // (nhu ben duoi) cho ca truong hop nay, 2 nhanh re LOAI TRU LAN NHAU se
+                // bi CHAY GOP: sau khi vao dung 1 nhanh, engine se tu dong chay tiep
+                // sang stepOrder lon hon ke tiep (chinh la nhanh CON LAI) va tra ve
+                // nham response cua nhanh do thay vi nhanh vua duoc chon dung dieu kien
+                // (bug phat hien khi verify "Numeric Branch Demo" - ca 2 gia tri thoa
+                // dieu kien <=3 lan >3 deu bi tra ve ket qua cua nhanh >3).
+                return null;
+            }
+            // Khong khai bao dieu kien VA khong phai dich cua bat ky nhanh re nao: day
+            // la endpoint THUAN TUY SEQUENTIAL (khong dung P1-5) - next TU NHIEN la
+            // stepOrder NHO NHAT con lai LON HON step hien tai (khong cung "+1", khong
+            // doi hoi stepOrder lien tuc) - day CHINH LA cach tai tao dung 100% hanh vi
+            // cu (chay het moi step theo dung thu tu stepOrder tang dan).
             return allOrders.stream().filter(o -> o > step.stepOrder()).min(Integer::compareTo).orElse(null);
         }
         return evaluateCondition(step, ctx) ? step.nextStepOrderIfTrue() : step.nextStepOrderIfFalse();
@@ -156,11 +183,48 @@ public class CompositeOrchestratorEngine {
             case NOT_EXISTS -> !exists;
             case EQUALS -> exists && conditionValueAsString(value).equals(step.conditionExpectedValue());
             case NOT_EQUALS -> !exists || !conditionValueAsString(value).equals(step.conditionExpectedValue());
+            // So sanh SO: gia tri response khong ton tai (!exists) coi la false, GIONG HET
+            // cach EQUALS dang xu ly - khong throw chi vi step truoc chua chay (nhanh re
+            // khac trong cung do thi dieu kien).
+            case GREATER_THAN -> exists && conditionValueAsDouble(step, value) > expectedValueAsDouble(step);
+            case GREATER_THAN_OR_EQUAL -> exists && conditionValueAsDouble(step, value) >= expectedValueAsDouble(step);
+            case LESS_THAN -> exists && conditionValueAsDouble(step, value) < expectedValueAsDouble(step);
+            case LESS_THAN_OR_EQUAL -> exists && conditionValueAsDouble(step, value) <= expectedValueAsDouble(step);
         };
     }
 
     private String conditionValueAsString(JsonNode value) {
         return value.isTextual() ? value.asText() : value.toString();
+    }
+
+    /**
+     * Ep gia tri lay tu response (co the la JSON number that, hoac chuoi chua
+     * so vd tu REQUEST_BODY) thanh double de so sanh voi toan tu >,>=,<,<=.
+     * Throw ro rang neu KHONG phai so - tranh am tham re nhanh sai huong thay
+     * vi bao loi (khac han so sanh EQUALS/NOT_EQUALS chap nhan bat ky chuoi nao).
+     */
+    private double conditionValueAsDouble(BackendStepDto step, JsonNode value) {
+        if (value.isNumber()) {
+            return value.asDouble();
+        }
+        try {
+            return Double.parseDouble(value.asText());
+        } catch (NumberFormatException e) {
+            throw new BusinessException("GW-CONDITION-NOT-NUMERIC", "Step '" + step.name()
+                    + "': dieu kien re nhanh (" + step.conditionOperator() + ") can gia tri SO tu field '"
+                    + step.conditionSourceField() + "' nhung response thuc te la '" + conditionValueAsString(value) + "'.");
+        }
+    }
+
+    /** conditionExpectedValue da duoc validate la so hop le luc luu (xem EndpointService.validateBranching()) - parse lai o day de phong du lieu cu/import tay khong qua validate. */
+    private double expectedValueAsDouble(BackendStepDto step) {
+        try {
+            return Double.parseDouble(step.conditionExpectedValue());
+        } catch (NumberFormatException | NullPointerException e) {
+            throw new BusinessException("GW-CONDITION-NOT-NUMERIC", "Step '" + step.name()
+                    + "': conditionExpectedValue ('" + step.conditionExpectedValue() + "') khong phai so hop le cho toan tu "
+                    + step.conditionOperator() + ".");
+        }
     }
 
     private JsonNode executeStep(EndpointResponseDto config, BackendStepDto step, ExecutionContext ctx) {

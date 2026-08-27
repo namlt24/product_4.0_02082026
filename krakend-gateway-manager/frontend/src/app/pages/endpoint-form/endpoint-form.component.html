@@ -259,7 +259,10 @@
                       <mat-select formControlName="conditionOperator">
                         @for (op of conditionOperators; track op) {
                           <mat-option [value]="op">
-                            {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác' : op === 'EXISTS' ? 'Tồn tại' : 'Không tồn tại' }}
+                            {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác'
+                              : op === 'EXISTS' ? 'Tồn tại' : op === 'NOT_EXISTS' ? 'Không tồn tại'
+                              : op === 'GREATER_THAN' ? 'Lớn hơn (>)' : op === 'GREATER_THAN_OR_EQUAL' ? 'Lớn hơn hoặc bằng (>=)'
+                              : op === 'LESS_THAN' ? 'Nhỏ hơn (<)' : 'Nhỏ hơn hoặc bằng (<=)' }}
                           </mat-option>
                         }
                       </mat-select>
@@ -268,7 +271,10 @@
                     @if (stepConditionNeedsExpectedValue(i)) {
                       <mat-form-field appearance="outline">
                         <mat-label>Giá trị mong đợi</mat-label>
-                        <input matInput formControlName="conditionExpectedValue" placeholder="vd: active" />
+                        <input matInput
+                               [type]="stepConditionExpectedValueIsNumeric(i) ? 'number' : 'text'"
+                               formControlName="conditionExpectedValue"
+                               [placeholder]="stepConditionExpectedValueIsNumeric(i) ? 'vd: 3' : 'vd: active'" />
                       </mat-form-field>
                     }
                   </div>

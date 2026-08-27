@@ -11,8 +11,20 @@ export type MappingTargetType = 'PATH' | 'QUERY' | 'HEADER' | 'BODY_FIELD';
 /** Nguon du lieu cua 1 FieldMapping. */
 export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'QUERY_PARAM' | 'STEP_RESPONSE_ARRAY_AGGREGATE';
 
-/** Toan tu so sanh dung cho dieu kien re nhanh (P1-5) cua 1 BackendStep. */
-export type ConditionOperator = 'EQUALS' | 'NOT_EQUALS' | 'EXISTS' | 'NOT_EXISTS';
+/**
+ * Toan tu so sanh dung cho dieu kien re nhanh (P1-5) cua 1 BackendStep.
+ * 4 toan tu so sanh SO (GREATER_THAN...LESS_THAN_OR_EQUAL) bat buoc
+ * conditionExpectedValue phai parse duoc thanh so (validate o backend).
+ */
+export type ConditionOperator =
+  | 'EQUALS'
+  | 'NOT_EQUALS'
+  | 'EXISTS'
+  | 'NOT_EXISTS'
+  | 'GREATER_THAN'
+  | 'GREATER_THAN_OR_EQUAL'
+  | 'LESS_THAN'
+  | 'LESS_THAN_OR_EQUAL';
 
 export interface FieldRenameMap {
   [sourceField: string]: string;
@@ -267,7 +279,16 @@ export function emptyStep(stepOrder: number): BackendStep {
   };
 }
 
-export const CONDITION_OPERATORS: ConditionOperator[] = ['EQUALS', 'NOT_EQUALS', 'EXISTS', 'NOT_EXISTS'];
+export const CONDITION_OPERATORS: ConditionOperator[] = [
+  'EQUALS',
+  'NOT_EQUALS',
+  'EXISTS',
+  'NOT_EXISTS',
+  'GREATER_THAN',
+  'GREATER_THAN_OR_EQUAL',
+  'LESS_THAN',
+  'LESS_THAN_OR_EQUAL',
+];
 
 export function emptyMapping(sourceStepOrder: number, targetStepOrder: number): FieldMapping {
   return {

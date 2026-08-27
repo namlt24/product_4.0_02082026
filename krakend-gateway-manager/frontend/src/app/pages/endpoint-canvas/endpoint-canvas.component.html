@@ -309,7 +309,10 @@
               <mat-select [(ngModel)]="edit.conditionOperator">
                 @for (op of conditionOperators; track op) {
                   <mat-option [value]="op">
-                    {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác' : op === 'EXISTS' ? 'Tồn tại' : 'Không tồn tại' }}
+                    {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác'
+                      : op === 'EXISTS' ? 'Tồn tại' : op === 'NOT_EXISTS' ? 'Không tồn tại'
+                      : op === 'GREATER_THAN' ? 'Lớn hơn (>)' : op === 'GREATER_THAN_OR_EQUAL' ? 'Lớn hơn hoặc bằng (>=)'
+                      : op === 'LESS_THAN' ? 'Nhỏ hơn (<)' : 'Nhỏ hơn hoặc bằng (<=)' }}
                   </mat-option>
                 }
               </mat-select>
@@ -317,7 +320,10 @@
             @if (stepConditionNeedsExpectedValue()) {
               <mat-form-field appearance="outline" style="flex: 1">
                 <mat-label>Giá trị mong đợi</mat-label>
-                <input matInput [(ngModel)]="edit.conditionExpectedValue" placeholder="vd: active" />
+                <input matInput
+                       [type]="stepConditionExpectedValueIsNumeric() ? 'number' : 'text'"
+                       [(ngModel)]="edit.conditionExpectedValue"
+                       [placeholder]="stepConditionExpectedValueIsNumeric() ? 'vd: 3' : 'vd: active'" />
               </mat-form-field>
             }
           </div>

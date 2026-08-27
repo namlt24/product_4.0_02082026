@@ -46,19 +46,26 @@ chọn), không phải bước bắt buộc.
 krakend-gateway-manager/
 ├── docker-compose.yml       # redis + backend + frontend (KHONG con postgres/krakend)
 ├── backend/                 # Control Plane + Gateway thuc thi (Spring Boot)
+│   ├── src/main/resources/db/ddl-gateway-manager.sql  # DDL 8 bang (ban chup, xem muc 8)
 │   └── src/main/java/com/bccs/gatewaymanager/
-│       ├── entity/           # EndpointConfig, BackendStep, FieldMapping, UpstreamService
+│       ├── entity/           # EndpointConfig, BackendStep, FieldMapping, UpstreamService,
+│       │                     # EndpointConfigVersion (lich su phien ban)
 │       ├── engine/           # CompositeOrchestratorEngine, UpstreamHttpExecutor, JsonPathUtil...
 │       ├── controller/       # EndpointController, UpstreamServiceController,
-│       │                     # ConfigController, DynamicDispatcherController (catch-all "/**")
+│       │                     # ConfigController, DynamicDispatcherController (catch-all "/**"),
+│       │                     # LogSearchController (tra cuu log - xem muc 7)
 │       ├── service/          # EndpointService, UpstreamServiceService, *RegistryCache
 │       ├── cache/            # GatewayCacheService (Redis cache-aside)
-│       └── dto/, repository/, exception/, config/
+│       ├── audit/            # AuditLogService/LogSearchService - ghi/doc log vao Elasticsearch
+│       │                     # (gwm-requests-*/gwm-hops-*, xem muc 7)
+│       └── dto/, repository/, exception/, config/  # config/ElasticsearchConfig, ApiKeyAuthFilter...
 └── frontend/                 # Angular 18 standalone
     └── src/app/pages/
         ├── endpoint-list/, endpoint-form/   # khai báo Endpoint + Field Mapping
-        ├── upstream-services/                # đăng ký backend thật (host/timeout/resilience)
-        └── dependency-graph/                 # sơ đồ endpoint nào gọi endpoint nào
+        ├── endpoint-canvas/                  # khai báo Endpoint kiểu kéo-thả trực quan
+        ├── endpoint-versions/                 # lịch sử phiên bản + rollback
+        ├── upstream-services/, upstream-health/  # đăng ký + dashboard sức khoẻ backend thật
+        └── log-search/                        # Tra cứu log request/hop (xem mục 7)
 ```
 
 ## 3. Chạy hệ thống
@@ -147,7 +154,59 @@ Step 3: product-catalog-service /v1/product/checkProductAttByRuleType
   checklist "production-grade composition service" (API Composition pattern,
   Circuit Breaker pattern, Cache-Aside pattern).
 
-## 7. Giới hạn hiện tại
+## 7. Giám sát: audit log (Elasticsearch) + Elastic APM + trang Tra cứu Log
+
+Dùng **chung** Elasticsearch/Kibana đã có sẵn của hạ tầng BCCS
+(`db-local/docker-compose.yml`, container `bccs-elasticsearch`/`bccs-kibana`)
+— không dựng ES riêng. **Không dùng Logstash/Filebeat**: log có cấu trúc được
+ghi **thẳng vào Elasticsearch bằng code** (`audit/AuditLogService`, dùng
+`co.elastic.clients:elasticsearch-java`), tại đúng 2 điểm:
+`DynamicDispatcherController.dispatch()` (tổng 1 request client) và
+`UpstreamHttpExecutor.call()` (từng hop gọi 1 Upstream).
+
+### 2 index mới (daily index, UTC, KHÔNG lẫn với `bccs-logs-*` của K8s)
+
+| Index | 1 document = | Field chính |
+|---|---|---|
+| `gwm-requests-*` | 1 request client thật gọi vào gateway | `requestId`, `timestamp`, `endpointName`, `clientMethod`/`clientPath`, `status` (SUCCESS/ERROR), `httpStatus`, `errorCode`/`errorMessage`, `durationMs`, `requestBody` (cắt 8KB), `traceId` (link sang APM) |
+| `gwm-hops-*` | 1 lần `BackendStep` gọi ra Upstream thật | `requestId` (join key), `stepOrder`, `stepName`, `upstreamName`, `resolvedUrl`, `requestBody`/`responseBody` (cắt 8KB), `responseStatus`, `durationMs`, `cacheHit`, `success` |
+
+**Fail-open**: `AuditLogService` ghi qua hàng đợi trong bộ nhớ (bounded, 5000
+phần tử) + flush định kỳ 1 giây bằng Bulk API — lỗi Elasticsearch (mất kết
+nối, index lỗi...) chỉ log cảnh báo rồi bỏ qua, **không bao giờ làm hỏng
+traffic thật**. Ngược lại, API tra cứu (`LogSearchService`, đọc) throw lỗi rõ
+ràng nếu ES không trả lời được — người dùng đang chủ động bấm "Tìm kiếm" nên
+cần biết ngay thay vì hiểu nhầm "không có log nào".
+
+### Bật/tắt + cấu hình
+
+```yaml
+gatewaymanager.audit.enabled: ${GATEWAY_AUDIT_ENABLED:true}
+gatewaymanager.audit.elasticsearch.host: ${GATEWAY_AUDIT_ES_HOST:localhost}
+gatewaymanager.audit.elasticsearch.port: ${GATEWAY_AUDIT_ES_PORT:9200}
+```
+
+### Elastic APM
+
+Java agent (`elastic-apm-agent-1.56.0.jar`, tải qua `Dockerfile` lúc build
+image, gắn qua `-javaagent`) tự động instrument `RestTemplate` — không cần
+sửa code thêm. Trỏ tới `apm-server` cũng đặt tại `db-local/docker-compose.yml`
+(cạnh Elasticsearch/Kibana, port `8200`). `traceId` của mỗi request được đọc
+qua `co.elastic.apm.api.ElasticApm` và lưu vào `gwm-requests-*` — đối chiếu
+1-1 sang trace/span thật trên Kibana APM UI.
+
+### Trang UI "Tra cứu Log" (`/logs`)
+
+Lọc theo khoảng thời gian, trạng thái (SUCCESS/ERROR), endpoint path, nội
+dung request body — bấm 1 dòng để xem **waterfall từng hop** (request/response
+mỗi bước, cache hit, lỗi). API: `GET /api/logs/requests`, `GET
+/api/logs/requests/{requestId}/hops` (nằm dưới `/api/**` nên tự động được
+`ApiKeyAuthFilter` bảo vệ như mọi API Control Plane khác).
+
+> **Chưa làm (P2, không chặn dùng V1)**: chưa redact PII (idNo, tel, email...)
+> trước khi ghi vào ES, chưa có chính sách ILM tự xoá index cũ.
+
+## 8. Giới hạn hiện tại
 
 - Các step luôn thực thi **tuần tự trong 1 vòng lặp Java** (chưa có gọi song
   song thật cho các step độc lập không phụ thuộc dữ liệu lẫn nhau) — tối ưu
@@ -159,3 +218,11 @@ Step 3: product-catalog-service /v1/product/checkProductAttByRuleType
 - Đổi cấu hình resilience (timeout/circuit-breaker) của 1 Upstream sau khi đã
   có request đầu tiên chưa áp dụng ngay (registry Resilience4j giữ config lúc
   khởi tạo lần đầu) — cần cải tiến nếu cần đổi động không restart.
+- Query param của client **chưa** dùng được làm nguồn `FieldMapping` (chỉ mới
+  hỗ trợ `pathVariables`/`requestBody`) — xem comment trong
+  `service/OpenApiGeneratorService.java`.
+- Không có auth theo từng Endpoint ở Data Plane (chỉ Control Plane `/api/**`
+  có `X-Gateway-Admin-Key`) — quyết định đã chốt, không phải thiếu sót.
+- Schema DB dùng `ddl-auto: update` (tự tạo/cập nhật bảng) — bản chụp DDL 8
+  bảng để dựng thủ công trên máy khác (nếu không muốn dựa vào auto-DDL): xem
+  [`backend/src/main/resources/db/ddl-gateway-manager.sql`](backend/src/main/resources/db/ddl-gateway-manager.sql).

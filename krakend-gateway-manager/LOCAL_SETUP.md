@@ -176,9 +176,37 @@ docker compose down -v
 | Build package thất bại `Unsupported class file major version 69` | `spring-boot-maven-plugin` 3.3.4 chưa hỗ trợ repackage bytecode JDK 25 | `pom.xml` đã dịch bytecode target về JDK 21 (`java.version`) dù compiler chạy bằng JDK 25 vẫn được — Dockerfile dùng đúng JDK 21 để build/runtime |
 | Endpoint composite gọi ra `connection refused` tới `host.docker.internal:PORT` | Service BCCS thật (Bước 1) chưa chạy hoặc đã bị tắt | Khởi động lại theo Bước 3, verify bằng `curl localhost:PORT/...` từ máy host trước |
 | `LazyInitializationException` khi backend khởi động lại (có dữ liệu thật trong DB) | `@PostConstruct` tự gọi method `@Transactional` trong cùng class (self-invocation) khiến Spring bỏ qua proxy transaction | Đã fix bằng `TransactionTemplate` trong `EndpointRegistryCache`/`UpstreamRegistryCache` (không phụ thuộc AOP proxy) |
-| `POST /api/config/deploy` trả 400 `GW-CYCLE` | Có 2 endpoint composite gọi vòng vào nhau (A→B→A) | Mở trang **Sơ đồ phụ thuộc** trên UI để xem chính xác vòng lặp |
+| `POST /api/config/deploy` trả 400 `GW-CYCLE` | Có 2 endpoint composite gọi vòng vào nhau (A→B→A) | Xem cột **"Phụ thuộc"** trên trang **Endpoints** (badge "Vòng lặp" đỏ) — trang "Sơ đồ phụ thuộc" riêng đã bị gỡ khỏi UI, thông tin vòng lặp giờ hiển thị ngay trong bảng |
+| Trang **Tra cứu Log** (`/logs`) báo lỗi/không thấy log mới | Elasticsearch (`bccs-elasticsearch`, `db-local`) chưa chạy, hoặc `GATEWAY_AUDIT_ENABLED=false` | Dựng `db-local` trước (mục 2), verify `curl http://localhost:9200`; xem mục 8 |
 
-## 8. Dừng toàn bộ hệ thống
+## 8. Giám sát local: Elasticsearch/Kibana + Elastic APM (đã có sẵn, không cần dựng thêm)
+
+`db-local` (mục 2) đã kèm sẵn `bccs-elasticsearch`, `bccs-kibana` **và**
+`apm-server` — không cần cài đặt gì riêng, chỉ cần `db-local` đang chạy là
+`docker-compose.yml` của Gateway Manager (mục 4) tự trỏ tới qua
+`host.docker.internal` (đúng cách Oracle đang làm).
+
+```powershell
+# Verify Elasticsearch (audit log)
+curl http://localhost:9200
+
+# Verify APM Server
+curl http://localhost:8200
+```
+
+Verify audit log thật đang chảy vào ES (sau khi gọi thử 1 endpoint composite
+qua `http://localhost:8080`):
+
+```powershell
+curl "http://localhost:9200/gwm-requests-*/_count"
+```
+
+Mở UI **http://localhost:4200/logs** để lọc/xem log bằng trang Tra cứu Log,
+hoặc mở **http://localhost:5601** (Kibana) để khám phá thô/xem APM trace.
+Chi tiết field từng index, cách tắt (`GATEWAY_AUDIT_ENABLED=false`): xem mục
+7 trong [README.md](README.md).
+
+## 9. Dừng toàn bộ hệ thống
 
 ```powershell
 # Gateway Manager
@@ -188,7 +216,7 @@ docker compose down
 # Service BCCS
 # Ctrl+C trong terminal dang chay mvnw
 
-# Ha tang dung chung (Oracle/Redis/Elasticsearch) - dung neu khong con service BCCS nao can
+# Ha tang dung chung (Oracle/Redis/Elasticsearch/Kibana/APM Server) - dung neu khong con service BCCS nao can
 cd db-local
 docker compose down
 ```

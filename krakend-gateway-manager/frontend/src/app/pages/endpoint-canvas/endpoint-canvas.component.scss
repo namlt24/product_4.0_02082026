@@ -417,6 +417,36 @@
   width: 100%;
 }
 
+// ---------------------------------------------------------------------------
+// Ghi chu nho giai thich 1 field cu the (vi du Gia tri co dinh cua CONSTANT) -
+// tach rieng khoi mat-hint de KHONG lam vo layout panel truot 420px (mat-hint
+// dai qua se bi wrap nhieu dong va DE LEN field ben duoi vi subscript-wrapper
+// cua Angular Material khong tu gian du - dung y het pattern da co san o
+// endpoint-form.component.scss).
+// ---------------------------------------------------------------------------
+.field-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -4px 0 4px;
+  padding: 10px 12px;
+  background: var(--gwm-accent-light);
+  border: 1px solid #a5f3fc;
+  border-radius: var(--gwm-radius-md);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--gwm-text-secondary);
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    color: var(--gwm-accent);
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+}
+
 .endpoint-picker {
   ::ng-deep .mat-mdc-text-field-wrapper {
     background: var(--gwm-accent-light);

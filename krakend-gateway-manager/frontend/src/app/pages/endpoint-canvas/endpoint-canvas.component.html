@@ -440,8 +440,11 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Giá trị cố định</mat-label>
           <input matInput [(ngModel)]="m.constantValue" placeholder="vd: low, 3, true, hoặc {&quot;a&quot;:1} (JSON)" />
-          <mat-hint>Không đọc từ request/response nào - luôn gửi đúng giá trị này. Với body: tự nhận diện số/boolean/JSON nếu hợp lệ, còn lại giữ nguyên dạng chuỗi.</mat-hint>
         </mat-form-field>
+        <div class="field-note">
+          <mat-icon inline="true">info</mat-icon>
+          <span>Không đọc từ request/response nào - luôn gửi đúng giá trị này. Với body: tự nhận diện số/boolean/JSON nếu hợp lệ, còn lại giữ nguyên dạng chuỗi.</span>
+        </div>
       }
 
       <mat-icon class="arrow-icon center-arrow">trending_flat</mat-icon>

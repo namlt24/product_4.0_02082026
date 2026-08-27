@@ -334,7 +334,7 @@
               <mat-select formControlName="sourceType">
                 @for (t of sourceTypes; track t) {
                   <mat-option [value]="t">
-                    {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : t === 'QUERY_PARAM' ? 'Query param của client' : 'Gộp mảng (response step trước)' }}
+                    {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : t === 'QUERY_PARAM' ? 'Query param của client' : t === 'CONSTANT' ? 'Hằng số cố định' : 'Gộp mảng (response step trước)' }}
                   </mat-option>
                 }
               </mat-select>
@@ -366,6 +366,14 @@
               <mat-form-field appearance="outline">
                 <mat-label>Field lấy từ mỗi phần tử</mat-label>
                 <input matInput formControlName="sourceElementField" placeholder="vd: code" />
+              </mat-form-field>
+            }
+
+            @if (mappingUsesConstantValue(i)) {
+              <mat-form-field appearance="outline">
+                <mat-label>Giá trị cố định</mat-label>
+                <input matInput formControlName="constantValue" placeholder="vd: low, 3, true, hoặc {{ '{' }}&quot;a&quot;:1{{ '}' }}" />
+                <mat-hint>Không đọc từ request/response nào - luôn gửi đúng giá trị này.</mat-hint>
               </mat-form-field>
             }
 

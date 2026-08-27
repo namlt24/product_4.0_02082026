@@ -73,6 +73,10 @@ public class FieldMapping {
     @Column(name = "source_element_field")
     private String sourceElementField;
 
+    /** sourceType=CONSTANT: gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */
+    @Column(name = "constant_value")
+    private String constantValue;
+
     /** Step dich (1-based) - noi gia tri duoc bom vao. Phai > sourceStepOrder khi sourceType=STEP_RESPONSE*. */
     @Column(name = "target_step_order", nullable = false)
     private int targetStepOrder;

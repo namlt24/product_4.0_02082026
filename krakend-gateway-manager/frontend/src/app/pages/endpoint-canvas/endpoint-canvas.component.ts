@@ -140,9 +140,10 @@ export class EndpointCanvasComponent implements OnInit {
   readonly httpMethods = HTTP_METHODS;
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
-  /** Query param cua client KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
+  /** Query param cua client / hang so co dinh KHONG dung cho re nhanh (so sanh 1 hang so co dinh voi
+   * chinh no vo nghia) - ngoai pham vi, chi dung cho FieldMapping thuong. */
   readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
-    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM',
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT',
   );
   readonly conditionOperators = CONDITION_OPERATORS;
 
@@ -646,6 +647,7 @@ export class EndpointCanvasComponent implements OnInit {
       sourceField: '',
       sourceArrayField: '',
       sourceElementField: '',
+      constantValue: '',
       targetStepOrder: target,
       targetType: 'QUERY',
       targetParamName: '',
@@ -654,15 +656,26 @@ export class EndpointCanvasComponent implements OnInit {
   }
 
   mappingNeedsSourceStep(): boolean {
-    return this.editingMapping?.sourceType !== 'REQUEST_BODY' && this.editingMapping?.sourceType !== 'QUERY_PARAM';
+    return (
+      this.editingMapping?.sourceType !== 'REQUEST_BODY' &&
+      this.editingMapping?.sourceType !== 'QUERY_PARAM' &&
+      this.editingMapping?.sourceType !== 'CONSTANT'
+    );
   }
 
   mappingUsesSourceField(): boolean {
-    return this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE';
+    return (
+      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && this.editingMapping?.sourceType !== 'CONSTANT'
+    );
   }
 
   mappingUsesArrayAggregate(): boolean {
     return this.editingMapping?.sourceType === 'STEP_RESPONSE_ARRAY_AGGREGATE';
+  }
+
+  /** sourceType=CONSTANT - gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */
+  mappingUsesConstantValue(): boolean {
+    return this.editingMapping?.sourceType === 'CONSTANT';
   }
 
   applyMappingPanel(): void {

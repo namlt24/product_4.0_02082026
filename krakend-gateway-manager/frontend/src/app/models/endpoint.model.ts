@@ -9,7 +9,7 @@ export type HttpMethodType = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export type MappingTargetType = 'PATH' | 'QUERY' | 'HEADER' | 'BODY_FIELD';
 
 /** Nguon du lieu cua 1 FieldMapping. */
-export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'QUERY_PARAM' | 'STEP_RESPONSE_ARRAY_AGGREGATE';
+export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'QUERY_PARAM' | 'STEP_RESPONSE_ARRAY_AGGREGATE' | 'CONSTANT';
 
 /**
  * Toan tu so sanh dung cho dieu kien re nhanh (P1-5) cua 1 BackendStep.
@@ -103,6 +103,8 @@ export interface FieldMapping {
   sourceArrayField?: string | null;
   /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: field lay tu MOI phan tu, vi du "code". */
   sourceElementField?: string | null;
+  /** Bat buoc khi sourceType=CONSTANT: gia tri hang so co dinh, khong doc tu request/response. */
+  constantValue?: string | null;
   targetStepOrder: number;
   targetType: MappingTargetType;
   targetParamName: string;
@@ -233,6 +235,7 @@ export const FIELD_MAPPING_SOURCE_TYPES: FieldMappingSourceType[] = [
   'REQUEST_BODY',
   'QUERY_PARAM',
   'STEP_RESPONSE_ARRAY_AGGREGATE',
+  'CONSTANT',
 ];
 
 /** Endpoint rong dung lam gia tri khoi tao cho form "tao moi". */
@@ -297,6 +300,7 @@ export function emptyMapping(sourceStepOrder: number, targetStepOrder: number): 
     sourceField: '',
     sourceArrayField: '',
     sourceElementField: '',
+    constantValue: '',
     targetStepOrder,
     targetType: 'QUERY',
     targetParamName: '',

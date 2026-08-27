@@ -76,9 +76,9 @@ export class EndpointFormComponent implements OnInit {
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
   /** Nguon dieu kien chi cho phep Step truoc/Body client - Gop mang khong co y nghia cho 1 dieu kien dung/sai,
-   * Query param cua client KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
+   * Query param cua client / hang so co dinh KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
   readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
-    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM',
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT',
   );
   readonly conditionOperators = CONDITION_OPERATORS;
 
@@ -184,6 +184,7 @@ export class EndpointFormComponent implements OnInit {
       sourceField: [m.sourceField ?? ''],
       sourceArrayField: [m.sourceArrayField ?? ''],
       sourceElementField: [m.sourceElementField ?? ''],
+      constantValue: [m.constantValue ?? ''],
       targetStepOrder: [m.targetStepOrder, Validators.required],
       targetType: [m.targetType, Validators.required],
       targetParamName: [m.targetParamName, Validators.required],
@@ -218,19 +219,25 @@ export class EndpointFormComponent implements OnInit {
     return this.mappingsArray.at(index) as FormGroup;
   }
 
-  /** true neu mapping nay can chon step nguon (khong ap dung cho REQUEST_BODY/QUERY_PARAM - deu lay tu chinh client, khong phai tu 1 step). */
+  /** true neu mapping nay can chon step nguon (khong ap dung cho REQUEST_BODY/QUERY_PARAM/CONSTANT - deu khong lay tu 1 step). */
   mappingNeedsSourceStep(index: number): boolean {
     const sourceType = this.mappingGroup(index).get('sourceType')!.value;
-    return sourceType !== 'REQUEST_BODY' && sourceType !== 'QUERY_PARAM';
+    return sourceType !== 'REQUEST_BODY' && sourceType !== 'QUERY_PARAM' && sourceType !== 'CONSTANT';
   }
 
-  /** true neu mapping nay dung sourceField don (STEP_RESPONSE/REQUEST_BODY), khong phai gop mang. */
+  /** true neu mapping nay dung sourceField don (STEP_RESPONSE/REQUEST_BODY), khong phai gop mang/hang so. */
   mappingUsesSourceField(index: number): boolean {
-    return this.mappingGroup(index).get('sourceType')!.value !== 'STEP_RESPONSE_ARRAY_AGGREGATE';
+    const sourceType = this.mappingGroup(index).get('sourceType')!.value;
+    return sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && sourceType !== 'CONSTANT';
   }
 
   mappingUsesArrayAggregate(index: number): boolean {
     return this.mappingGroup(index).get('sourceType')!.value === 'STEP_RESPONSE_ARRAY_AGGREGATE';
+  }
+
+  /** sourceType=CONSTANT - gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */
+  mappingUsesConstantValue(index: number): boolean {
+    return this.mappingGroup(index).get('sourceType')!.value === 'CONSTANT';
   }
 
   /** Danh sach so thu tu step hien co - dung cho <mat-select> chon step nguon/dich trong mapping. */
@@ -505,6 +512,7 @@ export class EndpointFormComponent implements OnInit {
       sourceField: m.sourceField || null,
       sourceArrayField: m.sourceArrayField || null,
       sourceElementField: m.sourceElementField || null,
+      constantValue: m.constantValue || null,
       targetStepOrder: m.targetStepOrder,
       targetType: m.targetType,
       targetParamName: m.targetParamName,

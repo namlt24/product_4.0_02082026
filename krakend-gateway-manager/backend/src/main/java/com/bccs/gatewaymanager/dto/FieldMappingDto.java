@@ -30,6 +30,9 @@ public record FieldMappingDto(
         /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_AGGREGATE. */
         String sourceElementField,
 
+        /** Bat buoc khi sourceType=CONSTANT - gia tri hang so co dinh, khong doc tu request/response. */
+        String constantValue,
+
         @Min(1) int targetStepOrder,
 
         @NotNull MappingTargetType targetType,

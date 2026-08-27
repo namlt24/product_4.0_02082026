@@ -156,7 +156,8 @@ public class EndpointService {
         if (dto.mappings() != null) {
             for (var m : dto.mappings()) {
                 boolean needsSourceStep = m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
-                        && m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM;
+                        && m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM
+                        && m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.CONSTANT;
                 if (needsSourceStep && (m.sourceStepOrder() == null || m.sourceStepOrder() > maxOrder)) {
                     throw new BusinessException("GW-003", "FieldMapping (sourceType=" + m.sourceType()
                             + ") thieu sourceStepOrder hop le (max step = " + maxOrder + ").");
@@ -182,6 +183,10 @@ public class EndpointService {
                             || (m.sourceElementField() == null || m.sourceElementField().isBlank()))) {
                     throw new BusinessException("GW-003",
                             "FieldMapping (sourceType=STEP_RESPONSE_ARRAY_AGGREGATE) thieu sourceArrayField/sourceElementField.");
+                }
+                if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.CONSTANT
+                        && (m.constantValue() == null || m.constantValue().isBlank())) {
+                    throw new BusinessException("GW-003", "FieldMapping (sourceType=CONSTANT) thieu constantValue.");
                 }
             }
         }

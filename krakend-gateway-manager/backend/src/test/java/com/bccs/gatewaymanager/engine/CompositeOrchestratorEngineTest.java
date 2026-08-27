@@ -375,7 +375,7 @@ class CompositeOrchestratorEngineTest {
     @Test
     void queryParamMapping_forwardDungGiaTriVaoQuery() {
         stubCall(up1, json("{\"v\":1}"));
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.QUERY, "staffCode", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null);
@@ -391,7 +391,7 @@ class CompositeOrchestratorEngineTest {
     @Test
     void queryParamMapping_forwardDungGiaTriVaoBodyField() {
         stubCall(up1, json("{\"v\":1}"));
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.BODY_FIELD, "staffCode", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null);
@@ -407,7 +407,7 @@ class CompositeOrchestratorEngineTest {
     @Test
     void queryParamMapping_khongCoGiaTri_traNullKhongThrow() {
         stubCall(up1, json("{\"v\":1}"));
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.BODY_FIELD, "staffCode", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null);
@@ -419,5 +419,60 @@ class CompositeOrchestratorEngineTest {
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
                 anyBoolean(), anyInt(), anyInt(), any(), any(), any());
         assertThat(bodyCaptor.getValue().get("staffCode").isNull()).isTrue();
+    }
+
+    // ---- CONSTANT (nguon FieldMapping moi - hang so co dinh, khong doc tu request/response) - dung cho
+    // case "2 nhanh re cung goi 1 API nhung fix cung khac nhau tham so, khong phu thuoc input". ----
+
+    @Test
+    void constantMapping_forwardDungGiaTriVaoQuery_luonLaChuoiTextNguyenBan() {
+        stubCall(up1, json("{\"v\":1}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
+                1, MappingTargetType.QUERY, "priority", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<String> urlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), urlCaptor.capture(), any(), any(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).contains("priority=low");
+    }
+
+    @Test
+    void constantMapping_bodyField_chuoiSoTuDongThanhSoJSON() {
+        stubCall(up1, json("{\"v\":1}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "3",
+                1, MappingTargetType.BODY_FIELD, "priority", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        // "3" parse duoc nhu JSON -> so JSON THAT (isNumber), khong phai chuoi "3".
+        assertThat(bodyCaptor.getValue().get("priority").isNumber()).isTrue();
+        assertThat(bodyCaptor.getValue().get("priority").asInt()).isEqualTo(3);
+    }
+
+    @Test
+    void constantMapping_bodyField_chuoiKhongPhaiJson_giuNguyenDangChuoi() {
+        stubCall(up1, json("{\"v\":1}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
+                1, MappingTargetType.BODY_FIELD, "priority", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        // "low" khong phai JSON hop le -> fallback giu nguyen chuoi text.
+        assertThat(bodyCaptor.getValue().get("priority").isTextual()).isTrue();
+        assertThat(bodyCaptor.getValue().get("priority").asText()).isEqualTo("low");
     }
 }

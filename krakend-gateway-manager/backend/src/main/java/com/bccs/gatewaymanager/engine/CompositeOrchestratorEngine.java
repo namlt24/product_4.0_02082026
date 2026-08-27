@@ -342,7 +342,25 @@ public class CompositeOrchestratorEngine {
             case STEP_RESPONSE -> orDefault(JsonPathUtil.getByDotPath(ctx.getStepResult(m.sourceStepOrder()), m.sourceField()), objectMapper.nullNode());
             case STEP_RESPONSE_ARRAY_AGGREGATE -> JsonPathUtil.toArrayNode(objectMapper,
                     JsonPathUtil.aggregateArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(), m.sourceElementField()));
+            case CONSTANT -> constantValueAsJson(m.constantValue());
         };
+    }
+
+    /**
+     * Gia tri CONSTANT cho BODY_FIELD - thu parse nhu JSON truoc (ho tro fix cung so/boolean/
+     * object/mang, vi du constantValue="3" -> so JSON 3, "true" -> boolean true), khong parse
+     * duoc (vi du "low") thi fallback ve chuoi text nguyen ban - KHONG throw, vi day la gia tri
+     * admin tu khai bao (khac han "response khong phai so" cua toan tu so sanh so).
+     */
+    private JsonNode constantValueAsJson(String constantValue) {
+        if (constantValue == null) {
+            return objectMapper.nullNode();
+        }
+        try {
+            return objectMapper.readTree(constantValue);
+        } catch (Exception e) {
+            return objectMapper.getNodeFactory().stringNode(constantValue);
+        }
     }
 
     /** Query param cua CHINH client (khong phai response step nao) - luon la String[] (co the nhieu gia tri trung ten), lay gia tri dau tien. */
@@ -359,6 +377,11 @@ public class CompositeOrchestratorEngine {
         }
         if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM) {
             return firstQueryParamValue(ctx, m.sourceField());
+        }
+        if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.CONSTANT) {
+            // PATH/QUERY/HEADER luon la chuoi text tren URL/header - KHONG parse JSON o day
+            // (khac buildBody(), noi so/boolean can giu dung kieu JSON goc).
+            return m.constantValue();
         }
         JsonNode node = m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
                 ? JsonPathUtil.getByDotPath(ctx.requestBody(), m.sourceField())

@@ -93,6 +93,7 @@ public class EndpointMapper {
                 .sourceField(m.sourceField())
                 .sourceArrayField(m.sourceArrayField())
                 .sourceElementField(m.sourceElementField())
+                .constantValue(m.constantValue())
                 .targetStepOrder(m.targetStepOrder())
                 .targetType(m.targetType())
                 .targetParamName(m.targetParamName())
@@ -132,7 +133,7 @@ public class EndpointMapper {
         List<FieldMappingDto> mappings = entity.getMappings().stream()
                 .map(m -> new FieldMappingDto(
                         m.getId(), m.getSourceType(), m.getSourceStepOrder(), m.getSourceField(),
-                        m.getSourceArrayField(), m.getSourceElementField(),
+                        m.getSourceArrayField(), m.getSourceElementField(), m.getConstantValue(),
                         m.getTargetStepOrder(), m.getTargetType(), m.getTargetParamName(),
                         m.getMappingOrder()))
                 .toList();

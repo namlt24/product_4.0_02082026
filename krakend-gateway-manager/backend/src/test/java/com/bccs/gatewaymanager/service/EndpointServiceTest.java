@@ -122,7 +122,7 @@ class EndpointServiceTest {
 
     @Test
     void create_rejectsMappingWhenSourceStepOrderNotBeforeTargetStepOrder() {
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "a", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "a", null, null, null,
                 1, MappingTargetType.QUERY, "a", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
@@ -132,7 +132,7 @@ class EndpointServiceTest {
 
     @Test
     void create_rejectsBlankSourceFieldForStepResponse() {
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "  ", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "  ", null, null, null,
                 2, MappingTargetType.QUERY, "a", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
@@ -143,7 +143,7 @@ class EndpointServiceTest {
     @Test
     void create_rejectsBlankArrayAggregateFields() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_AGGREGATE, 1,
-                null, "", "code", 2, MappingTargetType.BODY_FIELD, "a", 0);
+                null, "", "code", null, 2, MappingTargetType.BODY_FIELD, "a", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -152,7 +152,7 @@ class EndpointServiceTest {
 
     @Test
     void create_validMapping_succeeds() {
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "code", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "code", null, null, null,
                 2, MappingTargetType.QUERY, "a", 0);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
@@ -164,7 +164,7 @@ class EndpointServiceTest {
 
     @Test
     void create_queryParamMapping_khongCanSourceStepOrder_thanhCong() {
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 2, MappingTargetType.QUERY, "staffCode", 0);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
@@ -173,8 +173,40 @@ class EndpointServiceTest {
 
     @Test
     void create_rejectsBlankSourceFieldForQueryParam() {
-        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "  ", null, null,
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "  ", null, null, null,
                 2, MappingTargetType.QUERY, "staffCode", 0);
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    // ---- CONSTANT (nguon FieldMapping moi - hang so co dinh, khong doc tu request/response nao): khong
+    // can sourceStepOrder/sourceField, nhung BAT BUOC constantValue. ----
+
+    @Test
+    void create_constantMapping_khongCanSourceStepOrderVaSourceField_thanhCong() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
+                2, MappingTargetType.QUERY, "priority", 0);
+        EndpointResponseDto result = service.create(requestWithMapping(mapping));
+        assertThat(result).isNotNull();
+        verify(registryCache).reload();
+    }
+
+    @Test
+    void create_rejectsBlankConstantValueForConstant() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "  ",
+                2, MappingTargetType.QUERY, "priority", 0);
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsNullConstantValueForConstant() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, null,
+                2, MappingTargetType.QUERY, "priority", 0);
         assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -386,7 +418,7 @@ class EndpointServiceTest {
         // thuong se bi chan GW-003, nhung endpoint nay CO step dung re nhanh (step3)
         // nen thu tu thuc thi khong con dam bao theo stepOrder nua -> phai CHO QUA
         // rule nay (dua vao graceful-null luc runtime).
-        FieldMappingDto backwardsMapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "f", null, null,
+        FieldMappingDto backwardsMapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "f", null, null, null,
                 1, MappingTargetType.QUERY, "q", 0);
         // step3 co dieu kien nhung CA 2 nhanh deu ket thuc (null, null) - khong tao
         // cycle (1->2->3, step3 khong di dau ca) - chi de kich usesBranching=true.

@@ -31,25 +31,89 @@
 --   du lieu).
 --
 -- HUONG DAN DUNG tren production:
---   1. Xac nhan schema dich CHUA co 8 bang nay (SELECT COUNT(*) FROM
---      user_tables WHERE table_name IN ('UPSTREAM_SERVICE','ENDPOINT_CONFIG',
---      'BACKEND_STEP','BACKEND_STEP_ALLOW','BACKEND_STEP_DENY',
---      'BACKEND_STEP_MAPPING','FIELD_MAPPING','ENDPOINT_CONFIG_VERSION') -
---      phai la 0). Neu da co san (vd chay app 1 lan voi ddl-auto=update roi),
---      BO QUA phan [1] DDL ben duoi, chi chay phan [2] INSERT.
---   2. sqlplus/SQLcl vao dung schema, SET DEFINE OFF truoc (URL_PATTERN co
+--   1. sqlplus/SQLcl vao dung schema, SET DEFINE OFF truoc (URL_PATTERN co
 --      ky tu "&", khong tat se bi hoi "Enter value for..." va hong cau lenh).
---   3. Chay het file nay 1 luot (DDL truoc, INSERT sau, dung thu tu FK).
---   4. Sau khi insert xong, app can duoc KHOI DONG LAI (hoac it nhat goi lai
+--   2. Chay het file nay 1 luot (DROP-neu-co truoc, DDL sau, INSERT cuoi,
+--      dung thu tu FK). Idempotent: chay lai nhieu lan tren cung 1 schema
+--      deu ra ket qua giong nhau (khong con bi loi "ORA-00955 name already
+--      used" neu 8 bang da ton tai tu truoc).
+--   3. Sau khi insert xong, app can duoc KHOI DONG LAI (hoac it nhat goi lai
 --      /api/config/deploy CHO Endpoint - rieng Upstream Service can restart
 --      that su, vi /deploy chi reload EndpointRegistryCache, KHONG reload
 --      UpstreamRegistryCache - da xac nhan that khi verify tren dev local).
+--
+-- !!! CANH BAO QUAN TRONG - DOC TRUOC KHI CHAY TREN PRODUCTION THAT !!!
+-- Buoc [0] ben duoi DROP (xoa han, KHONG the hoan tac) ca 8 bang neu chung
+-- DA TON TAI tren schema dich - bao gom XOA SACH bat ky du lieu THAT nao
+-- dang co san trong do (vd Endpoint/Upstream khac ngoai 2 cai duoc INSERT
+-- lai o buoc [2]), khong chi rieng cau truc bang. CHI dung file nay neu ban
+-- CHAC CHAN muon thay the toan bo 8 bang bang dung 25 dong du lieu o buoc
+-- [2] - neu schema dich dang co du lieu PRODUCTION THAT khac can giu lai,
+-- PHAI backup truoc (vd expdp/exp rieng 8 bang nay) hoac bo han buoc [0],
+-- chi chay [1]+[2] tren schema con trong.
 -- ============================================================================
 
 SET DEFINE OFF
 
 -- ============================================================================
--- [1] DDL - 8 bang (BO QUA neu schema dich DA CO san 8 bang nay)
+-- [0] DROP neu da ton tai (idempotent - xem CANH BAO o tren truoc khi chay).
+--     Thu tu NGUOC voi luc tao (bang con truoc, bang cha sau) + CASCADE
+--     CONSTRAINTS de tu go moi FK tham chieu toi truoc khi xoa, PURGE de
+--     khong giu ban ghi trong recyclebin (giai phong ten bang ngay lap tuc).
+--     Bo qua an toan (khong bao loi) neu bang chua ton tai (ORA-00942).
+-- ============================================================================
+
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "ENDPOINT_CONFIG_VERSION" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "FIELD_MAPPING" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP_MAPPING" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP_DENY" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP_ALLOW" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "ENDPOINT_CONFIG" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "UPSTREAM_SERVICE" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+
+-- ============================================================================
+-- [1] DDL - 8 bang
 -- ============================================================================
 
 CREATE TABLE "UPSTREAM_SERVICE"

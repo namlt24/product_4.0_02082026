@@ -25,7 +25,68 @@
 -- tai (vd FKRTN26VYRBRFLYH5FA838XWTL2) - neu chay lai script nay tren may khac
 -- roi de app tu ket noi voi ddl-auto=update, Hibernate se tu nhan dien schema
 -- da khop, khong ALTER gi them.
+--
+-- Cap nhat 2026-08-27 (lan 3): them buoc [0] DROP-neu-da-ton-tai (idempotent)
+-- truoc moi CREATE TABLE - chay lai script tren schema DA CO 8 bang nay se
+-- khong con loi ORA-00955. !!! CANH BAO: buoc [0] XOA HAN (khong hoan tac
+-- duoc) ca 8 bang neu da ton tai, ke ca du lieu that dang co trong do - chi
+-- chay file nay neu chac chan muon thay the toan bo, da backup truoc neu can
+-- giu du lieu cu. !!!
 -- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 0. DROP neu da ton tai (idempotent) - thu tu NGUOC voi luc tao, CASCADE
+--    CONSTRAINTS de tu go FK tham chieu, PURGE de giai phong ten bang ngay.
+--    Bo qua an toan (khong bao loi) neu bang chua ton tai (ORA-00942).
+-- ----------------------------------------------------------------------------
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "ENDPOINT_CONFIG_VERSION" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "FIELD_MAPPING" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP_MAPPING" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP_DENY" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP_ALLOW" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "BACKEND_STEP" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "ENDPOINT_CONFIG" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE "UPSTREAM_SERVICE" CASCADE CONSTRAINTS PURGE';
+EXCEPTION
+   WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
 
 -- ----------------------------------------------------------------------------
 -- 1. UPSTREAM_SERVICE - dang ky 1 backend that (host/timeout/resilience)

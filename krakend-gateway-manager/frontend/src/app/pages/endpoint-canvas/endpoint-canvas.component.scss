@@ -113,6 +113,30 @@
   stroke-linejoin: round;
 }
 
+// Mui ten re nhanh (P1-5) - dang cung vong xuong duoi hang, tach biet mau/net dut
+// (dashed) voi duong FieldMapping (Bezier lien net, mau tim) o tren de khong nham lan.
+.branch-edge {
+  cursor: pointer;
+}
+
+.branch-edge-label {
+  font-family: var(--gwm-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--gwm-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+
+  &--true {
+    fill: #16a34a;
+  }
+
+  &--false {
+    fill: #dc2626;
+  }
+}
+
 .canvas-node-layer {
   position: absolute;
   inset: 0;

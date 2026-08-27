@@ -73,7 +73,37 @@
             <marker id="canvas-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1" />
             </marker>
+            <marker id="branch-arrow-true" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#16a34a" />
+            </marker>
+            <marker id="branch-arrow-false" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
+            </marker>
           </defs>
+
+          <!-- Mui ten re nhanh (P1-5) - VE TRUOC duong FieldMapping de FieldMapping (thuong quan trong hon,
+               nam giua duoc bam de sua) khong bi de len. Dang cung vong xuong duoi hang, mau xanh la = nhanh
+               DUNG, do = nhanh SAI - phan biet ro voi Bezier ngang cua FieldMapping. -->
+          @for (pb of positionedBranches(); track pb.fromStepIndex + '-' + pb.outcome) {
+            <path [attr.d]="pb.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openStepPanel(pb.fromStepIndex)" />
+            <path
+              [attr.d]="pb.path"
+              fill="none"
+              [attr.stroke]="pb.outcome === 'true' ? '#16a34a' : '#dc2626'"
+              stroke-width="2"
+              stroke-dasharray="6 4"
+              [attr.marker-end]="pb.outcome === 'true' ? 'url(#branch-arrow-true)' : 'url(#branch-arrow-false)'"
+              class="branch-edge"
+            />
+            <text
+              [attr.x]="pb.labelX"
+              [attr.y]="pb.labelY"
+              class="branch-edge-label"
+              [class.branch-edge-label--true]="pb.outcome === 'true'"
+              [class.branch-edge-label--false]="pb.outcome === 'false'"
+              text-anchor="middle"
+            >{{ pb.outcome === 'true' ? 'Đúng' : 'Sai' }}</text>
+          }
 
           @for (pe of positionedMappings(); track pe.index) {
             <path [attr.d]="pe.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openMappingPanel(pe.index)" />

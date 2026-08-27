@@ -88,6 +88,15 @@ interface PositionedMapping {
   labelY: number;
 }
 
+/** 1 mui ten re nhanh (P1-5) tren canvas - KHAC FieldMapping: khong chuyen du lieu, chi bieu dien luong dieu khien (dung/sai) tu step co dieu kien sang step ke tiep. */
+interface PositionedBranch {
+  fromStepIndex: number;
+  outcome: 'true' | 'false';
+  path: string;
+  labelX: number;
+  labelY: number;
+}
+
 /**
  * "Canvas mới" - kéo thả trực quan để khai báo 1 Endpoint (Step + Field Mapping),
  * năng lực tương đương form "Endpoint mới" nhưng xem/thao tác trực quan qua node-graph
@@ -215,6 +224,49 @@ export class EndpointCanvasComponent implements OnInit {
         labelY: (y1 + y2) / 2 - 6,
       };
     });
+  });
+
+  /**
+   * Mui ten re nhanh (P1-5) - RIENG voi positionedMappings (FieldMapping): 1 step co
+   * conditionOperator co the tro toi 2 step khac (nextStepOrderIfTrue/False), khong
+   * qua FieldMapping nen truoc day KHONG duoc ve gi tren canvas (chi co badge "Co dieu
+   * kien" tren node nguon) - de lo hoan toan quan he re nhanh giua cac step. Ve dang
+   * cung vong xuong duoi hang (khac kieu Bezier ngang cua FieldMapping) de khong lan
+   * lon voi duong FieldMapping giua CUNG 2 node do.
+   */
+  readonly positionedBranches = computed<PositionedBranch[]>(() => {
+    const positions = this.liveNodePositions();
+    const byOrder = new Map(positions.map((p) => [p.step.stepOrder, p]));
+    const branches: PositionedBranch[] = [];
+    const DIP = 70;
+
+    positions.forEach((p, fromStepIndex) => {
+      if (!p.step.conditionOperator) {
+        return;
+      }
+      (['true', 'false'] as const).forEach((outcome) => {
+        const targetOrder = outcome === 'true' ? p.step.nextStepOrderIfTrue : p.step.nextStepOrderIfFalse;
+        if (targetOrder == null) {
+          return;
+        }
+        const target = byOrder.get(targetOrder);
+        if (!target) {
+          return;
+        }
+        const x1 = p.x + this.nodeWidth / 2;
+        const y1 = p.y + this.nodeHeight;
+        const x2 = target.x + this.nodeWidth / 2;
+        const y2 = target.y + this.nodeHeight;
+        branches.push({
+          fromStepIndex,
+          outcome,
+          path: `M ${x1} ${y1} C ${x1} ${y1 + DIP}, ${x2} ${y2 + DIP}, ${x2} ${y2}`,
+          labelX: (x1 + x2) / 2,
+          labelY: Math.max(y1, y2) + DIP + 4,
+        });
+      });
+    });
+    return branches;
   });
 
   readonly canvasSize = computed(() => {

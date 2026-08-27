@@ -9,7 +9,7 @@ export type HttpMethodType = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export type MappingTargetType = 'PATH' | 'QUERY' | 'HEADER' | 'BODY_FIELD';
 
 /** Nguon du lieu cua 1 FieldMapping. */
-export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'STEP_RESPONSE_ARRAY_AGGREGATE';
+export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'QUERY_PARAM' | 'STEP_RESPONSE_ARRAY_AGGREGATE';
 
 /** Toan tu so sanh dung cho dieu kien re nhanh (P1-5) cua 1 BackendStep. */
 export type ConditionOperator = 'EQUALS' | 'NOT_EQUALS' | 'EXISTS' | 'NOT_EXISTS';
@@ -85,7 +85,7 @@ export interface FieldMapping {
   sourceType: FieldMappingSourceType;
   /** Bat buoc khi sourceType=STEP_RESPONSE hoac STEP_RESPONSE_ARRAY_AGGREGATE. */
   sourceStepOrder?: number | null;
-  /** Bat buoc khi sourceType=STEP_RESPONSE hoac REQUEST_BODY. */
+  /** Bat buoc khi sourceType=STEP_RESPONSE, REQUEST_BODY hoac QUERY_PARAM (ten query param can doc). */
   sourceField?: string | null;
   /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: duong dan toi mang, vi du "data". */
   sourceArrayField?: string | null;
@@ -219,6 +219,7 @@ export const MAPPING_TARGET_TYPES: MappingTargetType[] = ['PATH', 'QUERY', 'HEAD
 export const FIELD_MAPPING_SOURCE_TYPES: FieldMappingSourceType[] = [
   'STEP_RESPONSE',
   'REQUEST_BODY',
+  'QUERY_PARAM',
   'STEP_RESPONSE_ARRAY_AGGREGATE',
 ];
 

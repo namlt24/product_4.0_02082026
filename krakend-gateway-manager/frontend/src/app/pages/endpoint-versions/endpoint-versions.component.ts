@@ -122,6 +122,8 @@ export class EndpointVersionsComponent implements OnInit {
     switch (m.sourceType) {
       case 'REQUEST_BODY':
         return `Body của client · ${m.sourceField}`;
+      case 'QUERY_PARAM':
+        return `Query param của client · ${m.sourceField}`;
       case 'STEP_RESPONSE_ARRAY_AGGREGATE':
         return `Gộp mảng Step ${m.sourceStepOrder} · ${m.sourceArrayField}[].${m.sourceElementField}`;
       default:

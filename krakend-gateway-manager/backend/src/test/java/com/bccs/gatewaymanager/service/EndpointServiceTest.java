@@ -159,6 +159,28 @@ class EndpointServiceTest {
         verify(registryCache).reload();
     }
 
+    // ---- QUERY_PARAM (nguon FieldMapping moi - doc query param cua chinh client): giong REQUEST_BODY,
+    // KHONG can sourceStepOrder, nhung VAN can sourceField (ten query param can doc). ----
+
+    @Test
+    void create_queryParamMapping_khongCanSourceStepOrder_thanhCong() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+                2, MappingTargetType.QUERY, "staffCode", 0);
+        EndpointResponseDto result = service.create(requestWithMapping(mapping));
+        assertThat(result).isNotNull();
+        verify(registryCache).reload();
+    }
+
+    @Test
+    void create_rejectsBlankSourceFieldForQueryParam() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "  ", null, null,
+                2, MappingTargetType.QUERY, "staffCode", 0);
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
     // ---- Finding #3: cycle-detection phai chan create()/update() TRUOC khi reload cache ----
 
     @Test

@@ -365,7 +365,7 @@
         <mat-select [(ngModel)]="m.sourceType">
           @for (t of sourceTypes; track t) {
             <mat-option [value]="t">
-              {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : 'Gộp mảng (response step trước)' }}
+              {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : t === 'QUERY_PARAM' ? 'Query param của client' : 'Gộp mảng (response step trước)' }}
             </mat-option>
           }
         </mat-select>
@@ -384,7 +384,7 @@
 
       @if (mappingUsesSourceField()) {
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>{{ m.sourceType === 'REQUEST_BODY' ? 'Field trong body client' : 'Field trong response' }}</mat-label>
+          <mat-label>{{ m.sourceType === 'REQUEST_BODY' ? 'Field trong body client' : m.sourceType === 'QUERY_PARAM' ? 'Tên query param' : 'Field trong response' }}</mat-label>
           <input matInput [(ngModel)]="m.sourceField" placeholder="vd: telecomServiceId hoặc data.id" />
         </mat-form-field>
       }

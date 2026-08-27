@@ -271,10 +271,20 @@ public class CompositeOrchestratorEngine {
     private JsonNode resolveMappingValueAsJson(FieldMappingDto m, ExecutionContext ctx) {
         return switch (m.sourceType()) {
             case REQUEST_BODY -> orDefault(JsonPathUtil.getByDotPath(ctx.requestBody(), m.sourceField()), objectMapper.nullNode());
+            case QUERY_PARAM -> {
+                String value = firstQueryParamValue(ctx, m.sourceField());
+                yield value == null ? objectMapper.nullNode() : objectMapper.getNodeFactory().stringNode(value);
+            }
             case STEP_RESPONSE -> orDefault(JsonPathUtil.getByDotPath(ctx.getStepResult(m.sourceStepOrder()), m.sourceField()), objectMapper.nullNode());
             case STEP_RESPONSE_ARRAY_AGGREGATE -> JsonPathUtil.toArrayNode(objectMapper,
                     JsonPathUtil.aggregateArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(), m.sourceElementField()));
         };
+    }
+
+    /** Query param cua CHINH client (khong phai response step nao) - luon la String[] (co the nhieu gia tri trung ten), lay gia tri dau tien. */
+    private String firstQueryParamValue(ExecutionContext ctx, String paramName) {
+        String[] values = ctx.queryParams().get(paramName);
+        return (values == null || values.length == 0) ? null : values[0];
     }
 
     /** Tra ve gia tri mapping duoi dang String (dung cho PATH/QUERY/HEADER). Mang (ARRAY_AGGREGATE) duoc noi bang dau phay. */
@@ -282,6 +292,9 @@ public class CompositeOrchestratorEngine {
         if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE_ARRAY_AGGREGATE) {
             List<String> values = JsonPathUtil.aggregateArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(), m.sourceElementField());
             return String.join(",", values);
+        }
+        if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM) {
+            return firstQueryParamValue(ctx, m.sourceField());
         }
         JsonNode node = m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
                 ? JsonPathUtil.getByDotPath(ctx.requestBody(), m.sourceField())

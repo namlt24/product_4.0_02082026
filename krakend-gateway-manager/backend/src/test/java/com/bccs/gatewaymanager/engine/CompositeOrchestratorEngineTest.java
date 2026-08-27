@@ -2,9 +2,11 @@ package com.bccs.gatewaymanager.engine;
 
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
+import com.bccs.gatewaymanager.dto.FieldMappingDto;
 import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
+import com.bccs.gatewaymanager.entity.MappingTargetType;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.service.UpstreamRegistryCache;
@@ -286,5 +288,56 @@ class CompositeOrchestratorEngineTest {
                 any(), connectCaptor.capture(), readCaptor.capture());
         assertThat(connectCaptor.getValue()).isNull();
         assertThat(readCaptor.getValue()).isNull();
+    }
+
+    // ---- QUERY_PARAM (nguon FieldMapping moi - doc query param cua chinh client, khong phai response step nao) ----
+
+    @Test
+    void queryParamMapping_forwardDungGiaTriVaoQuery() {
+        stubCall(up1, json("{\"v\":1}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+                1, MappingTargetType.QUERY, "staffCode", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of("staffCode", new String[]{"QUITT"}), null);
+
+        org.mockito.ArgumentCaptor<String> urlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), urlCaptor.capture(), any(), any(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).contains("staffCode=QUITT");
+    }
+
+    @Test
+    void queryParamMapping_forwardDungGiaTriVaoBodyField() {
+        stubCall(up1, json("{\"v\":1}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+                1, MappingTargetType.BODY_FIELD, "staffCode", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of("staffCode", new String[]{"QUITT"}), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("staffCode").asText()).isEqualTo("QUITT");
+    }
+
+    @Test
+    void queryParamMapping_khongCoGiaTri_traNullKhongThrow() {
+        stubCall(up1, json("{\"v\":1}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null,
+                1, MappingTargetType.BODY_FIELD, "staffCode", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null);
+
+        // Khong truyen queryParams nao ca (Map.of()) - staffCode khong ton tai, phai ra null, khong throw.
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("staffCode").isNull()).isTrue();
     }
 }

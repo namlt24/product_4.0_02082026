@@ -104,8 +104,15 @@ Cache Redis **không** cấu hình ở đây — xem `BackendStep` bên dưới.
 - Mỗi `FieldMapping` = "lấy 1 giá trị từ đâu, bơm vào đâu":
   - **Nguồn** (`sourceType`): `STEP_RESPONSE` (response step trước, hỗ trợ
     dot-notation lồng nhau vd `shop.channelTypeId`), `REQUEST_BODY` (đọc thẳng
-    field từ body client), `STEP_RESPONSE_ARRAY_AGGREGATE` (gộp 1 field của
-    TỪNG phần tử trong 1 mảng response thành mảng mới).
+    field từ body client), `QUERY_PARAM` (đọc thẳng query param của chính
+    client — vd endpoint client gọi `?staffCode=X` cần forward `staffCode` đó
+    sang query param của 1 step sau), `STEP_RESPONSE_ARRAY_AGGREGATE` (gộp 1
+    field của TỪNG phần tử trong 1 mảng response thành mảng mới).
+  - **Lưu ý khi forward nguyên 1 mảng làm body** (`targetParamName="$body"`):
+    nếu mảng đó nằm trong `data` của response step trước, **để trống `target`
+    của step nguồn** (đừng tự unwrap `data` ở step) rồi đặt `sourceField="data"`
+    ở FieldMapping — vì `sourceField` rỗng luôn trả `null` (không có cú pháp
+    "lấy nguyên response, không đi sâu thêm"), unwrap 2 lần liên tiếp sẽ ra `null`.
   - **Đích** (`targetType`): `PATH`/`QUERY`/`HEADER`, hoặc `BODY_FIELD` (thêm
     field vào JSON body gửi đi của step đích — riêng nếu đặt tên field đích là
     `$body` thì giá trị đó **thay thế toàn bộ body**, dùng khi backend nhận
@@ -221,11 +228,22 @@ mỗi bước, cache hit, lỗi). API: `GET /api/logs/requests`, `GET
 - Đổi cấu hình resilience (timeout/circuit-breaker) của 1 Upstream sau khi đã
   có request đầu tiên chưa áp dụng ngay (registry Resilience4j giữ config lúc
   khởi tạo lần đầu) — cần cải tiến nếu cần đổi động không restart.
-- Query param của client **chưa** dùng được làm nguồn `FieldMapping` (chỉ mới
-  hỗ trợ `pathVariables`/`requestBody`) — xem comment trong
-  `service/OpenApiGeneratorService.java`.
 - Không có auth theo từng Endpoint ở Data Plane (chỉ Control Plane `/api/**`
   có `X-Gateway-Admin-Key`) — quyết định đã chốt, không phải thiếu sót.
 - Schema DB dùng `ddl-auto: update` (tự tạo/cập nhật bảng) — bản chụp DDL 8
   bảng để dựng thủ công trên máy khác (nếu không muốn dựa vào auto-DDL): xem
   [`backend/src/main/resources/db/ddl-gateway-manager.sql`](backend/src/main/resources/db/ddl-gateway-manager.sql).
+- **`ddl-auto: update` KHÔNG tự cập nhật CHECK constraint của cột `@Enumerated(EnumType.STRING)`
+  đã tồn tại** (đã xác nhận thật khi thêm `QUERY_PARAM` vào `FieldMappingSourceType`:
+  Oracle báo `ORA-02290 check constraint violated` dù code/DTO đã đúng, vì
+  constraint `source_type in (...)` được Hibernate sinh 1 LẦN DUY NHẤT lúc
+  tạo bảng, không tự nới khi enum có thêm giá trị mới). Trên **CSDL đã có sẵn
+  bảng** (không phải tạo mới hoàn toàn), mỗi lần thêm giá trị vào 1 enum dùng
+  `@Enumerated(EnumType.STRING)` (`FieldMappingSourceType`, `MappingTargetType`,
+  `ConditionOperator`, `GatewayMethod`, `EndpointChangeType`) đều cần chạy tay:
+  ```sql
+  ALTER TABLE <bang> DROP CONSTRAINT <ten_constraint_cu>;
+  ALTER TABLE <bang> ADD CONSTRAINT <ten_moi> CHECK (<cot> in (...gom ca gia tri moi...));
+  ```
+  Trên CSDL **tạo mới hoàn toàn** (chưa có bảng), `ddl-auto: update` tự sinh
+  đúng constraint đầy đủ ngay từ đầu — chỉ cần chạy tay khi đang có schema cũ.

@@ -27,6 +27,10 @@ public class ExecutionContext {
         return pathVariables;
     }
 
+    public Map<String, String[]> queryParams() {
+        return queryParams;
+    }
+
     public JsonNode requestBody() {
         return requestBody;
     }

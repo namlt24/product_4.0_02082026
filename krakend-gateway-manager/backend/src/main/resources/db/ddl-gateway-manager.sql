@@ -12,6 +12,11 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
+-- Cap nhat 2026-08-27: them 'QUERY_PARAM' vao CHECK constraint cua
+-- FIELD_MAPPING.SOURCE_TYPE (doi ten sang FIELD_MAPPING_SOURCE_TYPE_CHK, khong
+-- con la ten SYS_C#### tu dong nua) - xem README.md muc 8 "Gioi han hien tai"
+-- ve viec ddl-auto=update KHONG tu noi CHECK constraint cho enum da co san.
+--
 -- Thu tu tao bang theo dung phu thuoc FK (bang cha truoc, bang con sau).
 -- Ten constraint/index giu NGUYEN theo dung Hibernate da tu sinh tren may hien
 -- tai (vd FKRTN26VYRBRFLYH5FA838XWTL2) - neu chay lai script nay tren may khac
@@ -141,7 +146,7 @@ CREATE TABLE "FIELD_MAPPING"
 	"TARGET_TYPE" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"ENDPOINT_ID" VARCHAR2(255 CHAR),
 	"MAPPING_ORDER" NUMBER(10,0) DEFAULT 0 NOT NULL ENABLE,
-	 CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','STEP_RESPONSE_ARRAY_AGGREGATE')) ENABLE,
+	 CONSTRAINT "FIELD_MAPPING_SOURCE_TYPE_CHK" CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM','STEP_RESPONSE_ARRAY_AGGREGATE')) ENABLE,
 	 CHECK (target_type in ('PATH','QUERY','HEADER','BODY_FIELD')) ENABLE,
 	 CONSTRAINT "FIELD_MAPPING_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKG9BDKEU7BU7USNQSCONIOKV8K" FOREIGN KEY ("ENDPOINT_ID")

@@ -13,6 +13,9 @@ public enum FieldMappingSourceType {
     /** Lay tu chinh body goc cua client gui len (sourceStepOrder bi bo qua). */
     REQUEST_BODY,
 
+    /** Lay tu chinh query param cua client gui len (sourceStepOrder bi bo qua, giong REQUEST_BODY). */
+    QUERY_PARAM,
+
     /**
      * Gop 1 field cua TUNG phan tu trong 1 mang o response step {@code sourceStepOrder}
      * thanh 1 mang moi. Vi du: mang "data" gom cac object co field "code"

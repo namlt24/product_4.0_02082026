@@ -131,7 +131,10 @@ export class EndpointCanvasComponent implements OnInit {
   readonly httpMethods = HTTP_METHODS;
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
-  readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter((t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE');
+  /** Query param cua client KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
+  readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM',
+  );
   readonly conditionOperators = CONDITION_OPERATORS;
 
   readonly nodeWidth = NODE_W;
@@ -593,7 +596,7 @@ export class EndpointCanvasComponent implements OnInit {
   }
 
   mappingNeedsSourceStep(): boolean {
-    return this.editingMapping?.sourceType !== 'REQUEST_BODY';
+    return this.editingMapping?.sourceType !== 'REQUEST_BODY' && this.editingMapping?.sourceType !== 'QUERY_PARAM';
   }
 
   mappingUsesSourceField(): boolean {

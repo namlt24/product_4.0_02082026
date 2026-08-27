@@ -96,6 +96,26 @@ class OpenApiGeneratorServiceTest {
     }
 
     @Test
+    void coMappingQUERY_PARAM_sinhDungQueryParameterBatBuoc() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null,
+                "staffCode", null, null, 1, MappingTargetType.QUERY, "staffCode", 0);
+        EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.GET,
+                true, "json", List.of(step(false)), List.of(mapping), null, null);
+
+        Map<String, Object> doc = service.generate(ep);
+        Map<String, Object> op = operationOf(doc, "/v1/x", "get");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> params = (List<Map<String, Object>>) op.get("parameters");
+        assertThat(params).hasSize(1);
+        assertThat(params.get(0).get("name")).isEqualTo("staffCode");
+        assertThat(params.get(0).get("in")).isEqualTo("query");
+        assertThat(params.get(0).get("required")).isEqualTo(true);
+        // QUERY_PARAM khong dua vao "requestBody" (khac REQUEST_BODY) - day la param tren URL.
+        assertThat(op).doesNotContainKey("requestBody");
+    }
+
+    @Test
     void luonCoResponses200Va4xx5xxChuan() {
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.GET,
                 true, "json", List.of(step(false)), List.of(), null, null);

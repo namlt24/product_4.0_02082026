@@ -6,7 +6,9 @@ import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,10 +24,8 @@ import java.util.regex.Pattern;
  * truc DO composite chain quyet dinh o runtime (phu thuoc response that cua
  * Upstream), khong the biet truoc schema chinh xac tu cau hinh - chi mo ta
  * duoc "type: object" chung. Request thi suy duoc kha chinh xac hon: path
- * param tu token {x} trong path, cac field REQUEST_BODY duoc mapping toi
- * (engine CHUA ho tro client tu query param lam nguon - xem ExecutionContext,
- * chi co pathVariables/requestBody - nen KHONG co "query parameters" trong
- * tai lieu sinh ra, dung voi that).
+ * param tu token {x} trong path, query param tu cac FieldMapping co
+ * sourceType=QUERY_PARAM, cac field REQUEST_BODY duoc mapping toi.
  *
  * Chon JSON thay vi YAML: OpenAPI spec cho phep ca 2 dinh dang tuong duong,
  * JSON dung thang duoc ObjectMapper da co san (khong can them dependency YAML
@@ -59,7 +59,9 @@ public class OpenApiGeneratorService {
         Map<String, Object> op = new LinkedHashMap<>();
         op.put("summary", ep.name());
         op.put("operationId", "endpoint_" + ep.id());
-        op.put("parameters", pathParameters(ep));
+        List<Map<String, Object>> parameters = new ArrayList<>(pathParameters(ep));
+        parameters.addAll(queryParameters(ep));
+        op.put("parameters", parameters);
 
         Map<String, Object> requestBodySchema = requestBodySchema(ep);
         if (requestBodySchema != null) {
@@ -72,9 +74,9 @@ public class OpenApiGeneratorService {
     }
 
     /** Path param suy tu token {x} trong EndpointConfig.path - dung Y HET regex CompositeOrchestratorEngine.resolvePath() dung de khop token that. */
-    private Object pathParameters(EndpointResponseDto ep) {
+    private List<Map<String, Object>> pathParameters(EndpointResponseDto ep) {
         Matcher m = PATH_TOKEN.matcher(ep.path());
-        var params = new java.util.ArrayList<Map<String, Object>>();
+        var params = new ArrayList<Map<String, Object>>();
         while (m.find()) {
             params.add(Map.of(
                     "name", m.group(1),
@@ -83,6 +85,21 @@ public class OpenApiGeneratorService {
                     "schema", Map.of("type", "string")));
         }
         return params;
+    }
+
+    /** Query param suy tu cac FieldMapping co sourceType=QUERY_PARAM (client PHAI gui query param do de mapping hoat dong). */
+    private List<Map<String, Object>> queryParameters(EndpointResponseDto ep) {
+        return ep.mappings().stream()
+                .filter(m -> m.sourceType() == FieldMappingSourceType.QUERY_PARAM)
+                .map(FieldMappingDto::sourceField)
+                .filter(f -> f != null && !f.isBlank())
+                .distinct()
+                .<Map<String, Object>>map(name -> Map.of(
+                        "name", name,
+                        "in", "query",
+                        "required", true,
+                        "schema", Map.of("type", "string")))
+                .toList();
     }
 
     /**

@@ -155,7 +155,8 @@ public class EndpointService {
         boolean usesBranching = usesBranching(dto);
         if (dto.mappings() != null) {
             for (var m : dto.mappings()) {
-                boolean needsSourceStep = m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY;
+                boolean needsSourceStep = m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
+                        && m.sourceType() != com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM;
                 if (needsSourceStep && (m.sourceStepOrder() == null || m.sourceStepOrder() > maxOrder)) {
                     throw new BusinessException("GW-003", "FieldMapping (sourceType=" + m.sourceType()
                             + ") thieu sourceStepOrder hop le (max step = " + maxOrder + ").");
@@ -171,7 +172,8 @@ public class EndpointService {
                             + ") phai nho hon targetStepOrder (" + m.targetStepOrder() + ") - step nguon phai chay truoc step dich.");
                 }
                 if ((m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
-                        || m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY)
+                        || m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
+                        || m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM)
                         && (m.sourceField() == null || m.sourceField().isBlank())) {
                     throw new BusinessException("GW-003", "FieldMapping (sourceType=" + m.sourceType() + ") thieu sourceField.");
                 }

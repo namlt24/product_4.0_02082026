@@ -142,12 +142,14 @@ CREATE TABLE "BACKEND_STEP"
 	"URL_PATTERN" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"ENDPOINT_ID" VARCHAR2(255 CHAR),
 	"UPSTREAM_SERVICE_ID" VARCHAR2(255 CHAR) NOT NULL ENABLE,
-	-- CACHE_ENABLED dung kieu BOOLEAN native cua Oracle (23ai tro len) thay vi
-	-- NUMBER(1,0)+CHECK nhu cac cot boolean khac - do cot nay duoc Hibernate
-	-- ALTER TABLE them vao SAU (xem @ColumnDefault trong BackendStep.java),
-	-- tai thoi diem dialect da chuyen sang dung BOOLEAN native. Giu dung
-	-- nguyen trang thai that, KHONG "sua cho dong bo" voi cac cot boolean cu.
-	"CACHE_ENABLED" BOOLEAN DEFAULT false NOT NULL ENABLE,
+	-- Tren Oracle dev that (23ai) cot nay duoc Hibernate tu sinh kieu BOOLEAN
+	-- native (chi co tu Oracle 23c tro len - xem @ColumnDefault trong
+	-- BackendStep.java) vi ALTER TABLE them cot nay vao SAU, dung luc dialect
+	-- da chuyen sang BOOLEAN. Script nay CHU DICH doi lai NUMBER(1,0)+CHECK
+	-- (giong het FORWARD_ORIGINAL_BODY o tren) de tuong thich Oracle 19c -
+	-- BOOLEAN lam kieu COT BANG se loi ORA-00902 tren 19c (BOOLEAN truoc 23c
+	-- chi dung duoc trong PL/SQL, khong dung lam kieu cot bang).
+	"CACHE_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	"CACHE_TTL_SECONDS" NUMBER(10,0) DEFAULT 300 NOT NULL ENABLE,
 	"CANVAS_X" NUMBER(10,0),
 	"CANVAS_Y" NUMBER(10,0),
@@ -163,6 +165,7 @@ CREATE TABLE "BACKEND_STEP"
 	"CONNECT_TIMEOUT_MS" NUMBER(10,0),
 	"READ_TIMEOUT_MS" NUMBER(10,0),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
+	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS'))) ENABLE,
 	 CHECK ((condition_source_type in ('STEP_RESPONSE','REQUEST_BODY','STEP_RESPONSE_ARRAY_AGGREGATE'))) ENABLE,

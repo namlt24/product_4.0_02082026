@@ -202,20 +202,49 @@ export class EndpointCanvasComponent implements OnInit {
 
   readonly positionedMappings = computed<PositionedMapping[]>(() => {
     const byOrder = new Map(this.liveNodePositions().map((p) => [p.step.stepOrder, p]));
-    return this.mappings().map((mapping, index) => {
+    const mappings = this.mappings();
+
+    // Nhieu FieldMapping CUNG nguon (vd 2+ mapping CONSTANT - khong co sourceStepOrder,
+    // hoac 2+ REQUEST_BODY/QUERY_PARAM deu xuat phat tu node Client) VA CUNG step dich se
+    // tinh ra x1/y1/x2/y2 GIONG HET NHAU -> duong cong SVG trung khop 100%, chi con 1
+    // duong nhin thay/bam duoc (duong ve SAU CUNG de len tren) - cac mapping khac VAN TON
+    // TAI trong du lieu (khong mat), chi khong bam duoc qua canvas. Fix: nhom theo (nguon,
+    // dich) giong het nhau, toa do BAT DAU/KET THUC cua tung duong trong 1 nhom duoc GIAN
+    // DEU doc theo canh node (khac nhau vai px) de tach thanh nhieu duong cong song song,
+    // duong nao cung bam duoc rieng.
+    const groupKeyOf = (m: FieldMapping): string =>
+      `${m.sourceType === 'REQUEST_BODY' || m.sourceType === 'QUERY_PARAM' || m.sourceType === 'CONSTANT' || m.sourceStepOrder == null ? 'client' : m.sourceStepOrder}->${m.targetStepOrder}`;
+    const groupIndex = new Map<string, number>();
+    const groupSize = new Map<string, number>();
+    for (const m of mappings) {
+      const key = groupKeyOf(m);
+      groupSize.set(key, (groupSize.get(key) ?? 0) + 1);
+    }
+    // 20px - lon hon stroke-width=16 cua .edge-hit (vung bam an) de 2 duong ke nhau
+    // trong 1 nhom KHONG con de vung bam trung nhau (16px de len 16px se giao nhau
+    // giua tam neu spread <16px, kho bam trung dung 1 duong khi 2 duong sat nhau).
+    const FAN_SPREAD = 20;
+
+    return mappings.map((mapping, index) => {
+      const key = groupKeyOf(mapping);
+      const posInGroup = groupIndex.get(key) ?? 0;
+      groupIndex.set(key, posInGroup + 1);
+      const total = groupSize.get(key) ?? 1;
+      const fanOffset = (posInGroup - (total - 1) / 2) * FAN_SPREAD;
+
       let x1: number;
       let y1: number;
-      if (mapping.sourceType === 'REQUEST_BODY' || mapping.sourceStepOrder == null) {
+      if (mapping.sourceType === 'REQUEST_BODY' || mapping.sourceType === 'QUERY_PARAM' || mapping.sourceType === 'CONSTANT' || mapping.sourceStepOrder == null) {
         x1 = this.clientNodeX + this.nodeWidth;
-        y1 = this.clientNodeY + this.nodeHeight / 2;
+        y1 = this.clientNodeY + this.nodeHeight / 2 + fanOffset;
       } else {
         const source = byOrder.get(mapping.sourceStepOrder);
         x1 = source ? source.x + this.nodeWidth : this.clientNodeX + this.nodeWidth;
-        y1 = source ? source.y + this.nodeHeight / 2 : this.clientNodeY + this.nodeHeight / 2;
+        y1 = (source ? source.y + this.nodeHeight / 2 : this.clientNodeY + this.nodeHeight / 2) + fanOffset;
       }
       const target = byOrder.get(mapping.targetStepOrder);
       const x2 = target ? target.x : x1;
-      const y2 = target ? target.y + this.nodeHeight / 2 : y1;
+      const y2 = (target ? target.y + this.nodeHeight / 2 : y1) + fanOffset;
       const midX = (x1 + x2) / 2;
       return {
         mapping,

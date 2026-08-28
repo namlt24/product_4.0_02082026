@@ -30,7 +30,12 @@
 --   10.207.252.17 vi may dev khong ra duoc mang noi bo do - khong phai loi
 --   du lieu).
 --
--- Cap nhat 2026-08-28: them 'CONSTANT' vao CHECK constraint cua
+-- Cap nhat 2026-08-28 (lan 2): FIELD_MAPPING.CONSTANT_VALUE luc dau khong ghi ro
+-- length tren @Column cua entity (JPA mac dinh 255) - ALTER TABLE tay len 4000 bi
+-- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
+-- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
+-- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-08-28 (lan 1): them 'CONSTANT' vao CHECK constraint cua
 -- FIELD_MAPPING.SOURCE_TYPE + cot moi FIELD_MAPPING.CONSTANT_VALUE (dong bo voi
 -- ddl-gateway-manager.sql) - khong anh huong du lieu THAT o tren, ca 12
 -- FIELD_MAPPING that hien co deu khong dung sourceType=CONSTANT.

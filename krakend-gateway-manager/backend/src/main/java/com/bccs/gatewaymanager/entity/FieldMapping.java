@@ -73,8 +73,12 @@ public class FieldMapping {
     @Column(name = "source_element_field")
     private String sourceElementField;
 
-    /** sourceType=CONSTANT: gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */
-    @Column(name = "constant_value")
+    /**
+     * sourceType=CONSTANT: gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response
+     * nao. length=4000 (thay vi mac dinh 255 cua JPA) - co the can chua nguyen 1 object/mang JSON
+     * fix cung cho BODY_FIELD (vi du {"a":1,"b":[1,2,3]}), khong chi 1 chuoi/so ngan.
+     */
+    @Column(name = "constant_value", length = 4000)
     private String constantValue;
 
     /** Step dich (1-based) - noi gia tri duoc bom vao. Phai > sourceStepOrder khi sourceType=STEP_RESPONSE*. */

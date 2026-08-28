@@ -19,6 +19,12 @@
 -- Cap nhat 2026-08-27 (lan 2): them CONNECT_TIMEOUT_MS/READ_TIMEOUT_MS vao
 -- BACKEND_STEP (tinh nang override timeout theo tung step) - lan trich xuat
 -- truoc do (lan 1) da bo sot 2 cot nay.
+-- Cap nhat 2026-08-28 (lan 6): FIELD_MAPPING.CONSTANT_VALUE luc dau khong ghi ro
+-- length tren @Column cua entity (JPA mac dinh 255) - ALTER TABLE tay len 4000 (lan
+-- 5 duoi day) bi Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend
+-- ke tiep (khop theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai
+-- 4000 tren DB dev - can chay lai tay neu DB da tung bi noi ve 255:
+-- ALTER TABLE field_mapping MODIFY constant_value VARCHAR2(4000 CHAR);
 -- Cap nhat 2026-08-28 (lan 5): them 'CONSTANT' vao CHECK constraint cua
 -- FIELD_MAPPING.SOURCE_TYPE + cot moi FIELD_MAPPING.CONSTANT_VALUE - dung khai
 -- bao gia tri hang so co dinh (khong doc tu request/response nao) cho

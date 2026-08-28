@@ -27,7 +27,15 @@ public record EndpointRequestDto(
 
         @NotEmpty @Valid List<BackendStepDto> steps,
 
-        @Valid List<FieldMappingDto> mappings
+        @Valid List<FieldMappingDto> mappings,
+
+        /**
+         * Bat idempotency-key (client gui header "Idempotency-Key") - mac dinh tat (false),
+         * moi endpoint cu giu nguyen hanh vi hien tai. Xem EndpointConfig.idempotencyEnabled.
+         */
+        boolean idempotencyEnabled,
+
+        Integer idempotencyTtlSeconds
 ) {
     public EndpointRequestDto {
         if (outputEncoding == null || outputEncoding.isBlank()) {
@@ -35,6 +43,9 @@ public record EndpointRequestDto(
         }
         if (mappings == null) {
             mappings = List.of();
+        }
+        if (idempotencyTtlSeconds == null || idempotencyTtlSeconds <= 0) {
+            idempotencyTtlSeconds = 86400;
         }
     }
 }

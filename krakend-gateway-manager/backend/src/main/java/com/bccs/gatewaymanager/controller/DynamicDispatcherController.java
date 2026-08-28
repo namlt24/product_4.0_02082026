@@ -3,11 +3,13 @@ package com.bccs.gatewaymanager.controller;
 import com.bccs.gatewaymanager.audit.AuditLogService;
 import com.bccs.gatewaymanager.audit.BodyTruncator;
 import com.bccs.gatewaymanager.audit.RequestAuditEvent;
+import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.engine.CompositeOrchestratorEngine;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.service.EndpointRegistryCache;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import org.springframework.web.util.pattern.PathPatternParser;
 import java.io.BufferedReader;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -44,9 +47,14 @@ public class DynamicDispatcherController {
     private final EndpointRegistryCache registryCache;
     private final CompositeOrchestratorEngine engine;
     private final AuditLogService auditLogService;
+    private final GatewayCacheService cacheService;
+    private final ObjectMapper objectMapper;
 
     private final Map<String, PathPattern> patternCache = new ConcurrentHashMap<>();
     private final PathPatternParser pathPatternParser = new PathPatternParser();
+
+    /** Header client gui de danh dau 1 request idempotent - xem EndpointConfig.idempotencyEnabled. */
+    private static final String IDEMPOTENCY_HEADER = "Idempotency-Key";
 
     @RequestMapping("/**")
     public ResponseEntity<?> dispatch(HttpServletRequest request) throws Exception {
@@ -96,12 +104,33 @@ public class DynamicDispatcherController {
         }
     }
 
-    /** Thuc thi 1 EndpointConfig da khop (qua O(1) hoac fallback pattern) + ghi audit ca 2 nhanh thanh cong/loi. */
+    /**
+     * Thuc thi 1 EndpointConfig da khop (qua O(1) hoac fallback pattern) + ghi audit ca 2
+     * nhanh thanh cong/loi. Idempotency-key (P-idem, tuy chon theo tung endpoint - xem
+     * EndpointConfig.idempotencyEnabled): khi bat + client co gui header, cache-hit tra
+     * THANG response da cache TU LAN GOI TRUOC, KHONG goi lai engine.handle() (tranh
+     * side-effect lap vi du client tu dong retry 1 POST co that tao du lieu); cache-miss
+     * thi goi engine binh thuong, CHI cache khi THANH CONG (khong cache loi - client phai
+     * retry lai duoc khi loi that da het, khong bi "ket" voi loi cache vinh vien).
+     */
     private ResponseEntity<?> execute(EndpointResponseDto config, Map<String, String> pathVariables, HttpServletRequest request,
                                        String requestId, HttpMethod method, String requestPath, long startNanos) throws Exception {
         String rawBody = readBody(request);
+        String idempotencyCacheKey = resolveIdempotencyCacheKey(config, request);
+
+        if (idempotencyCacheKey != null) {
+            Optional<String> cached = cacheService.get(idempotencyCacheKey);
+            if (cached.isPresent()) {
+                recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
+                return ResponseEntity.ok(objectMapper.readTree(cached.get()));
+            }
+        }
+
         try {
             JsonNode result = engine.handle(config, pathVariables, request.getParameterMap(), rawBody);
+            if (idempotencyCacheKey != null) {
+                cacheService.put(idempotencyCacheKey, result.toString(), config.idempotencyTtlSeconds());
+            }
             recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
@@ -109,6 +138,18 @@ public class DynamicDispatcherController {
                     resolveHttpStatus(e), resolveErrorCode(e), e.getMessage());
             throw e;
         }
+    }
+
+    /** null = khong dung idempotency cho request nay (endpoint chua bat cot hoac client khong gui header). */
+    private String resolveIdempotencyCacheKey(EndpointResponseDto config, HttpServletRequest request) {
+        if (!config.idempotencyEnabled()) {
+            return null;
+        }
+        String key = request.getHeader(IDEMPOTENCY_HEADER);
+        if (key == null || key.isBlank()) {
+            return null;
+        }
+        return "gwm:idempotency:" + config.id() + ":" + key;
     }
 
     private String readBody(HttpServletRequest request) throws Exception {

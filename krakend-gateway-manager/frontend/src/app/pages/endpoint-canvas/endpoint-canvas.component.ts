@@ -71,6 +71,8 @@ interface HeaderModel {
   method: HttpMethodType;
   sequential: boolean;
   outputEncoding: string;
+  idempotencyEnabled: boolean;
+  idempotencyTtlSeconds: number;
 }
 
 interface NodePos {
@@ -183,6 +185,8 @@ export class EndpointCanvasComponent implements OnInit {
     method: 'GET',
     sequential: false,
     outputEncoding: 'json',
+    idempotencyEnabled: false,
+    idempotencyTtlSeconds: 86400,
   };
 
   private endpointId: string | null = null;
@@ -373,6 +377,8 @@ export class EndpointCanvasComponent implements OnInit {
             method: ep.method,
             sequential: ep.sequential,
             outputEncoding: ep.outputEncoding || 'json',
+            idempotencyEnabled: ep.idempotencyEnabled ?? false,
+            idempotencyTtlSeconds: ep.idempotencyTtlSeconds ?? 86400,
           };
           this.steps.set([...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder));
           this.mappings.set([...ep.mappings]);
@@ -800,6 +806,8 @@ export class EndpointCanvasComponent implements OnInit {
       method: this.header.method,
       sequential: this.header.sequential,
       outputEncoding: this.header.outputEncoding || 'json',
+      idempotencyEnabled: this.header.idempotencyEnabled ?? false,
+      idempotencyTtlSeconds: this.header.idempotencyTtlSeconds || 86400,
       steps: this.steps(),
       mappings: this.mappings(),
     };

@@ -87,7 +87,8 @@ public class EndpointVersionService {
                 snapshot.name(), snapshot.description(), snapshot.path(), snapshot.method(),
                 snapshot.sequential(), snapshot.outputEncoding(),
                 snapshot.steps().stream().map(this::stripStepId).toList(),
-                snapshot.mappings());
+                snapshot.mappings(),
+                snapshot.idempotencyEnabled(), snapshot.idempotencyTtlSeconds());
     }
 
     /**

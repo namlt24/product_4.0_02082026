@@ -17,6 +17,8 @@ public record EndpointResponseDto(
         List<BackendStepDto> steps,
         List<FieldMappingDto> mappings,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        boolean idempotencyEnabled,
+        int idempotencyTtlSeconds
 ) {
 }

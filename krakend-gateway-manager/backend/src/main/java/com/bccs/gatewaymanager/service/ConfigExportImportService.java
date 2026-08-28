@@ -125,6 +125,7 @@ public class ConfigExportImportService {
                 .toList();
 
         return new EndpointRequestDto(ep.name(), ep.description(), ep.path(), ep.method(),
-                ep.sequential(), ep.outputEncoding(), steps, mappings);
+                ep.sequential(), ep.outputEncoding(), steps, mappings,
+                ep.idempotencyEnabled(), ep.idempotencyTtlSeconds());
     }
 }

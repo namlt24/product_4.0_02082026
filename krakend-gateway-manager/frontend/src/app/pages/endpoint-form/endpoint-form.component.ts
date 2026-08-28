@@ -132,6 +132,8 @@ export class EndpointFormComponent implements OnInit {
       method: [ep.method, Validators.required],
       sequential: [ep.sequential],
       outputEncoding: [ep.outputEncoding || 'json'],
+      idempotencyEnabled: [ep.idempotencyEnabled ?? false],
+      idempotencyTtlSeconds: [ep.idempotencyTtlSeconds ?? 86400],
       steps: this.fb.array(
         [...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder).map((s) => this.buildStepGroup(s)),
       ),
@@ -539,6 +541,8 @@ export class EndpointFormComponent implements OnInit {
       method: v.method,
       sequential: v.sequential,
       outputEncoding: v.outputEncoding || 'json',
+      idempotencyEnabled: v.idempotencyEnabled ?? false,
+      idempotencyTtlSeconds: v.idempotencyTtlSeconds || 86400,
       steps,
       mappings,
     };

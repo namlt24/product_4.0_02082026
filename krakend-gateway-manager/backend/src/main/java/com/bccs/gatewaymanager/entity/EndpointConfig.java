@@ -56,6 +56,22 @@ public class EndpointConfig {
     @Column(name = "output_encoding")
     private String outputEncoding = "json";
 
+    /**
+     * Bat idempotency-key: client gui header "Idempotency-Key" - lan goi dau tien voi 1 key
+     * duoc thuc thi + cache response THANH CONG (khong cache loi, de client retry duoc sau
+     * khi loi that da het) trong idempotencyTtlSeconds; lan goi TIEP THEO CUNG key trong TTL
+     * do tra thang response da cache, KHONG goi lai engine (tranh side-effect lap, vi du
+     * client tu dong retry 1 request POST co that tao du lieu). Mac dinh tat (false) - moi
+     * endpoint hien co giu nguyen hanh vi cu 100% tru khi chu dong bat.
+     */
+    @Builder.Default
+    @Column(name = "idempotency_enabled")
+    private boolean idempotencyEnabled = false;
+
+    @Builder.Default
+    @Column(name = "idempotency_ttl_seconds")
+    private int idempotencyTtlSeconds = 86400;
+
     @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

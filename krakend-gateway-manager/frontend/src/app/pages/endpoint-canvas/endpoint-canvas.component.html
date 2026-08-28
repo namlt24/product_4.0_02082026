@@ -48,6 +48,21 @@
         </mat-form-field>
         <mat-slide-toggle [(ngModel)]="header.sequential" class="sequential-toggle">Sequential</mat-slide-toggle>
       </div>
+      <div class="field-row">
+        <mat-slide-toggle [(ngModel)]="header.idempotencyEnabled">Idempotency-Key (chống trùng khi client tự retry)</mat-slide-toggle>
+        @if (header.idempotencyEnabled) {
+          <mat-form-field appearance="outline" class="small-field">
+            <mat-label>TTL (giây)</mat-label>
+            <input matInput type="number" [(ngModel)]="header.idempotencyTtlSeconds" />
+          </mat-form-field>
+        }
+      </div>
+      @if (header.idempotencyEnabled) {
+        <div class="field-note">
+          <mat-icon inline="true">info</mat-icon>
+          <span>Client gửi header <code>Idempotency-Key</code> - lần gọi đầu tiên với 1 key được thực thi + lưu kết quả thành công; lần gọi tiếp theo cùng key trong TTL trả thẳng kết quả cũ, không gọi lại backend thật. Lỗi không được lưu - client vẫn retry lại được sau khi lỗi thật đã hết.</span>
+        </div>
+      }
     </mat-card-content>
   </mat-card>
 

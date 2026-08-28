@@ -30,7 +30,7 @@ class EndpointTryServiceTest {
     @Test
     void chuyenDungQueryParamsSangMangVaGoiEngineVoiDungConfig() {
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "n", null, "/x/{id}", GatewayMethod.GET, true, "json",
-                List.of(), List.of(), null, null);
+                List.of(), List.of(), null, null, false, 86400);
         when(endpointService.get("ep-1")).thenReturn(config);
         var expected = JsonMapper.builder().build().createObjectNode();
         when(engine.handle(eq(config), any(), any(), any())).thenReturn(expected);

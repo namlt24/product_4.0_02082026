@@ -130,6 +130,14 @@ export interface EndpointConfig {
   mappings: FieldMapping[];
   createdAt?: string;
   updatedAt?: string;
+  /**
+   * Bat idempotency-key: client gui header "Idempotency-Key" - lan goi dau tien voi 1 key
+   * duoc thuc thi + cache response THANH CONG trong idempotencyTtlSeconds; lan goi tiep
+   * theo CUNG key trong TTL do tra thang response cu, khong goi lai backend that (tranh
+   * side-effect lap khi client tu dong retry). Mac dinh tat.
+   */
+  idempotencyEnabled: boolean;
+  idempotencyTtlSeconds: number;
 }
 
 export type EndpointChangeType = 'CREATED' | 'UPDATED' | 'ROLLED_BACK';
@@ -256,6 +264,8 @@ export function emptyEndpoint(): EndpointConfig {
     outputEncoding: 'json',
     steps: [emptyStep(1)],
     mappings: [],
+    idempotencyEnabled: false,
+    idempotencyTtlSeconds: 86400,
   };
 }
 

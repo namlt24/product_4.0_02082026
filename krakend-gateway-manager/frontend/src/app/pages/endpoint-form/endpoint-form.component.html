@@ -56,6 +56,24 @@
         <mat-slide-toggle formControlName="sequential">
           Sequential (goi tuan tu nhieu backend - bat buoc neu co &gt; 1 step va can chain du lieu)
         </mat-slide-toggle>
+
+        <div class="field-row toggle-row">
+          <mat-slide-toggle formControlName="idempotencyEnabled">
+            Idempotency-Key (chống trùng khi client tự retry)
+          </mat-slide-toggle>
+          @if (form.get('idempotencyEnabled')?.value) {
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>TTL (giây)</mat-label>
+              <input matInput type="number" formControlName="idempotencyTtlSeconds" />
+            </mat-form-field>
+          }
+        </div>
+        @if (form.get('idempotencyEnabled')?.value) {
+          <div class="field-note">
+            <mat-icon inline="true">info</mat-icon>
+            <span>Client gửi header <code>Idempotency-Key</code> - lần gọi đầu tiên với 1 key được thực thi + lưu kết quả thành công; lần gọi tiếp theo cùng key trong TTL trả thẳng kết quả cũ, không gọi lại backend thật (tránh side-effect lặp khi client tự động retry). Lỗi không được lưu - client vẫn retry lại được sau khi lỗi thật đã hết.</span>
+          </div>
+        }
       </mat-card-content>
     </mat-card>
 

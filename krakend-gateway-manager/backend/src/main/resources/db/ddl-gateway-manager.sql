@@ -19,6 +19,15 @@
 -- Cap nhat 2026-08-27 (lan 2): them CONNECT_TIMEOUT_MS/READ_TIMEOUT_MS vao
 -- BACKEND_STEP (tinh nang override timeout theo tung step) - lan trich xuat
 -- truoc do (lan 1) da bo sot 2 cot nay.
+-- Cap nhat 2026-08-28 (lan 8): them cot IDEMPOTENCY_ENABLED (NUMBER(1,0), mac dinh 0) +
+-- IDEMPOTENCY_TTL_SECONDS (NUMBER(10,0), mac dinh 86400) vao ENDPOINT_CONFIG - bat
+-- idempotency-key theo tung endpoint (client gui header "Idempotency-Key", cache
+-- response THANH CONG qua GatewayCacheService, tranh goi lai backend that khi client tu
+-- dong retry). Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE endpoint_config ADD idempotency_enabled NUMBER(1,0) DEFAULT 0 NOT NULL;
+-- ALTER TABLE endpoint_config ADD CONSTRAINT endpoint_config_idempotency_chk
+--   CHECK (idempotency_enabled in (0,1));
+-- ALTER TABLE endpoint_config ADD idempotency_ttl_seconds NUMBER(10,0) DEFAULT 86400 NOT NULL;
 -- Cap nhat 2026-08-28 (lan 7): them 'STEP_RESPONSE_ARRAY_MERGE' vao CHECK constraint
 -- cua FIELD_MAPPING.SOURCE_TYPE - gop TOAN BO field cua tung phan tu (object) trong 1
 -- mang thanh 1 OBJECT DUY NHAT (khac STEP_RESPONSE_ARRAY_AGGREGATE - trich 1 field ten
@@ -156,8 +165,11 @@ CREATE TABLE "ENDPOINT_CONFIG"
 	"PATH" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"IS_SEQUENTIAL" NUMBER(1,0) NOT NULL ENABLE,
 	"UPDATED_AT" TIMESTAMP (6) WITH TIME ZONE,
+	"IDEMPOTENCY_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
+	"IDEMPOTENCY_TTL_SECONDS" NUMBER(10,0) DEFAULT 86400 NOT NULL ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK (is_sequential in (0,1)) ENABLE,
+	 CHECK (idempotency_enabled in (0,1)) ENABLE,
 	 CONSTRAINT "ENDPOINT_CONFIG_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "UK5SBR9SP37R2WRGTA6BTBEE3XB" UNIQUE ("PATH") ENABLE
    );

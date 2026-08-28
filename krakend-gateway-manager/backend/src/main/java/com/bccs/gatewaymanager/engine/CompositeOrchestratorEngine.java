@@ -95,12 +95,17 @@ public class CompositeOrchestratorEngine {
         Map<Integer, BackendStepDto> stepsByOrder = orderedSteps.stream()
                 .collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
         List<Integer> allOrders = orderedSteps.stream().map(BackendStepDto::stepOrder).sorted().toList();
-        // Tap hop stepOrder la DICH cua it nhat 1 nhanh re (duoc step khac tro toi qua
-        // nextStepOrderIfTrue/nextStepOrderIfFalse) - dung de xu ly dung "nhanh la" trong
-        // determineNextStepOrder() (xem javadoc o do).
+        // Tap hop stepOrder la DICH cua it nhat 1 "buoc nhay dac biet" - re nhanh
+        // (nextStepOrderIfTrue/nextStepOrderIfFalse) HOAC fallback loi (onErrorStepOrder) -
+        // dung de xu ly dung "nhanh la"/"step fallback" trong determineNextStepOrder() (xem
+        // javadoc o do): ca 2 loai buoc nhay nay deu KHONG phai "chay tuan tu tu nhien", nen
+        // step dich cua chung, neu ban than khong co dieu kien rieng, phai DUNG LAI tai do
+        // thay vi am tham roi tiep sang stepOrder lon hon ke tiep.
         Set<Integer> branchTargetOrders = orderedSteps.stream()
-                .filter(s -> s.conditionOperator() != null)
-                .flatMap(s -> Stream.of(s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse()))
+                .flatMap(s -> Stream.of(
+                        s.conditionOperator() != null ? s.nextStepOrderIfTrue() : null,
+                        s.conditionOperator() != null ? s.nextStepOrderIfFalse() : null,
+                        s.onErrorStepOrder()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
@@ -122,7 +127,24 @@ public class CompositeOrchestratorEngine {
                 throw new BusinessException("GW-BRANCH-TARGET-404", "Endpoint '" + config.name()
                         + "': dieu kien re nhanh tro toi step " + currentOrder + " khong ton tai.");
             }
-            lastResult = executeStep(config, step, ctx);
+            // Fallback khi step LOI (onErrorStepOrder, doc lap voi conditionOperator o tren) -
+            // step KHONG khai bao (onErrorStepOrder=null) throw ngay y HET truoc day (bat
+            // buoc, de moi endpoint hien co khong doi hanh vi 1 chut nao). Chi bat loi cua
+            // CHINH executeStep() nay - GW-BRANCH-LOOP/GW-BRANCH-TARGET-404 o tren van throw
+            // thang (do la loi cau hinh, khong phai loi goi upstream, khong nen bi fallback
+            // am tham nuot). Hop that/loi da duoc UpstreamHttpExecutor.call() tu ghi audit
+            // (finally) TRUOC KHI exception toi day, khong can log lai o day.
+            try {
+                lastResult = executeStep(config, step, ctx);
+            } catch (RuntimeException e) {
+                if (step.onErrorStepOrder() == null) {
+                    throw e;
+                }
+                log.warn("Endpoint '{}': step '{}' (order={}) loi, fallback sang step {} theo onErrorStepOrder: {}",
+                        config.name(), step.name(), currentOrder, step.onErrorStepOrder(), e.getMessage());
+                currentOrder = step.onErrorStepOrder();
+                continue;
+            }
             ctx.putStepResult(currentOrder, lastResult);
             currentOrder = determineNextStepOrder(step, ctx, allOrders, branchTargetOrders);
         }

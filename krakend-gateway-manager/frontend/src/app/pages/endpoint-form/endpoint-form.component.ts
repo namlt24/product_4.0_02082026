@@ -172,6 +172,9 @@ export class EndpointFormComponent implements OnInit {
       conditionExpectedValue: [step.conditionExpectedValue ?? ''],
       nextStepOrderIfTrue: [step.nextStepOrderIfTrue ?? null],
       nextStepOrderIfFalse: [step.nextStepOrderIfFalse ?? null],
+      // Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi conditionOperator o tren,
+      // dung duoc ca cho step tuan tu thuong.
+      onErrorStepOrder: [step.onErrorStepOrder ?? null],
     });
   }
 
@@ -408,6 +411,11 @@ export class EndpointFormComponent implements OnInit {
 
       if (nextFalse === removedOrder) ctrl.get('nextStepOrderIfFalse')!.setValue(null);
       else if (nextFalse !== null && nextFalse > removedOrder) ctrl.get('nextStepOrderIfFalse')!.setValue(nextFalse - 1);
+
+      // onErrorStepOrder doc lap voi conditionOperator - reindex/xoa rieng theo dung logic tren.
+      const onError = ctrl.get('onErrorStepOrder')!.value as number | null;
+      if (onError === removedOrder) ctrl.get('onErrorStepOrder')!.setValue(null);
+      else if (onError !== null && onError > removedOrder) ctrl.get('onErrorStepOrder')!.setValue(onError - 1);
     });
   }
 
@@ -515,6 +523,8 @@ export class EndpointFormComponent implements OnInit {
       conditionExpectedValue: s.conditionOperator ? s.conditionExpectedValue || null : null,
       nextStepOrderIfTrue: s.conditionOperator ? s.nextStepOrderIfTrue || null : null,
       nextStepOrderIfFalse: s.conditionOperator ? s.nextStepOrderIfFalse || null : null,
+      // onErrorStepOrder DOC LAP voi conditionOperator - khong gate theo dieu kien re nhanh.
+      onErrorStepOrder: s.onErrorStepOrder || null,
     }));
 
     const mappings: FieldMapping[] = v.mappings.map((m: any) => ({

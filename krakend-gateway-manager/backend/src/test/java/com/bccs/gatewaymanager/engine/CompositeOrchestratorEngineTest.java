@@ -73,7 +73,7 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 conditionSourceType, conditionSourceStepOrder, conditionSourceField, operator, conditionExpectedValue,
-                nextIfTrue, nextIfFalse);
+                nextIfTrue, nextIfFalse, null);
     }
 
     private BackendStepDto plainStep(int order, String upstreamId) {
@@ -88,6 +88,20 @@ class CompositeOrchestratorEngineTest {
     private void stubCall(UpstreamService upstream, JsonNode response) {
         when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
                 .thenReturn(response);
+    }
+
+    private void stubCallThrows(UpstreamService upstream, RuntimeException ex) {
+        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                .thenThrow(ex);
+    }
+
+    /** Step co onErrorStepOrder rieng - dung cho test fallback khi step loi (P-3, doc lap voi conditionOperator). */
+    private BackendStepDto stepWithOnError(int order, String upstreamId, Integer onErrorStepOrder) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, onErrorStepOrder);
     }
 
     // ---- Tuong thich nguoc: endpoint KHONG dung re nhanh phai chay DUNG y het hanh vi cu ----
@@ -344,7 +358,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto stepWithOverride = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 750, 5000, // connectTimeoutMs/readTimeoutMs override rieng cho step nay
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
 
         engine.handle(endpoint(true, stepWithOverride), Map.of(), Map.of(), null);
 
@@ -551,5 +565,64 @@ class CompositeOrchestratorEngineTest {
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
                 anyBoolean(), anyInt(), anyInt(), any(), any(), any());
         assertThat(bodyCaptor.getValue().size()).isEqualTo(0);
+    }
+
+    // ---- onErrorStepOrder (nang luc moi - fallback khi step LOI, doc lap voi conditionOperator) ----
+
+    @Test
+    void onErrorStepOrder_stepLoiCoFallback_nhaySangStepFallback_traVeKetQuaStepFallback() {
+        stubCallThrows(up1, new RuntimeException("upstream that loi"));
+        stubCall(up2, json("{\"fallback\":true}"));
+        BackendStepDto s1 = stepWithOnError(1, "u1", 2);
+        EndpointResponseDto config = endpoint(true, s1, plainStep(2, "u2"));
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("fallback").asBoolean()).isTrue();
+    }
+
+    @Test
+    void onErrorStepOrder_null_stepLoi_throwNguyenBanYHetTruocDay() {
+        // Regression: step KHONG khai bao onErrorStepOrder phai throw dung nguyen ban
+        // exception, KHONG bi nuot am tham - step 2 KHONG duoc goi (chuoi dung ngay).
+        stubCallThrows(up1, new BusinessException("GW-UPSTREAM-TIMEOUT", "timeout"));
+        BackendStepDto s1 = plainStep(1, "u1");
+        EndpointResponseDto config = endpoint(true, s1, plainStep(2, "u2"));
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-UPSTREAM-TIMEOUT");
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
+                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void onErrorStepOrder_troToiChinhNo_throwGW_BRANCH_LOOP() {
+        stubCallThrows(up1, new RuntimeException("boom"));
+        BackendStepDto s1 = stepWithOnError(1, "u1", 1);
+        EndpointResponseDto config = endpoint(true, s1);
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-BRANCH-LOOP");
+    }
+
+    @Test
+    void onErrorStepOrder_stepFallbackKhongCoDieuKienRieng_DungLaiKhongRoiTiepStepSau() {
+        // Dung y het pattern bug branch-cascade da fix truoc do: step fallback (step2) la
+        // DICH cua 1 "buoc nhay dac biet" (onErrorStepOrder) nhung ban than khong co dieu
+        // kien rieng -> phai DUNG LAI, khong duoc tu dong roi tiep sang step3.
+        stubCallThrows(up1, new RuntimeException("boom"));
+        stubCall(up2, json("{\"v\":2}"));
+        BackendStepDto s1 = stepWithOnError(1, "u1", 2);
+        EndpointResponseDto config = endpoint(true, s1, plainStep(2, "u2"), plainStep(3, "u3"));
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("v").asInt()).isEqualTo(2);
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
+                .call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
     }
 }

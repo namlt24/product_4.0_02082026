@@ -35,6 +35,10 @@
 -- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
 -- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
 -- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-08-28 (lan 5): them cot BACKEND_STEP.ON_ERROR_STEP_ORDER (dong bo voi
+-- ddl-gateway-manager.sql) - khong anh huong du lieu THAT o tren, ca 4 BACKEND_STEP that
+-- hien co deu ON_ERROR_STEP_ORDER=NULL (khong dung fallback loi).
+--
 -- Cap nhat 2026-08-28 (lan 4): them cot IDEMPOTENCY_ENABLED + IDEMPOTENCY_TTL_SECONDS vao
 -- ENDPOINT_CONFIG (dong bo voi ddl-gateway-manager.sql) - khong anh huong du lieu THAT o
 -- tren, ca 2 ENDPOINT_CONFIG that hien co deu nhan gia tri mac dinh (tat idempotency).
@@ -204,6 +208,7 @@ CREATE TABLE "BACKEND_STEP"
 	"NEXT_STEP_ORDER_IF_TRUE" NUMBER(10,0),
 	"CONNECT_TIMEOUT_MS" NUMBER(10,0),
 	"READ_TIMEOUT_MS" NUMBER(10,0),
+	"ON_ERROR_STEP_ORDER" NUMBER(10,0),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,

@@ -79,7 +79,14 @@ public record BackendStepDto(
         Integer nextStepOrderIfTrue,
 
         /** null = neu dieu kien SAI thi ket thuc chuoi tai day. */
-        Integer nextStepOrderIfFalse
+        Integer nextStepOrderIfFalse,
+
+        /**
+         * Fallback khi step nay LOI (upstream timeout/4xx/5xx) - null = throw ngay, ket thuc
+         * ca chuoi (hanh vi cu). DOC LAP voi conditionOperator - dung duoc ca step tuan tu
+         * thuong. Xem BackendStep.onErrorStepOrder.
+         */
+        Integer onErrorStepOrder
 ) {
     public BackendStepDto {
         if (cacheTtlSeconds <= 0) {

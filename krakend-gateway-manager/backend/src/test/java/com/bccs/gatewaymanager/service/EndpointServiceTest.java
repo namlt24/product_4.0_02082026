@@ -62,7 +62,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     /** Step voi dieu kien re nhanh - dung cho cac test P1-5 (validate next-step-not-exist, cycle...). */
@@ -77,7 +77,16 @@ class EndpointServiceTest {
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
                 FieldMappingSourceType.STEP_RESPONSE, conditionSourceStepOrder, "field", operator, conditionExpectedValue,
-                nextIfTrue, nextIfFalse);
+                nextIfTrue, nextIfFalse, null);
+    }
+
+    /** Step voi onErrorStepOrder rieng (doc lap voi conditionOperator) - dung cho test fallback loi. */
+    private BackendStepDto stepWithOnError(int order, Integer onErrorStepOrder) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, onErrorStepOrder);
     }
 
     private EndpointRequestDto requestWithMapping(FieldMappingDto mapping) {
@@ -458,6 +467,58 @@ class EndpointServiceTest {
         BackendStepDto s3 = stepWithBranch(3, 1, ConditionOperator.EXISTS, null, null);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(step(1), step(2), s3), List.of(backwardsMapping), false, null);
+
+        assertThat(service.create(dto)).isNotNull();
+    }
+
+    // ---- onErrorStepOrder (nang luc moi - fallback khi step LOI, doc lap voi conditionOperator) ----
+
+    @Test
+    void create_onErrorStepOrder_hopLe_thanhCong() {
+        BackendStepDto s1 = stepWithOnError(1, 2);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of(), false, null);
+
+        assertThat(service.create(dto)).isNotNull();
+    }
+
+    @Test
+    void create_rejectsOnErrorStepOrderKhongTonTai() {
+        BackendStepDto s1 = stepWithOnError(1, 99); // step 99 khong ton tai
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2)), List.of(), false, null);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsOnErrorStepOrderTaoVongLap() {
+        // step1 loi -> fallback ve CHINH NO -> vong lap (dung DFS cycle-detection y het
+        // conditionOperator, xem detectBranchCycle()).
+        BackendStepDto s1 = stepWithOnError(1, 1);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1), List.of(), false, null);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-BRANCH-CYCLE");
+    }
+
+    @Test
+    void create_boQuaRuleSourceTruocTarget_khiEndpointChiDungOnErrorStepOrder() {
+        // Chi dung onErrorStepOrder (KHONG dung conditionOperator) - usesBranching() van
+        // phai nhan dien dung de tha long rule "sourceStepOrder < targetStepOrder".
+        // step1 fallback sang step3 (KHONG phai vong lap - step1->{2,3}, step2->3, step3->
+        // khong di dau, xem detectBranchCycle()) chi de kich usesBranching()=true.
+        FieldMappingDto backwardsMapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 3, "f", null, null, null,
+                1, MappingTargetType.QUERY, "q", 0);
+        BackendStepDto s1 = stepWithOnError(1, 3);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, step(2), step(3)), List.of(backwardsMapping), false, null);
 
         assertThat(service.create(dto)).isNotNull();
     }

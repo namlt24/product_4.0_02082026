@@ -198,4 +198,16 @@ public class BackendStep {
     /** null = neu dieu kien SAI thi ket thuc chuoi tai day. */
     @Column(name = "next_step_order_if_false")
     private Integer nextStepOrderIfFalse;
+
+    /**
+     * Fallback khi step nay LOI (upstream timeout/4xx/5xx...) - thay vi throw ngay va ket
+     * thuc ca chuoi (hanh vi mac dinh, van giu nguyen khi null), nhay sang step nay tiep
+     * tuc chay. DOC LAP voi conditionOperator o tren (dung duoc ca cho step tuan tu thuong,
+     * khong bat buoc dang re nhanh) - dung LAI CO CHE "graph pointer" da co cua rieng nhanh,
+     * di qua dung executedOrders cycle-guard trong CompositeOrchestratorEngine.executeSequentialChain()
+     * nen khong can code chong vong lap rieng. Nullable, KHONG can @ColumnDefault (giong
+     * canvasX/canvasY o tren) - step khong khai bao (null) van throw dung 100% hanh vi cu.
+     */
+    @Column(name = "on_error_step_order")
+    private Integer onErrorStepOrder;
 }

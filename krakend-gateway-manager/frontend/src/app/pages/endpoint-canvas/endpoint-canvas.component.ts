@@ -62,6 +62,8 @@ interface StepEditModel {
   conditionExpectedValue: string;
   nextStepOrderIfTrue: number | null;
   nextStepOrderIfFalse: number | null;
+  // Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi conditionOperator o tren.
+  onErrorStepOrder: number | null;
 }
 
 interface HeaderModel {
@@ -462,6 +464,7 @@ export class EndpointCanvasComponent implements OnInit {
       conditionExpectedValue: s.conditionExpectedValue ?? '',
       nextStepOrderIfTrue: s.nextStepOrderIfTrue ?? null,
       nextStepOrderIfFalse: s.nextStepOrderIfFalse ?? null,
+      onErrorStepOrder: s.onErrorStepOrder ?? null,
     };
   }
 
@@ -513,6 +516,15 @@ export class EndpointCanvasComponent implements OnInit {
    * tham chieu toi step con lai thi dich stepOrder xuong 1.
    */
   private reindexStepCondition(step: BackendStep, removedOrder: number): BackendStep {
+    const shift = (v: number | null | undefined): number | null => {
+      if (v == null) return null;
+      if (v === removedOrder) return null;
+      return v > removedOrder ? v - 1 : v;
+    };
+    // onErrorStepOrder DOC LAP voi conditionOperator - reindex/xoa rieng, ap dung cho MOI
+    // nhanh return ben duoi (khac conditionSourceStepOrder chi gan voi dieu kien re nhanh).
+    const onErrorStepOrder = shift(step.onErrorStepOrder);
+
     const srcStep = step.conditionSourceStepOrder ?? null;
     if (srcStep === removedOrder) {
       return {
@@ -523,18 +535,15 @@ export class EndpointCanvasComponent implements OnInit {
         conditionExpectedValue: null,
         nextStepOrderIfTrue: null,
         nextStepOrderIfFalse: null,
+        onErrorStepOrder,
       };
     }
-    const shift = (v: number | null | undefined): number | null => {
-      if (v == null) return null;
-      if (v === removedOrder) return null;
-      return v > removedOrder ? v - 1 : v;
-    };
     return {
       ...step,
       conditionSourceStepOrder: srcStep !== null && srcStep > removedOrder ? srcStep - 1 : srcStep,
       nextStepOrderIfTrue: shift(step.nextStepOrderIfTrue),
       nextStepOrderIfFalse: shift(step.nextStepOrderIfFalse),
+      onErrorStepOrder,
     };
   }
 
@@ -615,6 +624,8 @@ export class EndpointCanvasComponent implements OnInit {
       conditionExpectedValue: edit.conditionOperator ? edit.conditionExpectedValue || null : null,
       nextStepOrderIfTrue: edit.conditionOperator ? edit.nextStepOrderIfTrue : null,
       nextStepOrderIfFalse: edit.conditionOperator ? edit.nextStepOrderIfFalse : null,
+      // onErrorStepOrder DOC LAP voi conditionOperator - khong gate theo dieu kien re nhanh.
+      onErrorStepOrder: edit.onErrorStepOrder,
     };
     this.steps.set(list);
     this.closePanel();

@@ -95,6 +95,11 @@ export interface BackendStep {
   nextStepOrderIfTrue?: number | null;
   /** null = nếu điều kiện SAI thì kết thúc chuỗi tại đây. */
   nextStepOrderIfFalse?: number | null;
+  /**
+   * Fallback khi step này LỖI (upstream timeout/4xx/5xx) - null = throw ngay, kết thúc cả
+   * chuỗi (hành vi cũ). ĐỘC LẬP với conditionOperator - dùng được cả cho step tuần tự thường.
+   */
+  onErrorStepOrder?: number | null;
 }
 
 /** Khai bao "trich xuat 1 gia tri -> bom vao step Y". Xem FieldMappingSourceType cho y nghia cac field con lai. */
@@ -296,6 +301,7 @@ export function emptyStep(stepOrder: number): BackendStep {
     conditionExpectedValue: null,
     nextStepOrderIfTrue: null,
     nextStepOrderIfFalse: null,
+    onErrorStepOrder: null,
   };
 }
 

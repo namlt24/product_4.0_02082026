@@ -19,6 +19,11 @@
 -- Cap nhat 2026-08-27 (lan 2): them CONNECT_TIMEOUT_MS/READ_TIMEOUT_MS vao
 -- BACKEND_STEP (tinh nang override timeout theo tung step) - lan trich xuat
 -- truoc do (lan 1) da bo sot 2 cot nay.
+-- Cap nhat 2026-08-28 (lan 9): them cot BACKEND_STEP.ON_ERROR_STEP_ORDER (NUMBER(10,0),
+-- nullable, KHONG can @ColumnDefault - giong CANVAS_X/CANVAS_Y) - fallback khi 1 step LOI
+-- (upstream timeout/4xx/5xx), doc lap voi CONDITION_OPERATOR - dung duoc ca step tuan tu
+-- thuong. Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE backend_step ADD on_error_step_order NUMBER(10,0);
 -- Cap nhat 2026-08-28 (lan 8): them cot IDEMPOTENCY_ENABLED (NUMBER(1,0), mac dinh 0) +
 -- IDEMPOTENCY_TTL_SECONDS (NUMBER(10,0), mac dinh 86400) vao ENDPOINT_CONFIG - bat
 -- idempotency-key theo tung endpoint (client gui header "Idempotency-Key", cache
@@ -210,6 +215,9 @@ CREATE TABLE "BACKEND_STEP"
 	-- @ColumnDefault - xem BackendStep.java) - null = dung mac dinh UpstreamService.
 	"CONNECT_TIMEOUT_MS" NUMBER(10,0),
 	"READ_TIMEOUT_MS" NUMBER(10,0),
+	-- Fallback khi step nay LOI (P-3, doc lap voi conditionOperator) - null = throw ngay
+	-- (hanh vi cu), co gia tri = nhay sang step do thay vi ket thuc ca chuoi.
+	"ON_ERROR_STEP_ORDER" NUMBER(10,0),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,

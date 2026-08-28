@@ -63,7 +63,7 @@ public class DataSeeder implements CommandLineRunner {
                 Map.of("id", "user_id"),       // rename "id" -> "user_id" cho ro nghia truoc khi chain
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
-                null, null, null, null, null, null, null // dieu kien re nhanh: khong dung trong endpoint demo nay
+                null, null, null, null, null, null, null, null // dieu kien re nhanh/fallback loi: khong dung trong endpoint demo nay
         );
 
         // Step 2: goi Order Service, dung user_id trich xuat tu step 1 lam query param
@@ -80,7 +80,7 @@ public class DataSeeder implements CommandLineRunner {
                 Map.of(),
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
-                null, null, null, null, null, null, null // dieu kien re nhanh: khong dung trong endpoint demo nay
+                null, null, null, null, null, null, null, null // dieu kien re nhanh/fallback loi: khong dung trong endpoint demo nay
         );
 
         // Chain: field "user_id" tu response step 1 -> query param "userId" cua step 2

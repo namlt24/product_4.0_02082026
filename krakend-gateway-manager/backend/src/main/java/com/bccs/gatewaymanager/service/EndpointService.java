@@ -206,8 +206,9 @@ public class EndpointService {
         validateBranching(dto, orders);
     }
 
+    /** true neu endpoint dung BAT KY co che "nhay" nao lam thu tu thuc thi khong con dam bao tang dan theo stepOrder - re nhanh (conditionOperator) HOAC fallback loi (onErrorStepOrder). */
     private boolean usesBranching(EndpointRequestDto dto) {
-        return dto.steps().stream().anyMatch(s -> s.conditionOperator() != null);
+        return dto.steps().stream().anyMatch(s -> s.conditionOperator() != null || s.onErrorStepOrder() != null);
     }
 
     /** Kiem tra field re nhanh (P1-5) tham chieu dung step co that + khong tao vong lap. */
@@ -221,6 +222,10 @@ public class EndpointService {
             if (s.nextStepOrderIfFalse() != null && !orderSet.contains(s.nextStepOrderIfFalse())) {
                 throw new BusinessException("GW-003", "Step '" + s.name() + "': nextStepOrderIfFalse tro toi step "
                         + s.nextStepOrderIfFalse() + " khong ton tai.");
+            }
+            if (s.onErrorStepOrder() != null && !orderSet.contains(s.onErrorStepOrder())) {
+                throw new BusinessException("GW-003", "Step '" + s.name() + "': onErrorStepOrder tro toi step "
+                        + s.onErrorStepOrder() + " khong ton tai.");
             }
             if (s.conditionOperator() != null
                     && s.conditionSourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
@@ -287,6 +292,11 @@ public class EndpointService {
                 if (s.nextStepOrderIfFalse() != null) next.add(s.nextStepOrderIfFalse());
             } else {
                 allOrders.stream().filter(o -> o > s.stepOrder()).min(Integer::compareTo).ifPresent(next::add);
+            }
+            // Fallback loi (onErrorStepOrder) la 1 canh THEM, doc lap voi conditionOperator o
+            // tren - 1 step co the vua co dieu kien re nhanh vua co fallback loi rieng.
+            if (s.onErrorStepOrder() != null) {
+                next.add(s.onErrorStepOrder());
             }
             adjacency.put(s.stepOrder(), next);
         }

@@ -135,6 +135,10 @@
   &--false {
     fill: #dc2626;
   }
+
+  &--error {
+    fill: #d97706;
+  }
 }
 
 .canvas-node-layer {
@@ -292,6 +296,11 @@
   &--branch {
     background: var(--gwm-warning-bg);
     color: var(--gwm-warning);
+  }
+
+  &--error {
+    background: var(--gwm-danger-bg);
+    color: var(--gwm-danger);
   }
 }
 

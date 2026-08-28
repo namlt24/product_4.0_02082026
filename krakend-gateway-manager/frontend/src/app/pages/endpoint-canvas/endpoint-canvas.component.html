@@ -94,20 +94,24 @@
             <marker id="branch-arrow-false" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
             </marker>
+            <marker id="branch-arrow-error" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
+            </marker>
           </defs>
 
-          <!-- Mui ten re nhanh (P1-5) - VE TRUOC duong FieldMapping de FieldMapping (thuong quan trong hon,
-               nam giua duoc bam de sua) khong bi de len. Dang cung vong xuong duoi hang, mau xanh la = nhanh
-               DUNG, do = nhanh SAI - phan biet ro voi Bezier ngang cua FieldMapping. -->
+          <!-- Mui ten re nhanh (P1-5) + fallback loi (P-3, onErrorStepOrder) - VE TRUOC duong
+               FieldMapping de FieldMapping (thuong quan trong hon, nam giua duoc bam de sua) khong
+               bi de len. Dang cung vong xuong duoi hang, mau xanh la = nhanh DUNG, do = nhanh SAI,
+               cam = fallback LOI - phan biet ro voi Bezier ngang cua FieldMapping. -->
           @for (pb of positionedBranches(); track pb.fromStepIndex + '-' + pb.outcome) {
             <path [attr.d]="pb.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openStepPanel(pb.fromStepIndex)" />
             <path
               [attr.d]="pb.path"
               fill="none"
-              [attr.stroke]="pb.outcome === 'true' ? '#16a34a' : '#dc2626'"
+              [attr.stroke]="pb.outcome === 'true' ? '#16a34a' : pb.outcome === 'false' ? '#dc2626' : '#d97706'"
               stroke-width="2"
               stroke-dasharray="6 4"
-              [attr.marker-end]="pb.outcome === 'true' ? 'url(#branch-arrow-true)' : 'url(#branch-arrow-false)'"
+              [attr.marker-end]="pb.outcome === 'true' ? 'url(#branch-arrow-true)' : pb.outcome === 'false' ? 'url(#branch-arrow-false)' : 'url(#branch-arrow-error)'"
               class="branch-edge"
             />
             <text
@@ -116,8 +120,9 @@
               class="branch-edge-label"
               [class.branch-edge-label--true]="pb.outcome === 'true'"
               [class.branch-edge-label--false]="pb.outcome === 'false'"
+              [class.branch-edge-label--error]="pb.outcome === 'error'"
               text-anchor="middle"
-            >{{ pb.outcome === 'true' ? 'Đúng' : 'Sai' }}</text>
+            >{{ pb.outcome === 'true' ? 'Đúng' : pb.outcome === 'false' ? 'Sai' : 'Lỗi' }}</text>
           }
 
           @for (pe of positionedMappings(); track pe.index) {
@@ -170,6 +175,11 @@
                 @if (p.step.conditionOperator) {
                   <span class="mini-badge mini-badge--branch" matTooltip="Sau step này có rẽ nhánh - xem/sửa trong panel">
                     <mat-icon inline="true">call_split</mat-icon>Có điều kiện
+                  </span>
+                }
+                @if (p.step.onErrorStepOrder) {
+                  <span class="mini-badge mini-badge--error" matTooltip="Step {{ p.step.stepOrder }} lỗi → tự động fallback sang Step {{ p.step.onErrorStepOrder }}">
+                    <mat-icon inline="true">error_outline</mat-icon>Có fallback lỗi
                   </span>
                 }
               </div>

@@ -95,7 +95,7 @@ interface PositionedMapping {
 /** 1 mui ten re nhanh (P1-5) tren canvas - KHAC FieldMapping: khong chuyen du lieu, chi bieu dien luong dieu khien (dung/sai) tu step co dieu kien sang step ke tiep. */
 interface PositionedBranch {
   fromStepIndex: number;
-  outcome: 'true' | 'false';
+  outcome: 'true' | 'false' | 'error';
   path: string;
   labelX: number;
   labelY: number;
@@ -263,12 +263,14 @@ export class EndpointCanvasComponent implements OnInit {
   });
 
   /**
-   * Mui ten re nhanh (P1-5) - RIENG voi positionedMappings (FieldMapping): 1 step co
-   * conditionOperator co the tro toi 2 step khac (nextStepOrderIfTrue/False), khong
-   * qua FieldMapping nen truoc day KHONG duoc ve gi tren canvas (chi co badge "Co dieu
-   * kien" tren node nguon) - de lo hoan toan quan he re nhanh giua cac step. Ve dang
-   * cung vong xuong duoi hang (khac kieu Bezier ngang cua FieldMapping) de khong lan
-   * lon voi duong FieldMapping giua CUNG 2 node do.
+   * Mui ten re nhanh (P1-5) + fallback loi (P-3, onErrorStepOrder) - RIENG voi
+   * positionedMappings (FieldMapping): 1 step co conditionOperator co the tro toi 2 step
+   * khac (nextStepOrderIfTrue/False), VA/HOAC co onErrorStepOrder (DOC LAP voi
+   * conditionOperator - step khong dieu kien van co the co fallback loi rieng) - khong
+   * qua FieldMapping nen truoc day KHONG duoc ve gi tren canvas (chi co badge tren node
+   * nguon) - de lo hoan toan quan he giua cac step. Ve dang cung vong xuong duoi hang
+   * (khac kieu Bezier ngang cua FieldMapping) de khong lan lon voi duong FieldMapping
+   * giua CUNG 2 node do.
    */
   readonly positionedBranches = computed<PositionedBranch[]>(() => {
     const positions = this.liveNodePositions();
@@ -276,31 +278,34 @@ export class EndpointCanvasComponent implements OnInit {
     const branches: PositionedBranch[] = [];
     const DIP = 70;
 
-    positions.forEach((p, fromStepIndex) => {
-      if (!p.step.conditionOperator) {
+    const addBranch = (p: NodePos, fromStepIndex: number, outcome: 'true' | 'false' | 'error', targetOrder: number | null | undefined) => {
+      if (targetOrder == null) {
         return;
       }
-      (['true', 'false'] as const).forEach((outcome) => {
-        const targetOrder = outcome === 'true' ? p.step.nextStepOrderIfTrue : p.step.nextStepOrderIfFalse;
-        if (targetOrder == null) {
-          return;
-        }
-        const target = byOrder.get(targetOrder);
-        if (!target) {
-          return;
-        }
-        const x1 = p.x + this.nodeWidth / 2;
-        const y1 = p.y + this.nodeHeight;
-        const x2 = target.x + this.nodeWidth / 2;
-        const y2 = target.y + this.nodeHeight;
-        branches.push({
-          fromStepIndex,
-          outcome,
-          path: `M ${x1} ${y1} C ${x1} ${y1 + DIP}, ${x2} ${y2 + DIP}, ${x2} ${y2}`,
-          labelX: (x1 + x2) / 2,
-          labelY: Math.max(y1, y2) + DIP + 4,
-        });
+      const target = byOrder.get(targetOrder);
+      if (!target) {
+        return;
+      }
+      const x1 = p.x + this.nodeWidth / 2;
+      const y1 = p.y + this.nodeHeight;
+      const x2 = target.x + this.nodeWidth / 2;
+      const y2 = target.y + this.nodeHeight;
+      branches.push({
+        fromStepIndex,
+        outcome,
+        path: `M ${x1} ${y1} C ${x1} ${y1 + DIP}, ${x2} ${y2 + DIP}, ${x2} ${y2}`,
+        labelX: (x1 + x2) / 2,
+        labelY: Math.max(y1, y2) + DIP + 4,
       });
+    };
+
+    positions.forEach((p, fromStepIndex) => {
+      if (p.step.conditionOperator) {
+        addBranch(p, fromStepIndex, 'true', p.step.nextStepOrderIfTrue);
+        addBranch(p, fromStepIndex, 'false', p.step.nextStepOrderIfFalse);
+      }
+      // onErrorStepOrder DOC LAP voi conditionOperator - ve rieng du step co dieu kien hay khong.
+      addBranch(p, fromStepIndex, 'error', p.step.onErrorStepOrder);
     });
     return branches;
   });

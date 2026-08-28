@@ -343,7 +343,30 @@ public class CompositeOrchestratorEngine {
             case STEP_RESPONSE_ARRAY_AGGREGATE -> JsonPathUtil.toArrayNode(objectMapper,
                     JsonPathUtil.aggregateArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(), m.sourceElementField()));
             case CONSTANT -> constantValueAsJson(m.constantValue());
+            case STEP_RESPONSE_ARRAY_MERGE -> mergeArrayIntoObject(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField());
         };
+    }
+
+    /**
+     * Gop TOAN BO field cua tung phan tu (moi phan tu la 1 object) trong 1 mang thanh 1
+     * object duy nhat (union key/value) - xem javadoc FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE.
+     * Phan tu KHONG phai object bi bo qua (khong throw, nhat quan triet ly aggregateArray()
+     * hien co - du lieu la that tu upstream, khong chan luong vi 1 phan tu la khong hop dinh dang).
+     * Key trung nhau: phan tu DEN SAU (thu tu trong mang) ghi de gia tri phan tu truoc -
+     * dung ObjectNode.setAll() lan luot theo dung thu tu duyet mang.
+     */
+    private ObjectNode mergeArrayIntoObject(JsonNode root, String arrayPath) {
+        ObjectNode result = objectMapper.createObjectNode();
+        JsonNode arrayNode = JsonPathUtil.getByDotPath(root, arrayPath);
+        if (arrayNode == null || !arrayNode.isArray()) {
+            return result;
+        }
+        for (JsonNode element : arrayNode) {
+            if (element != null && element.isObject()) {
+                result.setAll((ObjectNode) element);
+            }
+        }
+        return result;
     }
 
     /**
@@ -382,6 +405,12 @@ public class CompositeOrchestratorEngine {
             // PATH/QUERY/HEADER luon la chuoi text tren URL/header - KHONG parse JSON o day
             // (khac buildBody(), noi so/boolean can giu dung kieu JSON goc).
             return m.constantValue();
+        }
+        if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE) {
+            // Chi hop le voi targetType=BODY_FIELD (EndpointService da chan luc luu) - toi day
+            // chi con du lieu cu/import tay lot qua validate, tra ve dang JSON string cua object
+            // gop thay vi throw/tra null am tham.
+            return mergeArrayIntoObject(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField()).toString();
         }
         JsonNode node = m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
                 ? JsonPathUtil.getByDotPath(ctx.requestBody(), m.sourceField())

@@ -126,6 +126,8 @@ export class EndpointVersionsComponent implements OnInit {
         return `Query param của client · ${m.sourceField}`;
       case 'STEP_RESPONSE_ARRAY_AGGREGATE':
         return `Gộp mảng Step ${m.sourceStepOrder} · ${m.sourceArrayField}[].${m.sourceElementField}`;
+      case 'STEP_RESPONSE_ARRAY_MERGE':
+        return `Gộp N object Step ${m.sourceStepOrder} · ${m.sourceArrayField}[] → 1 object`;
       case 'CONSTANT':
         return `Hằng số cố định · ${m.constantValue}`;
       default:

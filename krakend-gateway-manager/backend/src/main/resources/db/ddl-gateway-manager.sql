@@ -19,6 +19,15 @@
 -- Cap nhat 2026-08-27 (lan 2): them CONNECT_TIMEOUT_MS/READ_TIMEOUT_MS vao
 -- BACKEND_STEP (tinh nang override timeout theo tung step) - lan trich xuat
 -- truoc do (lan 1) da bo sot 2 cot nay.
+-- Cap nhat 2026-08-28 (lan 7): them 'STEP_RESPONSE_ARRAY_MERGE' vao CHECK constraint
+-- cua FIELD_MAPPING.SOURCE_TYPE - gop TOAN BO field cua tung phan tu (object) trong 1
+-- mang thanh 1 OBJECT DUY NHAT (khac STEP_RESPONSE_ARRAY_AGGREGATE - trich 1 field ten
+-- co dinh tu moi phan tu thanh 1 MANG). Khong them cot moi (tai dung sourceArrayField
+-- da co). Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE field_mapping DROP CONSTRAINT FIELD_MAPPING_SOURCE_TYPE_CHK;
+-- ALTER TABLE field_mapping ADD CONSTRAINT FIELD_MAPPING_SOURCE_TYPE_CHK
+--   CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM',
+--   'STEP_RESPONSE_ARRAY_AGGREGATE','CONSTANT','STEP_RESPONSE_ARRAY_MERGE'));
 -- Cap nhat 2026-08-28 (lan 6): FIELD_MAPPING.CONSTANT_VALUE luc dau khong ghi ro
 -- length tren @Column cua entity (JPA mac dinh 255) - ALTER TABLE tay len 4000 (lan
 -- 5 duoi day) bi Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend
@@ -243,7 +252,7 @@ CREATE TABLE "FIELD_MAPPING"
 	"TARGET_TYPE" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"ENDPOINT_ID" VARCHAR2(255 CHAR),
 	"MAPPING_ORDER" NUMBER(10,0) DEFAULT 0 NOT NULL ENABLE,
-	 CONSTRAINT "FIELD_MAPPING_SOURCE_TYPE_CHK" CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM','STEP_RESPONSE_ARRAY_AGGREGATE','CONSTANT')) ENABLE,
+	 CONSTRAINT "FIELD_MAPPING_SOURCE_TYPE_CHK" CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM','STEP_RESPONSE_ARRAY_AGGREGATE','CONSTANT','STEP_RESPONSE_ARRAY_MERGE')) ENABLE,
 	 CHECK (target_type in ('PATH','QUERY','HEADER','BODY_FIELD')) ENABLE,
 	 CONSTRAINT "FIELD_MAPPING_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKG9BDKEU7BU7USNQSCONIOKV8K" FOREIGN KEY ("ENDPOINT_ID")

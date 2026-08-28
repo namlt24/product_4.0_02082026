@@ -213,6 +213,39 @@ class EndpointServiceTest {
                 .isEqualTo("GW-003");
     }
 
+    // ---- STEP_RESPONSE_ARRAY_MERGE (nguon FieldMapping moi - gop N object trong 1 mang thanh
+    // 1 object duy nhat): can sourceStepOrder + sourceArrayField (khong can sourceElementField),
+    // CHI dung duoc voi targetType=BODY_FIELD. ----
+
+    @Test
+    void create_arrayMergeMapping_sourceArrayFieldVaTargetTypeBodyField_thanhCong() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
+                2, MappingTargetType.BODY_FIELD, "$body", 0);
+        EndpointResponseDto result = service.create(requestWithMapping(mapping));
+        assertThat(result).isNotNull();
+        verify(registryCache).reload();
+    }
+
+    @Test
+    void create_rejectsBlankSourceArrayFieldForArrayMerge() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "  ", null, null,
+                2, MappingTargetType.BODY_FIELD, "$body", 0);
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsArrayMergeMappingVoiTargetTypeKhacBodyField() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
+                2, MappingTargetType.QUERY, "q", 0);
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
     // ---- Finding #3: cycle-detection phai chan create()/update() TRUOC khi reload cache ----
 
     @Test

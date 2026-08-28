@@ -475,4 +475,81 @@ class CompositeOrchestratorEngineTest {
         assertThat(bodyCaptor.getValue().get("priority").isTextual()).isTrue();
         assertThat(bodyCaptor.getValue().get("priority").asText()).isEqualTo("low");
     }
+
+    // ---- STEP_RESPONSE_ARRAY_MERGE (nguon FieldMapping moi - gop TOAN BO field cua tung
+    // phan tu trong 1 mang thanh 1 OBJECT DUY NHAT) - dung cho case that "response la
+    // List<HashMap>, trich tung key/value cua tung HashMap thanh duy nhat 1 HashMap". ----
+
+    @Test
+    void arrayMergeMapping_gopNObject1KeyThanh1ObjectDuyNhat() {
+        stubCall(up1, json("{\"data\":[{\"500173047\":\"1\"},{\"400017940\":\"1\"},{\"400019046\":\"1\"}]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
+                2, MappingTargetType.BODY_FIELD, "$body", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        JsonNode body = bodyCaptor.getValue();
+        assertThat(body.get("500173047").asText()).isEqualTo("1");
+        assertThat(body.get("400017940").asText()).isEqualTo("1");
+        assertThat(body.get("400019046").asText()).isEqualTo("1");
+        assertThat(body.size()).isEqualTo(3);
+    }
+
+    @Test
+    void arrayMergeMapping_keyTrungNhau_phanTuDenSauGhiDe() {
+        stubCall(up1, json("{\"data\":[{\"a\":\"1\"},{\"a\":\"2\"}]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
+                2, MappingTargetType.BODY_FIELD, "$body", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("a").asText()).isEqualTo("2");
+    }
+
+    @Test
+    void arrayMergeMapping_phanTuKhongPhaiObject_boQuaKhongThrow() {
+        stubCall(up1, json("{\"data\":[{\"a\":\"1\"},\"khong-phai-object\",123]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
+                2, MappingTargetType.BODY_FIELD, "$body", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("a").asText()).isEqualTo("1");
+        assertThat(bodyCaptor.getValue().size()).isEqualTo(1);
+    }
+
+    @Test
+    void arrayMergeMapping_khongTimThayMang_traObjectRongKhongThrow() {
+        stubCall(up1, json("{}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
+                2, MappingTargetType.BODY_FIELD, "$body", 0);
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().size()).isEqualTo(0);
+    }
 }

@@ -35,6 +35,10 @@
 -- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
 -- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
 -- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-08-28 (lan 3): them 'STEP_RESPONSE_ARRAY_MERGE' vao CHECK constraint
+-- cua FIELD_MAPPING.SOURCE_TYPE (dong bo voi ddl-gateway-manager.sql) - khong anh
+-- huong du lieu THAT o tren, khong dung sourceType nay.
+--
 -- Cap nhat 2026-08-28 (lan 1): them 'CONSTANT' vao CHECK constraint cua
 -- FIELD_MAPPING.SOURCE_TYPE + cot moi FIELD_MAPPING.CONSTANT_VALUE (dong bo voi
 -- ddl-gateway-manager.sql) - khong anh huong du lieu THAT o tren, ca 12
@@ -241,7 +245,7 @@ CREATE TABLE "FIELD_MAPPING"
 	"TARGET_TYPE" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"ENDPOINT_ID" VARCHAR2(255 CHAR),
 	"MAPPING_ORDER" NUMBER(10,0) DEFAULT 0 NOT NULL ENABLE,
-	 CONSTRAINT "FIELD_MAPPING_SOURCE_TYPE_CHK" CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM','STEP_RESPONSE_ARRAY_AGGREGATE','CONSTANT')) ENABLE,
+	 CONSTRAINT "FIELD_MAPPING_SOURCE_TYPE_CHK" CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM','STEP_RESPONSE_ARRAY_AGGREGATE','CONSTANT','STEP_RESPONSE_ARRAY_MERGE')) ENABLE,
 	 CHECK (target_type in ('PATH','QUERY','HEADER','BODY_FIELD')) ENABLE,
 	 CONSTRAINT "FIELD_MAPPING_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKG9BDKEU7BU7USNQSCONIOKV8K" FOREIGN KEY ("ENDPOINT_ID")

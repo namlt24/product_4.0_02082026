@@ -188,6 +188,18 @@ public class EndpointService {
                         && (m.constantValue() == null || m.constantValue().isBlank())) {
                     throw new BusinessException("GW-003", "FieldMapping (sourceType=CONSTANT) thieu constantValue.");
                 }
+                if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE) {
+                    if (m.sourceArrayField() == null || m.sourceArrayField().isBlank()) {
+                        throw new BusinessException("GW-003",
+                                "FieldMapping (sourceType=STEP_RESPONSE_ARRAY_MERGE) thieu sourceArrayField.");
+                    }
+                    // Object gop khong flatten duoc thanh chuoi cho PATH/QUERY/HEADER - chi hop
+                    // ly khi bom thang vao body (xem javadoc FieldMappingSourceType).
+                    if (m.targetType() != com.bccs.gatewaymanager.entity.MappingTargetType.BODY_FIELD) {
+                        throw new BusinessException("GW-003",
+                                "FieldMapping (sourceType=STEP_RESPONSE_ARRAY_MERGE) chi dung duoc voi targetType=BODY_FIELD.");
+                    }
+                }
             }
         }
 

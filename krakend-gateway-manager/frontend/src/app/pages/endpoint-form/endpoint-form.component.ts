@@ -228,11 +228,20 @@ export class EndpointFormComponent implements OnInit {
   /** true neu mapping nay dung sourceField don (STEP_RESPONSE/REQUEST_BODY), khong phai gop mang/hang so. */
   mappingUsesSourceField(index: number): boolean {
     const sourceType = this.mappingGroup(index).get('sourceType')!.value;
-    return sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && sourceType !== 'CONSTANT';
+    return sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && sourceType !== 'CONSTANT' && sourceType !== 'STEP_RESPONSE_ARRAY_MERGE';
   }
 
   mappingUsesArrayAggregate(index: number): boolean {
     return this.mappingGroup(index).get('sourceType')!.value === 'STEP_RESPONSE_ARRAY_AGGREGATE';
+  }
+
+  /**
+   * sourceType=STEP_RESPONSE_ARRAY_MERGE - gop TOAN BO field cua tung phan tu trong 1 mang
+   * thanh 1 object duy nhat. Chi can duong dan toi mang (sourceArrayField, dung chung UI voi
+   * STEP_RESPONSE_ARRAY_AGGREGATE) - KHONG can sourceElementField.
+   */
+  mappingUsesArrayMerge(index: number): boolean {
+    return this.mappingGroup(index).get('sourceType')!.value === 'STEP_RESPONSE_ARRAY_MERGE';
   }
 
   /** sourceType=CONSTANT - gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */

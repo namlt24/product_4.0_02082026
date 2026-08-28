@@ -401,7 +401,7 @@
         <mat-select [(ngModel)]="m.sourceType">
           @for (t of sourceTypes; track t) {
             <mat-option [value]="t">
-              {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : t === 'QUERY_PARAM' ? 'Query param của client' : t === 'CONSTANT' ? 'Hằng số cố định' : 'Gộp mảng (response step trước)' }}
+              {{ t === 'STEP_RESPONSE' ? 'Response step trước' : t === 'REQUEST_BODY' ? 'Body của client' : t === 'QUERY_PARAM' ? 'Query param của client' : t === 'CONSTANT' ? 'Hằng số cố định' : t === 'STEP_RESPONSE_ARRAY_MERGE' ? 'Gộp N object trong mảng thành 1 object' : 'Gộp mảng thành mảng giá trị mới' }}
             </mat-option>
           }
         </mat-select>
@@ -425,15 +425,23 @@
         </mat-form-field>
       }
 
-      @if (mappingUsesArrayAggregate()) {
+      @if (mappingUsesArrayAggregate() || mappingUsesArrayMerge()) {
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Đường dẫn tới mảng</mat-label>
           <input matInput [(ngModel)]="m.sourceArrayField" placeholder="vd: data" />
         </mat-form-field>
+      }
+      @if (mappingUsesArrayAggregate()) {
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Field lấy từ mỗi phần tử</mat-label>
           <input matInput [(ngModel)]="m.sourceElementField" placeholder="vd: code" />
         </mat-form-field>
+      }
+      @if (mappingUsesArrayMerge()) {
+        <div class="field-note">
+          <mat-icon inline="true">info</mat-icon>
+          <span>Mỗi phần tử trong mảng phải là 1 object - toàn bộ key/value của từng phần tử được gộp vào 1 object duy nhất (trùng key thì phần tử đến sau ghi đè). Chỉ dùng được với "Bơm vào" = BODY_FIELD.</span>
+        </div>
       }
 
       @if (mappingUsesConstantValue()) {

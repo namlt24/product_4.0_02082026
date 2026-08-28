@@ -694,12 +694,24 @@ export class EndpointCanvasComponent implements OnInit {
 
   mappingUsesSourceField(): boolean {
     return (
-      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && this.editingMapping?.sourceType !== 'CONSTANT'
+      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' &&
+      this.editingMapping?.sourceType !== 'CONSTANT' &&
+      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_MERGE'
     );
   }
 
   mappingUsesArrayAggregate(): boolean {
     return this.editingMapping?.sourceType === 'STEP_RESPONSE_ARRAY_AGGREGATE';
+  }
+
+  /**
+   * sourceType=STEP_RESPONSE_ARRAY_MERGE - gop TOAN BO field cua tung phan tu trong 1 mang
+   * thanh 1 object duy nhat. Chi can duong dan toi mang (sourceArrayField, dung chung UI
+   * voi STEP_RESPONSE_ARRAY_AGGREGATE) - KHONG can sourceElementField (lay nguyen ca
+   * object cua phan tu, khong trich 1 field).
+   */
+  mappingUsesArrayMerge(): boolean {
+    return this.editingMapping?.sourceType === 'STEP_RESPONSE_ARRAY_MERGE';
   }
 
   /** sourceType=CONSTANT - gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */

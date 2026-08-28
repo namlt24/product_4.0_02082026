@@ -9,7 +9,13 @@ export type HttpMethodType = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 export type MappingTargetType = 'PATH' | 'QUERY' | 'HEADER' | 'BODY_FIELD';
 
 /** Nguon du lieu cua 1 FieldMapping. */
-export type FieldMappingSourceType = 'STEP_RESPONSE' | 'REQUEST_BODY' | 'QUERY_PARAM' | 'STEP_RESPONSE_ARRAY_AGGREGATE' | 'CONSTANT';
+export type FieldMappingSourceType =
+  | 'STEP_RESPONSE'
+  | 'REQUEST_BODY'
+  | 'QUERY_PARAM'
+  | 'STEP_RESPONSE_ARRAY_AGGREGATE'
+  | 'CONSTANT'
+  | 'STEP_RESPONSE_ARRAY_MERGE';
 
 /**
  * Toan tu so sanh dung cho dieu kien re nhanh (P1-5) cua 1 BackendStep.
@@ -236,6 +242,7 @@ export const FIELD_MAPPING_SOURCE_TYPES: FieldMappingSourceType[] = [
   'QUERY_PARAM',
   'STEP_RESPONSE_ARRAY_AGGREGATE',
   'CONSTANT',
+  'STEP_RESPONSE_ARRAY_MERGE',
 ];
 
 /** Endpoint rong dung lam gia tri khoi tao cho form "tao moi". */

@@ -82,6 +82,10 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  // width:100% - luon chiem tron 1 dong: trong luong flow thuong (khong doi gi, block
+  // da mac dinh 100% width) VA khi dat lam con truc tiep cua 1 flex-wrap row (vd
+  // .mapping-row) - ep xuong dong rieng thay vi bi ep hep lai/nam canh field khac.
+  width: 100%;
   margin: -4px 0 14px;
   padding: 10px 12px;
   background: var(--gwm-accent-light);

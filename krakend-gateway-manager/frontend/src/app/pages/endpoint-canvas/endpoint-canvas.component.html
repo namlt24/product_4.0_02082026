@@ -404,6 +404,30 @@
           </div>
         }
       </div>
+
+      <!-- Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi dieu kien re nhanh o
+           tren, dung duoc ca cho step tuan tu thuong (khong bat buoc dang re nhanh).
+           Mirror y het endpoint-form.component.html. -->
+      <div class="sub-section">
+        <div class="sub-section-header">
+          <span>Fallback khi lỗi (tuỳ chọn)</span>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nếu lỗi → chạy</mat-label>
+          <mat-select [(ngModel)]="edit.onErrorStepOrder">
+            <mat-option [value]="null">Kết thúc tại đây (báo lỗi)</mat-option>
+            @for (o of availableStepOrders; track o) {
+              <mat-option [value]="o">Step {{ o }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (edit.onErrorStepOrder) {
+          <div class="field-note">
+            <mat-icon inline="true">info</mat-icon>
+            <span>Nếu step này gọi upstream lỗi (timeout/4xx/5xx), thay vì báo lỗi ngay và kết thúc cả chuỗi, gateway sẽ chạy tiếp Step {{ edit.onErrorStepOrder }} đã chọn ở trên.</span>
+          </div>
+        }
+      </div>
     </div>
     <div class="side-panel-footer">
       <button mat-button type="button" color="warn" (click)="removeStepFromPanel()">

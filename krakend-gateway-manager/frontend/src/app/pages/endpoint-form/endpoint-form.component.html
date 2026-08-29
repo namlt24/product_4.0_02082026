@@ -191,7 +191,7 @@
                 </mat-form-field>
                 <mat-form-field appearance="outline" style="flex: 1">
                   <mat-label>Target (bóc vỏ field, tuỳ chọn)</mat-label>
-                  <input matInput formControlName="target" placeholder="vd: data (StandardResponse của BCCS)" />
+                  <input matInput formControlName="target" placeholder="vd: data, hoặc data[0] để lấy 1 phần tử mảng" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" style="flex: 1">
                   <mat-label>Allow fields (whitelist, tuỳ chọn)</mat-label>
@@ -428,7 +428,8 @@
             @if (mappingUsesSourceField(i)) {
               <mat-form-field appearance="outline">
                 <mat-label>{{ mappingGroup.get('sourceType')?.value === 'REQUEST_BODY' ? 'Field trong body client' : mappingGroup.get('sourceType')?.value === 'QUERY_PARAM' ? 'Tên query param' : 'Field trong response' }}</mat-label>
-                <input matInput formControlName="sourceField" placeholder="vd: telecomServiceId hoặc data.id" />
+                <input matInput formControlName="sourceField" placeholder="vd: telecomServiceId, data.id, hoặc data[0].name" />
+                <mat-hint>Dùng "[N]" để lấy 1 phần tử cụ thể trong mảng theo vị trí (từ 0), vd "data[0].name" lấy field "name" của phần tử đầu tiên, hoặc "data[0]" (không có field sau) để lấy nguyên cả phần tử đó.</mat-hint>
               </mat-form-field>
             }
 

@@ -345,6 +345,77 @@ class CompositeOrchestratorEngineTest {
         assertThat(result.get("b").asInt()).isEqualTo(2);
     }
 
+    // ---- Index mang trong duong dan qua "[N]" (JsonPathUtil) - lay 1 field cua phan tu CU
+    // THE trong mang, hoac ca phan tu do, dung lam sourceField cua FieldMapping HOAC lam
+    // target de "boc vo" response 1 step - ca 2 noi dung chung JsonPathUtil.getByDotPath()
+    // nen tu dong duoc ho tro, khong can FieldMappingSourceType/cot DB moi. ----
+
+    /** Step co target tuy chinh (boc vo response) - dung cho test index mang qua target. */
+    private BackendStepDto stepWithTarget(int order, String upstreamId, String target) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
+                false, false, 300, null, target, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, null);
+    }
+
+    @Test
+    void sourceField_layFieldCuaPhanTuMangTheoIndex_dungThangTrongFieldMapping() {
+        // Cach dung PHO BIEN nhat: KHONG can target boc vo o step nguon - sourceField cua
+        // FieldMapping tu index thang vao mang (vi du response tra ve 1 danh sach "items",
+        // muon lay ten cua PHAN TU THU 2 lam query param cho step sau).
+        stubCall(up1, json("{\"items\":[{\"id\":10,\"name\":\"Alpha\"},{\"id\":20,\"name\":\"Beta\"}]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        BackendStepDto s1 = plainStep(1, "u1");
+        BackendStepDto s2 = plainStep(2, "u2");
+        FieldMappingDto m = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "items[1].name",
+                null, null, null, 2, MappingTargetType.QUERY, "itemName", 0);
+        EndpointResponseDto config = endpointWithMappings(List.of(m), s1, s2);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).contains("itemName=Beta");
+    }
+
+    @Test
+    void stepTarget_boQuaVoPhanTuMangTheoIndex_traVeNguyenPhanTuDoLamResponseCuaStep() {
+        // step.target="items[1]" (KHONG co truong sau) -> response CUA CHINH STEP NAY sau
+        // khi boc vo la NGUYEN object phan tu do - dung khi muon dung ca 1 phan tu mang lam
+        // response tra ve, hoac lam nguon cho FieldMapping cua step sau (sourceField tinh
+        // TU goc phan tu do, khong phai tu response goc).
+        stubCall(up1, json("{\"items\":[{\"id\":10,\"name\":\"Alpha\"},{\"id\":20,\"name\":\"Beta\"}]}"));
+        BackendStepDto s1 = stepWithTarget(1, "u1", "items[1]");
+        EndpointResponseDto config = endpoint(true, s1);
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("id").asInt()).isEqualTo(20);
+        assertThat(result.get("name").asString()).isEqualTo("Beta");
+    }
+
+    @Test
+    void sourceField_indexVuotQuaSizeMang_traVeNullAnToan_khongThrow() {
+        // Graceful null nhu moi tham chieu khac trong engine - khong throw chi vi mang
+        // ngan hon du kien (vi du backend tra ve it phan tu hon binh thuong).
+        stubCall(up1, json("{\"items\":[{\"name\":\"Alpha\"}]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        BackendStepDto s1 = plainStep(1, "u1");
+        BackendStepDto s2 = plainStep(2, "u2");
+        FieldMappingDto m = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "items[5].name",
+                null, null, null, 2, MappingTargetType.QUERY, "itemName", 0);
+        EndpointResponseDto config = endpointWithMappings(List.of(m), s1, s2);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).doesNotContain("itemName=");
+    }
+
     // ---- Re nhanh that: di theo nhanh dung/sai ----
 
     @Test

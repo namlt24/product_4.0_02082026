@@ -36,6 +36,56 @@ class JsonPathUtilTest {
         assertThat(JsonPathUtil.getByDotPath(null, "a")).isNull();
     }
 
+    // ---- Index mang qua "[N]" - lay 1 field cua PHAN TU CU THE, hoac ca phan tu do ----
+
+    @Test
+    void getByDotPath_layFieldCuaPhanTuMangTheoIndex() {
+        JsonNode root = mapper.readTree("{\"data\":[{\"code\":\"A\",\"qty\":1},{\"code\":\"B\",\"qty\":2}]}");
+        assertThat(JsonPathUtil.getByDotPath(root, "data[0].code").asString()).isEqualTo("A");
+        assertThat(JsonPathUtil.getByDotPath(root, "data[1].qty").asInt()).isEqualTo(2);
+    }
+
+    @Test
+    void getByDotPath_layNguyenCaPhanTuMangTheoIndex_khongChiRoField() {
+        // "data[0]" (khong co ".field" sau) tra ve NGUYEN object cua phan tu do - dung khi
+        // muon dung ca 1 phan tu mang lam tham so cho step sau, hoac tra thang lam response
+        // qua BackendStep.target.
+        JsonNode root = mapper.readTree("{\"data\":[{\"code\":\"A\",\"qty\":1},{\"code\":\"B\",\"qty\":2}]}");
+        JsonNode element = JsonPathUtil.getByDotPath(root, "data[0]");
+        assertThat(element.isObject()).isTrue();
+        assertThat(element.get("code").asString()).isEqualTo("A");
+        assertThat(element.get("qty").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void getByDotPath_indexVuotQuaSize_traVeNullAnToan() {
+        JsonNode root = mapper.readTree("{\"data\":[{\"code\":\"A\"}]}");
+        assertThat(JsonPathUtil.getByDotPath(root, "data[5]")).isNull();
+        assertThat(JsonPathUtil.getByDotPath(root, "data[5].code")).isNull();
+    }
+
+    @Test
+    void getByDotPath_indexTrenNodeKhongPhaiMang_traVeNullAnToan() {
+        JsonNode root = mapper.readTree("{\"data\":{\"code\":\"A\"}}");
+        assertThat(JsonPathUtil.getByDotPath(root, "data[0]")).isNull();
+    }
+
+    @Test
+    void getByDotPath_nhieuIndexLongNhau_dungChoMangCuaMang() {
+        JsonNode root = mapper.readTree("{\"matrix\":[[1,2],[3,4]]}");
+        assertThat(JsonPathUtil.getByDotPath(root, "matrix[1][0]").asInt()).isEqualTo(3);
+    }
+
+    @Test
+    void getByDotPath_dotNotationThuongVanHoatDongDungY_khongDoiHanhVi() {
+        // Regression: cu phap dot-notation THUONG (khong co index mang) - 100% mapping da
+        // cau hinh truoc khi co tinh nang nay - phai chay dung y het truoc, khong doi 1 chut.
+        JsonNode root = mapper.readTree("{\"shop\":{\"channelTypeId\":1001527}}");
+        assertThat(JsonPathUtil.getByDotPath(root, "shop.channelTypeId").asLong()).isEqualTo(1001527L);
+        JsonNode missing = mapper.readTree("{\"shop\":{}}");
+        assertThat(JsonPathUtil.getByDotPath(missing, "shop.channelTypeId")).isNull();
+    }
+
     @Test
     void aggregateArray_collectsFieldFromEachElement() {
         JsonNode root = mapper.readTree("{\"data\":[{\"code\":\"A\"},{\"code\":\"B\"},{\"code\":\"C\"}]}");

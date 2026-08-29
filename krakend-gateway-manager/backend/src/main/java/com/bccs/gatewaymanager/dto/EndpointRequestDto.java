@@ -35,7 +35,13 @@ public record EndpointRequestDto(
          */
         boolean idempotencyEnabled,
 
-        Integer idempotencyTtlSeconds
+        Integer idempotencyTtlSeconds,
+
+        /**
+         * Chi co y nghia khi sequential=false - bat song song hoa THAT SU cac step doc
+         * lap qua thread pool rieng. Mac dinh tat (false). Xem EndpointConfig.parallelExecution.
+         */
+        boolean parallelExecution
 ) {
     public EndpointRequestDto {
         if (outputEncoding == null || outputEncoding.isBlank()) {

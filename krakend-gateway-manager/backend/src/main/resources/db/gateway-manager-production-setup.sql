@@ -35,6 +35,11 @@
 -- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
 -- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
 -- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-08-29 (lan 6): them cot ENDPOINT_CONFIG.PARALLEL_EXECUTION (dong bo voi
+-- ddl-gateway-manager.sql) - muc 4 (song song hoa THAT SU step doc lap qua thread pool).
+-- Khong anh huong du lieu THAT o tren, moi ENDPOINT_CONFIG that hien co deu nhan gia tri
+-- mac dinh 0 (tat song song, giu nguyen vong lap tuan tu cu).
+--
 -- Cap nhat 2026-08-28 (lan 5): them cot BACKEND_STEP.ON_ERROR_STEP_ORDER (dong bo voi
 -- ddl-gateway-manager.sql) - khong anh huong du lieu THAT o tren, ca 4 BACKEND_STEP that
 -- hien co deu ON_ERROR_STEP_ORDER=NULL (khong dung fallback loi).
@@ -174,9 +179,11 @@ CREATE TABLE "ENDPOINT_CONFIG"
 	"UPDATED_AT" TIMESTAMP (6) WITH TIME ZONE,
 	"IDEMPOTENCY_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	"IDEMPOTENCY_TTL_SECONDS" NUMBER(10,0) DEFAULT 86400 NOT NULL ENABLE,
+	"PARALLEL_EXECUTION" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK (is_sequential in (0,1)) ENABLE,
 	 CHECK (idempotency_enabled in (0,1)) ENABLE,
+	 CHECK (parallel_execution in (0,1)) ENABLE,
 	 CONSTRAINT "ENDPOINT_CONFIG_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "UK5SBR9SP37R2WRGTA6BTBEE3XB" UNIQUE ("PATH") ENABLE
    );

@@ -12,6 +12,14 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
+-- Cap nhat 2026-08-29 (lan 10): them cot ENDPOINT_CONFIG.PARALLEL_EXECUTION (NUMBER(1,0),
+-- mac dinh 0) - muc 4 (song song hoa THAT SU step doc lap qua thread pool rieng
+-- parallelStepExecutor, xem ParallelExecutionConfig + CompositeOrchestratorEngine.
+-- executeStepsInParallel()). Chi co y nghia khi IS_SEQUENTIAL=0. Tren DB DA CO bang nay,
+-- chay tay:
+-- ALTER TABLE endpoint_config ADD parallel_execution NUMBER(1,0) DEFAULT 0 NOT NULL;
+-- ALTER TABLE endpoint_config ADD CONSTRAINT endpoint_config_parallel_exec_chk
+--   CHECK (parallel_execution in (0,1));
 -- Cap nhat 2026-08-27 (lan 1): them 'QUERY_PARAM' vao CHECK constraint cua
 -- FIELD_MAPPING.SOURCE_TYPE (doi ten sang FIELD_MAPPING_SOURCE_TYPE_CHK, khong
 -- con la ten SYS_C#### tu dong nua) - xem README.md muc 8 "Gioi han hien tai"
@@ -172,9 +180,11 @@ CREATE TABLE "ENDPOINT_CONFIG"
 	"UPDATED_AT" TIMESTAMP (6) WITH TIME ZONE,
 	"IDEMPOTENCY_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	"IDEMPOTENCY_TTL_SECONDS" NUMBER(10,0) DEFAULT 86400 NOT NULL ENABLE,
+	"PARALLEL_EXECUTION" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK (is_sequential in (0,1)) ENABLE,
 	 CHECK (idempotency_enabled in (0,1)) ENABLE,
+	 CHECK (parallel_execution in (0,1)) ENABLE,
 	 CONSTRAINT "ENDPOINT_CONFIG_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "UK5SBR9SP37R2WRGTA6BTBEE3XB" UNIQUE ("PATH") ENABLE
    );

@@ -34,7 +34,7 @@ class OpenApiGeneratorServiceTest {
     @Test
     void sinhDungPathParam_tuTokenTrongPath() {
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/orders/{orderId}", GatewayMethod.GET,
-                true, "json", List.of(step(false)), List.of(), null, null, false, 86400);
+                true, "json", List.of(step(false)), List.of(), null, null, false, 86400, false);
 
         Map<String, Object> doc = service.generate(ep);
 
@@ -53,7 +53,7 @@ class OpenApiGeneratorServiceTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.REQUEST_BODY, null,
                 "shop.channelTypeId", null, null, null, 1, MappingTargetType.QUERY, "userId", 0);
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.POST,
-                true, "json", List.of(step(false)), List.of(mapping), null, null, false, 86400);
+                true, "json", List.of(step(false)), List.of(mapping), null, null, false, 86400, false);
 
         Map<String, Object> doc = service.generate(ep);
         Map<String, Object> op = operationOf(doc, "/v1/x", "post");
@@ -76,7 +76,7 @@ class OpenApiGeneratorServiceTest {
     @Test
     void forwardOriginalBody_sinhRequestBodyDuKhongCoMapping() {
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.POST,
-                true, "json", List.of(step(true)), List.of(), null, null, false, 86400);
+                true, "json", List.of(step(true)), List.of(), null, null, false, 86400, false);
 
         Map<String, Object> doc = service.generate(ep);
         Map<String, Object> op = operationOf(doc, "/v1/x", "post");
@@ -87,7 +87,7 @@ class OpenApiGeneratorServiceTest {
     @Test
     void khongCoBodyMapping_khongCoForward_khongSinhRequestBody() {
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.GET,
-                true, "json", List.of(step(false)), List.of(), null, null, false, 86400);
+                true, "json", List.of(step(false)), List.of(), null, null, false, 86400, false);
 
         Map<String, Object> doc = service.generate(ep);
         Map<String, Object> op = operationOf(doc, "/v1/x", "get");
@@ -100,7 +100,7 @@ class OpenApiGeneratorServiceTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null,
                 "staffCode", null, null, null, 1, MappingTargetType.QUERY, "staffCode", 0);
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.GET,
-                true, "json", List.of(step(false)), List.of(mapping), null, null, false, 86400);
+                true, "json", List.of(step(false)), List.of(mapping), null, null, false, 86400, false);
 
         Map<String, Object> doc = service.generate(ep);
         Map<String, Object> op = operationOf(doc, "/v1/x", "get");
@@ -118,7 +118,7 @@ class OpenApiGeneratorServiceTest {
     @Test
     void luonCoResponses200Va4xx5xxChuan() {
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.GET,
-                true, "json", List.of(step(false)), List.of(), null, null, false, 86400);
+                true, "json", List.of(step(false)), List.of(), null, null, false, 86400, false);
 
         Map<String, Object> doc = service.generate(ep);
         Map<String, Object> op = operationOf(doc, "/v1/x", "get");

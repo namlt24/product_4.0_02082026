@@ -21,6 +21,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,6 +49,10 @@ class CompositeOrchestratorEngineTest {
     private UpstreamRegistryCache upstreamRegistryCache;
 
     private final ObjectMapper objectMapper = JsonMapper.builder().build();
+    // Pool that thay vi mock/single-thread - muc 4 (parallelExecution) can nhieu thread
+    // THAT su chay dong thoi de cac test lien quan co gia tri (mock đon giản, khong I/O
+    // thuc, nen fixed(4) la du, khong can dung dung ProductionExecutorConfig).
+    private final ExecutorService parallelStepExecutor = Executors.newFixedThreadPool(4);
     private CompositeOrchestratorEngine engine;
 
     private final UpstreamService up1 = UpstreamService.builder().id("u1").name("up1").baseHost("http://u1").build();
@@ -55,7 +61,7 @@ class CompositeOrchestratorEngineTest {
 
     @BeforeEach
     void setUp() {
-        engine = new CompositeOrchestratorEngine(upstreamHttpExecutor, upstreamRegistryCache, objectMapper);
+        engine = new CompositeOrchestratorEngine(upstreamHttpExecutor, upstreamRegistryCache, objectMapper, parallelStepExecutor);
         lenient().when(upstreamRegistryCache.getById("u1")).thenReturn(up1);
         lenient().when(upstreamRegistryCache.getById("u2")).thenReturn(up2);
         lenient().when(upstreamRegistryCache.getById("u3")).thenReturn(up3);
@@ -82,7 +88,13 @@ class CompositeOrchestratorEngineTest {
 
     private EndpointResponseDto endpoint(boolean sequential, BackendStepDto... steps) {
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, sequential, "json",
-                List.of(steps), List.of(), null, null, false, 86400);
+                List.of(steps), List.of(), null, null, false, 86400, false);
+    }
+
+    /** Endpoint non-sequential VOI parallelExecution=true (muc 4) - dung cho nhom test song song hoa. */
+    private EndpointResponseDto endpointParallel(BackendStepDto... steps) {
+        return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, false, "json",
+                List.of(steps), List.of(), null, null, false, 86400, true);
     }
 
     private void stubCall(UpstreamService upstream, JsonNode response) {
@@ -128,6 +140,81 @@ class CompositeOrchestratorEngineTest {
         stubCall(up2, json("{\"b\":2}"));
         BackendStepDto s1 = step(1, "u1", 99, 99, ConditionOperator.EXISTS, FieldMappingSourceType.REQUEST_BODY, null, "x", null);
         EndpointResponseDto config = endpoint(false, s1, plainStep(2, "u2"));
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("a").asInt()).isEqualTo(1);
+        assertThat(result.get("b").asInt()).isEqualTo(2);
+    }
+
+    // ---- Muc 4: song song hoa THAT SU step doc lap (parallelExecution) ----
+
+    @Test
+    void parallel_ketQuaGiongHetVongLapTuanTu_khiCacStepDocLap() {
+        // parallelExecution=true chi doi CACH thuc thi (dong thoi thay vi tuan tu), KHONG
+        // duoc doi KET QUA - phai gop dung du field cua ca 3 step, giong het test
+        // nonSequential_boQuaHoanToanFieldReNhanh... o tren (chi khac endpointParallel()).
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        stubCall(up3, json("{\"c\":3}"));
+        EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"), plainStep(3, "u3"));
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("a").asInt()).isEqualTo(1);
+        assertThat(result.get("b").asInt()).isEqualTo(2);
+        assertThat(result.get("c").asInt()).isEqualTo(3);
+    }
+
+    @Test
+    void parallel_chayThatSuDongThoi_khongPhaiTuanTuNguyTrang() {
+        // Chung minh "song song" o day la THAT (dung thread pool, khong chi la vong lap
+        // tuan tu doi lot) - 3 step, moi step gia lap goi upstream mat 200ms. Neu chay
+        // tuan tu: >= 600ms. Neu chay dong thoi: ~200ms (+overhead). Nguong 450ms du xa
+        // 2 phia de khong flaky tren may cham, nhung van chan chac chan hon tuan tu.
+        int delayMs = 200;
+        when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"a\":1}"); });
+        when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"b\":2}"); });
+        when(upstreamHttpExecutor.call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"c\":3}"); });
+        EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"), plainStep(3, "u3"));
+
+        long start = System.nanoTime();
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(result.get("a").asInt()).isEqualTo(1);
+        assertThat(result.get("b").asInt()).isEqualTo(2);
+        assertThat(result.get("c").asInt()).isEqualTo(3);
+        assertThat(elapsedMs).isLessThan(3L * delayMs - 100);
+    }
+
+    @Test
+    void parallel_1StepLoi_tatCaStepDocLapVanDuocSubmit_roiThrowLoiGoc() {
+        // Khac han vong lap tuan tu (loi o dau dung ngay o do, step sau KHONG BAO GIO
+        // chay) - o parallel, TAT CA step da duoc submit truoc khi loi duoc phat hien.
+        // Verify ca 2: (1) step khac VAN duoc goi (khong bi "huy" giua chung boi loi cua
+        // step kia), (2) loi goc van throw ra ngoai dung nguyen ban (khong bi nuot/doi kieu).
+        stubCall(up2, json("{\"b\":2}"));
+        stubCallThrows(up1, new BusinessException("GW-UP-500", "upstream 1 loi"));
+        EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"));
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("upstream 1 loi");
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.times(1))
+                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void parallelExecutionTat_macDinhFalse_vanChayTuanTuNhuCu() {
+        // Regression: endpoint non-sequential hien co (parallelExecution=false mac dinh)
+        // phai giu nguyen 100% hanh vi cu - dung endpoint() (khong phai endpointParallel()).
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        EndpointResponseDto config = endpoint(false, plainStep(1, "u1"), plainStep(2, "u2"));
 
         JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
 
@@ -392,7 +479,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.QUERY, "staffCode", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of("staffCode", new String[]{"QUITT"}), null);
 
@@ -408,7 +495,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.BODY_FIELD, "staffCode", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of("staffCode", new String[]{"QUITT"}), null);
 
@@ -424,7 +511,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.BODY_FIELD, "staffCode", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
         // Khong truyen queryParams nao ca (Map.of()) - staffCode khong ton tai, phai ra null, khong throw.
         engine.handle(config, Map.of(), Map.of(), null);
@@ -444,7 +531,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
                 1, MappingTargetType.QUERY, "priority", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -460,7 +547,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "3",
                 1, MappingTargetType.BODY_FIELD, "priority", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -478,7 +565,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
                 1, MappingTargetType.BODY_FIELD, "priority", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -501,7 +588,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -522,7 +609,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -539,7 +626,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -557,7 +644,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
         engine.handle(config, Map.of(), Map.of(), null);
 

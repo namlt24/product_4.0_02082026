@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -44,16 +47,18 @@ public class CompositeOrchestratorEngine {
     private final UpstreamHttpExecutor upstreamHttpExecutor;
     private final UpstreamRegistryCache upstreamRegistryCache;
     private final ObjectMapper objectMapper;
+    private final ExecutorService parallelStepExecutor;
 
     /**
      * Thuc thi 1 EndpointConfig cho 1 request that.
      *
      * Non-sequential: moi step DOC LAP, LUON chay het (khong lien quan gi toi
      * re nhanh - xem executeSequentialChain()), roi gop ket qua qua
-     * assembleFinalResponse(). Toi uu hoa goi that su song song (vi du qua
-     * CompletableFuture cho cac step khong phu thuoc du lieu lan nhau) la
-     * huong cai tien co the lam sau, khong chan V1 - hien van la 1 vong lap
-     * Java tuan tu, chi khac o cho KHONG doc con tro/dieu kien.
+     * assembleFinalResponse(). Mac dinh (config.parallelExecution()=false) van
+     * la 1 vong lap Java tuan tu nhu truoc, chi khac o cho KHONG doc con tro/
+     * dieu kien - giu nguyen 100% hanh vi cu cho moi endpoint hien co. Khi
+     * parallelExecution=true, cac step duoc submit CHAY THAT SU SONG SONG qua
+     * executeStepsInParallel() (xem javadoc rieng ve danh doi side-effect).
      *
      * Sequential (P1-5): xem executeSequentialChain() - moi step co the tu
      * quyet dinh step TIEP THEO se chay (re nhanh that) thay vi luon la
@@ -69,9 +74,13 @@ public class CompositeOrchestratorEngine {
                 .toList();
 
         if (!config.sequential()) {
-            for (BackendStepDto step : orderedSteps) {
-                JsonNode transformed = executeStep(config, step, ctx);
-                ctx.putStepResult(step.stepOrder(), transformed);
+            if (config.parallelExecution()) {
+                executeStepsInParallel(config, orderedSteps, ctx);
+            } else {
+                for (BackendStepDto step : orderedSteps) {
+                    JsonNode transformed = executeStep(config, step, ctx);
+                    ctx.putStepResult(step.stepOrder(), transformed);
+                }
             }
             return assembleFinalResponse(orderedSteps, ctx);
         }
@@ -149,6 +158,60 @@ public class CompositeOrchestratorEngine {
             currentOrder = determineNextStepOrder(step, ctx, allOrders, branchTargetOrders);
         }
         return lastResult == null ? objectMapper.createObjectNode() : lastResult;
+    }
+
+    /**
+     * Chay N step DOC LAP (khong sequential) THAT SU SONG SONG qua parallelStepExecutor
+     * (muc 4, xem ParallelExecutionConfig) - submit TAT CA step cung luc, roi cho TAT
+     * CA future hoan thanh (vong for lan luot future.get(), khong phai cho tung cai roi
+     * moi submit cai tiep) truoc khi tra ve, dam bao khong con thread nao dang chay ngam
+     * sau khi method nay return. ctx.putStepResult() an toan goi dong thoi tu nhieu
+     * thread (xem javadoc ExecutionContext.stepResults).
+     *
+     * DANH DOI PHAI BIET (da canh bao ro tren UI luc cau hinh - xem field-note cua
+     * parallelExecution o endpoint-form/endpoint-canvas): khac han vong lap tuan tu
+     * (loi step nao dung NGAY tai do, step SAU khong bao gio chay), o day TAT CA step
+     * DA duoc submit truoc khi biet step nao loi - step co side-effect that (POST/PUT/
+     * DELETE) co the DA CHAY XONG truoc khi loi cua step khac duoc phat hien. Chi nen
+     * bat parallelExecution cho endpoint co step khong side-effect quan trong/idempotent.
+     *
+     * Loi: doi TAT CA future xong (khong bo cuoc som khi gap loi dau tien) roi moi
+     * throw loi DAU TIEN gap phai (theo thu tu step trong orderedSteps, khong phai
+     * thu tu hoan thanh thuc te - de hanh vi loi de doan hon, nhat quan voi thu tu
+     * hien tren UI) - cac loi khac (neu co nhieu step cung loi) chi duoc log WARN.
+     */
+    private void executeStepsInParallel(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
+        List<Future<?>> futures = orderedSteps.stream()
+                .<Future<?>>map(step -> parallelStepExecutor.submit(() -> {
+                    JsonNode transformed = executeStep(config, step, ctx);
+                    ctx.putStepResult(step.stepOrder(), transformed);
+                }))
+                .toList();
+
+        RuntimeException firstError = null;
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                RuntimeException wrapped = (cause instanceof RuntimeException re) ? re
+                        : new BusinessException("GW-PARALLEL-STEP-ERROR", "Endpoint '" + config.name()
+                                + "': loi khi thuc thi step song song: " + cause.getMessage());
+                if (firstError == null) {
+                    firstError = wrapped;
+                } else {
+                    log.warn("Endpoint '{}': step song song loi them (sau loi dau tien '{}'): {}",
+                            config.name(), firstError.getMessage(), wrapped.getMessage());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new BusinessException("GW-PARALLEL-INTERRUPTED",
+                        "Endpoint '" + config.name() + "': thuc thi step song song bi ngat.");
+            }
+        }
+        if (firstError != null) {
+            throw firstError;
+        }
     }
 
     /**

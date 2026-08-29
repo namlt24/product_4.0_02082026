@@ -75,6 +75,8 @@ interface HeaderModel {
   outputEncoding: string;
   idempotencyEnabled: boolean;
   idempotencyTtlSeconds: number;
+  /** Chi co y nghia khi sequential=false - xem EndpointConfig.parallelExecution. */
+  parallelExecution: boolean;
 }
 
 interface NodePos {
@@ -189,6 +191,7 @@ export class EndpointCanvasComponent implements OnInit {
     outputEncoding: 'json',
     idempotencyEnabled: false,
     idempotencyTtlSeconds: 86400,
+    parallelExecution: false,
   };
 
   private endpointId: string | null = null;
@@ -386,6 +389,7 @@ export class EndpointCanvasComponent implements OnInit {
             outputEncoding: ep.outputEncoding || 'json',
             idempotencyEnabled: ep.idempotencyEnabled ?? false,
             idempotencyTtlSeconds: ep.idempotencyTtlSeconds ?? 86400,
+            parallelExecution: ep.parallelExecution ?? false,
           };
           this.steps.set([...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder));
           this.mappings.set([...ep.mappings]);
@@ -642,6 +646,10 @@ export class EndpointCanvasComponent implements OnInit {
     this.steps.set([...this.steps(), emptyStep(nextOrder)]);
     if (this.steps().length > 1) {
       this.header.sequential = true;
+      // parallelExecution chi hop le voi sequential=false (xem GW-003 o backend) - tu
+      // dong tat khi UI tu dong bat sequential, tranh nguoi dung phai tu nho tat lai
+      // truoc khi luu (se bi 400 GW-003 neu quen).
+      this.header.parallelExecution = false;
     }
     this.openStepPanel(this.steps().length - 1);
   }
@@ -824,6 +832,7 @@ export class EndpointCanvasComponent implements OnInit {
       outputEncoding: this.header.outputEncoding || 'json',
       idempotencyEnabled: this.header.idempotencyEnabled ?? false,
       idempotencyTtlSeconds: this.header.idempotencyTtlSeconds || 86400,
+      parallelExecution: this.header.parallelExecution ?? false,
       steps: this.steps(),
       mappings: this.mappings(),
     };

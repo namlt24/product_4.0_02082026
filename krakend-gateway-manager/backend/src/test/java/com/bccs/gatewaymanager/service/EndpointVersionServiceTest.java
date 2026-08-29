@@ -56,7 +56,7 @@ class EndpointVersionServiceTest {
                 null, null,
                 null, null, null, null, null, null, null, null);
         return new EndpointResponseDto(id, name, "desc", path, GatewayMethod.GET, true, "json",
-                List.of(step), List.of(), null, null, false, 86400);
+                List.of(step), List.of(), null, null, false, 86400, false);
     }
 
     @Test
@@ -142,7 +142,7 @@ class EndpointVersionServiceTest {
                 null, null, null, null, null, null, null, null);
         EndpointResponseDto withStepId = new EndpointResponseDto(original.id(), original.name(), original.description(),
                 original.path(), original.method(), original.sequential(), original.outputEncoding(),
-                List.of(stepWithId), original.mappings(), null, null, false, 86400);
+                List.of(stepWithId), original.mappings(), null, null, false, 86400, false);
         String json = objectMapper.writeValueAsString(withStepId);
         EndpointConfigVersion stored = EndpointConfigVersion.builder()
                 .id("v-1").endpointId("ep-1").versionNumber(1).changeType(EndpointChangeType.CREATED)

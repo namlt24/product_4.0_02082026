@@ -101,7 +101,8 @@ public class DataSeeder implements CommandLineRunner {
                 List.of(step1, step2),
                 List.of(chain),
                 false,
-                null
+                null,
+                false
         );
 
         endpointService.create(request);

@@ -72,6 +72,24 @@ public class EndpointConfig {
     @Column(name = "idempotency_ttl_seconds")
     private int idempotencyTtlSeconds = 86400;
 
+    /**
+     * Chi co y nghia khi sequential=false (step DOC LAP - xem javadoc handle() cua
+     * CompositeOrchestratorEngine). true = cac step doc lap duoc submit CHAY THAT SU
+     * SONG SONG qua 1 thread pool rieng (parallelStepExecutor) thay vi vong lap Java
+     * tuan tu nhu truoc - giam do tre tong khi cac step khong phu thuoc du lieu lan
+     * nhau (khac han sequential=true, noi step SAU luon can du lieu step TRUOC).
+     *
+     * DANH DOI PHAI BIET (canh bao ro tren UI): khi bat, TAT CA step da duoc submit
+     * truoc khi biet step nao loi - 1 step co side-effect that (POST/PUT/DELETE) co
+     * the da CHAY XONG truoc khi loi cua step khac duoc phat hien, khac han vong lap
+     * tuan tu (loi o dau dung ngay o do, step sau khong bao gio chay). Mac dinh tat
+     * (false) - moi endpoint non-sequential hien co giu nguyen vong lap tuan tu cu,
+     * khong doi hanh vi/thu tu gi ca.
+     */
+    @Builder.Default
+    @Column(name = "parallel_execution")
+    private boolean parallelExecution = false;
+
     @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

@@ -63,7 +63,7 @@ class ConfigExportImportServiceTest {
 
     private EndpointResponseDto endpointDto(String path, String upstreamId, String upstreamName) {
         return new EndpointResponseDto("ep-old-id", "n", null, path, GatewayMethod.GET, true, "json",
-                List.of(step(upstreamId, upstreamName)), List.of(), null, null, false, 86400);
+                List.of(step(upstreamId, upstreamName)), List.of(), null, null, false, 86400, false);
     }
 
     @Test

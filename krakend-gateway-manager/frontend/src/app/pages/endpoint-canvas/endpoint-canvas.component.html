@@ -48,6 +48,19 @@
         </mat-form-field>
         <mat-slide-toggle [(ngModel)]="header.sequential" class="sequential-toggle">Sequential</mat-slide-toggle>
       </div>
+      @if (!header.sequential) {
+        <div class="field-row">
+          <mat-slide-toggle [(ngModel)]="header.parallelExecution">
+            Chạy song song step độc lập (tăng tốc, chỉ khi các step KHÔNG phụ thuộc dữ liệu lẫn nhau)
+          </mat-slide-toggle>
+        </div>
+        @if (header.parallelExecution) {
+          <div class="field-note field-note--warning">
+            <mat-icon inline="true">warning</mat-icon>
+            <span>Tất cả step được gọi ĐỒNG THỜI thay vì tuần tự - nếu 1 step lỗi, các step khác CÓ THỂ ĐÃ CHẠY XONG (kể cả side-effect như POST/PUT/DELETE thật) trước khi lỗi được phát hiện, khác hẳn tuần tự (lỗi ở đâu dừng ngay ở đó). Chỉ nên bật khi các step không có side-effect quan trọng/idempotent.</span>
+          </div>
+        }
+      }
       <div class="field-row">
         <mat-slide-toggle [(ngModel)]="header.idempotencyEnabled">Idempotency-Key (chống trùng khi client tự retry)</mat-slide-toggle>
         @if (header.idempotencyEnabled) {

@@ -40,6 +40,7 @@ public class EndpointMapper {
                 .outputEncoding(dto.outputEncoding())
                 .idempotencyEnabled(dto.idempotencyEnabled())
                 .idempotencyTtlSeconds(dto.idempotencyTtlSeconds())
+                .parallelExecution(dto.parallelExecution())
                 .build();
         applySteps(entity, dto.steps());
         applyMappings(entity, dto.mappings());
@@ -56,6 +57,7 @@ public class EndpointMapper {
         entity.setOutputEncoding(dto.outputEncoding());
         entity.setIdempotencyEnabled(dto.idempotencyEnabled());
         entity.setIdempotencyTtlSeconds(dto.idempotencyTtlSeconds());
+        entity.setParallelExecution(dto.parallelExecution());
         applySteps(entity, dto.steps());
         applyMappings(entity, dto.mappings());
     }
@@ -147,7 +149,7 @@ public class EndpointMapper {
                 entity.getId(), entity.getName(), entity.getDescription(), entity.getPath(),
                 entity.getMethod(), entity.isSequential(), entity.getOutputEncoding(),
                 steps, mappings, entity.getCreatedAt(), entity.getUpdatedAt(),
-                entity.isIdempotencyEnabled(), entity.getIdempotencyTtlSeconds());
+                entity.isIdempotencyEnabled(), entity.getIdempotencyTtlSeconds(), entity.isParallelExecution());
     }
 
     /** So sanh path co doi khong (dung khi update de kiem tra trung path voi endpoint khac). */

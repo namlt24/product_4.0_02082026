@@ -115,6 +115,19 @@
   strong {
     color: var(--gwm-text);
   }
+
+  // Bien the "canh bao" (khac ghi chu thong tin thuong mau accent/cyan) - dung cho
+  // canh bao danh doi that su can nguoi dung chu y truoc khi bat 1 tinh nang (vd
+  // parallelExecution) chu khong chi giai thich field, tai dung token mau warning
+  // toan cuc (dung y het mini-badge--branch cua endpoint-canvas).
+  &--warning {
+    background: var(--gwm-warning-bg);
+    border-color: var(--gwm-warning);
+
+    mat-icon {
+      color: var(--gwm-warning);
+    }
+  }
 }
 
 .sub-section {

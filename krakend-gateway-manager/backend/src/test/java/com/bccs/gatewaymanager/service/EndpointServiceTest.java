@@ -54,7 +54,7 @@ class EndpointServiceTest {
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(mapper.toResponseDto(any())).thenReturn(
                 new EndpointResponseDto("ep-1", "n", null, "/x", GatewayMethod.GET, true, "json",
-                        List.of(), List.of(), null, null, false, 86400));
+                        List.of(), List.of(), null, null, false, 86400, false));
         lenient().when(dependencyAnalyzer.detectCycleWarningsOnly()).thenReturn(List.of());
     }
 
@@ -91,7 +91,7 @@ class EndpointServiceTest {
 
     private EndpointRequestDto requestWithMapping(FieldMappingDto mapping) {
         return new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1), step(2)), List.of(mapping), false, null);
+                List.of(step(1), step(2)), List.of(mapping), false, null, false);
     }
 
     // ---- Ha thap rui ro phat sinh tu fix auth: path Data Plane khong duoc trung tien to /api hoac /actuator ----
@@ -102,7 +102,7 @@ class EndpointServiceTest {
     @Test
     void create_rejectsPathStartingWithApi() {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/api/orders", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -112,7 +112,7 @@ class EndpointServiceTest {
     @Test
     void create_rejectsPathStartingWithActuator() {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/actuator/custom", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -123,7 +123,7 @@ class EndpointServiceTest {
     void create_allowsPathThatOnlyContainsApiAsSegmentNotPrefix() {
         // "/apinormal" khong phai "/api" hay "/api/..." - khong bi chan (chi chan dung tien to).
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/apinormal", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
         assertThat(service.create(dto)).isNotNull();
     }
 
@@ -262,7 +262,7 @@ class EndpointServiceTest {
         when(dependencyAnalyzer.detectCycleWarningsOnly())
                 .thenReturn(List.of("Endpoint A goi nguoc Endpoint B, B goi lai A"));
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -278,7 +278,7 @@ class EndpointServiceTest {
         when(repository.findById("ep-1")).thenReturn(java.util.Optional.of(EndpointConfig.builder().id("ep-1").build()));
         when(dependencyAnalyzer.detectCycleWarningsOnly()).thenReturn(List.of("vong lap"));
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.update("ep-1", dto))
                 .isInstanceOf(BusinessException.class)
@@ -292,7 +292,7 @@ class EndpointServiceTest {
     @Test
     void create_noCycle_reloadsRegistryCache() {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
         service.create(dto);
         verify(registryCache).reload();
     }
@@ -302,7 +302,7 @@ class EndpointServiceTest {
     @Test
     void create_success_recordsSnapshotAsCreated() {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
 
         service.create(dto);
 
@@ -314,7 +314,7 @@ class EndpointServiceTest {
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
         when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
 
         service.update("ep-1", dto);
 
@@ -326,7 +326,7 @@ class EndpointServiceTest {
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
         when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
         EndpointRequestDto snapshotDto = new EndpointRequestDto("n-cu", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
         when(versionService.toRequestDtoForRollback("ep-1", "v-1")).thenReturn(snapshotDto);
 
         EndpointResponseDto result = service.rollback("ep-1", "v-1");
@@ -345,7 +345,7 @@ class EndpointServiceTest {
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
         lenient().when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
         EndpointRequestDto badSnapshot = new EndpointRequestDto("n", null, "/api/legacy", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null);
+                List.of(step(1)), List.of(), false, null, false);
         when(versionService.toRequestDtoForRollback("ep-1", "v-1")).thenReturn(badSnapshot);
 
         assertThatThrownBy(() -> service.rollback("ep-1", "v-1"))
@@ -374,7 +374,7 @@ class EndpointServiceTest {
     void create_rejectsNextStepOrderIfTrueKhongTonTai() {
         BackendStepDto s1 = stepWithBranch(1, null, null, 99, null); // step 99 khong ton tai
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -386,7 +386,7 @@ class EndpointServiceTest {
     void create_rejectsConditionSourceStepOrderKhongTonTai() {
         BackendStepDto s1 = stepWithBranch(1, 99, ConditionOperator.EXISTS, 2, null); // sourceStepOrder 99 khong ton tai
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -398,7 +398,7 @@ class EndpointServiceTest {
     void create_rejectsEqualsThieuConditionExpectedValue() {
         BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.EQUALS, 2, null, null); // EQUALS nhung khong co gia tri mong doi
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -412,7 +412,7 @@ class EndpointServiceTest {
     void create_rejectsGreaterThanThieuConditionExpectedValue() {
         BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.GREATER_THAN, 2, null, null);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -424,7 +424,7 @@ class EndpointServiceTest {
     void create_rejectsLessThanOrEqualConditionExpectedValueKhongPhaiSo() {
         BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.LESS_THAN_OR_EQUAL, 2, null, "abc");
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -436,7 +436,7 @@ class EndpointServiceTest {
     void create_greaterThanConditionExpectedValueLaSoHopLe_thanhCong() {
         BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.GREATER_THAN, 2, null, "3");
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThat(service.create(dto)).isNotNull();
     }
@@ -446,7 +446,7 @@ class EndpointServiceTest {
         // step1 dieu kien luon (gia lap) -> nextStepOrderIfTrue tro VE CHINH NO -> vong lap.
         BackendStepDto s1 = stepWithBranch(1, 1, ConditionOperator.EXISTS, 1, null);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1), List.of(), false, null);
+                List.of(s1), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -466,7 +466,7 @@ class EndpointServiceTest {
         // cycle (1->2->3, step3 khong di dau ca) - chi de kich usesBranching=true.
         BackendStepDto s3 = stepWithBranch(3, 1, ConditionOperator.EXISTS, null, null);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1), step(2), s3), List.of(backwardsMapping), false, null);
+                List.of(step(1), step(2), s3), List.of(backwardsMapping), false, null, false);
 
         assertThat(service.create(dto)).isNotNull();
     }
@@ -477,7 +477,7 @@ class EndpointServiceTest {
     void create_onErrorStepOrder_hopLe_thanhCong() {
         BackendStepDto s1 = stepWithOnError(1, 2);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThat(service.create(dto)).isNotNull();
     }
@@ -486,7 +486,7 @@ class EndpointServiceTest {
     void create_rejectsOnErrorStepOrderKhongTonTai() {
         BackendStepDto s1 = stepWithOnError(1, 99); // step 99 khong ton tai
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2)), List.of(), false, null);
+                List.of(s1, step(2)), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -500,7 +500,7 @@ class EndpointServiceTest {
         // conditionOperator, xem detectBranchCycle()).
         BackendStepDto s1 = stepWithOnError(1, 1);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1), List.of(), false, null);
+                List.of(s1), List.of(), false, null, false);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -518,7 +518,30 @@ class EndpointServiceTest {
                 1, MappingTargetType.QUERY, "q", 0);
         BackendStepDto s1 = stepWithOnError(1, 3);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(s1, step(2), step(3)), List.of(backwardsMapping), false, null);
+                List.of(s1, step(2), step(3)), List.of(backwardsMapping), false, null, false);
+
+        assertThat(service.create(dto)).isNotNull();
+    }
+
+    // ---- Muc 4: parallelExecution (song song hoa step doc lap) ----
+
+    @Test
+    void create_rejectsParallelExecutionKhiSequentialTrue() {
+        // parallelExecution chi co y nghia voi step doc lap (sequential=false) - bat ca 2
+        // cung luc la cau hinh mau thuan, phai chan tai luc luu (xem validateStepOrders()).
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1), step(2)), List.of(), false, null, true);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_parallelExecutionKhiSequentialFalse_thanhCong() {
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, false, "json",
+                List.of(step(1), step(2)), List.of(), false, null, true);
 
         assertThat(service.create(dto)).isNotNull();
     }

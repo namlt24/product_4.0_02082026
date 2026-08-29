@@ -143,6 +143,13 @@ export interface EndpointConfig {
    */
   idempotencyEnabled: boolean;
   idempotencyTtlSeconds: number;
+  /**
+   * Chi co y nghia khi sequential=false (step doc lap) - bat song song hoa THAT SU cac
+   * step qua thread pool rieng thay vi vong lap tuan tu. DANH DOI: step co side-effect
+   * that (POST/PUT/DELETE) co the da chay xong truoc khi loi cua step khac duoc phat
+   * hien - chi nen bat cho step khong side-effect quan trong/idempotent. Mac dinh tat.
+   */
+  parallelExecution: boolean;
 }
 
 export type EndpointChangeType = 'CREATED' | 'UPDATED' | 'ROLLED_BACK';
@@ -271,6 +278,7 @@ export function emptyEndpoint(): EndpointConfig {
     mappings: [],
     idempotencyEnabled: false,
     idempotencyTtlSeconds: 86400,
+    parallelExecution: false,
   };
 }
 

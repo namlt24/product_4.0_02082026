@@ -134,6 +134,7 @@ export class EndpointFormComponent implements OnInit {
       outputEncoding: [ep.outputEncoding || 'json'],
       idempotencyEnabled: [ep.idempotencyEnabled ?? false],
       idempotencyTtlSeconds: [ep.idempotencyTtlSeconds ?? 86400],
+      parallelExecution: [ep.parallelExecution ?? false],
       steps: this.fb.array(
         [...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder).map((s) => this.buildStepGroup(s)),
       ),
@@ -363,6 +364,10 @@ export class EndpointFormComponent implements OnInit {
     this.stepsArray.push(this.buildStepGroup(emptyStep(nextOrder)));
     if (this.stepsArray.length > 1) {
       this.form.get('sequential')!.setValue(true);
+      // parallelExecution chi hop le voi sequential=false (xem GW-003 o backend) - tu
+      // dong tat khi UI tu dong bat sequential, tranh nguoi dung phai tu nho tat lai
+      // truoc khi luu (se bi 400 GW-003 neu quen). Mirror y het endpoint-canvas.addStep().
+      this.form.get('parallelExecution')!.setValue(false);
     }
   }
 
@@ -553,6 +558,7 @@ export class EndpointFormComponent implements OnInit {
       outputEncoding: v.outputEncoding || 'json',
       idempotencyEnabled: v.idempotencyEnabled ?? false,
       idempotencyTtlSeconds: v.idempotencyTtlSeconds || 86400,
+      parallelExecution: v.parallelExecution ?? false,
       steps,
       mappings,
     };

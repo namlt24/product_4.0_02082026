@@ -64,7 +64,7 @@ class DynamicDispatcherControllerTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null, null, null, null, null, null, null, null, null);
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step), List.of(), null, null, idempotencyEnabled, 86400);
+                List.of(step), List.of(), null, null, idempotencyEnabled, 86400, false);
     }
 
     private MockHttpServletRequest request(String idempotencyKey) {

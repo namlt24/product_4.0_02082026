@@ -455,6 +455,16 @@
     margin-top: 1px;
     flex-shrink: 0;
   }
+
+  // Bien the "canh bao" cho muc 4 (parallelExecution) - dung y het endpoint-form.component.scss.
+  &--warning {
+    background: var(--gwm-warning-bg);
+    border-color: var(--gwm-warning);
+
+    mat-icon {
+      color: var(--gwm-warning);
+    }
+  }
 }
 
 .endpoint-picker {

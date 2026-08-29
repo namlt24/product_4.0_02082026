@@ -140,6 +140,17 @@ public class EndpointService {
 
     /** Kiem tra: stepOrder phai bat dau tu 1, khong trung, va mapping phai tham chieu step co that + hop le. */
     private void validateStepOrders(EndpointRequestDto dto) {
+        // parallelExecution (muc 4) chi co y nghia voi step DOC LAP (sequential=false) - xem
+        // javadoc CompositeOrchestratorEngine.handle(). Bat ca 2 cung luc la cau hinh mau
+        // thuan (sequential=true khong bao gio di qua nhanh code parallel), chan som tai day
+        // thay vi luu 1 cau hinh gay hieu lam roi sau nay khong ai biet vi sao khong chay
+        // song song.
+        if (dto.sequential() && dto.parallelExecution()) {
+            throw new BusinessException("GW-003",
+                    "parallelExecution chi ap dung duoc khi sequential=false (step doc lap) - "
+                            + "endpoint sequential=true luon chay tuan tu theo con tro, khong dung thread pool song song.");
+        }
+
         var orders = dto.steps().stream().map(com.bccs.gatewaymanager.dto.BackendStepDto::stepOrder).toList();
         if (orders.stream().distinct().count() != orders.size()) {
             throw new BusinessException("GW-002", "stepOrder bi trung lap giua cac backend step.");

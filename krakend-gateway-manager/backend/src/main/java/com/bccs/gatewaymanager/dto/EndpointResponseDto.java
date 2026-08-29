@@ -19,6 +19,7 @@ public record EndpointResponseDto(
         Instant createdAt,
         Instant updatedAt,
         boolean idempotencyEnabled,
-        int idempotencyTtlSeconds
+        int idempotencyTtlSeconds,
+        boolean parallelExecution
 ) {
 }

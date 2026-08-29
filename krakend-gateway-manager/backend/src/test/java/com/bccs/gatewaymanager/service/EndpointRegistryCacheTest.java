@@ -105,6 +105,6 @@ class EndpointRegistryCacheTest {
     }
 
     private static EndpointResponseDto dto(String id, String path, GatewayMethod method) {
-        return new EndpointResponseDto(id, "name", null, path, method, false, "json", List.of(), List.of(), null, null, false, 86400);
+        return new EndpointResponseDto(id, "name", null, path, method, false, "json", List.of(), List.of(), null, null, false, 86400, false);
     }
 }

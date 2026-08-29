@@ -90,6 +90,10 @@ public class EndpointMapper {
                 .nextStepOrderIfFalse(s.nextStepOrderIfFalse())
                 .onErrorStepOrder(s.onErrorStepOrder())
                 .parallelGroup(s.parallelGroup())
+                .compensationUpstreamService(s.compensationUpstreamServiceId() == null
+                        ? null : findUpstreamOrThrow(s.compensationUpstreamServiceId()))
+                .compensationMethod(s.compensationMethod())
+                .compensationUrlPattern(s.compensationUrlPattern())
                 .build()).toList();
         entity.replaceSteps(steps);
     }
@@ -106,6 +110,7 @@ public class EndpointMapper {
                 .targetType(m.targetType())
                 .targetParamName(m.targetParamName())
                 .mappingOrder(m.mappingOrder())
+                .targetContext(m.targetContext())
                 .build()).toList();
         entity.replaceMappings(mappings);
     }
@@ -136,7 +141,10 @@ public class EndpointMapper {
                         s.getConditionSourceType(), s.getConditionSourceStepOrder(), s.getConditionSourceField(),
                         s.getConditionOperator(), s.getConditionExpectedValue(),
                         s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse(), s.getOnErrorStepOrder(),
-                        s.getParallelGroup()))
+                        s.getParallelGroup(),
+                        s.getCompensationUpstreamService() == null ? null : s.getCompensationUpstreamService().getId(),
+                        s.getCompensationUpstreamService() == null ? null : s.getCompensationUpstreamService().getName(),
+                        s.getCompensationMethod(), s.getCompensationUrlPattern()))
                 .toList();
 
         List<FieldMappingDto> mappings = entity.getMappings().stream()
@@ -144,7 +152,7 @@ public class EndpointMapper {
                         m.getId(), m.getSourceType(), m.getSourceStepOrder(), m.getSourceField(),
                         m.getSourceArrayField(), m.getSourceElementField(), m.getConstantValue(),
                         m.getTargetStepOrder(), m.getTargetType(), m.getTargetParamName(),
-                        m.getMappingOrder()))
+                        m.getMappingOrder(), m.getTargetContext()))
                 .toList();
 
         return new EndpointResponseDto(

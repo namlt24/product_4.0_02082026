@@ -104,4 +104,18 @@ public class FieldMapping {
     @Column(name = "mapping_order", nullable = false)
     @ColumnDefault("0")
     private int mappingOrder = 0;
+
+    /**
+     * Mapping nay dung de xay dung loi goi CHINH cua targetStepOrder (MAIN, mac
+     * dinh - 100% mapping tu truoc gio) hay loi goi BU TRU/rollback cua step do
+     * (COMPENSATION, xem BackendStep.compensationUpstreamService) - xem
+     * MappingTargetContext. @ColumnDefault BAT BUOC vi cot NOT NULL them vao
+     * bang FIELD_MAPPING da co du lieu that (dung mau da lam voi
+     * EndpointConfig.idempotencyEnabled).
+     */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_context", nullable = false)
+    @ColumnDefault("'MAIN'")
+    private MappingTargetContext targetContext = MappingTargetContext.MAIN;
 }

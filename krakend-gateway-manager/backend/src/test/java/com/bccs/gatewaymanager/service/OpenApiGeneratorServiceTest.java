@@ -21,7 +21,7 @@ class OpenApiGeneratorServiceTest {
         return new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
                 forwardOriginalBody, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
-                null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     @SuppressWarnings("unchecked")
@@ -51,7 +51,7 @@ class OpenApiGeneratorServiceTest {
     @Test
     void coMappingREQUEST_BODY_sinhRequestBodyKemDungPropertyGoc() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.REQUEST_BODY, null,
-                "shop.channelTypeId", null, null, null, 1, MappingTargetType.QUERY, "userId", 0);
+                "shop.channelTypeId", null, null, null, 1, MappingTargetType.QUERY, "userId", 0, null);
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.POST,
                 true, "json", List.of(step(false)), List.of(mapping), null, null, false, 86400, false);
 
@@ -98,7 +98,7 @@ class OpenApiGeneratorServiceTest {
     @Test
     void coMappingQUERY_PARAM_sinhDungQueryParameterBatBuoc() {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null,
-                "staffCode", null, null, null, 1, MappingTargetType.QUERY, "staffCode", 0);
+                "staffCode", null, null, null, 1, MappingTargetType.QUERY, "staffCode", 0, null);
         EndpointResponseDto ep = new EndpointResponseDto("ep-1", "n", null, "/v1/x", GatewayMethod.GET,
                 true, "json", List.of(step(false)), List.of(mapping), null, null, false, 86400, false);
 

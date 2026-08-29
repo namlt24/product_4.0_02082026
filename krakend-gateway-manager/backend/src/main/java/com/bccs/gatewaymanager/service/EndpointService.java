@@ -179,7 +179,11 @@ public class EndpointService {
                 // sourceStepOrder phai < targetStepOrder (dung invariant FieldMapping da tu ghi
                 // chu) - step nguon phai chay TRUOC step dich, neu khong ket qua se luon null
                 // luc runtime (engine thuc thi tuan tu, step sau moi thay du lieu step truoc).
-                if (!usesBranching && needsSourceStep && m.sourceStepOrder() != null && m.sourceStepOrder() >= m.targetStepOrder()) {
+                // BO QUA cho mapping targetContext=COMPENSATION (muc 6) - truong hop pho bien
+                // nhat la sourceStepOrder==targetStepOrder (bu tru step N dung CHINH response
+                // cua step N, vi du lay "orderId" vua tao de dien vao URL DELETE).
+                if (!usesBranching && needsSourceStep && m.targetContext() == com.bccs.gatewaymanager.entity.MappingTargetContext.MAIN
+                        && m.sourceStepOrder() != null && m.sourceStepOrder() >= m.targetStepOrder()) {
                     throw new BusinessException("GW-003", "FieldMapping co sourceStepOrder (" + m.sourceStepOrder()
                             + ") phai nho hon targetStepOrder (" + m.targetStepOrder() + ") - step nguon phai chay truoc step dich.");
                 }
@@ -216,6 +220,54 @@ public class EndpointService {
 
         validateBranching(dto, orders);
         validateParallelGroups(dto);
+        validateCompensationConfig(dto);
+    }
+
+    /**
+     * Kiem tra cau hinh bu tru/rollback nghiep vu (saga best-effort, muc 6, xem
+     * BackendStep.compensationUpstreamService + CompositeOrchestratorEngine.
+     * runCompensations()) - 3 rang buoc V1:
+     * (1) chi dung duoc khi sequential=true (bu tru chi kich hoat tu nhanh do trong
+     *     CompositeOrchestratorEngine.handle());
+     * (2) ca 3 field bu tru (compensationUpstreamServiceId/Method/UrlPattern) PHAI
+     *     cung co hoac cung KHONG co (all-or-nothing) - tranh cau hinh nua vo;
+     * (3) FieldMapping targetContext=COMPENSATION PHAI tro toi 1 step DA CO cau
+     *     hinh bu tru (khong "mo coi", vo nghia neu step do khong bao gio bu tru).
+     * Ton tai compensationUpstreamServiceId duoc validate MIEN PHI qua
+     * EndpointMapper.findUpstreamOrThrow() luc map entity (quan he @ManyToOne that),
+     * khong can kiem tra rieng o day.
+     */
+    private void validateCompensationConfig(EndpointRequestDto dto) {
+        var stepsWithCompensation = new java.util.HashSet<Integer>();
+        for (var s : dto.steps()) {
+            boolean hasAny = s.compensationUpstreamServiceId() != null || s.compensationMethod() != null
+                    || (s.compensationUrlPattern() != null && !s.compensationUrlPattern().isBlank());
+            if (!hasAny) {
+                continue;
+            }
+            if (!dto.sequential()) {
+                throw new BusinessException("GW-003", "Step '" + s.name()
+                        + "': cau hinh bu tru/rollback chi ap dung duoc khi sequential=true.");
+            }
+            boolean hasAll = s.compensationUpstreamServiceId() != null && s.compensationMethod() != null
+                    && s.compensationUrlPattern() != null && !s.compensationUrlPattern().isBlank();
+            if (!hasAll) {
+                throw new BusinessException("GW-003", "Step '" + s.name()
+                        + "': cau hinh bu tru phai co DU CA 3 (Upstream/Method/URL pattern), khong duoc thieu 1 phan.");
+            }
+            stepsWithCompensation.add(s.stepOrder());
+        }
+
+        if (dto.mappings() == null) {
+            return;
+        }
+        for (var m : dto.mappings()) {
+            if (m.targetContext() == com.bccs.gatewaymanager.entity.MappingTargetContext.COMPENSATION
+                    && !stepsWithCompensation.contains(m.targetStepOrder())) {
+                throw new BusinessException("GW-003", "FieldMapping (targetContext=COMPENSATION) tro toi step "
+                        + m.targetStepOrder() + " nhung step do CHUA cau hinh bu tru.");
+            }
+        }
     }
 
     /**

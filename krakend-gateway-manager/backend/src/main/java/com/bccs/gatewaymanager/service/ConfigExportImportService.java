@@ -104,6 +104,18 @@ public class ConfigExportImportService {
                                 + s.upstreamServiceName() + "' trong bundle hoac trong DB hien tai, giu nguyen id cu (co the loi khi luu).");
                         resolvedUpstreamId = s.upstreamServiceId();
                     }
+                    // Upstream bu tru (tuy chon) - CUNG rui ro portability nhu upstreamServiceId
+                    // chinh o tren (id tu bundle co the khong ton tai o moi truong dich) - resolve
+                    // lai theo TEN giong het, warn + giu id cu neu khong tim thay.
+                    String resolvedCompensationUpstreamId = null;
+                    if (s.compensationUpstreamServiceId() != null) {
+                        resolvedCompensationUpstreamId = upstreamNameToId.get(s.compensationUpstreamServiceName());
+                        if (resolvedCompensationUpstreamId == null) {
+                            warnings.add("Endpoint '" + ep.name() + "' - step '" + s.name() + "': khong tim thay Upstream bu tru ten '"
+                                    + s.compensationUpstreamServiceName() + "' trong bundle hoac trong DB hien tai, giu nguyen id cu (co the loi khi luu).");
+                            resolvedCompensationUpstreamId = s.compensationUpstreamServiceId();
+                        }
+                    }
                     return new BackendStepDto(null, s.stepOrder(), s.name(), s.method(), s.urlPattern(),
                             resolvedUpstreamId, s.upstreamServiceName(), s.forwardOriginalBody(), s.cacheEnabled(),
                             s.cacheTtlSeconds(), s.group(), s.target(), s.allowFields(), s.denyFields(),
@@ -114,14 +126,16 @@ public class ConfigExportImportService {
                             // moi truong nguon nhu upstreamServiceId nen khong can resolve lai gi.
                             s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
                             s.conditionOperator(), s.conditionExpectedValue(),
-                            s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup());
+                            s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup(),
+                            resolvedCompensationUpstreamId, s.compensationUpstreamServiceName(),
+                            s.compensationMethod(), s.compensationUrlPattern());
                 })
                 .toList();
 
         List<FieldMappingDto> mappings = ep.mappings().stream()
                 .map(m -> new FieldMappingDto(null, m.sourceType(), m.sourceStepOrder(), m.sourceField(),
                         m.sourceArrayField(), m.sourceElementField(), m.constantValue(), m.targetStepOrder(), m.targetType(),
-                        m.targetParamName(), m.mappingOrder()))
+                        m.targetParamName(), m.mappingOrder(), m.targetContext()))
                 .toList();
 
         return new EndpointRequestDto(ep.name(), ep.description(), ep.path(), ep.method(),

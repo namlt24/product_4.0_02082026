@@ -6,6 +6,7 @@ import com.bccs.gatewaymanager.dto.FieldMappingDto;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
+import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.service.EndpointService;
@@ -63,7 +64,8 @@ public class DataSeeder implements CommandLineRunner {
                 Map.of("id", "user_id"),       // rename "id" -> "user_id" cho ro nghia truoc khi chain
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
-                null, null, null, null, null, null, null, null, null // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
+                null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
+                null, null, null, null // bu tru/rollback: khong dung trong endpoint demo nay
         );
 
         // Step 2: goi Order Service, dung user_id trich xuat tu step 1 lam query param
@@ -80,13 +82,14 @@ public class DataSeeder implements CommandLineRunner {
                 Map.of(),
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
-                null, null, null, null, null, null, null, null, null // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
+                null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
+                null, null, null, null // bu tru/rollback: khong dung trong endpoint demo nay
         );
 
         // Chain: field "user_id" tu response step 1 -> query param "userId" cua step 2
         FieldMappingDto chain = new FieldMappingDto(
                 null, FieldMappingSourceType.STEP_RESPONSE, 1, "user_id", null, null, null,
-                2, MappingTargetType.QUERY, "userId", 0);
+                2, MappingTargetType.QUERY, "userId", 0, MappingTargetContext.MAIN);
 
         // Path endpoint PHAI khai bao {userId} vi Step 1 dung token nay trong url_pattern -
         // engine chi tu dong forward path-param khi ten token khop giua endpoint va backend.

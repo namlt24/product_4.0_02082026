@@ -25,6 +25,7 @@ import {
   GatewayInfo,
   HttpMethodType,
   HTTP_METHODS,
+  MAPPING_TARGET_CONTEXTS,
   MAPPING_TARGET_TYPES,
   UpstreamService,
 } from '../../models/endpoint.model';
@@ -67,6 +68,10 @@ interface StepEditModel {
   // Wave song song trong chuoi sequential - DOC LAP voi conditionOperator/onErrorStepOrder
   // o tren, KHONG tham chieu stepOrder (chi la 1 ma nhom tuy chon).
   parallelGroup: number | null;
+  // Bu tru/rollback nghiep vu (muc 6) - DOC LAP, KHONG tham chieu stepOrder.
+  compensationUpstreamServiceId: string | null;
+  compensationMethod: HttpMethodType | null;
+  compensationUrlPattern: string;
 }
 
 interface HeaderModel {
@@ -148,6 +153,7 @@ interface PositionedBranch {
 export class EndpointCanvasComponent implements OnInit {
   readonly httpMethods = HTTP_METHODS;
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
+  readonly mappingTargetContexts = MAPPING_TARGET_CONTEXTS;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
   /** Query param cua client / hang so co dinh KHONG dung cho re nhanh (so sanh 1 hang so co dinh voi
    * chinh no vo nghia) - ngoai pham vi, chi dung cho FieldMapping thuong. */
@@ -478,6 +484,9 @@ export class EndpointCanvasComponent implements OnInit {
       nextStepOrderIfFalse: s.nextStepOrderIfFalse ?? null,
       onErrorStepOrder: s.onErrorStepOrder ?? null,
       parallelGroup: s.parallelGroup ?? null,
+      compensationUpstreamServiceId: s.compensationUpstreamServiceId ?? null,
+      compensationMethod: s.compensationMethod ?? null,
+      compensationUrlPattern: s.compensationUrlPattern ?? '',
     };
   }
 
@@ -641,6 +650,10 @@ export class EndpointCanvasComponent implements OnInit {
       onErrorStepOrder: edit.onErrorStepOrder,
       // parallelGroup cung DOC LAP - khong tham chieu stepOrder, khong gate theo dieu kien.
       parallelGroup: edit.parallelGroup,
+      // Bu tru/rollback (muc 6) - DOC LAP, khong tham chieu stepOrder, khong gate theo dieu kien.
+      compensationUpstreamServiceId: edit.compensationUpstreamServiceId,
+      compensationMethod: edit.compensationMethod,
+      compensationUrlPattern: edit.compensationUrlPattern || null,
     };
     this.steps.set(list);
     this.closePanel();
@@ -717,6 +730,7 @@ export class EndpointCanvasComponent implements OnInit {
       targetType: 'QUERY',
       targetParamName: '',
       mappingOrder: this.mappings().length,
+      targetContext: 'MAIN',
     };
   }
 

@@ -200,6 +200,11 @@
                     <mat-icon inline="true">sync_alt</mat-icon>Nhóm song song #{{ p.step.parallelGroup }}
                   </span>
                 }
+                @if (p.step.compensationUpstreamServiceId) {
+                  <span class="mini-badge mini-badge--error" matTooltip="Có cấu hình bù trừ/rollback - tự động gọi khi chuỗi thất bại sau step này">
+                    <mat-icon inline="true">undo</mat-icon>Có bù trừ
+                  </span>
+                }
               </div>
             </div>
           }
@@ -466,6 +471,45 @@
           }
         </div>
       }
+
+      <!-- Bu tru/rollback nghiep vu (muc 6, saga best-effort) - CHI co y nghia khi
+           sequential=true cap Endpoint. Mirror y het endpoint-form.component.html. -->
+      @if (header.sequential) {
+        <div class="sub-section">
+          <div class="sub-section-header">
+            <span>Cấu hình bù trừ / rollback (tuỳ chọn)</span>
+          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Upstream bù trừ</mat-label>
+            <mat-select [(ngModel)]="edit.compensationUpstreamServiceId">
+              <mat-option [value]="null">(không dùng)</mat-option>
+              @for (u of upstreams(); track u.id) {
+                <mat-option [value]="u.id">{{ u.name }} — {{ u.baseHost }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <div class="field-row">
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Method</mat-label>
+              <mat-select [(ngModel)]="edit.compensationMethod">
+                @for (m of httpMethods; track m) {
+                  <mat-option [value]="m">{{ m }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>URL pattern bù trừ</mat-label>
+              <input matInput [(ngModel)]="edit.compensationUrlPattern" placeholder="/orders/{{ '{' }}orderId{{ '}' }}" />
+            </mat-form-field>
+          </div>
+          @if (edit.compensationUpstreamServiceId) {
+            <div class="field-note field-note--warning">
+              <mat-icon inline="true">warning</mat-icon>
+              <span>Nếu step này thành công nhưng chuỗi SAU ĐÓ thất bại (lỗi không được Fallback xử lý), gateway sẽ tự gọi lệnh bù trừ này (best-effort, chỉ thử 1 lần) - dùng Field Mapping với "Bối cảnh" = Bù trừ để lấy dữ liệu (vd "orderId") từ chính response của step này.</span>
+            </div>
+          }
+        </div>
+      }
     </div>
     <div class="side-panel-footer">
       <button mat-button type="button" color="warn" (click)="removeStepFromPanel()">
@@ -565,6 +609,15 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Tên param/token/header/field đích</mat-label>
         <input matInput [(ngModel)]="m.targetParamName" placeholder="userId" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Bối cảnh</mat-label>
+        <mat-select [(ngModel)]="m.targetContext">
+          @for (c of mappingTargetContexts; track c) {
+            <mat-option [value]="c">{{ c === 'MAIN' ? 'Chính' : 'Bù trừ' }}</mat-option>
+          }
+        </mat-select>
       </mat-form-field>
     </div>
     <div class="side-panel-footer">

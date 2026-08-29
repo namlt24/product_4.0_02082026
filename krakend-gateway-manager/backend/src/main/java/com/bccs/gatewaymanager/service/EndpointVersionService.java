@@ -107,7 +107,9 @@ public class EndpointVersionService {
                 s.connectTimeoutMs(), s.readTimeoutMs(),
                 s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
                 s.conditionOperator(), s.conditionExpectedValue(),
-                s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup());
+                s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup(),
+                s.compensationUpstreamServiceId(), s.compensationUpstreamServiceName(),
+                s.compensationMethod(), s.compensationUrlPattern());
     }
 
     /** Dung khi xoa han 1 endpoint - don toan bo lich su phien ban cua no (khong FK/cascade tu dong, xem EndpointConfigVersion). */

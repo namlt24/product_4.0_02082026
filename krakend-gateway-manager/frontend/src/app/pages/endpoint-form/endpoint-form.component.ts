@@ -30,6 +30,7 @@ import {
   FIELD_MAPPING_SOURCE_TYPES,
   GatewayInfo,
   HTTP_METHODS,
+  MAPPING_TARGET_CONTEXTS,
   MAPPING_TARGET_TYPES,
   UpstreamService,
 } from '../../models/endpoint.model';
@@ -74,6 +75,7 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
 export class EndpointFormComponent implements OnInit {
   readonly httpMethods = HTTP_METHODS;
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
+  readonly mappingTargetContexts = MAPPING_TARGET_CONTEXTS;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
   /** Nguon dieu kien chi cho phep Step truoc/Body client - Gop mang khong co y nghia cho 1 dieu kien dung/sai,
    * Query param cua client / hang so co dinh KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
@@ -180,6 +182,11 @@ export class EndpointFormComponent implements OnInit {
       // nhom tuy chon), nen KHONG can logic reindex/xoa nhu onErrorStepOrder o tren khi
       // removeStep() renumber cac step con lai.
       parallelGroup: [step.parallelGroup ?? null],
+      // Bu tru/rollback nghiep vu (muc 6) - DOC LAP, KHONG tham chieu stepOrder (giong
+      // parallelGroup o tren), khong can logic reindex khi removeStep().
+      compensationUpstreamServiceId: [step.compensationUpstreamServiceId ?? null],
+      compensationMethod: [step.compensationMethod ?? null],
+      compensationUrlPattern: [step.compensationUrlPattern ?? ''],
     });
   }
 
@@ -201,6 +208,8 @@ export class EndpointFormComponent implements OnInit {
       // Khong gan UI o man hinh nay - chi giu nguyen gia tri da tai de KHONG lam mat thu tu
       // da sap xep qua trang "Khai bao endpoint keo tha" khi luu lai tu day (xem toPayload()).
       mappingOrder: [m.mappingOrder ?? 0],
+      // Boi canh (muc 6) - MAIN (mac dinh) hay COMPENSATION.
+      targetContext: [m.targetContext ?? 'MAIN'],
     });
   }
 
@@ -537,6 +546,11 @@ export class EndpointFormComponent implements OnInit {
       // parallelGroup cung DOC LAP voi conditionOperator - chi co y nghia khi sequential=true
       // (backend tu validate, xem EndpointService.validateParallelGroups()).
       parallelGroup: s.parallelGroup || null,
+      // Bu tru/rollback (muc 6) - DOC LAP, khong gate theo dieu kien re nhanh (backend tu
+      // validate all-or-nothing, xem EndpointService.validateCompensationConfig()).
+      compensationUpstreamServiceId: s.compensationUpstreamServiceId || null,
+      compensationMethod: s.compensationMethod || null,
+      compensationUrlPattern: s.compensationUrlPattern || null,
     }));
 
     const mappings: FieldMapping[] = v.mappings.map((m: any) => ({
@@ -550,6 +564,7 @@ export class EndpointFormComponent implements OnInit {
       targetType: m.targetType,
       targetParamName: m.targetParamName,
       mappingOrder: m.mappingOrder,
+      targetContext: m.targetContext || 'MAIN',
     }));
 
     // Khong gui id trong body: PUT da mang id qua URL path (endpoint-api.service.ts

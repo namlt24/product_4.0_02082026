@@ -8,6 +8,13 @@ export type HttpMethodType = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 /** Noi 1 gia tri duoc bom vao khi goi step sau: path/query/header, hoac 1 field trong JSON body gui di. */
 export type MappingTargetType = 'PATH' | 'QUERY' | 'HEADER' | 'BODY_FIELD';
 
+/**
+ * 1 FieldMapping xay dung loi goi CHINH cua targetStepOrder (MAIN, mac dinh - 100%
+ * mapping tu truoc gio) hay loi goi BU TRU/rollback cua step do (COMPENSATION, xem
+ * BackendStep.compensationUpstreamServiceId) - muc 6, saga best-effort.
+ */
+export type MappingTargetContext = 'MAIN' | 'COMPENSATION';
+
 /** Nguon du lieu cua 1 FieldMapping. */
 export type FieldMappingSourceType =
   | 'STEP_RESPONSE'
@@ -109,6 +116,19 @@ export interface BackendStep {
    * TỚI 1 step trong wave; stepOrder của 1 wave PHẢI liên tiếp (vd {2,3}, không {2,4}).
    */
   parallelGroup?: number | null;
+
+  /**
+   * Bu tru/rollback nghiep vu (saga best-effort, muc 6) - khai bao TUY CHON: neu step
+   * nay CHAY THANH CONG nhung SAU DO ca chuoi that bai (loi khong duoc onErrorStepOrder
+   * xu ly), engine tu dong goi 1 "lenh bu tru" rieng (vi du DELETE /orders/{orderId}).
+   * Ca 3 field deu tuy chon nhung PHAI cung co hoac cung khong co (xem backend
+   * EndpointService.validateCompensationConfig()). Chi hoat dong khi sequential=true.
+   */
+  compensationUpstreamServiceId?: string | null;
+  /** Ten Upstream bu tru, chi de hien thi (mirror upstreamServiceName). */
+  compensationUpstreamServiceName?: string | null;
+  compensationMethod?: HttpMethodType | null;
+  compensationUrlPattern?: string | null;
 }
 
 /** Khai bao "trich xuat 1 gia tri -> bom vao step Y". Xem FieldMappingSourceType cho y nghia cac field con lai. */
@@ -130,6 +150,8 @@ export interface FieldMapping {
   targetParamName: string;
   /** Vi tri hien thi khi sap xep (trang "Khai bao endpoint keo tha") - KHONG anh huong hanh vi engine. */
   mappingOrder: number;
+  /** Mapping nay danh cho loi goi CHINH (MAIN) hay loi goi BU TRU (COMPENSATION) cua targetStepOrder - xem MappingTargetContext. */
+  targetContext?: MappingTargetContext | null;
 }
 
 export interface EndpointConfig {
@@ -265,6 +287,7 @@ export interface ConfigImportResult {
 
 export const HTTP_METHODS: HttpMethodType[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 export const MAPPING_TARGET_TYPES: MappingTargetType[] = ['PATH', 'QUERY', 'HEADER', 'BODY_FIELD'];
+export const MAPPING_TARGET_CONTEXTS: MappingTargetContext[] = ['MAIN', 'COMPENSATION'];
 export const FIELD_MAPPING_SOURCE_TYPES: FieldMappingSourceType[] = [
   'STEP_RESPONSE',
   'REQUEST_BODY',
@@ -320,6 +343,10 @@ export function emptyStep(stepOrder: number): BackendStep {
     nextStepOrderIfFalse: null,
     onErrorStepOrder: null,
     parallelGroup: null,
+    compensationUpstreamServiceId: null,
+    compensationUpstreamServiceName: null,
+    compensationMethod: null,
+    compensationUrlPattern: null,
   };
 }
 
@@ -346,6 +373,7 @@ export function emptyMapping(sourceStepOrder: number, targetStepOrder: number): 
     targetType: 'QUERY',
     targetParamName: '',
     mappingOrder: 0,
+    targetContext: 'MAIN',
   };
 }
 

@@ -376,6 +376,46 @@
                 </div>
               }
 
+              <!-- Bu tru/rollback nghiep vu (muc 6, saga best-effort) - CHI co y nghia khi
+                   sequential=true cap Endpoint (backend validate rieng, xem
+                   EndpointService.validateCompensationConfig()). -->
+              @if (form.get('sequential')?.value) {
+                <div class="sub-section">
+                  <div class="sub-section-header">
+                    <span>Cấu hình bù trừ / rollback (tuỳ chọn)</span>
+                  </div>
+                  <div class="field-row">
+                    <mat-form-field appearance="outline" style="flex: 2">
+                      <mat-label>Upstream bù trừ</mat-label>
+                      <mat-select formControlName="compensationUpstreamServiceId">
+                        <mat-option [value]="null">(không dùng)</mat-option>
+                        @for (u of upstreams(); track u.id) {
+                          <mat-option [value]="u.id">{{ u.name }} — {{ u.baseHost }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" style="flex: 1">
+                      <mat-label>Method</mat-label>
+                      <mat-select formControlName="compensationMethod">
+                        @for (m of httpMethods; track m) {
+                          <mat-option [value]="m">{{ m }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" style="flex: 2">
+                      <mat-label>URL pattern bù trừ</mat-label>
+                      <input matInput formControlName="compensationUrlPattern" placeholder="/orders/{{ '{' }}orderId{{ '}' }}" />
+                    </mat-form-field>
+                  </div>
+                  @if (stepsArray.at(i).get('compensationUpstreamServiceId')?.value) {
+                    <div class="field-note field-note--warning">
+                      <mat-icon inline="true">warning</mat-icon>
+                      <span>Nếu step này thành công nhưng chuỗi SAU ĐÓ thất bại (lỗi không được Fallback xử lý), gateway sẽ tự gọi lệnh bù trừ này (best-effort, chỉ thử 1 lần) - dùng Field Mapping với "Bối cảnh" = Bù trừ để lấy dữ liệu (vd "orderId") từ chính response của step này.</span>
+                    </div>
+                  }
+                </div>
+              }
+
               <mat-action-row>
                 <button mat-button type="button" color="warn" (click)="removeStep(i)">
                   <mat-icon>delete</mat-icon> Xoa Step {{ i + 1 }}
@@ -483,6 +523,15 @@
             <mat-form-field appearance="outline">
               <mat-label>Tên param/token/header/field đích</mat-label>
               <input matInput formControlName="targetParamName" placeholder="userId" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Bối cảnh</mat-label>
+              <mat-select formControlName="targetContext">
+                @for (c of mappingTargetContexts; track c) {
+                  <mat-option [value]="c">{{ c === 'MAIN' ? 'Chính' : 'Bù trừ' }}</mat-option>
+                }
+              </mat-select>
             </mat-form-field>
 
             <button mat-icon-button type="button" color="warn" (click)="removeMapping(i)">

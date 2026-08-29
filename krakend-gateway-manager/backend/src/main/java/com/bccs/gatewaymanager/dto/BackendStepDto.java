@@ -92,7 +92,21 @@ public record BackendStepDto(
          * "Wave" song song trong 1 chuoi sequential - xem BackendStep.parallelGroup.
          * Chi co y nghia khi EndpointConfig.sequential=true.
          */
-        Integer parallelGroup
+        Integer parallelGroup,
+
+        /**
+         * Bu tru/rollback nghiep vu (saga best-effort) - xem
+         * BackendStep.compensationUpstreamService. Ca 3 field deu tuy chon, PHAI
+         * cung co hoac cung khong co (xem EndpointService.validateCompensationConfig()).
+         */
+        String compensationUpstreamServiceId,
+
+        /** Ten Upstream bu tru, chi de hien thi - engine khong dung field nay (mirror upstreamServiceName). */
+        String compensationUpstreamServiceName,
+
+        GatewayMethod compensationMethod,
+
+        String compensationUrlPattern
 ) {
     public BackendStepDto {
         if (cacheTtlSeconds <= 0) {

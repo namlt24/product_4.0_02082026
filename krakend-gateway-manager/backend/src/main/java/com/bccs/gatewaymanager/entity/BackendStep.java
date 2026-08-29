@@ -233,4 +233,31 @@ public class BackendStep {
      */
     @Column(name = "parallel_group")
     private Integer parallelGroup;
+
+    /**
+     * Bu tru/rollback nghiep vu (saga best-effort) - khai bao TUY CHON: neu step
+     * nay CHAY THANH CONG nhung SAU DO ca chuoi that bai (loi khong duoc
+     * onErrorStepOrder xu ly - xem CompositeOrchestratorEngine.handle()), engine
+     * tu dong goi 1 "lenh bu tru" rieng (vi du DELETE /orders/{orderId} de huy
+     * resource vua tao) theo THU TU NGUOC voi cac step da thanh cong khac.
+     *
+     * Ca 3 field deu nullable, KHONG @ColumnDefault (giong onErrorStepOrder/
+     * parallelGroup) - step khong khai bao (null) hoan toan khong bi anh huong,
+     * validate luc luu bat buoc ca 3 cung co hoac cung khong co (xem
+     * EndpointService.validateCompensationConfig()). Upstream la quan he
+     * @ManyToOne THAT (khac cac field Integer/String tu tham chieu khac trong
+     * class nay) de tai dung dung EndpointMapper.findUpstreamOrThrow() validate
+     * ton tai luc luu, khong can code kiem tra rieng - nhung KHONG bat buoc
+     * (nullable=true, khac upstreamService chinh o tren).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "compensation_upstream_service_id")
+    private UpstreamService compensationUpstreamService;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "compensation_method")
+    private GatewayMethod compensationMethod;
+
+    @Column(name = "compensation_url_pattern")
+    private String compensationUrlPattern;
 }

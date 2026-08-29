@@ -1,6 +1,7 @@
 package com.bccs.gatewaymanager.dto;
 
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
+import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -44,11 +45,22 @@ public record FieldMappingDto(
          * hanh vi engine. Payload cu (chua biet field nay, vi du tu 1 client/test cu) thieu
          * field nay se duoc Jackson mac dinh 0 (int primitive, khong throw).
          */
-        int mappingOrder
+        int mappingOrder,
+
+        /**
+         * Mapping nay xay dung loi goi CHINH (MAIN, mac dinh) hay loi goi BU TRU/
+         * rollback (COMPENSATION) cua targetStepOrder - xem MappingTargetContext.
+         * Payload cu (chua biet field nay) tu nhan MAIN qua compact constructor,
+         * dung y het cach sourceType mac dinh STEP_RESPONSE.
+         */
+        MappingTargetContext targetContext
 ) {
     public FieldMappingDto {
         if (sourceType == null) {
             sourceType = FieldMappingSourceType.STEP_RESPONSE;
+        }
+        if (targetContext == null) {
+            targetContext = MappingTargetContext.MAIN;
         }
     }
 }

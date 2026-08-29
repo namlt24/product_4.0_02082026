@@ -6,6 +6,7 @@ import com.bccs.gatewaymanager.dto.FieldMappingDto;
 import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
+import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
@@ -14,9 +15,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
+import org.springframework.http.HttpMethod;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -60,6 +63,10 @@ class CompositeOrchestratorEngineTest {
     private final UpstreamService up1 = UpstreamService.builder().id("u1").name("up1").baseHost("http://u1").build();
     private final UpstreamService up2 = UpstreamService.builder().id("u2").name("up2").baseHost("http://u2").build();
     private final UpstreamService up3 = UpstreamService.builder().id("u3").name("up3").baseHost("http://u3").build();
+    // Upstream RIENG cho loi goi bu tru (muc 6) - khac up1/up2/up3 (loi goi CHINH) de
+    // phan biet ro trong test (verify dung upstream bu tru duoc goi, khong nham voi chinh).
+    private final UpstreamService upComp1 = UpstreamService.builder().id("uc1").name("upComp1").baseHost("http://upcomp1").build();
+    private final UpstreamService upComp2 = UpstreamService.builder().id("uc2").name("upComp2").baseHost("http://upcomp2").build();
 
     @BeforeEach
     void setUp() {
@@ -67,6 +74,8 @@ class CompositeOrchestratorEngineTest {
         lenient().when(upstreamRegistryCache.getById("u1")).thenReturn(up1);
         lenient().when(upstreamRegistryCache.getById("u2")).thenReturn(up2);
         lenient().when(upstreamRegistryCache.getById("u3")).thenReturn(up3);
+        lenient().when(upstreamRegistryCache.getById("uc1")).thenReturn(upComp1);
+        lenient().when(upstreamRegistryCache.getById("uc2")).thenReturn(upComp2);
     }
 
     private JsonNode json(String raw) {
@@ -81,7 +90,7 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 conditionSourceType, conditionSourceStepOrder, conditionSourceField, operator, conditionExpectedValue,
-                nextIfTrue, nextIfFalse, null, null);
+                nextIfTrue, nextIfFalse, null, null, null, null, null, null);
     }
 
     private BackendStepDto plainStep(int order, String upstreamId) {
@@ -121,7 +130,7 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 null, null, null, null, null,
-                null, null, onErrorStepOrder, null);
+                null, null, onErrorStepOrder, null, null, null, null, null);
     }
 
     /** Step trong 1 "wave" song song (parallelGroup) - dung cho test wave/dependency execution. */
@@ -130,7 +139,17 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 null, null, null, null, null,
-                null, null, null, parallelGroup);
+                null, null, null, parallelGroup, null, null, null, null);
+    }
+
+    /** Step co cau hinh bu tru/rollback (muc 6) - dung cho nhom test saga best-effort. */
+    private BackendStepDto stepWithCompensation(int order, String upstreamId, String compUpstreamId, String compUrlPattern) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, null,
+                compUpstreamId, "upComp", GatewayMethod.DELETE, compUrlPattern);
     }
 
     // ---- Tuong thich nguoc: endpoint KHONG dung re nhanh phai chay DUNG y het hanh vi cu ----
@@ -283,9 +302,9 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s2 = stepWithGroup(2, "u2", 1);
         BackendStepDto s3 = plainStep(3, "u3");
         FieldMappingDto m1 = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "a", null, null, null,
-                3, MappingTargetType.QUERY, "fromStep1", 0);
+                3, MappingTargetType.QUERY, "fromStep1", 0, null);
         FieldMappingDto m2 = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "b", null, null, null,
-                3, MappingTargetType.QUERY, "fromStep2", 1);
+                3, MappingTargetType.QUERY, "fromStep2", 1, null);
         EndpointResponseDto config = endpointWithMappings(List.of(m1, m2), s1, s2, s3);
 
         engine.handle(config, Map.of(), Map.of(), null);
@@ -356,7 +375,7 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, target, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 null, null, null, null, null,
-                null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     @Test
@@ -369,7 +388,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s1 = plainStep(1, "u1");
         BackendStepDto s2 = plainStep(2, "u2");
         FieldMappingDto m = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "items[1].name",
-                null, null, null, 2, MappingTargetType.QUERY, "itemName", 0);
+                null, null, null, 2, MappingTargetType.QUERY, "itemName", 0, null);
         EndpointResponseDto config = endpointWithMappings(List.of(m), s1, s2);
 
         engine.handle(config, Map.of(), Map.of(), null);
@@ -405,7 +424,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s1 = plainStep(1, "u1");
         BackendStepDto s2 = plainStep(2, "u2");
         FieldMappingDto m = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "items[5].name",
-                null, null, null, 2, MappingTargetType.QUERY, "itemName", 0);
+                null, null, null, 2, MappingTargetType.QUERY, "itemName", 0, null);
         EndpointResponseDto config = endpointWithMappings(List.of(m), s1, s2);
 
         engine.handle(config, Map.of(), Map.of(), null);
@@ -414,6 +433,155 @@ class CompositeOrchestratorEngineTest {
         org.mockito.Mockito.verify(upstreamHttpExecutor)
                 .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
         assertThat(urlCaptor.getValue()).doesNotContain("itemName=");
+    }
+
+    // ---- Bu tru/rollback nghiep vu (muc 6, saga best-effort) ----
+
+    @Test
+    void compensation_step1ThanhCongCoBuTru_step2LoiKhongOnError_buTruStep1DuocGoi_loiGocVanThrow() {
+        stubCall(up1, json("{\"a\":1}"));
+        stubCallThrows(up2, new BusinessException("GW-UP-500", "upstream 2 loi"));
+        stubCall(upComp1, json("{\"ok\":true}"));
+        BackendStepDto s1 = stepWithCompensation(1, "u1", "uc1", "/orders/cancel");
+        BackendStepDto s2 = plainStep(2, "u2");
+        EndpointResponseDto config = endpoint(true, s1, s2);
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("upstream 2 loi");
+
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(upComp1), eq(HttpMethod.DELETE), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void compensation_onErrorStepOrderXuLyThanhCong_buTruKhongDuocGoi() {
+        // onErrorStepOrder da xu ly loi thanh cong (fallback sang step3 thanh cong) -
+        // KHONG co exception nao thoat ra ngoai executeSequentialChain(), runCompensations()
+        // khong bao gio duoc goi - du step1 co cau hinh bu tru.
+        stubCall(up1, json("{\"a\":1}"));
+        stubCallThrows(up2, new BusinessException("GW-UP-500", "loi tam thoi"));
+        stubCall(up3, json("{\"fallback\":true}"));
+        BackendStepDto s1 = stepWithCompensation(1, "u1", "uc1", "/orders/cancel");
+        BackendStepDto s2 = stepWithOnError(2, "u2", 3);
+        BackendStepDto s3 = plainStep(3, "u3");
+        EndpointResponseDto config = endpoint(true, s1, s2, s3);
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("fallback").asBoolean()).isTrue();
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void compensation_nhieuStepThanhCong_buTruTheoThuTuNguoc() {
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        stubCallThrows(up3, new BusinessException("GW-UP-500", "step3 loi"));
+        stubCall(upComp1, json("{\"ok\":true}"));
+        stubCall(upComp2, json("{\"ok\":true}"));
+        BackendStepDto s1 = stepWithCompensation(1, "u1", "uc1", "/undo1");
+        BackendStepDto s2 = stepWithCompensation(2, "u2", "uc2", "/undo2");
+        BackendStepDto s3 = plainStep(3, "u3");
+        EndpointResponseDto config = endpoint(true, s1, s2, s3);
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null)).isInstanceOf(BusinessException.class);
+
+        // Undo cai GAN NHAT (step2) TRUOC, roi moi toi step1 - thu tu NGUOC voi thu tu hoan thanh.
+        InOrder inOrder = org.mockito.Mockito.inOrder(upstreamHttpExecutor);
+        inOrder.verify(upstreamHttpExecutor).call(eq(upComp2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        inOrder.verify(upstreamHttpExecutor).call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void compensation_1LoiBuTruKhongChanCacBuTruKhac_khongDoiLoiGoc() {
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        stubCallThrows(up3, new BusinessException("GW-UP-500", "step3 loi goc"));
+        stubCallThrows(upComp2, new RuntimeException("bu tru step2 that bai"));
+        stubCall(upComp1, json("{\"ok\":true}"));
+        BackendStepDto s1 = stepWithCompensation(1, "u1", "uc1", "/undo1");
+        BackendStepDto s2 = stepWithCompensation(2, "u2", "uc2", "/undo2");
+        BackendStepDto s3 = plainStep(3, "u3");
+        EndpointResponseDto config = endpoint(true, s1, s2, s3);
+
+        // Loi GOC (step3) van la loi client nhin thay - KHONG bi loi bu tru cua step2 che mat.
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("step3 loi goc");
+
+        // Bu tru step1 VAN duoc goi du bu tru step2 (chay TRUOC, vi thu tu nguoc) that bai.
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void compensation_stepKhongCauHinh_khongDuocGoi() {
+        stubCall(up1, json("{\"a\":1}"));
+        stubCallThrows(up2, new BusinessException("GW-UP-500", "loi"));
+        BackendStepDto s1 = plainStep(1, "u1"); // KHONG cau hinh bu tru
+        BackendStepDto s2 = plainStep(2, "u2");
+        EndpointResponseDto config = endpoint(true, s1, s2);
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null)).isInstanceOf(BusinessException.class);
+
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void compensation_waveThanhVienThanhCongCoBuTru_stepSauLoi_caWaveDuocBuTru() {
+        // 2 thanh vien wave (parallelGroup=1), CA HAI co bu tru rieng - chung minh
+        // completedStepOrders ghi nhan TUNG thanh vien rieng le (khong phai ca wave nhu
+        // 1 khoi), du chinh wave nay THANH CONG (chi step3 SAU wave moi loi).
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        stubCallThrows(up3, new BusinessException("GW-UP-500", "step3 loi"));
+        stubCall(upComp1, json("{\"ok\":true}"));
+        stubCall(upComp2, json("{\"ok\":true}"));
+        BackendStepDto s1 = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, 1,
+                "uc1", "upComp1", GatewayMethod.DELETE, "/undo1");
+        BackendStepDto s2 = new BackendStepDto(null, 2, "step2", GatewayMethod.GET, "/x", "u2", "up2",
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, 1,
+                "uc2", "upComp2", GatewayMethod.DELETE, "/undo2");
+        BackendStepDto s3 = plainStep(3, "u3");
+        EndpointResponseDto config = endpoint(true, s1, s2, s3);
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null)).isInstanceOf(BusinessException.class);
+
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(upComp2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void compensation_fieldMappingCompensationContext_dungDuLieuTuChinhResponseStepDo() {
+        // sourceStepOrder==targetStepOrder (bu tru step1 dung CHINH response cua step1,
+        // truong hop pho bien nhat - vd lay "orderId" vua tao de dien vao URL DELETE).
+        stubCall(up1, json("{\"orderId\":\"O123\"}"));
+        stubCallThrows(up2, new BusinessException("GW-UP-500", "step2 loi"));
+        stubCall(upComp1, json("{\"ok\":true}"));
+        BackendStepDto s1 = stepWithCompensation(1, "u1", "uc1", "/orders/{orderId}");
+        BackendStepDto s2 = plainStep(2, "u2");
+        FieldMappingDto compMapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "orderId",
+                null, null, null, 1, MappingTargetType.PATH, "orderId", 0, MappingTargetContext.COMPENSATION);
+        EndpointResponseDto config = endpointWithMappings(List.of(compMapping), s1, s2);
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null)).isInstanceOf(BusinessException.class);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(upComp1), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).contains("/orders/O123");
     }
 
     // ---- Re nhanh that: di theo nhanh dung/sai ----
@@ -639,7 +807,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto stepWithOverride = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 750, 5000, // connectTimeoutMs/readTimeoutMs override rieng cho step nay
-                null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         engine.handle(endpoint(true, stepWithOverride), Map.of(), Map.of(), null);
 
@@ -671,7 +839,7 @@ class CompositeOrchestratorEngineTest {
     void queryParamMapping_forwardDungGiaTriVaoQuery() {
         stubCall(up1, json("{\"v\":1}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
-                1, MappingTargetType.QUERY, "staffCode", 0);
+                1, MappingTargetType.QUERY, "staffCode", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
@@ -687,7 +855,7 @@ class CompositeOrchestratorEngineTest {
     void queryParamMapping_forwardDungGiaTriVaoBodyField() {
         stubCall(up1, json("{\"v\":1}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
-                1, MappingTargetType.BODY_FIELD, "staffCode", 0);
+                1, MappingTargetType.BODY_FIELD, "staffCode", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
@@ -703,7 +871,7 @@ class CompositeOrchestratorEngineTest {
     void queryParamMapping_khongCoGiaTri_traNullKhongThrow() {
         stubCall(up1, json("{\"v\":1}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
-                1, MappingTargetType.BODY_FIELD, "staffCode", 0);
+                1, MappingTargetType.BODY_FIELD, "staffCode", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
@@ -723,7 +891,7 @@ class CompositeOrchestratorEngineTest {
     void constantMapping_forwardDungGiaTriVaoQuery_luonLaChuoiTextNguyenBan() {
         stubCall(up1, json("{\"v\":1}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
-                1, MappingTargetType.QUERY, "priority", 0);
+                1, MappingTargetType.QUERY, "priority", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
@@ -739,7 +907,7 @@ class CompositeOrchestratorEngineTest {
     void constantMapping_bodyField_chuoiSoTuDongThanhSoJSON() {
         stubCall(up1, json("{\"v\":1}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "3",
-                1, MappingTargetType.BODY_FIELD, "priority", 0);
+                1, MappingTargetType.BODY_FIELD, "priority", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
@@ -757,7 +925,7 @@ class CompositeOrchestratorEngineTest {
     void constantMapping_bodyField_chuoiKhongPhaiJson_giuNguyenDangChuoi() {
         stubCall(up1, json("{\"v\":1}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
-                1, MappingTargetType.BODY_FIELD, "priority", 0);
+                1, MappingTargetType.BODY_FIELD, "priority", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
 
@@ -780,7 +948,7 @@ class CompositeOrchestratorEngineTest {
         stubCall(up1, json("{\"data\":[{\"500173047\":\"1\"},{\"400017940\":\"1\"},{\"400019046\":\"1\"}]}"));
         stubCall(up2, json("{\"ok\":true}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
-                2, MappingTargetType.BODY_FIELD, "$body", 0);
+                2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
@@ -801,7 +969,7 @@ class CompositeOrchestratorEngineTest {
         stubCall(up1, json("{\"data\":[{\"a\":\"1\"},{\"a\":\"2\"}]}"));
         stubCall(up2, json("{\"ok\":true}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
-                2, MappingTargetType.BODY_FIELD, "$body", 0);
+                2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
@@ -818,7 +986,7 @@ class CompositeOrchestratorEngineTest {
         stubCall(up1, json("{\"data\":[{\"a\":\"1\"},\"khong-phai-object\",123]}"));
         stubCall(up2, json("{\"ok\":true}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
-                2, MappingTargetType.BODY_FIELD, "$body", 0);
+                2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 
@@ -836,7 +1004,7 @@ class CompositeOrchestratorEngineTest {
         stubCall(up1, json("{}"));
         stubCall(up2, json("{\"ok\":true}"));
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
-                2, MappingTargetType.BODY_FIELD, "$body", 0);
+                2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
 

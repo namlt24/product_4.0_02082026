@@ -12,6 +12,23 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
+-- Cap nhat 2026-08-29 (lan 12): them cot BACKEND_STEP.COMPENSATION_UPSTREAM_SERVICE_ID
+-- (FK toi UPSTREAM_SERVICE, nullable) + COMPENSATION_METHOD + COMPENSATION_URL_PATTERN
+-- (deu nullable, KHONG @ColumnDefault) - bu tru/rollback nghiep vu (saga best-effort,
+-- muc 6). Kem cot FIELD_MAPPING.TARGET_CONTEXT (VARCHAR2 DEFAULT 'MAIN' NOT NULL) phan
+-- biet mapping xay dung loi goi CHINH (MAIN) hay loi goi BU TRU (COMPENSATION) cua 1
+-- step. Xem CompositeOrchestratorEngine.runCompensations()/executeCompensationStep() +
+-- EndpointService.validateCompensationConfig(). Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE backend_step ADD compensation_upstream_service_id VARCHAR2(255 CHAR);
+-- ALTER TABLE backend_step ADD CONSTRAINT backend_step_comp_upstream_fk
+--   FOREIGN KEY (compensation_upstream_service_id) REFERENCES upstream_service(id);
+-- ALTER TABLE backend_step ADD compensation_method VARCHAR2(255 CHAR);
+-- ALTER TABLE backend_step ADD CONSTRAINT backend_step_comp_method_chk
+--   CHECK (compensation_method in ('GET','POST','PUT','DELETE','PATCH'));
+-- ALTER TABLE backend_step ADD compensation_url_pattern VARCHAR2(255 CHAR);
+-- ALTER TABLE field_mapping ADD target_context VARCHAR2(255 CHAR) DEFAULT 'MAIN' NOT NULL;
+-- ALTER TABLE field_mapping ADD CONSTRAINT field_mapping_target_context_chk
+--   CHECK (target_context in ('MAIN','COMPENSATION'));
 -- Cap nhat 2026-08-29 (lan 10): them cot ENDPOINT_CONFIG.PARALLEL_EXECUTION (NUMBER(1,0),
 -- mac dinh 0) - muc 4 (song song hoa THAT SU step doc lap qua thread pool rieng
 -- parallelStepExecutor, xem ParallelExecutionConfig + CompositeOrchestratorEngine.
@@ -237,15 +254,24 @@ CREATE TABLE "BACKEND_STEP"
 	-- "Wave" song song trong 1 chuoi sequential - step cung gia tri PARALLEL_GROUP chay
 	-- DONG THOI, xem BackendStep.parallelGroup - null = step tuan tu binh thuong (hanh vi cu).
 	"PARALLEL_GROUP" NUMBER(10,0),
+	-- Bu tru/rollback nghiep vu (saga best-effort, muc 6) - tuy chon, ca 3 cot deu
+	-- nullable, PHAI cung co hoac cung khong co (validate luc luu, xem
+	-- EndpointService.validateCompensationConfig()).
+	"COMPENSATION_UPSTREAM_SERVICE_ID" VARCHAR2(255 CHAR),
+	"COMPENSATION_METHOD" VARCHAR2(255 CHAR),
+	"COMPENSATION_URL_PATTERN" VARCHAR2(255 CHAR),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK ((condition_operator in ('EQUALS','NOT_EQUALS','EXISTS','NOT_EXISTS','GREATER_THAN','GREATER_THAN_OR_EQUAL','LESS_THAN','LESS_THAN_OR_EQUAL'))) ENABLE,
 	 CHECK ((condition_source_type in ('STEP_RESPONSE','REQUEST_BODY','STEP_RESPONSE_ARRAY_AGGREGATE'))) ENABLE,
+	 CHECK (compensation_method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CONSTRAINT "BACKEND_STEP_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKRTN26VYRBRFLYH5FA838XWTL2" FOREIGN KEY ("ENDPOINT_ID")
 	  REFERENCES "ENDPOINT_CONFIG" ("ID") ENABLE,
 	 CONSTRAINT "FK2RCXPBA4YOIDGMRN8I0S3OFTT" FOREIGN KEY ("UPSTREAM_SERVICE_ID")
+	  REFERENCES "UPSTREAM_SERVICE" ("ID") ENABLE,
+	 CONSTRAINT "BACKEND_STEP_COMP_UPSTREAM_FK" FOREIGN KEY ("COMPENSATION_UPSTREAM_SERVICE_ID")
 	  REFERENCES "UPSTREAM_SERVICE" ("ID") ENABLE
    );
 
@@ -291,8 +317,12 @@ CREATE TABLE "FIELD_MAPPING"
 	"TARGET_TYPE" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"ENDPOINT_ID" VARCHAR2(255 CHAR),
 	"MAPPING_ORDER" NUMBER(10,0) DEFAULT 0 NOT NULL ENABLE,
+	-- Mapping xay dung loi goi CHINH (MAIN, mac dinh) hay loi goi BU TRU (COMPENSATION)
+	-- cua TARGET_STEP_ORDER - xem MappingTargetContext + muc 6 (saga best-effort).
+	"TARGET_CONTEXT" VARCHAR2(255 CHAR) DEFAULT 'MAIN' NOT NULL ENABLE,
 	 CONSTRAINT "FIELD_MAPPING_SOURCE_TYPE_CHK" CHECK (source_type in ('STEP_RESPONSE','REQUEST_BODY','QUERY_PARAM','STEP_RESPONSE_ARRAY_AGGREGATE','CONSTANT','STEP_RESPONSE_ARRAY_MERGE')) ENABLE,
 	 CHECK (target_type in ('PATH','QUERY','HEADER','BODY_FIELD')) ENABLE,
+	 CONSTRAINT "FIELD_MAPPING_TARGET_CONTEXT_CHK" CHECK (target_context in ('MAIN','COMPENSATION')) ENABLE,
 	 CONSTRAINT "FIELD_MAPPING_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "FKG9BDKEU7BU7USNQSCONIOKV8K" FOREIGN KEY ("ENDPOINT_ID")
 	  REFERENCES "ENDPOINT_CONFIG" ("ID") ENABLE

@@ -4,6 +4,7 @@ import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
+import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
@@ -86,7 +87,22 @@ public class CompositeOrchestratorEngine {
             return assembleFinalResponse(orderedSteps, ctx);
         }
 
-        return executeSequentialChain(config, orderedSteps, ctx);
+        // Bu tru/rollback nghiep vu (saga best-effort, muc 6) - CHI ap dung nhanh
+        // sequential=true (khong dung cho nhanh non-sequential o tren, hoan toan
+        // KHONG doi). Boc o DAY (handle(), khong phai ben trong
+        // executeSequentialChain()) de giu method do nguyen ven, giam rui ro tuong
+        // tac - ctx duoc truyen THEO THAM CHIEU nen moi putStepResult() da chay
+        // ben trong executeSequentialChain() truoc khi no throw van "nhin thay
+        // duoc" o day. Chi kich hoat khi loi THOAT HAN ra ngoai executeSequentialChain()
+        // - nghia la onErrorStepOrder (neu co) da co co hoi xu ly truoc do (fallback
+        // thanh cong thi ham tra ve binh thuong, khong co exception nao de bat o
+        // day, runCompensations() khong bao gio duoc goi).
+        try {
+            return executeSequentialChain(config, orderedSteps, ctx);
+        } catch (RuntimeException e) {
+            runCompensations(config, orderedSteps, ctx);
+            throw e;
+        }
     }
 
     /**
@@ -370,11 +386,15 @@ public class CompositeOrchestratorEngine {
                     "Step '" + step.name() + "' tham chieu Upstream Service khong ton tai (id=" + step.upstreamServiceId() + ").");
         }
 
+        // targetContext==MAIN: no-op voi moi du lieu hien co (mac dinh MAIN qua
+        // compact constructor cua FieldMappingDto) - mapping targetContext=COMPENSATION
+        // (muc 6) chi duoc dung boi executeCompensationStep(), khong bao gio lot vao
+        // loi goi CHINH nay.
         List<FieldMappingDto> mappingsForStep = config.mappings().stream()
-                .filter(m -> m.targetStepOrder() == step.stepOrder())
+                .filter(m -> m.targetStepOrder() == step.stepOrder() && m.targetContext() == MappingTargetContext.MAIN)
                 .toList();
 
-        String resolvedPath = resolvePath(step, ctx, mappingsForStep);
+        String resolvedPath = resolvePath(step.urlPattern(), step.name(), ctx, mappingsForStep);
         String resolvedUrl = buildUrl(upstream.getBaseHost(), resolvedPath, mappingsForStep, ctx);
         HttpHeaders headers = buildHeaders(mappingsForStep, ctx);
         JsonNode body = buildBody(step, mappingsForStep, ctx);
@@ -391,9 +411,19 @@ public class CompositeOrchestratorEngine {
         return ResponseTransformUtil.transform(unwrapped, step.allowFields(), step.denyFields(), step.fieldRenameMapping());
     }
 
-    /** Thay {token} trong urlPattern: uu tien FieldMapping targetType=PATH, sau do fallback pathVariables cua endpoint (token trung ten). */
-    private String resolvePath(BackendStepDto step, ExecutionContext ctx, List<FieldMappingDto> mappingsForStep) {
-        String pattern = step.urlPattern();
+    /**
+     * Thay {token} trong urlPattern: uu tien FieldMapping targetType=PATH, sau do
+     * fallback pathVariables cua endpoint (token trung ten).
+     *
+     * Chu ky nhan `urlPattern`/`stepLabel` RIENG (khong phai nguyen `BackendStepDto step`)
+     * de TAI DUNG duoc CHO CA loi goi bu tru (muc 6, xem executeCompensationStep() -
+     * urlPattern la `step.compensationUrlPattern()`, khac `step.urlPattern()` cua loi
+     * goi chinh) - ham CHI tung dung dung 2 gia tri nay tu step (urlPattern + name
+     * cho thong bao loi), doi chu ky KHONG doi 1 dong logic ben trong, call site
+     * hien co (executeStep()) truyen y HET gia tri cu, khong doi hanh vi.
+     */
+    private String resolvePath(String urlPattern, String stepLabel, ExecutionContext ctx, List<FieldMappingDto> mappingsForStep) {
+        String pattern = urlPattern;
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\{([a-zA-Z0-9_]+)}").matcher(pattern);
         StringBuilder result = new StringBuilder();
         int lastEnd = 0;
@@ -406,7 +436,7 @@ public class CompositeOrchestratorEngine {
                     .orElseGet(() -> ctx.pathVariables().get(token));
             if (value == null) {
                 throw new BusinessException("GW-PATH-TOKEN-MISSING",
-                        "Khong tim duoc gia tri cho token '{" + token + "}' o step '" + step.name() + "'.");
+                        "Khong tim duoc gia tri cho token '{" + token + "}' o step '" + stepLabel + "'.");
             }
             result.append(pattern, lastEnd, matcher.start()).append(java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8));
             lastEnd = matcher.end();
@@ -463,6 +493,92 @@ public class CompositeOrchestratorEngine {
         for (FieldMappingDto m : bodyMappings) {
             JsonNode value = resolveMappingValueAsJson(m, ctx);
             JsonPathUtil.setField(base, m.targetParamName(), value);
+        }
+        return base;
+    }
+
+    /**
+     * Bu tru/rollback nghiep vu (saga best-effort, muc 6) - sau khi CA CHUOI that
+     * bai (goi tu handle(), xem javadoc o do), duyet ctx.completedStepOrders()
+     * theo thu tu NGUOC (undo cai gan nhat truoc), voi moi step co
+     * compensationUpstreamServiceId da cau hinh, goi lenh bu tru rieng cua no.
+     *
+     * Best-effort THAT SU: MOI loi goi bu tru rieng le duoc bat + log WARN + BO
+     * QUA (chay tiep cac step con lai can bu tru) - method nay KHONG BAO GIO
+     * throw, khong doi gia tri handle() se tra/nem ra ngoai (loi GOC luon la loi
+     * client nhin thay, khong bao gio bi loi bu tru che mat).
+     *
+     * NGOAI PHAM VI V1 (ghi ro trong plan da duyet): khong co outbox/retry ben
+     * vung neu ban than loi goi bu tru cung that bai - chi thu 1 lan roi bo qua.
+     */
+    private void runCompensations(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
+        Map<Integer, BackendStepDto> stepsByOrder = orderedSteps.stream()
+                .collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
+        List<Integer> completedInOrder = ctx.completedStepOrders();
+        for (int i = completedInOrder.size() - 1; i >= 0; i--) {
+            BackendStepDto step = stepsByOrder.get(completedInOrder.get(i));
+            if (step == null || step.compensationUpstreamServiceId() == null) {
+                continue;
+            }
+            log.warn("Endpoint '{}': chuoi that bai, dang bu tru (rollback best-effort) step '{}' (order={})...",
+                    config.name(), step.name(), step.stepOrder());
+            try {
+                executeCompensationStep(config, step, ctx);
+            } catch (RuntimeException ex) {
+                log.warn("Endpoint '{}': bu tru cho step '{}' (order={}) that bai, bo qua (best-effort, khong anh huong loi goc): {}",
+                        config.name(), step.name(), step.stepOrder(), ex.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Goi 1 lenh bu tru rieng cua 1 step - mirror executeStep() nhung dung cau
+     * hinh/mapping RIENG cua bu tru (compensationUpstreamServiceId/Method/UrlPattern,
+     * mapping targetContext=COMPENSATION), khong dung gi tu loi goi CHINH. Response
+     * cua lenh bu tru KHONG duoc dung tiep (khong unwrap/transform, khong
+     * putStepResult) - chi de ghi audit hop (qua chinh UpstreamHttpExecutor.call()
+     * nhu moi hop khac) va bao hieu thanh cong/that bai cho runCompensations().
+     */
+    private void executeCompensationStep(EndpointResponseDto config, BackendStepDto step, ExecutionContext ctx) {
+        UpstreamService upstream = upstreamRegistryCache.getById(step.compensationUpstreamServiceId());
+        if (upstream == null) {
+            // Hiem (id sai/upstream vua bi xoa) - throw dung y het executeStep(), an
+            // toan vi runCompensations() da boc TUNG loi goi bu tru trong try/catch rieng.
+            throw new BusinessException("GW-UPSTREAM-404",
+                    "Bu tru cho step '" + step.name() + "' tham chieu Upstream Service khong ton tai (id=" + step.compensationUpstreamServiceId() + ").");
+        }
+
+        List<FieldMappingDto> compensationMappings = config.mappings().stream()
+                .filter(m -> m.targetStepOrder() == step.stepOrder() && m.targetContext() == MappingTargetContext.COMPENSATION)
+                .toList();
+
+        String stepLabel = step.name() + " (bu tru)";
+        String resolvedPath = resolvePath(step.compensationUrlPattern(), stepLabel, ctx, compensationMappings);
+        String resolvedUrl = buildUrl(upstream.getBaseHost(), resolvedPath, compensationMappings, ctx);
+        HttpHeaders headers = buildHeaders(compensationMappings, ctx);
+        JsonNode body = buildCompensationBody(compensationMappings, ctx);
+
+        HttpMethod httpMethod = HttpMethod.valueOf(step.compensationMethod().name());
+        upstreamHttpExecutor.call(upstream, httpMethod, resolvedUrl, headers, body,
+                false, 0, step.stepOrder(), "[BU TRU] " + step.name(), null, null);
+    }
+
+    /**
+     * Body cho lenh bu tru - CHI gop cac mapping targetType=BODY_FIELD (targetContext=
+     * COMPENSATION), KHONG ho tro forwardOriginalBody/"$body" nhu buildBody() chinh
+     * (V1 co tinh giu don gian - bu tru la 1 lenh "undo" co chu dich, khong can
+     * nguyen body client goc). Tach RIENG method, KHONG sua buildBody() hien co.
+     */
+    private JsonNode buildCompensationBody(List<FieldMappingDto> compensationMappings, ExecutionContext ctx) {
+        List<FieldMappingDto> bodyMappings = compensationMappings.stream()
+                .filter(m -> m.targetType() == MappingTargetType.BODY_FIELD)
+                .toList();
+        if (bodyMappings.isEmpty()) {
+            return null;
+        }
+        ObjectNode base = objectMapper.createObjectNode();
+        for (FieldMappingDto m : bodyMappings) {
+            JsonPathUtil.setField(base, m.targetParamName(), resolveMappingValueAsJson(m, ctx));
         }
         return base;
     }

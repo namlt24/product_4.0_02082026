@@ -86,7 +86,13 @@ public record BackendStepDto(
          * ca chuoi (hanh vi cu). DOC LAP voi conditionOperator - dung duoc ca step tuan tu
          * thuong. Xem BackendStep.onErrorStepOrder.
          */
-        Integer onErrorStepOrder
+        Integer onErrorStepOrder,
+
+        /**
+         * "Wave" song song trong 1 chuoi sequential - xem BackendStep.parallelGroup.
+         * Chi co y nghia khi EndpointConfig.sequential=true.
+         */
+        Integer parallelGroup
 ) {
     public BackendStepDto {
         if (cacheTtlSeconds <= 0) {

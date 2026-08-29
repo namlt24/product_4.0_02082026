@@ -13,8 +13,10 @@ import com.bccs.gatewaymanager.service.UpstreamRegistryCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -79,7 +81,7 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 conditionSourceType, conditionSourceStepOrder, conditionSourceField, operator, conditionExpectedValue,
-                nextIfTrue, nextIfFalse, null);
+                nextIfTrue, nextIfFalse, null, null);
     }
 
     private BackendStepDto plainStep(int order, String upstreamId) {
@@ -95,6 +97,12 @@ class CompositeOrchestratorEngineTest {
     private EndpointResponseDto endpointParallel(BackendStepDto... steps) {
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, false, "json",
                 List.of(steps), List.of(), null, null, false, 86400, true);
+    }
+
+    /** Endpoint sequential=true VOI mappings tuy chinh - dung cho nhom test wave (parallelGroup) can FieldMapping. */
+    private EndpointResponseDto endpointWithMappings(List<FieldMappingDto> mappings, BackendStepDto... steps) {
+        return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(steps), mappings, null, null, false, 86400, false);
     }
 
     private void stubCall(UpstreamService upstream, JsonNode response) {
@@ -113,7 +121,16 @@ class CompositeOrchestratorEngineTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 null, null, null, null, null,
-                null, null, onErrorStepOrder);
+                null, null, onErrorStepOrder, null);
+    }
+
+    /** Step trong 1 "wave" song song (parallelGroup) - dung cho test wave/dependency execution. */
+    private BackendStepDto stepWithGroup(int order, String upstreamId, Integer parallelGroup) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, parallelGroup);
     }
 
     // ---- Tuong thich nguoc: endpoint KHONG dung re nhanh phai chay DUNG y het hanh vi cu ----
@@ -215,6 +232,112 @@ class CompositeOrchestratorEngineTest {
         stubCall(up1, json("{\"a\":1}"));
         stubCall(up2, json("{\"b\":2}"));
         EndpointResponseDto config = endpoint(false, plainStep(1, "u1"), plainStep(2, "u2"));
+
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+
+        assertThat(result.get("a").asInt()).isEqualTo(1);
+        assertThat(result.get("b").asInt()).isEqualTo(2);
+    }
+
+    @Test
+    void parallel_MDCRequestIdLanSangThreadPool_khongBiMatKhoiHopAuditLog() {
+        // Bug THAT phat hien khi verify song tinh nang wave (chi thay 1/3 hop trong audit
+        // log, dung ra phai co 3) - MDC ("requestId", dung de noi hop audit log voi dung
+        // request, xem UpstreamHttpExecutor.call()) la ThreadLocal, KHONG tu lan sang
+        // thread cua parallelStepExecutor - truoc fix, hop chay trong thread song song bi
+        // ghi requestId=null, mat hoan toan khoi "Tra cuu Log". Test nay khong goi
+        // UpstreamHttpExecutor that (da mock) nhung mo phong DUNG cach no doc MDC.get()
+        // ngay trong luc thuc thi (thenAnswer chay TREN chinh thread cua parallelStepExecutor).
+        MDC.put("requestId", "req-mdc-test");
+        try {
+            List<String> capturedRequestIds = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+            when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                    .thenAnswer(inv -> { capturedRequestIds.add(MDC.get("requestId")); return json("{\"a\":1}"); });
+            when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                    .thenAnswer(inv -> { capturedRequestIds.add(MDC.get("requestId")); return json("{\"b\":2}"); });
+            EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"));
+
+            engine.handle(config, Map.of(), Map.of(), null);
+
+            assertThat(capturedRequestIds).containsExactlyInAnyOrder("req-mdc-test", "req-mdc-test");
+        } finally {
+            MDC.remove("requestId");
+        }
+    }
+
+    // ---- Wave song song trong 1 chuoi sequential (parallelGroup) ----
+    // Khac muc 4 (parallelExecution - TOAN BO step khong sequential chay song song):
+    // day la 1 "doan" song song NAM TRONG 1 chuoi sequential=true, step SAU wave van
+    // chay tuan tu binh thuong va co the doc du lieu da gop cua CA wave.
+
+    @Test
+    void wave_2StepSongSong_step3TuanTuDocDuLieuGopCuaCaWave() {
+        // Chinh nghiep vu nguoi dung mo ta: step1+step2 (cung parallelGroup=1) chay song
+        // song, step3 (tuan tu, KHONG group) dung 2 FieldMapping doc field "a" tu step1 va
+        // "b" tu step2 - phai co CA HAI, khong bi race/null (day la dieu workaround "goi
+        // lai chinh gateway" tung phai lam qua 2 endpoint moi dam bao dung).
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        stubCall(up3, json("{\"ok\":true}"));
+        BackendStepDto s1 = stepWithGroup(1, "u1", 1);
+        BackendStepDto s2 = stepWithGroup(2, "u2", 1);
+        BackendStepDto s3 = plainStep(3, "u3");
+        FieldMappingDto m1 = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 1, "a", null, null, null,
+                3, MappingTargetType.QUERY, "fromStep1", 0);
+        FieldMappingDto m2 = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE, 2, "b", null, null, null,
+                3, MappingTargetType.QUERY, "fromStep2", 1);
+        EndpointResponseDto config = endpointWithMappings(List.of(m1, m2), s1, s2, s3);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor)
+                .call(eq(up3), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).contains("fromStep1=1").contains("fromStep2=2");
+    }
+
+    @Test
+    void wave_chayThatSuDongThoi_khongPhaiTuanTuNguyTrang() {
+        // Dung y het pattern do thoi gian cua muc 4 (parallel_chayThatSuDongThoi...) -
+        // chung minh wave TRONG 1 chuoi sequential cung chay THAT dong thoi, khong phai
+        // tuan tu doi lot.
+        int delayMs = 200;
+        when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"a\":1}"); });
+        when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"b\":2}"); });
+        EndpointResponseDto config = endpoint(true, stepWithGroup(1, "u1", 1), stepWithGroup(2, "u2", 1));
+
+        long start = System.nanoTime();
+        JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(result.get("a").asInt()).isEqualTo(1);
+        assertThat(result.get("b").asInt()).isEqualTo(2);
+        assertThat(elapsedMs).isLessThan(2L * delayMs - 50);
+    }
+
+    @Test
+    void wave_1ThanhVienLoi_doiCaWaveXongRoiThrowLoiGoc() {
+        stubCall(up2, json("{\"b\":2}"));
+        stubCallThrows(up1, new BusinessException("GW-UP-500", "upstream 1 loi"));
+        EndpointResponseDto config = endpoint(true, stepWithGroup(1, "u1", 1), stepWithGroup(2, "u2", 1));
+
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("upstream 1 loi");
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.times(1))
+                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
+    void wave_laStepCuoiCungCuaChuoi_ketQuaLaGopCaWave() {
+        // Khong co step nao sau wave -> response cuoi cung = gop field cua ca wave, dung
+        // y het cach assembleFinalResponse() gop cho endpoint non-sequential (tai su dung
+        // code, xem CompositeOrchestratorEngine.executeSequentialChain()).
+        stubCall(up1, json("{\"a\":1}"));
+        stubCall(up2, json("{\"b\":2}"));
+        EndpointResponseDto config = endpoint(true, stepWithGroup(1, "u1", 1), stepWithGroup(2, "u2", 1));
 
         JsonNode result = engine.handle(config, Map.of(), Map.of(), null);
 
@@ -445,7 +568,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto stepWithOverride = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 750, 5000, // connectTimeoutMs/readTimeoutMs override rieng cho step nay
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
 
         engine.handle(endpoint(true, stepWithOverride), Map.of(), Map.of(), null);
 

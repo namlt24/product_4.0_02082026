@@ -176,6 +176,10 @@ export class EndpointFormComponent implements OnInit {
       // Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi conditionOperator o tren,
       // dung duoc ca cho step tuan tu thuong.
       onErrorStepOrder: [step.onErrorStepOrder ?? null],
+      // "Wave" song song trong chuoi sequential - KHONG tham chieu stepOrder (chi la 1 ma
+      // nhom tuy chon), nen KHONG can logic reindex/xoa nhu onErrorStepOrder o tren khi
+      // removeStep() renumber cac step con lai.
+      parallelGroup: [step.parallelGroup ?? null],
     });
   }
 
@@ -530,6 +534,9 @@ export class EndpointFormComponent implements OnInit {
       nextStepOrderIfFalse: s.conditionOperator ? s.nextStepOrderIfFalse || null : null,
       // onErrorStepOrder DOC LAP voi conditionOperator - khong gate theo dieu kien re nhanh.
       onErrorStepOrder: s.onErrorStepOrder || null,
+      // parallelGroup cung DOC LAP voi conditionOperator - chi co y nghia khi sequential=true
+      // (backend tu validate, xem EndpointService.validateParallelGroups()).
+      parallelGroup: s.parallelGroup || null,
     }));
 
     const mappings: FieldMapping[] = v.mappings.map((m: any) => ({

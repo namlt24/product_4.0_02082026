@@ -355,6 +355,27 @@
                 }
               </div>
 
+              <!-- Wave song song trong chuoi sequential (parallelGroup) - CHI co y nghia khi
+                   sequential=true cap Endpoint (backend validate rieng, xem
+                   EndpointService.validateParallelGroups()). -->
+              @if (form.get('sequential')?.value) {
+                <div class="sub-section">
+                  <div class="sub-section-header">
+                    <span>Nhóm chạy song song (tuỳ chọn)</span>
+                  </div>
+                  <mat-form-field appearance="outline" class="small-field">
+                    <mat-label>Số nhóm</mat-label>
+                    <input matInput type="number" formControlName="parallelGroup" placeholder="vd: 1" />
+                  </mat-form-field>
+                  @if (stepsArray.at(i).get('parallelGroup')?.value) {
+                    <div class="field-note field-note--warning">
+                      <mat-icon inline="true">warning</mat-icon>
+                      <span>Các step có CÙNG số nhóm sẽ chạy ĐỒNG THỜI, sau đó step tiếp theo (tuần tự) mới chạy - có thể đọc dữ liệu đã gộp của cả nhóm qua Field Mapping. Yêu cầu: các step cùng nhóm phải có stepOrder LIÊN TIẾP nhau, không được rẽ nhánh/fallback riêng, và không step nào khác được nhảy/fallback tới 1 step trong nhóm.</span>
+                    </div>
+                  }
+                </div>
+              }
+
               <mat-action-row>
                 <button mat-button type="button" color="warn" (click)="removeStep(i)">
                   <mat-icon>delete</mat-icon> Xoa Step {{ i + 1 }}

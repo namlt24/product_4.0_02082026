@@ -210,4 +210,27 @@ public class BackendStep {
      */
     @Column(name = "on_error_step_order")
     private Integer onErrorStepOrder;
+
+    /**
+     * "Wave" song song trong 1 chuoi sequential - cac step co CUNG gia tri
+     * parallelGroup (khac null) chay DONG THOI qua parallelStepExecutor (dung lai
+     * bean da co tu EndpointConfig.parallelExecution), roi step TIEP THEO (tuan tu
+     * binh thuong) moi chay, co the doc du lieu da gop cua CA wave qua FieldMapping.
+     * Khac EndpointConfig.parallelExecution (toan bo step KHONG sequential chay song
+     * song, khong con tro/chuoi) - day la 1 "doan" song song NAM TRONG 1 chuoi
+     * sequential=true, xen giua cac step tuan tu binh thuong khac.
+     *
+     * Chi co y nghia khi EndpointConfig.sequential=true. Rang buoc validate luc luu
+     * (xem EndpointService): step co parallelGroup PHAI co conditionOperator=null VA
+     * onErrorStepOrder=null (khong re nhanh/fallback TU 1 step trong wave - V1 chua
+     * ho tro); KHONG step nao khac duoc nhay/fallback TOI 1 step co parallelGroup (wave
+     * chi vao duoc qua tien trinh tuan tu tu nhien); cac stepOrder trong CUNG 1
+     * parallelGroup PHAI LIEN TIEP (vi du {2,3}, khong duoc {2,4}) de tranh bo sot 1
+     * step "la" nam giua khi engine nhay tu dau wave thang toi sau cuoi wave.
+     *
+     * Nullable, KHONG can @ColumnDefault (giong canvasX/canvasY o tren) - step khong
+     * khai bao (null) chay dung 100% hanh vi cu, khong bi anh huong.
+     */
+    @Column(name = "parallel_group")
+    private Integer parallelGroup;
 }

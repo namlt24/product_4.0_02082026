@@ -62,7 +62,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
     }
 
     /** Step voi dieu kien re nhanh - dung cho cac test P1-5 (validate next-step-not-exist, cycle...). */
@@ -77,7 +77,7 @@ class EndpointServiceTest {
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
                 FieldMappingSourceType.STEP_RESPONSE, conditionSourceStepOrder, "field", operator, conditionExpectedValue,
-                nextIfTrue, nextIfFalse, null);
+                nextIfTrue, nextIfFalse, null, null);
     }
 
     /** Step voi onErrorStepOrder rieng (doc lap voi conditionOperator) - dung cho test fallback loi. */
@@ -86,7 +86,25 @@ class EndpointServiceTest {
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
                 null, null, null, null, null,
-                null, null, onErrorStepOrder);
+                null, null, onErrorStepOrder, null);
+    }
+
+    /** Step trong 1 nhom song song (parallelGroup) - dung cho test wave/dependency execution. */
+    private BackendStepDto stepWithGroup(int order, Integer parallelGroup) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, parallelGroup);
+    }
+
+    /** Step vua trong 1 nhom song song, vua khai bao conditionOperator rieng - CAU HINH SAI (V1 khong ho tro), dung de test reject. */
+    private BackendStepDto stepWithGroupAndCondition(int order, Integer parallelGroup) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
+                FieldMappingSourceType.REQUEST_BODY, null, "x", ConditionOperator.EXISTS, null,
+                null, null, null, parallelGroup);
     }
 
     private EndpointRequestDto requestWithMapping(FieldMappingDto mapping) {
@@ -544,5 +562,85 @@ class EndpointServiceTest {
                 List.of(step(1), step(2)), List.of(), false, null, true);
 
         assertThat(service.create(dto)).isNotNull();
+    }
+
+    // ---- Wave song song trong 1 chuoi sequential (parallelGroup) ----
+
+    @Test
+    void create_parallelGroupHopLe_sequentialTrue_thanhCong() {
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(stepWithGroup(1, 10), stepWithGroup(2, 10)), List.of(), false, null, false);
+
+        assertThat(service.create(dto)).isNotNull();
+    }
+
+    @Test
+    void create_rejectsParallelGroupKhiSequentialFalse() {
+        // parallelGroup chi co y nghia trong 1 chuoi sequential=true (nguoc lai voi
+        // parallelExecution - chi dung khi sequential=false).
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, false, "json",
+                List.of(stepWithGroup(1, 10), stepWithGroup(2, 10)), List.of(), false, null, false);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsParallelGroupStepCoConditionOperatorRieng() {
+        // V1 chua ho tro re nhanh TU 1 step trong wave.
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(stepWithGroupAndCondition(1, 10), stepWithGroup(2, 10)), List.of(), false, null, false);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsParallelGroupStepCoOnErrorStepOrderRieng() {
+        // V1 chua ho tro fallback loi TU 1 step trong wave.
+        BackendStepDto s1 = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, 2, 10);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, stepWithGroup(2, 10)), List.of(), false, null, false);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsNhayVaoParallelGroup() {
+        // step1 (onErrorStepOrder=2) fallback TOI step2 - nhung step2 dang trong 1 nhom
+        // song song (parallelGroup=10) - wave chi duoc vao qua tien trinh tuan tu tu
+        // nhien, khong duoc qua nhay/fallback.
+        BackendStepDto s1 = stepWithOnError(1, 2);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(s1, stepWithGroup(2, 10), stepWithGroup(3, 10)), List.of(), false, null, false);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsParallelGroupStepOrderKhongLienTiep() {
+        // Nhom 10 = {step1, step3} - step2 (KHONG cung nhom) nam GIUA -> logic runtime
+        // "tu dau wave nhay thang toi sau cuoi wave" se BO QUA step2 - phai chan luc luu.
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(stepWithGroup(1, 10), step(2), stepWithGroup(3, 10)), List.of(), false, null, false);
+
+        assertThatThrownBy(() -> service.create(dto))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
     }
 }

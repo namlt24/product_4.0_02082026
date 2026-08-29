@@ -114,7 +114,7 @@ public class ConfigExportImportService {
                             // moi truong nguon nhu upstreamServiceId nen khong can resolve lai gi.
                             s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
                             s.conditionOperator(), s.conditionExpectedValue(),
-                            s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder());
+                            s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup());
                 })
                 .toList();
 

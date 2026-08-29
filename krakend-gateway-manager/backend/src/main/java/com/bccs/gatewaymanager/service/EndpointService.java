@@ -215,6 +215,70 @@ public class EndpointService {
         }
 
         validateBranching(dto, orders);
+        validateParallelGroups(dto);
+    }
+
+    /**
+     * Kiem tra "wave" song song trong 1 chuoi sequential (BackendStep.parallelGroup) -
+     * 4 rang buoc V1 (rui ro thap, xem plan da duyet): (1) chi dung khi sequential=true;
+     * (2) step trong wave khong duoc co conditionOperator/onErrorStepOrder rieng (V1
+     * chua ho tro re nhanh/fallback TU 1 thanh vien wave); (3) khong step nao khac
+     * duoc nhay/fallback TOI 1 step dang trong wave (wave chi vao duoc qua tien trinh
+     * tuan tu tu nhien, tranh nhap nhang "nhay vao thi vao dung thanh vien nao"); (4)
+     * stepOrder cua 1 wave PHAI LIEN TIEP (vi du {2,3}, khong duoc {2,4}) - neu khong,
+     * logic runtime "tu dau wave nhay thang toi sau cuoi wave"
+     * (CompositeOrchestratorEngine.executeSequentialChain()) se VO TINH BO QUA 1 step
+     * "la" nam giua thuoc nhom/khong nhom khac.
+     */
+    private void validateParallelGroups(EndpointRequestDto dto) {
+        boolean anyGroup = dto.steps().stream().anyMatch(s -> s.parallelGroup() != null);
+        if (!anyGroup) {
+            return;
+        }
+        if (!dto.sequential()) {
+            throw new BusinessException("GW-003",
+                    "parallelGroup chi ap dung duoc khi sequential=true (wave song song nam trong 1 chuoi tuan tu) - "
+                            + "endpoint sequential=false da co co rieng parallelExecution cho toan bo step.");
+        }
+        for (var s : dto.steps()) {
+            if (s.parallelGroup() != null && (s.conditionOperator() != null || s.onErrorStepOrder() != null)) {
+                throw new BusinessException("GW-003", "Step '" + s.name()
+                        + "': step trong 1 nhom song song (parallelGroup) khong duoc khai bao "
+                        + "conditionOperator/onErrorStepOrder rieng (chua ho tro o V1).");
+            }
+        }
+
+        var groupedStepOrders = dto.steps().stream()
+                .filter(s -> s.parallelGroup() != null)
+                .map(com.bccs.gatewaymanager.dto.BackendStepDto::stepOrder)
+                .collect(java.util.stream.Collectors.toSet());
+        for (var s : dto.steps()) {
+            boolean jumpsIntoGroup = (s.nextStepOrderIfTrue() != null && groupedStepOrders.contains(s.nextStepOrderIfTrue()))
+                    || (s.nextStepOrderIfFalse() != null && groupedStepOrders.contains(s.nextStepOrderIfFalse()))
+                    || (s.onErrorStepOrder() != null && groupedStepOrders.contains(s.onErrorStepOrder()));
+            if (jumpsIntoGroup) {
+                throw new BusinessException("GW-003", "Step '" + s.name()
+                        + "': khong duoc re nhanh/fallback TOI 1 step dang trong nhom song song (parallelGroup) - "
+                        + "wave chi duoc vao qua tien trinh tuan tu tu nhien.");
+            }
+        }
+
+        Map<Integer, List<Integer>> byGroup = dto.steps().stream()
+                .filter(s -> s.parallelGroup() != null)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        com.bccs.gatewaymanager.dto.BackendStepDto::parallelGroup,
+                        java.util.stream.Collectors.mapping(com.bccs.gatewaymanager.dto.BackendStepDto::stepOrder,
+                                java.util.stream.Collectors.toList())));
+        for (var entry : byGroup.entrySet()) {
+            List<Integer> sorted = entry.getValue().stream().sorted().toList();
+            int min = sorted.get(0);
+            int max = sorted.get(sorted.size() - 1);
+            if (max - min + 1 != sorted.size()) {
+                throw new BusinessException("GW-003", "Nhom song song #" + entry.getKey()
+                        + ": cac stepOrder " + sorted + " phai LIEN TIEP (khong co khoang trong) - "
+                        + "neu khong 1 step khac nam giua se bi bo qua khi thuc thi.");
+            }
+        }
     }
 
     /** true neu endpoint dung BAT KY co che "nhay" nao lam thu tu thuc thi khong con dam bao tang dan theo stepOrder - re nhanh (conditionOperator) HOAC fallback loi (onErrorStepOrder). */
@@ -302,6 +366,12 @@ public class EndpointService {
                 if (s.nextStepOrderIfTrue() != null) next.add(s.nextStepOrderIfTrue());
                 if (s.nextStepOrderIfFalse() != null) next.add(s.nextStepOrderIfFalse());
             } else {
+                // Step trong 1 "wave" song song (parallelGroup) cung roi vao day (luon co
+                // conditionOperator=null, da validate o validateParallelGroups()) - canh tinh
+                // ra la "stepOrder ke tiep lon hon minh", vi du group {2,3} thi step2->step3 (chinh
+                // no) roi step3->that-su-sau-wave. Chuoi canh nay LIEN TUC/khong lui, khong tao
+                // cycle gia (rule "khong duoc nhay/fallback TOI 1 step trong wave" da dam bao
+                // KHONG co canh nao khac tro VAO giua group) - khong can logic rieng cho wave o day.
                 allOrders.stream().filter(o -> o > s.stepOrder()).min(Integer::compareTo).ifPresent(next::add);
             }
             // Fallback loi (onErrorStepOrder) la 1 canh THEM, doc lap voi conditionOperator o

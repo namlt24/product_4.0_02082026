@@ -20,6 +20,12 @@
 -- ALTER TABLE endpoint_config ADD parallel_execution NUMBER(1,0) DEFAULT 0 NOT NULL;
 -- ALTER TABLE endpoint_config ADD CONSTRAINT endpoint_config_parallel_exec_chk
 --   CHECK (parallel_execution in (0,1));
+-- Cap nhat 2026-08-29 (lan 11): them cot BACKEND_STEP.PARALLEL_GROUP (NUMBER(10,0),
+-- nullable, KHONG can @ColumnDefault) - "wave" song song trong 1 chuoi sequential (nam
+-- TRONG chuoi tuan tu, khac EndpointConfig.parallelExecution la TOAN BO step khong
+-- sequential). Xem CompositeOrchestratorEngine.executeSequentialChain() +
+-- EndpointService.validateParallelGroups(). Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE backend_step ADD parallel_group NUMBER(10,0);
 -- Cap nhat 2026-08-27 (lan 1): them 'QUERY_PARAM' vao CHECK constraint cua
 -- FIELD_MAPPING.SOURCE_TYPE (doi ten sang FIELD_MAPPING_SOURCE_TYPE_CHK, khong
 -- con la ten SYS_C#### tu dong nua) - xem README.md muc 8 "Gioi han hien tai"
@@ -228,6 +234,9 @@ CREATE TABLE "BACKEND_STEP"
 	-- Fallback khi step nay LOI (P-3, doc lap voi conditionOperator) - null = throw ngay
 	-- (hanh vi cu), co gia tri = nhay sang step do thay vi ket thuc ca chuoi.
 	"ON_ERROR_STEP_ORDER" NUMBER(10,0),
+	-- "Wave" song song trong 1 chuoi sequential - step cung gia tri PARALLEL_GROUP chay
+	-- DONG THOI, xem BackendStep.parallelGroup - null = step tuan tu binh thuong (hanh vi cu).
+	"PARALLEL_GROUP" NUMBER(10,0),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,

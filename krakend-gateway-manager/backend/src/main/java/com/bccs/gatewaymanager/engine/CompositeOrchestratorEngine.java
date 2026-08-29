@@ -13,6 +13,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
@@ -136,6 +137,28 @@ public class CompositeOrchestratorEngine {
                 throw new BusinessException("GW-BRANCH-TARGET-404", "Endpoint '" + config.name()
                         + "': dieu kien re nhanh tro toi step " + currentOrder + " khong ton tai.");
             }
+            // "Wave" song song trong chuoi sequential (xem BackendStep.parallelGroup) - step
+            // nay la 1 THANH VIEN cua 1 nhom chay dong thoi. Gom TAT CA thanh vien cung nhom
+            // (EndpointService da validate: stepOrder cua 1 nhom LIEN TIEP, chi vao duoc qua
+            // tien trinh tu nhien, khong co conditionOperator/onErrorStepOrder rieng), chay
+            // qua executeStepsInParallel() **dung LAI nguyen ven** ham cua muc 4 (khong viet
+            // logic song song moi) - doi CA nhom xong (throw loi dau tien neu co), roi nhay
+            // thang toi natural-next SAU stepOrder LON NHAT trong nhom, dung CHINH XAC cong
+            // thuc natural-next da co ben duoi (determineNextStepOrder()) thay vi logic moi.
+            // Neu chuoi KET THUC ngay sau wave (khong con step nao), lastResult = ket qua GOP
+            // cua ca nhom qua assembleFinalResponse() - dung lai code cua endpoint non-sequential,
+            // nhat quan hanh vi giua 2 noi.
+            if (step.parallelGroup() != null) {
+                List<BackendStepDto> waveSteps = orderedSteps.stream()
+                        .filter(s -> step.parallelGroup().equals(s.parallelGroup()))
+                        .toList();
+                executeStepsInParallel(config, waveSteps, ctx);
+                lastResult = assembleFinalResponse(waveSteps, ctx);
+                int maxOrderInWave = waveSteps.stream().mapToInt(BackendStepDto::stepOrder).max().orElse(currentOrder);
+                waveSteps.forEach(member -> executedOrders.add(member.stepOrder()));
+                currentOrder = allOrders.stream().filter(o -> o > maxOrderInWave).min(Integer::compareTo).orElse(null);
+                continue;
+            }
             // Fallback khi step LOI (onErrorStepOrder, doc lap voi conditionOperator o tren) -
             // step KHONG khai bao (onErrorStepOrder=null) throw ngay y HET truoc day (bat
             // buoc, de moi endpoint hien co khong doi hanh vi 1 chut nao). Chi bat loi cua
@@ -161,12 +184,17 @@ public class CompositeOrchestratorEngine {
     }
 
     /**
-     * Chay N step DOC LAP (khong sequential) THAT SU SONG SONG qua parallelStepExecutor
-     * (muc 4, xem ParallelExecutionConfig) - submit TAT CA step cung luc, roi cho TAT
-     * CA future hoan thanh (vong for lan luot future.get(), khong phai cho tung cai roi
-     * moi submit cai tiep) truoc khi tra ve, dam bao khong con thread nao dang chay ngam
-     * sau khi method nay return. ctx.putStepResult() an toan goi dong thoi tu nhieu
-     * thread (xem javadoc ExecutionContext.stepResults).
+     * Chay N step THAT SU SONG SONG qua parallelStepExecutor (muc 4, xem
+     * ParallelExecutionConfig) - dung o **2 noi**: (1) toan bo step cua 1 endpoint
+     * KHONG sequential khi EndpointConfig.parallelExecution=true (xem handle()); (2) 1
+     * "wave" (nhom step co cung parallelGroup) NAM TRONG 1 chuoi sequential=true, xen
+     * giua cac step tuan tu khac (xem executeSequentialChain()) - ca 2 noi goi TRUYEN
+     * VAO danh sach step CAN chay song song (khong nhat thiet la orderedSteps day du),
+     * method nay khong quan tam ngu canh goi. Submit TAT CA step trong danh sach cung
+     * luc, roi cho TAT CA future hoan thanh (vong for lan luot future.get(), khong phai
+     * cho tung cai roi moi submit cai tiep) truoc khi tra ve, dam bao khong con thread
+     * nao dang chay ngam sau khi method nay return. ctx.putStepResult() an toan goi
+     * dong thoi tu nhieu thread (xem javadoc ExecutionContext.stepResults).
      *
      * DANH DOI PHAI BIET (da canh bao ro tren UI luc cau hinh - xem field-note cua
      * parallelExecution o endpoint-form/endpoint-canvas): khac han vong lap tuan tu
@@ -179,12 +207,35 @@ public class CompositeOrchestratorEngine {
      * throw loi DAU TIEN gap phai (theo thu tu step trong orderedSteps, khong phai
      * thu tu hoan thanh thuc te - de hanh vi loi de doan hon, nhat quan voi thu tu
      * hien tren UI) - cac loi khac (neu co nhieu step cung loi) chi duoc log WARN.
+     *
+     * MDC ("requestId", dung de noi hop audit log voi dung request - xem
+     * UpstreamHttpExecutor.call()) la ThreadLocal, KHONG tu dong lan sang thread cua
+     * parallelStepExecutor - neu khong copy tay, hop cua MOI step chay trong ham nay
+     * se bi ghi audit VOI requestId=null (mat hoan toan khoi "Tra cuu Log" khi tim
+     * theo dung request) - bug THAT phat hien khi verify song tinh nang wave (chi
+     * thay 1/3 hop trong audit, dung ra phai co 3). Fix: chup MDC cua thread GOI
+     * (request thread) 1 LAN truoc khi submit, roi set lai dung ban chup do TRONG
+     * MOI task truoc khi chay + phuc hoi MDC cu cua worker thread trong finally (tranh
+     * ro ri context sang task KHAC tai su dung CUNG thread cua pool sau nay).
      */
     private void executeStepsInParallel(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
+        Map<String, String> callerMdcContext = MDC.getCopyOfContextMap();
         List<Future<?>> futures = orderedSteps.stream()
                 .<Future<?>>map(step -> parallelStepExecutor.submit(() -> {
-                    JsonNode transformed = executeStep(config, step, ctx);
-                    ctx.putStepResult(step.stepOrder(), transformed);
+                    Map<String, String> workerMdcContext = MDC.getCopyOfContextMap();
+                    if (callerMdcContext != null) {
+                        MDC.setContextMap(callerMdcContext);
+                    }
+                    try {
+                        JsonNode transformed = executeStep(config, step, ctx);
+                        ctx.putStepResult(step.stepOrder(), transformed);
+                    } finally {
+                        if (workerMdcContext != null) {
+                            MDC.setContextMap(workerMdcContext);
+                        } else {
+                            MDC.clear();
+                        }
+                    }
                 }))
                 .toList();
 

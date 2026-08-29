@@ -89,6 +89,7 @@ public class EndpointMapper {
                 .nextStepOrderIfTrue(s.nextStepOrderIfTrue())
                 .nextStepOrderIfFalse(s.nextStepOrderIfFalse())
                 .onErrorStepOrder(s.onErrorStepOrder())
+                .parallelGroup(s.parallelGroup())
                 .build()).toList();
         entity.replaceSteps(steps);
     }
@@ -134,7 +135,8 @@ public class EndpointMapper {
                         s.getConnectTimeoutMs(), s.getReadTimeoutMs(),
                         s.getConditionSourceType(), s.getConditionSourceStepOrder(), s.getConditionSourceField(),
                         s.getConditionOperator(), s.getConditionExpectedValue(),
-                        s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse(), s.getOnErrorStepOrder()))
+                        s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse(), s.getOnErrorStepOrder(),
+                        s.getParallelGroup()))
                 .toList();
 
         List<FieldMappingDto> mappings = entity.getMappings().stream()

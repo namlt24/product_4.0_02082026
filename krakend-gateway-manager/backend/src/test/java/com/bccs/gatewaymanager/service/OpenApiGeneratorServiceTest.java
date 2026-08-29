@@ -21,7 +21,7 @@ class OpenApiGeneratorServiceTest {
         return new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
                 forwardOriginalBody, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
     }
 
     @SuppressWarnings("unchecked")

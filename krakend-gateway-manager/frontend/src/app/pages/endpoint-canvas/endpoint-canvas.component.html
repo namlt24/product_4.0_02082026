@@ -195,6 +195,11 @@
                     <mat-icon inline="true">error_outline</mat-icon>Có fallback lỗi
                   </span>
                 }
+                @if (p.step.parallelGroup) {
+                  <span class="mini-badge mini-badge--parallel" matTooltip="Nằm trong nhóm song song #{{ p.step.parallelGroup }} - chạy đồng thời với các step cùng số nhóm">
+                    <mat-icon inline="true">sync_alt</mat-icon>Nhóm song song #{{ p.step.parallelGroup }}
+                  </span>
+                }
               </div>
             </div>
           }
@@ -441,6 +446,26 @@
           </div>
         }
       </div>
+
+      <!-- Wave song song trong chuoi sequential (parallelGroup) - CHI co y nghia khi
+           sequential=true cap Endpoint. Mirror y het endpoint-form.component.html. -->
+      @if (header.sequential) {
+        <div class="sub-section">
+          <div class="sub-section-header">
+            <span>Nhóm chạy song song (tuỳ chọn)</span>
+          </div>
+          <mat-form-field appearance="outline" class="small-field">
+            <mat-label>Số nhóm</mat-label>
+            <input matInput type="number" [(ngModel)]="edit.parallelGroup" placeholder="vd: 1" />
+          </mat-form-field>
+          @if (edit.parallelGroup) {
+            <div class="field-note field-note--warning">
+              <mat-icon inline="true">warning</mat-icon>
+              <span>Các step có CÙNG số nhóm sẽ chạy ĐỒNG THỜI, sau đó step tiếp theo (tuần tự) mới chạy - có thể đọc dữ liệu đã gộp của cả nhóm qua Field Mapping. Yêu cầu: các step cùng nhóm phải có stepOrder LIÊN TIẾP nhau, không được rẽ nhánh/fallback riêng, và không step nào khác được nhảy/fallback tới 1 step trong nhóm.</span>
+            </div>
+          }
+        </div>
+      }
     </div>
     <div class="side-panel-footer">
       <button mat-button type="button" color="warn" (click)="removeStepFromPanel()">

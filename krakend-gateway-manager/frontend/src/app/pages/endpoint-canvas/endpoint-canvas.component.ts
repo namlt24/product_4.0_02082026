@@ -64,6 +64,9 @@ interface StepEditModel {
   nextStepOrderIfFalse: number | null;
   // Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi conditionOperator o tren.
   onErrorStepOrder: number | null;
+  // Wave song song trong chuoi sequential - DOC LAP voi conditionOperator/onErrorStepOrder
+  // o tren, KHONG tham chieu stepOrder (chi la 1 ma nhom tuy chon).
+  parallelGroup: number | null;
 }
 
 interface HeaderModel {
@@ -474,6 +477,7 @@ export class EndpointCanvasComponent implements OnInit {
       nextStepOrderIfTrue: s.nextStepOrderIfTrue ?? null,
       nextStepOrderIfFalse: s.nextStepOrderIfFalse ?? null,
       onErrorStepOrder: s.onErrorStepOrder ?? null,
+      parallelGroup: s.parallelGroup ?? null,
     };
   }
 
@@ -635,6 +639,8 @@ export class EndpointCanvasComponent implements OnInit {
       nextStepOrderIfFalse: edit.conditionOperator ? edit.nextStepOrderIfFalse : null,
       // onErrorStepOrder DOC LAP voi conditionOperator - khong gate theo dieu kien re nhanh.
       onErrorStepOrder: edit.onErrorStepOrder,
+      // parallelGroup cung DOC LAP - khong tham chieu stepOrder, khong gate theo dieu kien.
+      parallelGroup: edit.parallelGroup,
     };
     this.steps.set(list);
     this.closePanel();

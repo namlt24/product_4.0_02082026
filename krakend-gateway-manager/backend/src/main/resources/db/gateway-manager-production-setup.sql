@@ -40,6 +40,11 @@
 -- Khong anh huong du lieu THAT o tren, moi ENDPOINT_CONFIG that hien co deu nhan gia tri
 -- mac dinh 0 (tat song song, giu nguyen vong lap tuan tu cu).
 --
+-- Cap nhat 2026-08-29 (lan 7): them cot BACKEND_STEP.PARALLEL_GROUP (dong bo voi
+-- ddl-gateway-manager.sql) - "wave" song song trong 1 chuoi sequential. Khong anh huong
+-- du lieu THAT o tren, moi BACKEND_STEP that hien co deu PARALLEL_GROUP=NULL (chay tuan
+-- tu binh thuong, khong bi anh huong).
+--
 -- Cap nhat 2026-08-28 (lan 5): them cot BACKEND_STEP.ON_ERROR_STEP_ORDER (dong bo voi
 -- ddl-gateway-manager.sql) - khong anh huong du lieu THAT o tren, ca 4 BACKEND_STEP that
 -- hien co deu ON_ERROR_STEP_ORDER=NULL (khong dung fallback loi).
@@ -216,6 +221,7 @@ CREATE TABLE "BACKEND_STEP"
 	"CONNECT_TIMEOUT_MS" NUMBER(10,0),
 	"READ_TIMEOUT_MS" NUMBER(10,0),
 	"ON_ERROR_STEP_ORDER" NUMBER(10,0),
+	"PARALLEL_GROUP" NUMBER(10,0),
 	 CHECK (forward_original_body in (0,1)) ENABLE,
 	 CHECK (cache_enabled in (0,1)) ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,

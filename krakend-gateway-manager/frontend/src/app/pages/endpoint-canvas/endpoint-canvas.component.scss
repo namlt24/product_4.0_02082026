@@ -302,6 +302,13 @@
     background: var(--gwm-danger-bg);
     color: var(--gwm-danger);
   }
+
+  // Wave song song trong chuoi sequential (parallelGroup) - dung mau accent (khac
+  // branch=amber/error=do) de khong nham voi 2 loai badge dieu khien luong da co.
+  &--parallel {
+    background: var(--gwm-accent-light);
+    color: var(--gwm-accent);
+  }
 }
 
 .method-chip {

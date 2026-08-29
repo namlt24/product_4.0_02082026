@@ -100,6 +100,15 @@ export interface BackendStep {
    * chuỗi (hành vi cũ). ĐỘC LẬP với conditionOperator - dùng được cả cho step tuần tự thường.
    */
   onErrorStepOrder?: number | null;
+  /**
+   * "Wave" song song trong 1 chuỗi sequential - các step CÙNG giá trị parallelGroup
+   * chạy ĐỒNG THỜI, rồi step tiếp theo (tuần tự) mới chạy, có thể đọc dữ liệu đã gộp
+   * của cả wave. Chỉ có ý nghĩa khi EndpointConfig.sequential=true. Ràng buộc V1 (xem
+   * backend EndpointService.validateParallelGroups()): step trong wave KHÔNG được có
+   * conditionOperator/onErrorStepOrder riêng; KHÔNG step nào khác được rẽ nhánh/fallback
+   * TỚI 1 step trong wave; stepOrder của 1 wave PHẢI liên tiếp (vd {2,3}, không {2,4}).
+   */
+  parallelGroup?: number | null;
 }
 
 /** Khai bao "trich xuat 1 gia tri -> bom vao step Y". Xem FieldMappingSourceType cho y nghia cac field con lai. */
@@ -310,6 +319,7 @@ export function emptyStep(stepOrder: number): BackendStep {
     nextStepOrderIfTrue: null,
     nextStepOrderIfFalse: null,
     onErrorStepOrder: null,
+    parallelGroup: null,
   };
 }
 

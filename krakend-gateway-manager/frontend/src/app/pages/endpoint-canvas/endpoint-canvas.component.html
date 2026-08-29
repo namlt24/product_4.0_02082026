@@ -509,7 +509,6 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>{{ m.sourceType === 'REQUEST_BODY' ? 'Field trong body client' : m.sourceType === 'QUERY_PARAM' ? 'Tên query param' : 'Field trong response' }}</mat-label>
           <input matInput [(ngModel)]="m.sourceField" placeholder="vd: telecomServiceId, data.id, hoặc data[0].name" />
-          <mat-hint>Dùng "[N]" để lấy 1 phần tử cụ thể trong mảng theo vị trí (từ 0), vd "data[0].name" lấy field "name" của phần tử đầu tiên, hoặc "data[0]" (không có field sau) để lấy nguyên cả phần tử đó.</mat-hint>
         </mat-form-field>
       }
 

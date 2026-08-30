@@ -531,6 +531,33 @@ class CompositeOrchestratorEngineTest {
     }
 
     @Test
+    void compensation_duLieuKhongToanVen_compensationMethodNull_khongNemNpe_loiGocVanThrow() {
+        // Gia lap du lieu bi hong (bypass EndpointService.validateCompensationConfig(),
+        // vi du sua tay trong DB): compensationUpstreamServiceId co gia tri nhung
+        // compensationMethod=null - truoc fix se NPE tai step.compensationMethod().name(),
+        // sau fix phai bao BusinessException ro rang (GW-COMPENSATION-CONFIG-INVALID),
+        // van duoc runCompensations() nuot an toan, khong lam sap request, khong che loi goc.
+        stubCall(up1, json("{\"a\":1}"));
+        stubCallThrows(up2, new BusinessException("GW-UP-500", "upstream 2 loi"));
+        BackendStepDto s1 = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
+                false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
+                null, null, null, null, null,
+                null, null, null, null,
+                "uc1", "upComp", null, "/orders/cancel");
+        BackendStepDto s2 = plainStep(2, "u2");
+        EndpointResponseDto config = endpoint(true, s1, s2);
+
+        // Loi GOC (step2) van la loi client nhin thay - khong bi thay the boi NPE/loi cau hinh bu tru.
+        assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("upstream 2 loi");
+
+        org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+    }
+
+    @Test
     void compensation_waveThanhVienThanhCongCoBuTru_stepSauLoi_caWaveDuocBuTru() {
         // 2 thanh vien wave (parallelGroup=1), CA HAI co bu tru rieng - chung minh
         // completedStepOrders ghi nhan TUNG thanh vien rieng le (khong phai ca wave nhu

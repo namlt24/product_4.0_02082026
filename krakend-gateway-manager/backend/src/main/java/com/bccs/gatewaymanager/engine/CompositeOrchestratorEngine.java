@@ -106,6 +106,15 @@ public class CompositeOrchestratorEngine {
     }
 
     /**
+     * Index danh sach step theo stepOrder - dung chung cho ca thuc thi tuan tu
+     * (executeSequentialChain) va bu tru (runCompensations), tranh lap logic
+     * Collectors.toMap o 2 noi.
+     */
+    private static Map<Integer, BackendStepDto> indexStepsByOrder(List<BackendStepDto> orderedSteps) {
+        return orderedSteps.stream().collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
+    }
+
+    /**
      * Thuc thi chuoi step TUAN TU theo CON TRO (khong phai vong lap for co
      * dinh) - bat dau tu step co stepOrder NHO NHAT, sau moi step tu hoi
      * "step tiep theo la gi" qua determineNextStepOrder(). Step KHONG khai
@@ -118,8 +127,7 @@ public class CompositeOrchestratorEngine {
      * re nhanh, chuoi co the ket thuc o BAT KY step nao tuy theo dieu kien.
      */
     private JsonNode executeSequentialChain(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
-        Map<Integer, BackendStepDto> stepsByOrder = orderedSteps.stream()
-                .collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
+        Map<Integer, BackendStepDto> stepsByOrder = indexStepsByOrder(orderedSteps);
         List<Integer> allOrders = orderedSteps.stream().map(BackendStepDto::stepOrder).sorted().toList();
         // Tap hop stepOrder la DICH cua it nhat 1 "buoc nhay dac biet" - re nhanh
         // (nextStepOrderIfTrue/nextStepOrderIfFalse) HOAC fallback loi (onErrorStepOrder) -
@@ -510,10 +518,19 @@ public class CompositeOrchestratorEngine {
      *
      * NGOAI PHAM VI V1 (ghi ro trong plan da duyet): khong co outbox/retry ben
      * vung neu ban than loi goi bu tru cung that bai - chi thu 1 lan roi bo qua.
+     * Cung CHUA co metric rieng dem so lan bu tru thanh cong/that bai (chi co
+     * log WARN) - can bo sung neu muon alert tu dong tren ty le rollback loi.
+     *
+     * LUU Y VE THU TU TRONG 1 WAVE: neu >=2 step cung 1 parallelGroup deu
+     * thanh cong va deu co cau hinh bu tru, thu tu bu tru GIUA CHUNG phu
+     * thuoc vao thread nao goi ExecutionContext.putStepResult() truoc - KHONG
+     * xac dinh (non-deterministic) giua cac lan chay khac nhau. Dieu nay
+     * khong sai ve nghiep vu (2 step trong 1 wave von doc lap, khong phu
+     * thuoc thu tu lan nhau) nhung KHONG duoc hieu la "thu tu bu tru co y
+     * nghia xac dinh" giua cac thanh vien cung wave.
      */
     private void runCompensations(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
-        Map<Integer, BackendStepDto> stepsByOrder = orderedSteps.stream()
-                .collect(Collectors.toMap(BackendStepDto::stepOrder, s -> s));
+        Map<Integer, BackendStepDto> stepsByOrder = indexStepsByOrder(orderedSteps);
         List<Integer> completedInOrder = ctx.completedStepOrders();
         for (int i = completedInOrder.size() - 1; i >= 0; i--) {
             BackendStepDto step = stepsByOrder.get(completedInOrder.get(i));
@@ -546,6 +563,15 @@ public class CompositeOrchestratorEngine {
             // toan vi runCompensations() da boc TUNG loi goi bu tru trong try/catch rieng.
             throw new BusinessException("GW-UPSTREAM-404",
                     "Bu tru cho step '" + step.name() + "' tham chieu Upstream Service khong ton tai (id=" + step.compensationUpstreamServiceId() + ").");
+        }
+        // Phong thu: EndpointService.validateCompensationConfig() da bat buoc ca 3
+        // field bu tru phai cung co/cung khong co tai thoi diem luu, nhung neu 1
+        // cau hinh cu/sua tay trong DB lot qua duoc rule do, bao loi ro rang thay
+        // vi de NullPointerException khong ro nguyen nhan roi bi runCompensations()
+        // nuot am tham.
+        if (step.compensationMethod() == null || step.compensationUrlPattern() == null || step.compensationUrlPattern().isBlank()) {
+            throw new BusinessException("GW-COMPENSATION-CONFIG-INVALID",
+                    "Bu tru cho step '" + step.name() + "' thieu compensationMethod/compensationUrlPattern (du lieu khong toan ven, kiem tra lai cau hinh).");
         }
 
         List<FieldMappingDto> compensationMappings = config.mappings().stream()

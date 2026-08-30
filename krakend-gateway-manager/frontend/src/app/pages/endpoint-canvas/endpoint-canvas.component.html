@@ -110,7 +110,18 @@
             <marker id="branch-arrow-error" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
             </marker>
+            <marker id="compensation-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb" />
+            </marker>
           </defs>
+
+          <!-- Khung "wave" song song (parallelGroup, muc 5) - VE DAU TIEN de nam DUOI CUNG
+               (SVG ve theo thu tu xuat hien, node-layer HTML lai con o TREN ca lop SVG nay -
+               khung chi la nen mo phia sau node, khong che gi ca). -->
+          @for (g of positionedWaveGroups(); track g.groupId) {
+            <rect [attr.x]="g.x" [attr.y]="g.y" [attr.width]="g.width" [attr.height]="g.height" rx="14" class="wave-group-box" />
+            <text [attr.x]="g.labelX" [attr.y]="g.labelY" class="wave-group-label">⇉ Nhóm song song #{{ g.groupId }}</text>
+          }
 
           <!-- Mui ten re nhanh (P1-5) + fallback loi (P-3, onErrorStepOrder) - VE TRUOC duong
                FieldMapping de FieldMapping (thuong quan trong hon, nam giua duoc bam de sua) khong
@@ -136,6 +147,15 @@
               [class.branch-edge-label--error]="pb.outcome === 'error'"
               text-anchor="middle"
             >{{ pb.outcome === 'true' ? 'Đúng' : pb.outcome === 'false' ? 'Sai' : 'Lỗi' }}</text>
+          }
+
+          <!-- Vong lap bu tru/rollback (muc 6) - o CANH TRAI node (huong rieng, khong trung
+               branch/error luon o duoi hay mapping luon o phai) vi khong tro toi step nao ca,
+               chi bieu dien "step nay co lenh hoan tac rieng". -->
+          @for (pc of positionedCompensations(); track pc.stepIndex) {
+            <path [attr.d]="pc.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openStepPanel(pc.stepIndex)" />
+            <path [attr.d]="pc.path" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#compensation-arrow)" class="compensation-edge" />
+            <text [attr.x]="pc.labelX" [attr.y]="pc.labelY" class="compensation-edge-label" text-anchor="end">↩ {{ pc.label }}</text>
           }
 
           @for (pe of positionedMappings(); track pe.index) {

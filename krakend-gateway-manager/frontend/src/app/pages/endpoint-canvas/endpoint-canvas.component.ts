@@ -112,6 +112,37 @@ interface PositionedBranch {
 }
 
 /**
+ * Khung bao quanh cac step CUNG 1 "wave" song song (parallelGroup, muc 5) - KHAC moi
+ * duong noi khac (khong tro toi 1 step/nguon cu the, chi bao quanh nhieu node de the
+ * hien truc quan "cac step nay chay DONG THOI"). Ve o SVG layer, NAM DUOI node-layer
+ * (thu tu DOM: SVG truoc, node sau -> node luon o tren, khung chi la nen).
+ */
+interface PositionedWaveGroup {
+  groupId: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  labelX: number;
+  labelY: number;
+}
+
+/**
+ * Vong lap nho ("self-loop") hien thi cau hinh bu tru/rollback (muc 6) cua 1 step -
+ * KHAC branch/mapping (khong tro toi step/nguon KHAC, vi lenh bu tru goi toi 1
+ * Upstream ben ngoai do thi, khong phai 1 step trong chuoi) - ve mot vong nho o CANH
+ * TRAI cua node (huong rieng, khong trung voi branch/error luon o duoi node hay
+ * mapping luon o phai node) de tranh chong cheo voi cac duong noi khac.
+ */
+interface PositionedCompensation {
+  stepIndex: number;
+  path: string;
+  labelX: number;
+  labelY: number;
+  label: string;
+}
+
+/**
  * "Canvas mới" - kéo thả trực quan để khai báo 1 Endpoint (Step + Field Mapping),
  * năng lực tương đương form "Endpoint mới" nhưng xem/thao tác trực quan qua node-graph
  * thay vì form dài. Trang RIÊNG, KHÔNG đụng endpoint-form.component.* - dùng chung
@@ -320,6 +351,61 @@ export class EndpointCanvasComponent implements OnInit {
       addBranch(p, fromStepIndex, 'error', p.step.onErrorStepOrder);
     });
     return branches;
+  });
+
+  /**
+   * Khung bao quanh "wave" song song (parallelGroup, muc 5) - CHI ve khi nhom co >=2
+   * thanh vien DANG TON TAI trong steps hien tai (1 thanh vien don le khong can khung,
+   * badge tren node da du ro nghia). Padding co dinh quanh bounding box cua toa do
+   * THAT (lien tuc theo drag) cua tat ca thanh vien - luon bao dung du nut du chung
+   * co nam lien ke (mac dinh) hay da bi keo tay ra vi tri khac nhau.
+   */
+  readonly positionedWaveGroups = computed<PositionedWaveGroup[]>(() => {
+    const positions = this.liveNodePositions();
+    const byGroup = new Map<number, NodePos[]>();
+    for (const p of positions) {
+      const g = p.step.parallelGroup;
+      if (g == null) continue;
+      const list = byGroup.get(g) ?? [];
+      list.push(p);
+      byGroup.set(g, list);
+    }
+    const PAD = 18;
+    const groups: PositionedWaveGroup[] = [];
+    for (const [groupId, members] of byGroup) {
+      if (members.length < 2) continue;
+      const minX = Math.min(...members.map((m) => m.x)) - PAD;
+      const minY = Math.min(...members.map((m) => m.y)) - PAD;
+      const maxX = Math.max(...members.map((m) => m.x + this.nodeWidth)) + PAD;
+      const maxY = Math.max(...members.map((m) => m.y + this.nodeHeight)) + PAD;
+      groups.push({ groupId, x: minX, y: minY, width: maxX - minX, height: maxY - minY, labelX: minX + 10, labelY: minY + 16 });
+    }
+    return groups;
+  });
+
+  /**
+   * Vong lap nho ("self-loop") o CANH TRAI cua node hien thi cau hinh bu tru/rollback
+   * (muc 6) - xem javadoc PositionedCompensation. Kich thuoc co dinh (26px) nho hon
+   * DIP cua branch/error (70px) VA nam o huong KHAC (trai thay vi duoi) de khong
+   * chong lan du 1 step co CA HAI (hoan toan hop le - onErrorStepOrder xu ly loi CUA
+   * CHINH step nay, compensation xu ly khi step nay THANH CONG nhung chuoi SAU DO loi).
+   */
+  readonly positionedCompensations = computed<PositionedCompensation[]>(() => {
+    const LOOP = 26;
+    return this.liveNodePositions()
+      .filter((p) => p.step.compensationUpstreamServiceId)
+      .map((p) => {
+        const x = p.x;
+        const y1 = p.y + this.nodeHeight * 0.32;
+        const y2 = p.y + this.nodeHeight * 0.68;
+        return {
+          stepIndex: p.index,
+          path: `M ${x} ${y1} C ${x - LOOP} ${y1}, ${x - LOOP} ${y2}, ${x} ${y2}`,
+          labelX: x - LOOP - 6,
+          labelY: (y1 + y2) / 2 + 3,
+          label: p.step.compensationMethod ?? '?',
+        };
+      });
   });
 
   readonly canvasSize = computed(() => {

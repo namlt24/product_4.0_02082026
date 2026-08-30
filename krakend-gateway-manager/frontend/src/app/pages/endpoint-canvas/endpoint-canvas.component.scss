@@ -141,6 +141,47 @@
   }
 }
 
+// Khung bao "wave" song song (parallelGroup, muc 5) - nen mo phia sau node, net dut de
+// khong nham voi vien node that (solid). Mau accent (cyan) - khac han xanh la/do/cam
+// cua branch va xanh duong cua compensation ben duoi, tranh nham voi bat ky khai niem
+// nao khac tren canvas.
+.wave-group-box {
+  fill: var(--gwm-accent-light);
+  fill-opacity: 0.4;
+  stroke: var(--gwm-accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 8 5;
+}
+
+.wave-group-label {
+  font-family: var(--gwm-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--gwm-accent);
+  paint-order: stroke;
+  stroke: var(--gwm-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+// Vong lap bu tru/rollback (muc 6) - mau xanh duong (--gwm-info, chua dung o dau khac
+// tren canvas) de tach biet ro voi 4 mau da dung (branch true/false/error, wave accent,
+// mapping tim #818cf8) - khong nhap nhang voi bat ky duong noi nao khac.
+.compensation-edge {
+  cursor: pointer;
+}
+
+.compensation-edge-label {
+  font-family: var(--gwm-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--gwm-info);
+  paint-order: stroke;
+  stroke: var(--gwm-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
 .canvas-node-layer {
   position: absolute;
   inset: 0;

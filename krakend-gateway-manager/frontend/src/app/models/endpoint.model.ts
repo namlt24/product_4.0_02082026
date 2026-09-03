@@ -54,6 +54,10 @@ export interface UpstreamService {
   circuitBreakerEnabled: boolean;
   failureRateThreshold: number;
   retryEnabled: boolean;
+  /** So luong lenh goi dong thoi toi da qua Bulkhead cho Upstream nay - truoc day fix cung 20 cho MOI Upstream. */
+  maxConcurrentCalls: number;
+  /** Thoi gian (ms) cho "cho" trong Bulkhead truoc khi bi tu choi - truoc day fix cung 500ms. */
+  maxWaitDurationMs: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -387,5 +391,7 @@ export function emptyUpstreamService(): UpstreamService {
     circuitBreakerEnabled: true,
     failureRateThreshold: 50,
     retryEnabled: true,
+    maxConcurrentCalls: 20,
+    maxWaitDurationMs: 500,
   };
 }

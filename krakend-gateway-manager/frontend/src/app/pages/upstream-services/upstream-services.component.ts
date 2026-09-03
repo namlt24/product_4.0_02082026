@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, computed, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -38,6 +39,7 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
     MatCardModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatPaginatorModule,
   ],
   templateUrl: './upstream-services.component.html',
   styleUrl: './upstream-services.component.scss',
@@ -49,6 +51,16 @@ export class UpstreamServicesComponent implements OnInit {
   readonly saving = signal(false);
   readonly formOpen = signal(false);
   readonly editingId = signal<string | null>(null);
+
+  // Phan trang phia client - giong het endpoint-list.component.ts (danh sach
+  // da fetch DAY DU tu truoc gio, chi can cat mang trong bo nho).
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(5);
+  readonly pageSizeOptions = [5, 10, 25, 50, 100];
+  readonly pagedUpstreams = computed(() => {
+    const start = this.pageIndex() * this.pageSize();
+    return this.upstreams().slice(start, start + this.pageSize());
+  });
 
   form: FormGroup;
 
@@ -74,6 +86,8 @@ export class UpstreamServicesComponent implements OnInit {
       circuitBreakerEnabled: [u.circuitBreakerEnabled],
       failureRateThreshold: [u.failureRateThreshold, [Validators.min(1), Validators.max(100)]],
       retryEnabled: [u.retryEnabled],
+      maxConcurrentCalls: [u.maxConcurrentCalls, [Validators.required, Validators.min(1), Validators.max(1000)]],
+      maxWaitDurationMs: [u.maxWaitDurationMs, [Validators.required, Validators.min(0), Validators.max(60000)]],
     });
   }
 
@@ -83,6 +97,7 @@ export class UpstreamServicesComponent implements OnInit {
       next: (list) => {
         this.upstreams.set(list);
         this.loading.set(false);
+        this.pageIndex.set(0);
       },
       error: () => {
         this.loading.set(false);
@@ -105,6 +120,11 @@ export class UpstreamServicesComponent implements OnInit {
 
   closeForm(): void {
     this.formOpen.set(false);
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
   }
 
   save(): void {

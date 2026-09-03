@@ -49,6 +49,8 @@ public class UpstreamServiceService {
                 .circuitBreakerEnabled(dto.circuitBreakerEnabled())
                 .failureRateThreshold(dto.failureRateThreshold())
                 .retryEnabled(dto.retryEnabled())
+                .maxConcurrentCalls(dto.maxConcurrentCalls())
+                .maxWaitDurationMs(dto.maxWaitDurationMs())
                 .build();
         UpstreamService saved = repository.save(entity);
         upstreamRegistryCache.reload();
@@ -71,6 +73,8 @@ public class UpstreamServiceService {
         entity.setCircuitBreakerEnabled(dto.circuitBreakerEnabled());
         entity.setFailureRateThreshold(dto.failureRateThreshold());
         entity.setRetryEnabled(dto.retryEnabled());
+        entity.setMaxConcurrentCalls(dto.maxConcurrentCalls());
+        entity.setMaxWaitDurationMs(dto.maxWaitDurationMs());
         UpstreamService saved = repository.save(entity);
         // Upstream doi (timeout/circuit-breaker) anh huong toi moi endpoint dang tham
         // chieu no - nap lai ca 2 cache trong-process de co hieu luc ngay, khong can restart.
@@ -116,6 +120,7 @@ public class UpstreamServiceService {
         return new UpstreamServiceDto(e.getId(), e.getName(), e.getDescription(), e.getBaseHost(),
                 e.getConnectTimeoutMs(), e.getReadTimeoutMs(), e.isCircuitBreakerEnabled(),
                 e.getFailureRateThreshold(), e.isRetryEnabled(),
+                e.getMaxConcurrentCalls(), e.getMaxWaitDurationMs(),
                 e.getCreatedAt(), e.getUpdatedAt());
     }
 }

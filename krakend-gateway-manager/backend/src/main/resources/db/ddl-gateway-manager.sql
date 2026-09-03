@@ -12,6 +12,14 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
+-- Cap nhat 2026-08-31 (lan 13): them cot UPSTREAM_SERVICE.MAX_CONCURRENT_CALLS +
+-- MAX_WAIT_DURATION_MS (NUMBER(10,0) NOT NULL, mac dinh 20/500 - dung y het gia
+-- tri truoc day fix cung trong UpstreamHttpExecutor.bulkheadFor()) - cho phep
+-- chinh rieng gioi han Bulkhead (Resilience4j) theo tung Upstream qua UI thay vi
+-- ap dung 1 cau hinh chung cho moi Upstream. Xem UpstreamService.java +
+-- UpstreamHttpExecutor.bulkheadFor(). Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE upstream_service ADD max_concurrent_calls NUMBER(10,0) DEFAULT 20 NOT NULL;
+-- ALTER TABLE upstream_service ADD max_wait_duration_ms NUMBER(10,0) DEFAULT 500 NOT NULL;
 -- Cap nhat 2026-08-29 (lan 12): them cot BACKEND_STEP.COMPENSATION_UPSTREAM_SERVICE_ID
 -- (FK toi UPSTREAM_SERVICE, nullable) + COMPENSATION_METHOD + COMPENSATION_URL_PATTERN
 -- (deu nullable, KHONG @ColumnDefault) - bu tru/rollback nghiep vu (saga best-effort,
@@ -178,6 +186,8 @@ CREATE TABLE "UPSTREAM_SERVICE"
 	"CREATED_AT" TIMESTAMP (6) WITH TIME ZONE,
 	"DESCRIPTION" VARCHAR2(255 CHAR),
 	"FAILURE_RATE_THRESHOLD" NUMBER(10,0) NOT NULL ENABLE,
+	"MAX_CONCURRENT_CALLS" NUMBER(10,0) DEFAULT 20 NOT NULL ENABLE,
+	"MAX_WAIT_DURATION_MS" NUMBER(10,0) DEFAULT 500 NOT NULL ENABLE,
 	"NAME" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"READ_TIMEOUT_MS" NUMBER(10,0) NOT NULL ENABLE,
 	"RETRY_ENABLED" NUMBER(1,0) NOT NULL ENABLE,

@@ -252,8 +252,8 @@ public class UpstreamHttpExecutor {
 
     private Bulkhead bulkheadFor(UpstreamService upstream) {
         return bulkheadRegistry.bulkhead(upstream.getName(), () -> BulkheadConfig.custom()
-                .maxConcurrentCalls(20)
-                .maxWaitDuration(Duration.ofMillis(500))
+                .maxConcurrentCalls(upstream.getMaxConcurrentCalls())
+                .maxWaitDuration(Duration.ofMillis(upstream.getMaxWaitDurationMs()))
                 .build());
     }
 

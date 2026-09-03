@@ -4,6 +4,7 @@ import com.bccs.gatewaymanager.audit.AuditLogService;
 import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.sun.net.httpserver.HttpServer;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
@@ -18,6 +19,10 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -270,5 +275,51 @@ class UpstreamHttpExecutorTest {
         // Override readTimeoutMs=100ms (ngan hon 400ms server can) - PHAI timeout, du CUNG 1 Upstream/URL o tren van thanh cong.
         assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "test-step-2", null, 100))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
+    }
+
+    // ---- Bulkhead cau hinh duoc theo tung Upstream (truoc day fix cung 20/500ms cho MOI Upstream) ----
+
+    @Test
+    void call_maxConcurrentCallsTuyChinh_lenhGoiVuotQuaBiTuChoiBoiBulkheadFull() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/slow", exchange -> {
+            try {
+                Thread.sleep(300); // du lau de lenh goi thu 2 chac chan con dang giu bulkhead luc lenh goi 1 goi toi
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            byte[] body = "{\"ok\":true}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        // maxConcurrentCalls=1: lenh goi thu 2 KHONG co "cho" nao trong bulkhead trong luc
+        // lenh goi 1 con dang chay - maxWaitDurationMs=50 (ngan) de test khong phai cho lau.
+        UpstreamService up = UpstreamService.builder()
+                .name("svc-bulkhead-limited").baseHost("http://localhost:" + port)
+                .connectTimeoutMs(500).readTimeoutMs(2000)
+                .circuitBreakerEnabled(false).retryEnabled(false)
+                .maxConcurrentCalls(1).maxWaitDurationMs(50)
+                .build();
+        String url = "http://localhost:" + port + "/slow";
+
+        CountDownLatch firstCallStarted = new CountDownLatch(1);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            pool.submit(() -> {
+                firstCallStarted.countDown();
+                executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "step-1", null, null);
+            });
+            assertThat(firstCallStarted.await(2, TimeUnit.SECONDS)).isTrue();
+            Thread.sleep(30); // dam bao lenh goi 1 da thuc su chiem duoc slot bulkhead truoc khi lenh goi 2 toi
+
+            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "step-2", null, null))
+                    .isInstanceOf(BulkheadFullException.class);
+        } finally {
+            pool.shutdown();
+            pool.awaitTermination(2, TimeUnit.SECONDS);
+        }
     }
 }

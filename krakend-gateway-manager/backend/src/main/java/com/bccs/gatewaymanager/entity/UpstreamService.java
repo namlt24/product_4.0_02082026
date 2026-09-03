@@ -67,6 +67,27 @@ public class UpstreamService {
     @Column(name = "retry_enabled", nullable = false)
     private boolean retryEnabled = true;
 
+    /**
+     * So luong lenh goi dong thoi toi da qua Resilience4j Bulkhead cho Upstream nay
+     * (xem UpstreamHttpExecutor.bulkheadFor()) - truoc day fix cung 20 cho MOI Upstream,
+     * gio chinh duoc rieng tung Upstream. Mac dinh 20 = dung y het gia tri fix cung cu,
+     * Upstream chua tung chinh khong doi hanh vi.
+     */
+    @Builder.Default
+    @org.hibernate.annotations.ColumnDefault("20")
+    @Column(name = "max_concurrent_calls", nullable = false)
+    private int maxConcurrentCalls = 20;
+
+    /**
+     * Thoi gian toi da (ms) 1 lenh goi cho co "cho" trong Bulkhead truoc khi bi tu
+     * choi (BulkheadFullException) - truoc day fix cung 500ms. Mac dinh 500 = dung
+     * y het gia tri fix cung cu.
+     */
+    @Builder.Default
+    @org.hibernate.annotations.ColumnDefault("500")
+    @Column(name = "max_wait_duration_ms", nullable = false)
+    private int maxWaitDurationMs = 500;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Instant createdAt;

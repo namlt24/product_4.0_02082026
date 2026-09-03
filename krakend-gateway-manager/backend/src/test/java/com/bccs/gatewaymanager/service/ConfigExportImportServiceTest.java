@@ -51,7 +51,7 @@ class ConfigExportImportServiceTest {
     }
 
     private UpstreamServiceDto upstreamDto(String id, String name) {
-        return new UpstreamServiceDto(id, name, null, "http://x", 1000, 3000, true, 50, true, null, null);
+        return new UpstreamServiceDto(id, name, null, "http://x", 1000, 3000, true, 50, true, 20, 500, null, null);
     }
 
     private BackendStepDto step(String upstreamId, String upstreamName) {

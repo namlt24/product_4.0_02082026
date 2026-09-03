@@ -35,6 +35,12 @@
 -- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
 -- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
 -- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-08-31 (lan 8): them cot UPSTREAM_SERVICE.MAX_CONCURRENT_CALLS +
+-- MAX_WAIT_DURATION_MS (dong bo voi ddl-gateway-manager.sql, mac dinh 20/500 - dung
+-- y het gia tri truoc day fix cung trong UpstreamHttpExecutor.bulkheadFor()) - cho
+-- phep chinh rieng gioi han Bulkhead theo tung Upstream. Khong anh huong du lieu
+-- THAT o tren (4 Upstream Service hien co deu nhan mac dinh 20/500, dung y het
+-- hanh vi cu).
 -- Cap nhat 2026-08-29 (lan 7): them cot BACKEND_STEP.COMPENSATION_UPSTREAM_SERVICE_ID/
 -- COMPENSATION_METHOD/COMPENSATION_URL_PATTERN + FIELD_MAPPING.TARGET_CONTEXT (dong bo
 -- voi ddl-gateway-manager.sql) - bu tru/rollback nghiep vu (saga best-effort, muc 6).
@@ -168,6 +174,8 @@ CREATE TABLE "UPSTREAM_SERVICE"
 	"CREATED_AT" TIMESTAMP (6) WITH TIME ZONE,
 	"DESCRIPTION" VARCHAR2(255 CHAR),
 	"FAILURE_RATE_THRESHOLD" NUMBER(10,0) NOT NULL ENABLE,
+	"MAX_CONCURRENT_CALLS" NUMBER(10,0) DEFAULT 20 NOT NULL ENABLE,
+	"MAX_WAIT_DURATION_MS" NUMBER(10,0) DEFAULT 500 NOT NULL ENABLE,
 	"NAME" VARCHAR2(255 CHAR) NOT NULL ENABLE,
 	"READ_TIMEOUT_MS" NUMBER(10,0) NOT NULL ENABLE,
 	"RETRY_ENABLED" NUMBER(1,0) NOT NULL ENABLE,

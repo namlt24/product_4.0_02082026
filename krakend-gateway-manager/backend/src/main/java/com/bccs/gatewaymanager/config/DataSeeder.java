@@ -42,11 +42,11 @@ public class DataSeeder implements CommandLineRunner {
 
         UpstreamServiceDto authUpstream = upstreamServiceService.create(new UpstreamServiceDto(
                 null, "auth-service", "Demo - dich vu xac thuc/user",
-                "http://auth-service:8081", 1000, 3000, true, 50, true, null, null));
+                "http://auth-service:8081", 1000, 3000, true, 50, true, 20, 500, null, null));
 
         UpstreamServiceDto orderUpstream = upstreamServiceService.create(new UpstreamServiceDto(
                 null, "order-service", "Demo - dich vu don hang",
-                "http://order-service:8082", 1000, 3000, true, 50, true, null, null));
+                "http://order-service:8082", 1000, 3000, true, 50, true, 20, 500, null, null));
 
         // Step 1: goi Auth Service lay thong tin user hien tai -> co field "id".
         // Demo cache Redis BAT o day (TTL 60s) - thong tin user it doi trong thoi gian ngan

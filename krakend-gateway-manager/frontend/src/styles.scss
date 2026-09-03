@@ -12,6 +12,13 @@
   --gwm-accent: #0891b2;
   --gwm-accent-light: #ecfeff;
 
+  // Mau thuong hieu (logo mark "vOrchestra" o header + trang login) - do/trang
+  // theo nhan dien Viettel, TACH RIENG khoi --gwm-primary (da back ve indigo
+  // cho toan bo phan con lai cua app - nut/trang thai active/focus...). Chi
+  // logo mark dung cap mau nay, khong lan ra cho phan tu nao khac.
+  --gwm-brand-red: #ee0033;
+  --gwm-brand-red-dark: #a4001f;
+
   --gwm-bg: #f8fafc;
   --gwm-surface: #ffffff;
   --gwm-border: #e2e8f0;

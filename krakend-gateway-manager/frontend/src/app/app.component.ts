@@ -29,7 +29,7 @@ import { AuthService } from './services/auth.service';
               <mat-icon>hub</mat-icon>
             </span>
             <span class="brand-text">
-              <span class="brand-name">Gateway Manager</span>
+              <span class="brand-name">vOrchestra</span>
               <span class="brand-tag">Dynamic Composite API Orchestrator</span>
             </span>
           </a>
@@ -50,11 +50,6 @@ import { AuthService } from './services/auth.service';
           </nav>
 
           <span class="spacer"></span>
-
-          <a mat-flat-button color="primary" class="new-endpoint-btn" routerLink="/endpoints/new">
-            <mat-icon>add</mat-icon>
-            Endpoint mới
-          </a>
 
           <button mat-icon-button matTooltip="Đăng xuất" (click)="logout()">
             <mat-icon>logout</mat-icon>
@@ -103,7 +98,10 @@ import { AuthService } from './services/auth.service';
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, var(--gwm-primary), var(--gwm-primary-dark));
+        background: linear-gradient(135deg, var(--gwm-brand-red), var(--gwm-brand-red-dark));
+        /* Vien trang mong quanh khoi do - cung co ro net "do/trang" thay vi chi
+           dua vao 1 icon trang tren nen do. */
+        box-shadow: 0 0 0 2px #fff, var(--gwm-shadow-sm);
         color: white;
         flex-shrink: 0;
 
@@ -171,10 +169,6 @@ import { AuthService } from './services/auth.service';
 
       .spacer {
         flex: 1 1 auto;
-      }
-
-      .new-endpoint-btn {
-        white-space: nowrap;
       }
 
       .app-content {

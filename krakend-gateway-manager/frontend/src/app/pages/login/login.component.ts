@@ -38,7 +38,7 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
         <div class="login-header">
           <span class="login-mark"><mat-icon>hub</mat-icon></span>
           <div>
-            <div class="login-title">Gateway Manager</div>
+            <div class="login-title">vOrchestra</div>
             <div class="login-subtitle">Nhập API key để vào trang quản trị</div>
           </div>
         </div>
@@ -95,7 +95,8 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, var(--gwm-primary), var(--gwm-primary-dark));
+        background: linear-gradient(135deg, var(--gwm-brand-red), var(--gwm-brand-red-dark));
+        box-shadow: 0 0 0 2px #fff, var(--gwm-shadow-sm);
         color: white;
         flex-shrink: 0;
       }

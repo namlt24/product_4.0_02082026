@@ -723,8 +723,10 @@ class EndpointServiceTest {
     }
 
     @Test
-    void create_rejectsResponseCacheKhiEndpointKhongPhaiGet() {
-        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.POST, true, "json",
+    void create_rejectsResponseCacheKhiEndpointKhongPhaiGetPost() {
+        // PUT (chu khong phai POST) - tu 2026-09 POST duoc cho phep (mirror cache per-step),
+        // chi con PUT/PATCH/DELETE bi chan cung vi gan nhu chac chan la mutating.
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.PUT, true, "json",
                 List.of(step(1)), List.of(), false, null, false, true, 60);
 
         assertThatThrownBy(() -> service.create(dto))
@@ -734,9 +736,9 @@ class EndpointServiceTest {
     }
 
     @Test
-    void create_rejectsResponseCacheKhiCoStepKhongPhaiGet() {
+    void create_rejectsResponseCacheKhiCoStepKhongPhaiGetPost() {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1), stepWithMethod(2, GatewayMethod.POST)), List.of(), false, null, false, true, 60);
+                List.of(step(1), stepWithMethod(2, GatewayMethod.PUT)), List.of(), false, null, false, true, 60);
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BusinessException.class)
@@ -748,6 +750,15 @@ class EndpointServiceTest {
     void create_responseCacheHopLe_toanBoGet_thanhCong() {
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(step(1), step(2)), List.of(), false, null, false, true, 60);
+
+        assertThat(service.create(dto)).isNotNull();
+    }
+
+    @Test
+    void create_responseCacheHopLe_toanBoPost_thanhCong() {
+        // POST duoc cho phep tu 2026-09 - dung cho API tim kiem/tra cuu truyen filter qua body.
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.POST, true, "json",
+                List.of(stepWithMethod(1, GatewayMethod.POST), step(2)), List.of(), false, null, false, true, 60);
 
         assertThat(service.create(dto)).isNotNull();
     }

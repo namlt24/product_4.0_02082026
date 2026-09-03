@@ -85,6 +85,8 @@ interface HeaderModel {
   idempotencyTtlSeconds: number;
   /** Chi co y nghia khi sequential=false - xem EndpointConfig.parallelExecution. */
   parallelExecution: boolean;
+  responseCacheEnabled: boolean;
+  responseCacheTtlSeconds: number;
 }
 
 interface NodePos {
@@ -232,6 +234,8 @@ export class EndpointCanvasComponent implements OnInit {
     idempotencyEnabled: false,
     idempotencyTtlSeconds: 86400,
     parallelExecution: false,
+    responseCacheEnabled: false,
+    responseCacheTtlSeconds: 300,
   };
 
   private endpointId: string | null = null;
@@ -485,6 +489,8 @@ export class EndpointCanvasComponent implements OnInit {
             idempotencyEnabled: ep.idempotencyEnabled ?? false,
             idempotencyTtlSeconds: ep.idempotencyTtlSeconds ?? 86400,
             parallelExecution: ep.parallelExecution ?? false,
+            responseCacheEnabled: ep.responseCacheEnabled ?? false,
+            responseCacheTtlSeconds: ep.responseCacheTtlSeconds ?? 300,
           };
           this.steps.set([...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder));
           this.mappings.set([...ep.mappings]);
@@ -939,9 +945,25 @@ export class EndpointCanvasComponent implements OnInit {
       idempotencyEnabled: this.header.idempotencyEnabled ?? false,
       idempotencyTtlSeconds: this.header.idempotencyTtlSeconds || 86400,
       parallelExecution: this.header.parallelExecution ?? false,
+      responseCacheEnabled: this.header.responseCacheEnabled ?? false,
+      responseCacheTtlSeconds: this.header.responseCacheTtlSeconds || 300,
       steps: this.steps(),
       mappings: this.mappings(),
     };
+  }
+
+  /**
+   * Mirror dung endpoint-form.component.ts (2 noi luon phai dong bo tay) - dieu kien
+   * bat header.responseCacheEnabled: endpoint VA TOAN BO step deu phai la GET hoac POST
+   * (xem EndpointService.validateResponseCache() - backend chan cung, ham nay chi de
+   * disable toggle + hien canh bao SOM tren UI).
+   */
+  allStepsAreGetOrPost(): boolean {
+    const isGetOrPost = (method: string) => method === 'GET' || method === 'POST';
+    if (!isGetOrPost(this.header.method)) {
+      return false;
+    }
+    return this.steps().every((s) => isGetOrPost(s.method));
   }
 }
 

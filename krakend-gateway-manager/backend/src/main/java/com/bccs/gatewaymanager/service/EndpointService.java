@@ -227,24 +227,35 @@ public class EndpointService {
     /**
      * Cache TOAN BO response cho MOI client cung tham so (khac Idempotency-Key - xem
      * EndpointConfig.responseCacheEnabled) - CHAN CUNG (khong chi canh bao mem nhu
-     * retryEnabled) neu endpoint hoac BAT KY step nao khong phai GET: cho phep tren
-     * step mutating se khien 2 client khac nhau goi cung tham so nhan NHAM ket qua
-     * mutation cua nhau (khong co lenh goi that nao chay cho client thu 2).
+     * retryEnabled) neu endpoint hoac BAT KY step nao khong phai GET/POST: cho phep
+     * tren step mutating se khien 2 client khac nhau goi cung tham so nhan NHAM ket
+     * qua mutation cua nhau (khong co lenh goi that nao chay cho client thu 2).
+     *
+     * POST duoc cho phep tu 2026-09 (truoc do chi GET) - mirror dung quyet dinh da ap
+     * dung cho cache per-step (xem UpstreamHttpExecutor.call()): POST dung lam API tim
+     * kiem/tra cuu truyen filter qua body van la thuan doc, khong mutating. Nguoi quan
+     * ly cau hinh (bat responseCacheEnabled) tu chiu trach nhiem dam bao dieu do dung -
+     * he thong chi con chan cung PUT/PATCH/DELETE (gan nhu chac chan la mutating).
      */
     private void validateResponseCache(EndpointRequestDto dto) {
         if (!dto.responseCacheEnabled()) {
             return;
         }
-        if (dto.method() != com.bccs.gatewaymanager.entity.GatewayMethod.GET) {
+        if (!isGetOrPost(dto.method())) {
             throw new BusinessException("GW-003",
-                    "Cache toan bo response chi bat duoc khi endpoint la GET (dang la " + dto.method() + ").");
+                    "Cache toan bo response chi bat duoc khi endpoint la GET/POST (dang la " + dto.method() + ").");
         }
         for (var s : dto.steps()) {
-            if (s.method() != com.bccs.gatewaymanager.entity.GatewayMethod.GET) {
-                throw new BusinessException("GW-003", "Cache toan bo response chi bat duoc khi TOAN BO step deu la GET "
+            if (!isGetOrPost(s.method())) {
+                throw new BusinessException("GW-003", "Cache toan bo response chi bat duoc khi TOAN BO step deu la GET/POST "
                         + "(step '" + s.name() + "' dang la " + s.method() + ").");
             }
         }
+    }
+
+    private boolean isGetOrPost(com.bccs.gatewaymanager.entity.GatewayMethod method) {
+        return method == com.bccs.gatewaymanager.entity.GatewayMethod.GET
+                || method == com.bccs.gatewaymanager.entity.GatewayMethod.POST;
     }
 
     /**

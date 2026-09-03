@@ -76,6 +76,29 @@
           <span>Client gửi header <code>Idempotency-Key</code> - lần gọi đầu tiên với 1 key được thực thi + lưu kết quả thành công; lần gọi tiếp theo cùng key trong TTL trả thẳng kết quả cũ, không gọi lại backend thật. Lỗi không được lưu - client vẫn retry lại được sau khi lỗi thật đã hết.</span>
         </div>
       }
+
+      <div class="field-row">
+        <mat-slide-toggle [(ngModel)]="header.responseCacheEnabled" [disabled]="!allStepsAreGetOrPost()">
+          Cache toàn bộ response (dùng chung cho mọi client)
+        </mat-slide-toggle>
+        @if (header.responseCacheEnabled) {
+          <mat-form-field appearance="outline" class="small-field">
+            <mat-label>TTL (giây)</mat-label>
+            <input matInput type="number" [(ngModel)]="header.responseCacheTtlSeconds" />
+          </mat-form-field>
+        }
+      </div>
+      @if (!allStepsAreGetOrPost()) {
+        <div class="field-note field-note--warning">
+          <mat-icon inline="true">warning</mat-icon>
+          <span>Chỉ bật được khi endpoint VÀ TẤT CẢ step đều là GET hoặc POST - nếu cho phép trên step ghi/sửa dữ liệu thật (PUT/PATCH/DELETE, hoặc POST không phải API tìm kiếm thuần đọc), 2 client khác nhau gọi cùng tham số/body có thể nhận NHẦM kết quả của nhau.</span>
+        </div>
+      } @else if (header.responseCacheEnabled) {
+        <div class="field-note">
+          <mat-icon inline="true">info</mat-icon>
+          <span>Response cuối cùng được cache theo path + query (và hash body nếu là POST), dùng CHUNG cho MỌI client gọi cùng tham số trong TTL (khác Idempotency-Key - cache theo 1 key riêng client tự khai báo). Chỉ dùng cho endpoint tra cứu thuần tuý (kể cả API search POST truyền filter qua body), không dùng cho step thực sự tạo/sửa dữ liệu.</span>
+        </div>
+      }
     </mat-card-content>
   </mat-card>
 

@@ -45,7 +45,7 @@ public record EndpointRequestDto(
 
         /**
          * Cache TOAN BO response cho MOI client cung tham so - CHAN CUNG khi validate neu
-         * endpoint hoac bat ky step nao khong phai GET (xem EndpointService.validateResponseCache()).
+         * endpoint hoac bat ky step nao khong phai GET/POST (xem EndpointService.validateResponseCache()).
          * Mac dinh tat (false). Xem EndpointConfig.responseCacheEnabled.
          */
         boolean responseCacheEnabled,

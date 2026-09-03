@@ -118,14 +118,17 @@ public class DynamicDispatcherController {
      * client goi cung tham so (khong can client tu khai bao key gi ca) - kiem tra SAU
      * idempotency (client co gui dung Idempotency-Key van uu tien duong idempotency truoc,
      * chi roi xuong day khi khong dung idempotency). Engine validate da chan cung endpoint
-     * nay chi bat duoc khi TOAN BO step la GET, nen khong co rui ro cache nham ket qua
-     * mutation giua cac client khac nhau (xem EndpointService.validateResponseCache()).
+     * nay chi bat duoc khi TOAN BO step la GET/POST (xem EndpointService.validateResponseCache()),
+     * nen khong loai duoc het rui ro cache nham (POST van co the mutating, nguoi bat
+     * responseCacheEnabled tu chiu trach nhiem) - nhung key co gom hash body (xem
+     * resolveResponseCacheKey()) nen it nhat 2 request POST khac body khong bi tra nham
+     * response cua nhau.
      */
     private ResponseEntity<?> execute(EndpointResponseDto config, Map<String, String> pathVariables, HttpServletRequest request,
                                        String requestId, HttpMethod method, String requestPath, long startNanos) throws Exception {
         String rawBody = readBody(request);
         String idempotencyCacheKey = resolveIdempotencyCacheKey(config, request);
-        String responseCacheKey = idempotencyCacheKey == null ? resolveResponseCacheKey(config, requestPath, request) : null;
+        String responseCacheKey = idempotencyCacheKey == null ? resolveResponseCacheKey(config, requestPath, request, rawBody) : null;
 
         if (idempotencyCacheKey != null) {
             Optional<String> cached = cacheService.get(idempotencyCacheKey);
@@ -173,10 +176,12 @@ public class DynamicDispatcherController {
 
     /**
      * null = khong dung cache toan bo response cho request nay (endpoint chua bat cot).
-     * Key = path + query param da SAP XEP theo ten (khong phu thuoc thu tu client gui) -
-     * khong can gom body vi validate da dam bao endpoint nay chi toan step GET.
+     * Key = path + query param da SAP XEP theo ten (khong phu thuoc thu tu client gui),
+     * cong them hash SHA-256 cua rawBody neu co (endpoint nay tu 2026-09 co the la POST -
+     * xem EndpointService.validateResponseCache() - filter tim kiem thuong nam trong body
+     * chu khong phai query, 2 body khac nhau PHAI la 2 key khac nhau).
      */
-    private String resolveResponseCacheKey(EndpointResponseDto config, String requestPath, HttpServletRequest request) {
+    private String resolveResponseCacheKey(EndpointResponseDto config, String requestPath, HttpServletRequest request, String rawBody) {
         if (!config.responseCacheEnabled()) {
             return null;
         }
@@ -184,7 +189,11 @@ public class DynamicDispatcherController {
                 .sorted()
                 .map(name -> name + "=" + String.join(",", request.getParameterValues(name)))
                 .collect(Collectors.joining("&"));
-        return "gwm:response-cache:" + config.id() + ":" + requestPath + "?" + sortedQuery;
+        String key = "gwm:response-cache:" + config.id() + ":" + requestPath + "?" + sortedQuery;
+        if (rawBody != null && !rawBody.isBlank()) {
+            key += ":" + GatewayCacheService.sha256Hex(rawBody);
+        }
+        return key;
     }
 
     private String readBody(HttpServletRequest request) throws Exception {

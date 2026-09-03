@@ -70,7 +70,11 @@ public class GatewayCacheService {
         return base + ":" + sha256Hex(body.toString());
     }
 
-    private static String sha256Hex(String value) {
+    /**
+     * Dung chung boi DynamicDispatcherController.resolveResponseCacheKey() (cache toan
+     * bo response, tu 2026-09 cho phep POST) - tach public de khong lap lai logic hash.
+     */
+    public static String sha256Hex(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));

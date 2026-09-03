@@ -97,10 +97,14 @@ public class EndpointConfig {
      * sap xep (xem DynamicDispatcherController.resolveResponseCacheKey()).
      *
      * CHAN CUNG (validate, xem EndpointService.validateResponseCache()): chi bat duoc
-     * khi endpoint VA TOAN BO step deu la GET - neu cho phep tren step mutating
-     * (POST/PUT/DELETE), 2 client khac nhau gui request giong het nhau se khien client
-     * thu 2 nhan NHAM ket qua mutation cua client thu 1 (khong co lenh goi that nao
-     * chay cho ho). Mac dinh tat (false) - moi endpoint hien co giu nguyen hanh vi cu.
+     * khi endpoint VA TOAN BO step deu la GET/POST - PUT/PATCH/DELETE luon bi chan vi
+     * gan nhu chac chan la mutating. POST duoc cho phep tu 2026-09 (mirror quyet dinh
+     * cache per-step - xem UpstreamHttpExecutor.call()), dung cho API tim kiem/tra cuu
+     * truyen filter qua body; nguoi bat responseCacheEnabled tu chiu trach nhiem dam
+     * bao step POST do khong mutating - neu sai, 2 client khac nhau gui cung tham so/body
+     * se khien client thu 2 nhan NHAM ket qua mutation cua client thu 1 (khong co lenh
+     * goi that nao chay cho ho). Mac dinh tat (false) - moi endpoint hien co giu nguyen
+     * hanh vi cu.
      */
     @Builder.Default
     @org.hibernate.annotations.ColumnDefault("0")

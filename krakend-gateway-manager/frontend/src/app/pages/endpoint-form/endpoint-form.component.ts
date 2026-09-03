@@ -137,6 +137,8 @@ export class EndpointFormComponent implements OnInit {
       idempotencyEnabled: [ep.idempotencyEnabled ?? false],
       idempotencyTtlSeconds: [ep.idempotencyTtlSeconds ?? 86400],
       parallelExecution: [ep.parallelExecution ?? false],
+      responseCacheEnabled: [ep.responseCacheEnabled ?? false],
+      responseCacheTtlSeconds: [ep.responseCacheTtlSeconds ?? 300],
       steps: this.fb.array(
         [...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder).map((s) => this.buildStepGroup(s)),
       ),
@@ -223,6 +225,20 @@ export class EndpointFormComponent implements OnInit {
 
   get mappingsArray(): FormArray {
     return this.form.get('mappings') as FormArray;
+  }
+
+  /**
+   * Dieu kien bat responseCacheEnabled (xem EndpointService.validateResponseCache() -
+   * backend chan cung, ham nay chi de disable toggle + hien canh bao SOM tren UI):
+   * endpoint VA TOAN BO step deu phai la GET hoac POST - PUT/PATCH/DELETE luon bi chan
+   * vi gan nhu chac chan la mutating.
+   */
+  allStepsAreGetOrPost(): boolean {
+    const isGetOrPost = (method: string) => method === 'GET' || method === 'POST';
+    if (!isGetOrPost(this.form.get('method')!.value)) {
+      return false;
+    }
+    return this.stepsArray.controls.every((c) => isGetOrPost(c.get('method')!.value));
   }
 
   renameEntries(stepIndex: number): FormArray {
@@ -581,6 +597,8 @@ export class EndpointFormComponent implements OnInit {
       idempotencyEnabled: v.idempotencyEnabled ?? false,
       idempotencyTtlSeconds: v.idempotencyTtlSeconds || 86400,
       parallelExecution: v.parallelExecution ?? false,
+      responseCacheEnabled: v.responseCacheEnabled ?? false,
+      responseCacheTtlSeconds: v.responseCacheTtlSeconds || 300,
       steps,
       mappings,
     };

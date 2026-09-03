@@ -4,8 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -49,7 +54,32 @@ public class GatewayCacheService {
         }
     }
 
-    public static String buildKey(String upstreamName, String method, String resolvedUrl) {
-        return "gwm:cache:" + upstreamName + ":" + method + ":" + resolvedUrl;
+    /**
+     * @param body chi co y nghia voi method co request body (vi du POST dung lam API
+     *        tim kiem/tra cuu - filter nam trong body, khong phai query string). GET
+     *        hau nhu luon truyen null - giu KHONG doi dinh dang key cu (khong them
+     *        hau to) de khong lam "rong" toan bo cache GET dang chay khi trien khai
+     *        thay doi nay. Voi POST, 2 request cung URL nhung KHAC body PHAI la 2 key
+     *        khac nhau - neu khong se tra nham response cua 1 filter khac cho client.
+     */
+    public static String buildKey(String upstreamName, String method, String resolvedUrl, JsonNode body) {
+        String base = "gwm:cache:" + upstreamName + ":" + method + ":" + resolvedUrl;
+        if (body == null || body.isNull()) {
+            return base;
+        }
+        return base + ":" + sha256Hex(body.toString());
+    }
+
+    private static String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            // 16 hex dau (64 bit) du de tranh dung do trong pham vi 1 URL, khong can
+            // full 64 hex ky tu - giu key Redis gon.
+            return HexFormat.of().formatHex(hash, 0, 8);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 luon co san tren moi JVM chuan - nhanh nay thuc te khong bao gio xay ra.
+            throw new IllegalStateException("SHA-256 khong kha dung", e);
+        }
     }
 }

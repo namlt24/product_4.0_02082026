@@ -41,7 +41,16 @@ public record EndpointRequestDto(
          * Chi co y nghia khi sequential=false - bat song song hoa THAT SU cac step doc
          * lap qua thread pool rieng. Mac dinh tat (false). Xem EndpointConfig.parallelExecution.
          */
-        boolean parallelExecution
+        boolean parallelExecution,
+
+        /**
+         * Cache TOAN BO response cho MOI client cung tham so - CHAN CUNG khi validate neu
+         * endpoint hoac bat ky step nao khong phai GET (xem EndpointService.validateResponseCache()).
+         * Mac dinh tat (false). Xem EndpointConfig.responseCacheEnabled.
+         */
+        boolean responseCacheEnabled,
+
+        Integer responseCacheTtlSeconds
 ) {
     public EndpointRequestDto {
         if (outputEncoding == null || outputEncoding.isBlank()) {
@@ -52,6 +61,9 @@ public record EndpointRequestDto(
         }
         if (idempotencyTtlSeconds == null || idempotencyTtlSeconds <= 0) {
             idempotencyTtlSeconds = 86400;
+        }
+        if (responseCacheTtlSeconds == null || responseCacheTtlSeconds <= 0) {
+            responseCacheTtlSeconds = 300;
         }
     }
 }

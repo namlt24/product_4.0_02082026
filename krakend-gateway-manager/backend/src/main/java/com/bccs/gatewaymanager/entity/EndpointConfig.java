@@ -90,6 +90,28 @@ public class EndpointConfig {
     @Column(name = "parallel_execution")
     private boolean parallelExecution = false;
 
+    /**
+     * Cache TOAN BO response cuoi cung cua endpoint nay, dung CHUNG cho MOI client goi
+     * cung tham so (khac Idempotency-Key: cache theo 1 key rieng client tu khai bao,
+     * muc dich chinh la an toan retry chu khong phai giam tai). Key = path + query da
+     * sap xep (xem DynamicDispatcherController.resolveResponseCacheKey()).
+     *
+     * CHAN CUNG (validate, xem EndpointService.validateResponseCache()): chi bat duoc
+     * khi endpoint VA TOAN BO step deu la GET - neu cho phep tren step mutating
+     * (POST/PUT/DELETE), 2 client khac nhau gui request giong het nhau se khien client
+     * thu 2 nhan NHAM ket qua mutation cua client thu 1 (khong co lenh goi that nao
+     * chay cho ho). Mac dinh tat (false) - moi endpoint hien co giu nguyen hanh vi cu.
+     */
+    @Builder.Default
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "response_cache_enabled", nullable = false)
+    private boolean responseCacheEnabled = false;
+
+    @Builder.Default
+    @org.hibernate.annotations.ColumnDefault("300")
+    @Column(name = "response_cache_ttl_seconds", nullable = false)
+    private int responseCacheTtlSeconds = 300;
+
     @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

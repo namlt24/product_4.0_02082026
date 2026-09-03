@@ -35,6 +35,11 @@
 -- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
 -- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
 -- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-09-03 (lan 9): them cot ENDPOINT_CONFIG.RESPONSE_CACHE_ENABLED +
+-- RESPONSE_CACHE_TTL_SECONDS (dong bo voi ddl-gateway-manager.sql, mac dinh 0/300) -
+-- cache TOAN BO response cho MOI client goi cung tham so, CHAN CUNG boi validate chi
+-- bat duoc khi endpoint VA TOAN BO step deu la GET. Khong anh huong du lieu THAT o
+-- tren (2 Endpoint composite hien co deu nhan mac dinh 0/300, dung y het hanh vi cu).
 -- Cap nhat 2026-08-31 (lan 8): them cot UPSTREAM_SERVICE.MAX_CONCURRENT_CALLS +
 -- MAX_WAIT_DURATION_MS (dong bo voi ddl-gateway-manager.sql, mac dinh 20/500 - dung
 -- y het gia tri truoc day fix cung trong UpstreamHttpExecutor.bulkheadFor()) - cho
@@ -199,10 +204,13 @@ CREATE TABLE "ENDPOINT_CONFIG"
 	"IDEMPOTENCY_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	"IDEMPOTENCY_TTL_SECONDS" NUMBER(10,0) DEFAULT 86400 NOT NULL ENABLE,
 	"PARALLEL_EXECUTION" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
+	"RESPONSE_CACHE_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
+	"RESPONSE_CACHE_TTL_SECONDS" NUMBER(10,0) DEFAULT 300 NOT NULL ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK (is_sequential in (0,1)) ENABLE,
 	 CHECK (idempotency_enabled in (0,1)) ENABLE,
 	 CHECK (parallel_execution in (0,1)) ENABLE,
+	 CHECK (response_cache_enabled in (0,1)) ENABLE,
 	 CONSTRAINT "ENDPOINT_CONFIG_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "UK5SBR9SP37R2WRGTA6BTBEE3XB" UNIQUE ("PATH") ENABLE
    );

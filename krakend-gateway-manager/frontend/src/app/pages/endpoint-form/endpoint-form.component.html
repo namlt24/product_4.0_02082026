@@ -86,6 +86,29 @@
             <span>Client gửi header <code>Idempotency-Key</code> - lần gọi đầu tiên với 1 key được thực thi + lưu kết quả thành công; lần gọi tiếp theo cùng key trong TTL trả thẳng kết quả cũ, không gọi lại backend thật (tránh side-effect lặp khi client tự động retry). Lỗi không được lưu - client vẫn retry lại được sau khi lỗi thật đã hết.</span>
           </div>
         }
+
+        <div class="field-row toggle-row">
+          <mat-slide-toggle formControlName="responseCacheEnabled" [disabled]="!allStepsAreGet()">
+            Cache toàn bộ response (dùng chung cho mọi client)
+          </mat-slide-toggle>
+          @if (form.get('responseCacheEnabled')?.value) {
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>TTL (giây)</mat-label>
+              <input matInput type="number" formControlName="responseCacheTtlSeconds" />
+            </mat-form-field>
+          }
+        </div>
+        @if (!allStepsAreGet()) {
+          <div class="field-note field-note--warning">
+            <mat-icon inline="true">warning</mat-icon>
+            <span>Chỉ bật được khi endpoint VÀ TẤT CẢ step đều là GET - nếu cho phép trên step ghi/sửa dữ liệu (POST/PUT/DELETE), 2 client khác nhau gọi cùng tham số có thể nhận NHẦM kết quả của nhau.</span>
+          </div>
+        } @else if (form.get('responseCacheEnabled')?.value) {
+          <div class="field-note">
+            <mat-icon inline="true">info</mat-icon>
+            <span>Response cuối cùng được cache theo path + query, dùng CHUNG cho MỌI client gọi cùng tham số trong TTL (khác Idempotency-Key - cache theo 1 key riêng client tự khai báo). Chỉ dùng cho endpoint tra cứu thuần tuý, ít đổi dữ liệu.</span>
+          </div>
+        }
       </mat-card-content>
     </mat-card>
 
@@ -165,7 +188,7 @@
 
               <div class="field-row toggle-row">
                 <mat-slide-toggle formControlName="cacheEnabled">
-                  Cache Redis cho step này (chỉ GET)
+                  Cache Redis cho step này (GET/POST - PUT/PATCH/DELETE luôn bị bỏ qua)
                 </mat-slide-toggle>
                 <mat-form-field appearance="outline" class="small-field">
                   <mat-label>TTL cache (giây)</mat-label>

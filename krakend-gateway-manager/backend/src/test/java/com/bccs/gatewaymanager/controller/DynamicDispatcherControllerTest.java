@@ -60,11 +60,15 @@ class DynamicDispatcherControllerTest {
     }
 
     private EndpointResponseDto endpoint(boolean idempotencyEnabled) {
+        return endpoint(idempotencyEnabled, false);
+    }
+
+    private EndpointResponseDto endpoint(boolean idempotencyEnabled, boolean responseCacheEnabled) {
         BackendStepDto step = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step), List.of(), null, null, idempotencyEnabled, 86400, false);
+                List.of(step), List.of(), null, null, idempotencyEnabled, 86400, false, responseCacheEnabled, 60);
     }
 
     private MockHttpServletRequest request(String idempotencyKey) {
@@ -147,6 +151,66 @@ class DynamicDispatcherControllerTest {
         }
 
         // Loi KHONG duoc cache - client phai retry lai duoc sau khi loi that da het.
+        verify(cacheService, never()).put(any(), any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    // ---- Cache toan bo response cho MOI client (responseCacheEnabled) - mirror dung 4 hanh vi cot loi cua idempotency ----
+
+    @Test
+    void responseCacheTat_luonGoiEngine_khongDungCache() throws Exception {
+        EndpointResponseDto config = endpoint(false, false);
+        lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
+        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
+
+        ResponseEntity<?> response = controller.dispatch(request(null));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(cacheService, never()).get(any());
+    }
+
+    @Test
+    void responseCacheBat_cacheMiss_goiEngine_chiCacheKhiThanhCong() throws Exception {
+        EndpointResponseDto config = endpoint(false, true);
+        lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
+        when(cacheService.get("gwm:response-cache:ep-1:/x?")).thenReturn(Optional.empty());
+        JsonNode result = objectMapper.readTree("{\"v\":1}");
+        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(result);
+
+        ResponseEntity<?> response = controller.dispatch(request(null));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(cacheService).put(eq("gwm:response-cache:ep-1:/x?"), eq(result.toString()), eq(60));
+    }
+
+    @Test
+    void responseCacheBat_cacheHit_traThangResponseCu_khongGoiLaiEngine() throws Exception {
+        EndpointResponseDto config = endpoint(false, true);
+        lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
+        when(cacheService.get("gwm:response-cache:ep-1:/x?")).thenReturn(Optional.of("{\"v\":1}"));
+
+        ResponseEntity<?> response = controller.dispatch(request(null));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(((JsonNode) response.getBody()).get("v").asInt()).isEqualTo(1);
+        verify(engine, never()).handle(any(), anyMap(), any(), any());
+    }
+
+    @Test
+    void responseCacheBat_engineThrow_khongCacheLoi() {
+        EndpointResponseDto config = endpoint(false, true);
+        lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
+        when(cacheService.get("gwm:response-cache:ep-1:/x?")).thenReturn(Optional.empty());
+        when(engine.handle(eq(config), anyMap(), any(), any()))
+                .thenThrow(new RuntimeException("upstream loi"));
+
+        try {
+            controller.dispatch(request(null));
+        } catch (Exception ignored) {
+            // Mong doi throw - kiem tra hanh vi ben duoi.
+        }
+
         verify(cacheService, never()).put(any(), any(), org.mockito.ArgumentMatchers.anyInt());
     }
 }

@@ -112,14 +112,30 @@ public class DynamicDispatcherController {
      * side-effect lap vi du client tu dong retry 1 POST co that tao du lieu); cache-miss
      * thi goi engine binh thuong, CHI cache khi THANH CONG (khong cache loi - client phai
      * retry lai duoc khi loi that da het, khong bi "ket" voi loi cache vinh vien).
+     *
+     * Cache toan bo response (P-resp-cache, tuy chon theo tung endpoint - xem
+     * EndpointConfig.responseCacheEnabled): KHAC idempotency o cho ap dung CHUNG cho MOI
+     * client goi cung tham so (khong can client tu khai bao key gi ca) - kiem tra SAU
+     * idempotency (client co gui dung Idempotency-Key van uu tien duong idempotency truoc,
+     * chi roi xuong day khi khong dung idempotency). Engine validate da chan cung endpoint
+     * nay chi bat duoc khi TOAN BO step la GET, nen khong co rui ro cache nham ket qua
+     * mutation giua cac client khac nhau (xem EndpointService.validateResponseCache()).
      */
     private ResponseEntity<?> execute(EndpointResponseDto config, Map<String, String> pathVariables, HttpServletRequest request,
                                        String requestId, HttpMethod method, String requestPath, long startNanos) throws Exception {
         String rawBody = readBody(request);
         String idempotencyCacheKey = resolveIdempotencyCacheKey(config, request);
+        String responseCacheKey = idempotencyCacheKey == null ? resolveResponseCacheKey(config, requestPath, request) : null;
 
         if (idempotencyCacheKey != null) {
             Optional<String> cached = cacheService.get(idempotencyCacheKey);
+            if (cached.isPresent()) {
+                recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
+                return ResponseEntity.ok(objectMapper.readTree(cached.get()));
+            }
+        }
+        if (responseCacheKey != null) {
+            Optional<String> cached = cacheService.get(responseCacheKey);
             if (cached.isPresent()) {
                 recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
                 return ResponseEntity.ok(objectMapper.readTree(cached.get()));
@@ -130,6 +146,9 @@ public class DynamicDispatcherController {
             JsonNode result = engine.handle(config, pathVariables, request.getParameterMap(), rawBody);
             if (idempotencyCacheKey != null) {
                 cacheService.put(idempotencyCacheKey, result.toString(), config.idempotencyTtlSeconds());
+            }
+            if (responseCacheKey != null) {
+                cacheService.put(responseCacheKey, result.toString(), config.responseCacheTtlSeconds());
             }
             recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
             return ResponseEntity.ok(result);
@@ -150,6 +169,22 @@ public class DynamicDispatcherController {
             return null;
         }
         return "gwm:idempotency:" + config.id() + ":" + key;
+    }
+
+    /**
+     * null = khong dung cache toan bo response cho request nay (endpoint chua bat cot).
+     * Key = path + query param da SAP XEP theo ten (khong phu thuoc thu tu client gui) -
+     * khong can gom body vi validate da dam bao endpoint nay chi toan step GET.
+     */
+    private String resolveResponseCacheKey(EndpointResponseDto config, String requestPath, HttpServletRequest request) {
+        if (!config.responseCacheEnabled()) {
+            return null;
+        }
+        String sortedQuery = java.util.Collections.list(request.getParameterNames()).stream()
+                .sorted()
+                .map(name -> name + "=" + String.join(",", request.getParameterValues(name)))
+                .collect(Collectors.joining("&"));
+        return "gwm:response-cache:" + config.id() + ":" + requestPath + "?" + sortedQuery;
     }
 
     private String readBody(HttpServletRequest request) throws Exception {

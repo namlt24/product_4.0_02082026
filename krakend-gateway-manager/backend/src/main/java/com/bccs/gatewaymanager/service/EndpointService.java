@@ -221,6 +221,30 @@ public class EndpointService {
         validateBranching(dto, orders);
         validateParallelGroups(dto);
         validateCompensationConfig(dto);
+        validateResponseCache(dto);
+    }
+
+    /**
+     * Cache TOAN BO response cho MOI client cung tham so (khac Idempotency-Key - xem
+     * EndpointConfig.responseCacheEnabled) - CHAN CUNG (khong chi canh bao mem nhu
+     * retryEnabled) neu endpoint hoac BAT KY step nao khong phai GET: cho phep tren
+     * step mutating se khien 2 client khac nhau goi cung tham so nhan NHAM ket qua
+     * mutation cua nhau (khong co lenh goi that nao chay cho client thu 2).
+     */
+    private void validateResponseCache(EndpointRequestDto dto) {
+        if (!dto.responseCacheEnabled()) {
+            return;
+        }
+        if (dto.method() != com.bccs.gatewaymanager.entity.GatewayMethod.GET) {
+            throw new BusinessException("GW-003",
+                    "Cache toan bo response chi bat duoc khi endpoint la GET (dang la " + dto.method() + ").");
+        }
+        for (var s : dto.steps()) {
+            if (s.method() != com.bccs.gatewaymanager.entity.GatewayMethod.GET) {
+                throw new BusinessException("GW-003", "Cache toan bo response chi bat duoc khi TOAN BO step deu la GET "
+                        + "(step '" + s.name() + "' dang la " + s.method() + ").");
+            }
+        }
     }
 
     /**

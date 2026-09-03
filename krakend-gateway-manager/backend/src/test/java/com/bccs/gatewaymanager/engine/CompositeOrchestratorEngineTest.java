@@ -99,19 +99,19 @@ class CompositeOrchestratorEngineTest {
 
     private EndpointResponseDto endpoint(boolean sequential, BackendStepDto... steps) {
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, sequential, "json",
-                List.of(steps), List.of(), null, null, false, 86400, false);
+                List.of(steps), List.of(), null, null, false, 86400, false, false, 300);
     }
 
     /** Endpoint non-sequential VOI parallelExecution=true (muc 4) - dung cho nhom test song song hoa. */
     private EndpointResponseDto endpointParallel(BackendStepDto... steps) {
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, false, "json",
-                List.of(steps), List.of(), null, null, false, 86400, true);
+                List.of(steps), List.of(), null, null, false, 86400, true, false, 300);
     }
 
     /** Endpoint sequential=true VOI mappings tuy chinh - dung cho nhom test wave (parallelGroup) can FieldMapping. */
     private EndpointResponseDto endpointWithMappings(List<FieldMappingDto> mappings, BackendStepDto... steps) {
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(steps), mappings, null, null, false, 86400, false);
+                List.of(steps), mappings, null, null, false, 86400, false, false, 300);
     }
 
     private void stubCall(UpstreamService upstream, JsonNode response) {
@@ -868,7 +868,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.QUERY, "staffCode", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of("staffCode", new String[]{"QUITT"}), null);
 
@@ -884,7 +884,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.BODY_FIELD, "staffCode", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of("staffCode", new String[]{"QUITT"}), null);
 
@@ -900,7 +900,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.QUERY_PARAM, null, "staffCode", null, null, null,
                 1, MappingTargetType.BODY_FIELD, "staffCode", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         // Khong truyen queryParams nao ca (Map.of()) - staffCode khong ton tai, phai ra null, khong throw.
         engine.handle(config, Map.of(), Map.of(), null);
@@ -920,7 +920,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
                 1, MappingTargetType.QUERY, "priority", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -936,7 +936,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "3",
                 1, MappingTargetType.BODY_FIELD, "priority", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -954,7 +954,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.CONSTANT, null, null, null, null, "low",
                 1, MappingTargetType.BODY_FIELD, "priority", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -977,7 +977,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -998,7 +998,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -1015,7 +1015,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 
@@ -1033,7 +1033,7 @@ class CompositeOrchestratorEngineTest {
         FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_MERGE, 1, null, "data", null, null,
                 2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false);
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300);
 
         engine.handle(config, Map.of(), Map.of(), null);
 

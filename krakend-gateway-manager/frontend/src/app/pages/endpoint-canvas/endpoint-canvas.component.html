@@ -303,7 +303,7 @@
       </mat-slide-toggle>
 
       <div class="field-row toggle-row">
-        <mat-slide-toggle [(ngModel)]="edit.cacheEnabled">Cache Redis cho step này (chỉ GET)</mat-slide-toggle>
+        <mat-slide-toggle [(ngModel)]="edit.cacheEnabled">Cache Redis cho step này (GET/POST - PUT/PATCH/DELETE luôn bị bỏ qua)</mat-slide-toggle>
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>TTL (giây)</mat-label>
           <input matInput type="number" [(ngModel)]="edit.cacheTtlSeconds" />

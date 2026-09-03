@@ -140,6 +140,7 @@ public class ConfigExportImportService {
 
         return new EndpointRequestDto(ep.name(), ep.description(), ep.path(), ep.method(),
                 ep.sequential(), ep.outputEncoding(), steps, mappings,
-                ep.idempotencyEnabled(), ep.idempotencyTtlSeconds(), ep.parallelExecution());
+                ep.idempotencyEnabled(), ep.idempotencyTtlSeconds(), ep.parallelExecution(),
+                ep.responseCacheEnabled(), ep.responseCacheTtlSeconds());
     }
 }

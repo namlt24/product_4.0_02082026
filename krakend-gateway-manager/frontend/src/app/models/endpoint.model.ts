@@ -185,6 +185,14 @@ export interface EndpointConfig {
    * hien - chi nen bat cho step khong side-effect quan trong/idempotent. Mac dinh tat.
    */
   parallelExecution: boolean;
+  /**
+   * Cache TOAN BO response cuoi cung, dung CHUNG cho MOI client goi cung tham so - khac
+   * idempotencyEnabled (cache theo 1 key rieng client tu khai bao qua header). CHAN CUNG
+   * (backend validate): chi bat duoc khi endpoint VA TOAN BO step deu la GET, tranh 2
+   * client khac nhau nhan nham ket qua cua nhau tren step mutating. Mac dinh tat.
+   */
+  responseCacheEnabled: boolean;
+  responseCacheTtlSeconds: number;
 }
 
 export type EndpointChangeType = 'CREATED' | 'UPDATED' | 'ROLLED_BACK';
@@ -315,6 +323,8 @@ export function emptyEndpoint(): EndpointConfig {
     idempotencyEnabled: false,
     idempotencyTtlSeconds: 86400,
     parallelExecution: false,
+    responseCacheEnabled: false,
+    responseCacheTtlSeconds: 300,
   };
 }
 

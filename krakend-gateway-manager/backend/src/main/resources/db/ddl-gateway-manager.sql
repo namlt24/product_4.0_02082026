@@ -12,6 +12,16 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
+-- Cap nhat 2026-09-03 (lan 14): them cot ENDPOINT_CONFIG.RESPONSE_CACHE_ENABLED +
+-- RESPONSE_CACHE_TTL_SECONDS (NUMBER(1,0)/NUMBER(10,0) NOT NULL, mac dinh 0/300) -
+-- cache TOAN BO response cho MOI client goi cung tham so (khac Idempotency-Key -
+-- cache theo 1 key rieng client tu khai bao). CHAN CUNG boi validate: chi bat duoc
+-- khi endpoint VA TOAN BO step deu la GET (xem EndpointService.validateResponseCache(),
+-- DynamicDispatcherController.resolveResponseCacheKey()). Tren DB DA CO bang nay, chay tay:
+-- ALTER TABLE endpoint_config ADD response_cache_enabled NUMBER(1,0) DEFAULT 0 NOT NULL;
+-- ALTER TABLE endpoint_config ADD CONSTRAINT endpoint_config_resp_cache_chk
+--   CHECK (response_cache_enabled in (0,1));
+-- ALTER TABLE endpoint_config ADD response_cache_ttl_seconds NUMBER(10,0) DEFAULT 300 NOT NULL;
 -- Cap nhat 2026-08-31 (lan 13): them cot UPSTREAM_SERVICE.MAX_CONCURRENT_CALLS +
 -- MAX_WAIT_DURATION_MS (NUMBER(10,0) NOT NULL, mac dinh 20/500 - dung y het gia
 -- tri truoc day fix cung trong UpstreamHttpExecutor.bulkheadFor()) - cho phep
@@ -214,10 +224,13 @@ CREATE TABLE "ENDPOINT_CONFIG"
 	"IDEMPOTENCY_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
 	"IDEMPOTENCY_TTL_SECONDS" NUMBER(10,0) DEFAULT 86400 NOT NULL ENABLE,
 	"PARALLEL_EXECUTION" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
+	"RESPONSE_CACHE_ENABLED" NUMBER(1,0) DEFAULT 0 NOT NULL ENABLE,
+	"RESPONSE_CACHE_TTL_SECONDS" NUMBER(10,0) DEFAULT 300 NOT NULL ENABLE,
 	 CHECK (method in ('GET','POST','PUT','DELETE','PATCH')) ENABLE,
 	 CHECK (is_sequential in (0,1)) ENABLE,
 	 CHECK (idempotency_enabled in (0,1)) ENABLE,
 	 CHECK (parallel_execution in (0,1)) ENABLE,
+	 CHECK (response_cache_enabled in (0,1)) ENABLE,
 	 CONSTRAINT "ENDPOINT_CONFIG_PK" PRIMARY KEY ("ID") ENABLE,
 	 CONSTRAINT "UK5SBR9SP37R2WRGTA6BTBEE3XB" UNIQUE ("PATH") ENABLE
    );

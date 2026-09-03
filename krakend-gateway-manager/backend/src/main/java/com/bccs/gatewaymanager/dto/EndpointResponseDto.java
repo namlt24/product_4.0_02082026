@@ -20,6 +20,11 @@ public record EndpointResponseDto(
         Instant updatedAt,
         boolean idempotencyEnabled,
         int idempotencyTtlSeconds,
-        boolean parallelExecution
+        boolean parallelExecution,
+
+        /** Cache TOAN BO response cho MOI client cung tham so - xem EndpointConfig.responseCacheEnabled. */
+        boolean responseCacheEnabled,
+
+        int responseCacheTtlSeconds
 ) {
 }

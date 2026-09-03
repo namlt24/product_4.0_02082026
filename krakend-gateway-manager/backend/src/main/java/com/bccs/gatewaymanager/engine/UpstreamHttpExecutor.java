@@ -42,9 +42,11 @@ import java.util.function.Supplier;
 
 /**
  * Thuc su thuc hien 1 lan goi HTTP ra Upstream, boc trong Redis cache-aside
- * (chi cho GET + cacheEnabled cua tung BackendStep - xem tham so call(), KHONG
- * phai cua UpstreamService, vi 1 Upstream bi nhieu step goi toi nhieu ham/path
- * khac nhau, khong phai ham nao cung nen cache) va Resilience4j CircuitBreaker/
+ * (chi cho GET/POST + cacheEnabled cua tung BackendStep - xem tham so call(),
+ * KHONG phai cua UpstreamService, vi 1 Upstream bi nhieu step goi toi nhieu ham/
+ * path khac nhau, khong phai ham nao cung nen cache; PUT/PATCH/DELETE luon bi
+ * chan cache vi gan nhu chac chan la mutating - xem GatewayCacheService.buildKey()
+ * ve cach key phan biet theo body cho POST) va Resilience4j CircuitBreaker/
  * Retry/Bulkhead - rieng 3 cai nay van dat TEN THEO upstream.getName(), tao
  * dong tai lan goi dau (khong the dung @CircuitBreaker/@Cacheable tinh vi
  * backend duoc chon dong theo cau hinh DB, khong phai theo chu ky method co dinh).
@@ -97,8 +99,14 @@ public class UpstreamHttpExecutor {
                           HttpHeaders headers, JsonNode body, boolean cacheEnabled, int cacheTtlSeconds,
                           int stepOrder, String stepName, Integer stepConnectTimeoutMs, Integer stepReadTimeoutMs) {
         long startNanos = System.nanoTime();
-        boolean cacheable = cacheEnabled && method == HttpMethod.GET;
-        String cacheKey = cacheable ? GatewayCacheService.buildKey(upstream.getName(), method.name(), resolvedUrl) : null;
+        // POST duoc cho cache TU 2026-09 (truoc do chi GET) - dung cho API tim kiem/tra
+        // cuu truyen filter qua body (POST khong sua/tao du lieu that su). PUT/PATCH/DELETE
+        // VAN luon bi chan cache vi gan nhu chac chan la mutating. Rui ro cache nham 1 lenh
+        // goi co side-effect (tra ket qua cu thay vi thuc thi that) do NGUOI QUAN LY cau hinh
+        // (nguoi bat cacheEnabled cho tung BackendStep) tu chiu trach nhiem - he thong KHONG
+        // con chan cung theo method nhu truoc, chi con chan PUT/PATCH/DELETE.
+        boolean cacheable = cacheEnabled && (method == HttpMethod.GET || method == HttpMethod.POST);
+        String cacheKey = cacheable ? GatewayCacheService.buildKey(upstream.getName(), method.name(), resolvedUrl, body) : null;
 
         // Bien tam de xay HopAuditEvent trong finally, du di theo nhanh nao (cache-hit/
         // that-cong/loi) - JAVA khong cho bien local final duoc gan lai trong try/catch,

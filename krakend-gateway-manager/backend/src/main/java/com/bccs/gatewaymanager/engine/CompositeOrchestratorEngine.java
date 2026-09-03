@@ -24,13 +24,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Bo may thuc thi composition tai request-time - thay the hoan toan
@@ -135,13 +133,20 @@ public class CompositeOrchestratorEngine {
         // javadoc o do): ca 2 loai buoc nhay nay deu KHONG phai "chay tuan tu tu nhien", nen
         // step dich cua chung, neu ban than khong co dieu kien rieng, phai DUNG LAI tai do
         // thay vi am tham roi tiep sang stepOrder lon hon ke tiep.
-        Set<Integer> branchTargetOrders = orderedSteps.stream()
-                .flatMap(s -> Stream.of(
-                        s.conditionOperator() != null ? s.nextStepOrderIfTrue() : null,
-                        s.conditionOperator() != null ? s.nextStepOrderIfFalse() : null,
-                        s.onErrorStepOrder()))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<Integer> branchTargetOrders = new HashSet<>();
+        for (BackendStepDto s : orderedSteps) {
+            if (s.conditionOperator() != null) {
+                if (s.nextStepOrderIfTrue() != null) {
+                    branchTargetOrders.add(s.nextStepOrderIfTrue());
+                }
+                if (s.nextStepOrderIfFalse() != null) {
+                    branchTargetOrders.add(s.nextStepOrderIfFalse());
+                }
+            }
+            if (s.onErrorStepOrder() != null) {
+                branchTargetOrders.add(s.onErrorStepOrder());
+            }
+        }
 
         Integer currentOrder = allOrders.isEmpty() ? null : allOrders.get(0);
         // Chong lap vo han: 1 step KHONG DUOC chay lai trong CUNG 1 request - neu

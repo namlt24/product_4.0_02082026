@@ -1,18 +1,24 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Endpoints</h1>
-    <p class="page-subtitle">Quản lý các endpoint expose qua Gateway - lưu là có hiệu lực ngay</p>
   </div>
 
   <div class="header-actions">
-    <a mat-stroked-button routerLink="/upstreams">
-      <mat-icon>dns</mat-icon>
-      Upstream Services
-    </a>
-    <a mat-stroked-button routerLink="/endpoints/new/canvas">
-      <mat-icon>dashboard_customize</mat-icon>
-      Canvas mới
-    </a>
+    <button mat-stroked-button [matMenuTriggerFor]="newEndpointMenu">
+      <mat-icon>add</mat-icon>
+      Endpoint mới
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #newEndpointMenu="matMenu">
+      <a mat-menu-item routerLink="/endpoints/new">
+        <mat-icon>edit_note</mat-icon>
+        <span>Thêm bằng form</span>
+      </a>
+      <a mat-menu-item routerLink="/endpoints/new/canvas">
+        <mat-icon>dashboard_customize</mat-icon>
+        <span>Thêm bằng Canvas</span>
+      </a>
+    </mat-menu>
     <button mat-stroked-button [disabled]="exporting()" (click)="exportConfig()" matTooltip="Tải cấu hình hiện tại về file .json">
       @if (exporting()) {
         <mat-spinner diameter="16" class="btn-spinner" />
@@ -98,7 +104,7 @@
       </a>
     </div>
   } @else {
-    <table mat-table [dataSource]="endpoints()" class="full-width gwm-table">
+    <table mat-table [dataSource]="pagedEndpoints()" class="full-width gwm-table">
       <ng-container matColumnDef="method">
         <th mat-header-cell *matHeaderCellDef>Method</th>
         <td mat-cell *matCellDef="let ep">
@@ -196,5 +202,14 @@
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns" class="gwm-row"></tr>
     </table>
+
+    <mat-paginator
+      [length]="endpoints().length"
+      [pageIndex]="pageIndex()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      showFirstLastButtons
+      (page)="onPageChange($event)"
+    />
   }
 </div>

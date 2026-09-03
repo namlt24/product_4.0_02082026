@@ -7,6 +7,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
@@ -34,6 +36,8 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
     MatTooltipModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatMenuModule,
+    MatPaginatorModule,
   ],
   templateUrl: './endpoint-list.component.html',
   styleUrl: './endpoint-list.component.scss',
@@ -42,6 +46,17 @@ export class EndpointListComponent implements OnInit {
   readonly displayedColumns = ['method', 'path', 'name', 'type', 'depends', 'steps', 'actions'];
   readonly endpoints = signal<EndpointConfig[]>([]);
   readonly loading = signal(false);
+
+  // Phan trang - hoan toan phia client (danh sach endpoint da fetch DAY DU tu
+  // truoc gio, khong phai server-side pagination nhu "Tra cuu Log"). Chi can
+  // cat mang trong bo nho, khong goi API them moi lan doi trang.
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(5);
+  readonly pageSizeOptions = [5, 10, 25, 50, 100];
+  readonly pagedEndpoints = computed(() => {
+    const start = this.pageIndex() * this.pageSize();
+    return this.endpoints().slice(start, start + this.pageSize());
+  });
   readonly deploying = signal(false);
   readonly exporting = signal(false);
   readonly importing = signal(false);
@@ -89,12 +104,20 @@ export class EndpointListComponent implements OnInit {
     this.searchSubject.next(term);
   }
 
+  onPageChange(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+  }
+
   private fetch(term = ''): void {
     this.loading.set(true);
     this.api.list(term).subscribe({
       next: (data) => {
         this.endpoints.set(data);
         this.loading.set(false);
+        // Danh sach vua doi (tim kiem/xoa/import...) - ve lai trang 1, tranh
+        // dung o 1 pageIndex gio vuot qua so trang thuc te (mang rong).
+        this.pageIndex.set(0);
       },
       error: () => {
         this.loading.set(false);

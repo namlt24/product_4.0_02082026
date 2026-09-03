@@ -409,6 +409,9 @@ public class DataUtil {
         if (obj == null || fieldNames == null) return;
     }
 
+    // Da kiem tra "input instanceof String" truoc khi ep - ve mat runtime an toan, nhung khong the
+    // chung minh tinh an toan nay o compile-time voi kieu generic T nen phai suppress.
+    @SuppressWarnings("unchecked")
     public <T> T validateMissingParam(T input, String errorCode) {
         if (DataUtil.isNullOrEmpty(input)) {
             throw new BusinessException(errorCode);

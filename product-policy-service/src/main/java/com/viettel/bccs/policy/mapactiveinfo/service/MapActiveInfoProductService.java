@@ -717,7 +717,7 @@ public class MapActiveInfoProductService {
 
     private List<String> getSpecCharValue(Map<Long, List<ProductSpecCharDTO>> specCharMap, Long offeringId, String specCharCode) {
         if (offeringId == null || DataUtil.isNullOrEmpty(specCharCode)) {
-            return List.of(null);
+            return List.of((String) null);
         }
         List<ProductSpecCharDTO> specChars = specCharMap.getOrDefault(offeringId, List.of());
         List<String> values = specChars.stream()

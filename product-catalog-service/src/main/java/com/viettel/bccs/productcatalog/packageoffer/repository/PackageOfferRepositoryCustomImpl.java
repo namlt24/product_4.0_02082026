@@ -34,6 +34,10 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
         return result;
     }
 
+    // entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+    // TypedQuery cho native query) - ep ve NativeQuery<Tuple> cua Hibernate la cach duy nhat de lay
+    // lai generic an toan luc goi getResultList(), khong the loai bo cast nay.
+    @SuppressWarnings("unchecked")
     private void executeQuery(List<Long> prodPackTypeIds, Map<Long, List<PackageOfferEntity>> result) {
         StringBuilder inClause = new StringBuilder();
         for (int i = 0; i < prodPackTypeIds.size(); i++) {

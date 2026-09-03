@@ -52,6 +52,7 @@ public class ProductOfferingCharacterFullDTO {
 
     @Schema(description = "Danh sách mã VAS xung đột", example = "[\"VAS_A\", \"VAS_B\"]")
     @Size(max = 1000, message = "vasCodesConflict tối đa 1000 phần tử")
+    @Builder.Default
     private List<String> vasCodesConflict = new ArrayList<>();
 
 }

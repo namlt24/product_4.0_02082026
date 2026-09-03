@@ -13,6 +13,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+// TypedQuery cho native query) - query.getResultList() vi vay tra ve List tho, khong the tranh
+// unchecked conversion khi return ve List<ProductOfferingEntity> o hau het method cua class nay.
+@SuppressWarnings("unchecked")
 @Repository
 @RequiredArgsConstructor
 public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepositoryCustom {

@@ -16,9 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -32,6 +30,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
     private ReasonMapper mapper;
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<ReasonEntity> getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(
             String actionCode, Long telServiceId, String payType, Long numProduct, boolean checkStatus,
             List<String> excludeProdOfferTypeIds) {
@@ -135,6 +134,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<ReasonEntity> getByActionCodeOrderByIdWithMappingChecking(String actionCode, Long telServiceId, Long numProduct, String productOfferType,
                                                                           List<String> excludeProdOfferTypeIds) {
         String strQuery;

@@ -243,6 +243,7 @@ public class ProductPackageDTO implements Serializable {
     private String defaultName;
 
     @Size(max = 500, message = "listProdPackType tối đa 500 phần tử")
+    @Builder.Default
     private List<ProdPackProductOfferTypeDTO> listProdPackType = new ArrayList<>();
 
 }

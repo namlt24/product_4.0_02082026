@@ -133,10 +133,12 @@ public class ProdPackProductOfferTypeDTO implements Serializable {
 
     @Schema(description = "Danh sách các kho chức năng của mặt hàng")
     @Size(max = 1000, message = "prodPackShopDTOs tối đa 1000 phần tử")
+    @Builder.Default
     private List<ProdPackShopDTO> prodPackShopDTOs = new ArrayList<>();//Danh sach cac kho chuc nang cua mat hang
 
     @Schema(description = "Danh sách mặt hàng đi kèm")
     @Size(max = 1000, message = "packageOfferDTOs tối đa 1000 phần tử")
+    @Builder.Default
     private List<PackageOfferDTO> packageOfferDTOs = new ArrayList<>(); // danh sach mat hang di kem
 
 }

@@ -5,14 +5,10 @@ import com.viettel.bccs.policy.mapbusinessskipdebt.dto.response.SkipDebtResultRe
 import com.viettel.bccs.policy.mapbusinessskipdebt.entity.MapBusinessSkipDebtEntity;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Component
 public class MapBusinessSkipDebtMapper {
-
-    private static final DateTimeFormatter OUTPUT_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public MapBusinessSkipDebtResponse toResponse(MapBusinessSkipDebtEntity entity) {
         if (entity == null) {
@@ -80,9 +76,5 @@ public class MapBusinessSkipDebtMapper {
 
     private String str(Object val) {
         return val == null ? null : val.toString();
-    }
-
-    private String fmtDate(LocalDate val) {
-        return val == null ? null : val.format(OUTPUT_DATE_FMT);
     }
 }

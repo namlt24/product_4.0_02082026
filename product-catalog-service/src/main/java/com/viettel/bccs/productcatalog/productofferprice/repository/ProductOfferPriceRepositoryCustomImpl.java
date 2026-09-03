@@ -1,14 +1,11 @@
 package com.viettel.bccs.productcatalog.productofferprice.repository;
 
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
-import com.viettel.bccs.productcatalog.utils.Const;
-import com.viettel.bccs.productcatalog.utils.DataUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Repository

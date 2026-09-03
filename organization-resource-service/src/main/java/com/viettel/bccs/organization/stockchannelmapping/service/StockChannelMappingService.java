@@ -2,9 +2,7 @@ package com.viettel.bccs.organization.stockchannelmapping.service;
 
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.organization.shop.dto.ShopDTO;
-import com.viettel.bccs.organization.shop.service.ShopService;
 import com.viettel.bccs.organization.staff.dto.StaffDTO;
-import com.viettel.bccs.organization.staff.service.StaffService;
 import com.viettel.bccs.organization.stockchannelmapping.dto.response.StockChannelMappingResponse;
 import com.viettel.bccs.organization.stockchannelmapping.entity.StockChannelMappingEntity;
 import com.viettel.bccs.organization.stockchannelmapping.mapper.StockChannelMappingMapper;
@@ -23,12 +21,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StockChannelMappingService {
 
-    private static final Long ALL = -1L;
-
     private final StockChannelMappingRepository mappingRepository;
     private final StockChannelMappingMapper mappingMapper;
-    private final ShopService shopService;
-    private final StaffService staffService;
 
     @Transactional(readOnly = true)
     public List<StockChannelMappingResponse> findActive() {

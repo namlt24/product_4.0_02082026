@@ -89,6 +89,7 @@ public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Map<String, String> getLstMapPackageByActionCodeAndReasonCodes(List<String> reasonCodes, String actionCode) {
 
         if (DataUtil.isNullOrEmpty(reasonCodes) || DataUtil.isNullOrEmpty(actionCode)) {

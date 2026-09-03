@@ -9,6 +9,7 @@ import com.viettel.bccs.policy.utils.DataUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -65,7 +66,7 @@ public class DiscountPromotionRepositoryCustomImpl implements DiscountPromotionR
 
         queryString.append("ORDER BY FUNCTION('NLSSORT', dp.code, 'NLS_SORT=vietnamese')");
 
-        Query query = em.createQuery(queryString.toString(), DiscountPromotionEntity.class);
+        TypedQuery<DiscountPromotionEntity> query = em.createQuery(queryString.toString(), DiscountPromotionEntity.class);
 
         for (Map.Entry<String, Object> entry : parameters.entrySet()) {
             query.setParameter(entry.getKey(), entry.getValue());

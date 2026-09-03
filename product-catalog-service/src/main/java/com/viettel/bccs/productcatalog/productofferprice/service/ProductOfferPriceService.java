@@ -11,7 +11,6 @@ import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
-import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
@@ -57,7 +56,6 @@ public class ProductOfferPriceService {
     private final SensorFreeClient sensorFreeClient;
     private final FreeCamEquipmentClient freeCamEquipmentClient;
 
-    private final ProductOfferingService productOfferingService;
     private final OptionSetValueService optionSetValueService;
     private final ProductOfferPriceMapper mapper;
     private final ProductOfferPriceRepository repository;

@@ -11,9 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Repository
@@ -23,6 +21,7 @@ public class MapSkipDebtChargesRepositoryCustomImpl implements MapSkipDebtCharge
     private EntityManager em;
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<MapSkipDebtChargesEntity> findByExample(MapSkipDebtChargesDTO exampleMapActiveInfo) throws Exception {
         List<Object> param = new ArrayList<>();
         String sql = buildQuery(exampleMapActiveInfo, param);

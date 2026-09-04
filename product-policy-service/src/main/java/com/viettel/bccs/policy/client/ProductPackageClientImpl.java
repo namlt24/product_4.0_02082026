@@ -1,15 +1,16 @@
 package com.viettel.bccs.policy.client;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.common.error.exception.IntegrationException;
-import com.viettel.bccs.policy.client.dto.StandardClientResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-import java.util.List;
 
 @Service
 @Slf4j
@@ -20,10 +21,10 @@ public class ProductPackageClientImpl implements ProductPackageClient {
     private final ObjectMapper objectMapper;
 
     @Override
-    public List<String> getPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer pNumber) {
+    public List<String> getPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer packageNumber) {
         try {
             var response = productCatalogFeignClient
-                    .getPackageCodesByProductOfferTypeCount(excludeProdOfferType, pNumber)
+                    .getPackageCodesByProductOfferTypeCount(excludeProdOfferType, packageNumber)
                     .getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(
@@ -32,11 +33,11 @@ public class ProductPackageClientImpl implements ProductPackageClient {
             }
             return Collections.emptyList();
         } catch (RuntimeException e) {
-            log.error("Error calling product-package service for excludeProdOfferType: {}, pNumber: {}",
-                    excludeProdOfferType, pNumber, e);
+            log.error("Error calling product-package service for excludeProdOfferType: {}, packageNumber: {}",
+                    excludeProdOfferType, packageNumber, e);
             throw new IntegrationException("BCCS-SYS-PTC-0001",
                     "Error calling product-catalog-service getPackageCodesByProductOfferTypeCount for excludeProdOfferType="
-                            + excludeProdOfferType + ", pNumber=" + pNumber, e);
+                            + excludeProdOfferType + ", pNumber=" + packageNumber, e);
         }
     }
 }

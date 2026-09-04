@@ -1,13 +1,15 @@
 package com.viettel.bccs.productcatalog.prodpackproductoffertype.service;
 
-import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
-import com.viettel.bccs.productcatalog.prodpackproductoffertype.mapper.ProdPackProductOfferTypeMapper;
-import com.viettel.bccs.productcatalog.prodpackproductoffertype.repository.ProdPackProductOfferTypeRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
+import com.viettel.bccs.productcatalog.prodpackproductoffertype.mapper.ProdPackProductOfferTypeMapper;
+import com.viettel.bccs.productcatalog.prodpackproductoffertype.repository.ProdPackProductOfferTypeRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +23,8 @@ public class ProdPackProductOfferTypeService {
         return repository.getByProductPackageIdAndStatus(productPackageId, status);
     }
 
-    public List<ProdPackProductOfferTypeDTO> getListByProductPackageIdAndOfferTypeIds(Long productPackageId, List<Long> offerTypeIds) {
+    public List<ProdPackProductOfferTypeDTO> getListByProductPackageIdAndOfferTypeIds(Long productPackageId,
+        List<Long> offerTypeIds) {
         return repository.getListByProductPackageIdAndOfferTypeIds(productPackageId, offerTypeIds);
     }
 }

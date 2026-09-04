@@ -1,9 +1,9 @@
 package com.viettel.bccs.policy.client;
 
+import java.util.List;
+
 import com.viettel.bccs.policy.client.dto.ProductSpecCharLookupDTO;
 import com.viettel.bccs.policy.client.dto.ProductSpecCharValueLookupDTO;
-
-import java.util.List;
 
 public interface ProductSpecCharClient {
 

@@ -1,10 +1,18 @@
 package com.viettel.bccs.policy.reasoncharuse.entity;
 
-import jakarta.persistence.*;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "REASON_CHAR_USE")
+@Getter
+@Setter
 public class ReasonCharUseEntity {
 
     @Id
@@ -51,34 +59,6 @@ public class ReasonCharUseEntity {
     private Long max;
 
     // Getters
-    public Long getReasonCharUseId() { return reasonCharUseId; }
-    public Long getReasonId() { return reasonId; }
-    public Long getProductSpecCharValueId() { return productSpecCharValueId; }
-    public Long getProductSpecCharId() { return productSpecCharId; }
-    public String getCreateUser() { return createUser; }
-    public Date getCreateDatetime() { return createDatetime; }
-    public String getUpdateUser() { return updateUser; }
-    public Date getUpdateDatetime() { return updateDatetime; }
-    public String getStatus() { return status; }
-    public String getSpecificValue() { return specificValue; }
-    public Long getLimited() { return limited; }
-    public Long getLimited2() { return limited2; }
-    public Long getMin() { return min; }
-    public Long getMax() { return max; }
 
     // Setters
-    public void setReasonCharUseId(Long reasonCharUseId) { this.reasonCharUseId = reasonCharUseId; }
-    public void setReasonId(Long reasonId) { this.reasonId = reasonId; }
-    public void setProductSpecCharValueId(Long productSpecCharValueId) { this.productSpecCharValueId = productSpecCharValueId; }
-    public void setProductSpecCharId(Long productSpecCharId) { this.productSpecCharId = productSpecCharId; }
-    public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setCreateDatetime(Date createDatetime) { this.createDatetime = createDatetime; }
-    public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
-    public void setUpdateDatetime(Date updateDatetime) { this.updateDatetime = updateDatetime; }
-    public void setStatus(String status) { this.status = status; }
-    public void setSpecificValue(String specificValue) { this.specificValue = specificValue; }
-    public void setLimited(Long limited) { this.limited = limited; }
-    public void setLimited2(Long limited2) { this.limited2 = limited2; }
-    public void setMin(Long min) { this.min = min; }
-    public void setMax(Long max) { this.max = max; }
 }

@@ -1,8 +1,8 @@
 package com.viettel.bccs.productcatalog.productoffertype.repository;
 
-import com.viettel.bccs.productcatalog.productoffertype.entity.ProductOfferTypeEntity;
-
 import java.util.List;
+
+import com.viettel.bccs.productcatalog.productoffertype.entity.ProductOfferTypeEntity;
 
 public interface ProductOfferTypeRepositoryCustom {
 

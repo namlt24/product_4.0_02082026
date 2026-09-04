@@ -1,11 +1,12 @@
 package com.viettel.bccs.organization.shop.repository;
 
-import com.viettel.bccs.organization.shop.entity.ShopEntity;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.viettel.bccs.organization.shop.entity.ShopEntity;
 
 @Repository
 public interface ShopRepository extends JpaRepository<ShopEntity, Long>, ShopRepositoryCustom {

@@ -1,18 +1,24 @@
 package com.viettel.bccs.policy.mapactiveinfo.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
-
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.ChanelTypeIdRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.openapi.ApiFindById;
 import com.viettel.bccs.policy.mapactiveinfo.openapi.ApiGetChanelTypeIdMapActiveInfo;
 import com.viettel.bccs.policy.mapactiveinfo.openapi.ApiReindexElasticsearch;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
@@ -24,7 +30,7 @@ public class MapActiveInfoQuerryController {
     @GetMapping("/findById/{id}")
     @ApiFindById
     public StandardResponse<MapActiveInfoResponse> findById(
-            @Parameter(description = "ID bản ghi MAP_ACTIVE_INFO", example = "1", required = true)
+            @Parameter(description = "ID bản ghi MapActiveInfo", example = "1", required = true)
             @PathVariable
             Long id) {
         return StandardResponses.success(mapActiveInfoQuerryService.findById(id));

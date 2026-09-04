@@ -1,8 +1,8 @@
 package com.viettel.bccs.organization.staffext.repository;
 
-import com.viettel.bccs.organization.staffext.entity.StaffExtEntity;
-
 import java.util.Optional;
+
+import com.viettel.bccs.organization.staffext.entity.StaffExtEntity;
 
 public interface StaffExtRepositoryCustom {
 

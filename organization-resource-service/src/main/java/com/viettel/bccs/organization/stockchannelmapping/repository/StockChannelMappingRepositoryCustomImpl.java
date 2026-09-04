@@ -1,15 +1,20 @@
 package com.viettel.bccs.organization.stockchannelmapping.repository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Tuple;
-import lombok.RequiredArgsConstructor;
-import org.hibernate.query.NativeQuery;
-import org.springframework.stereotype.Repository;
-
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import org.hibernate.query.NativeQuery;
+import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import lombok.RequiredArgsConstructor;
+
+// entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+// TypedQuery cho native query) - ep ve NativeQuery<Tuple> cua Hibernate la cach duy nhat de lay
+// lai generic an toan luc goi getResultList(), khong the loai bo cast nay.
+@SuppressWarnings("unchecked")
 @Repository
 @RequiredArgsConstructor
 public class StockChannelMappingRepositoryCustomImpl implements StockChannelMappingRepositoryCustom {

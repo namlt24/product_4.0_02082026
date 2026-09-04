@@ -1,0 +1,22 @@
+create table PRODUCT_SPEC_CHAR_USE
+(
+    PROD_SPEC_CHAR_USE_ID      NUMBER(10) not null
+        constraint PSCVU_PK
+            primary key,
+    ORDER_CHAR                 NUMBER(10),
+    PRODUCT_SPEC_ID            NUMBER(10) not null,
+    PRODUCT_SPEC_CHAR_ID       NUMBER(10) not null,
+    PRODUCT_SPEC_CHAR_VALUE_ID NUMBER(10),
+    STATUS                     VARCHAR2(1),
+    CREATE_USER                CHAR(50),
+    CREATE_DATETIME            DATE,
+    UPDATE_USER                VARCHAR2(50),
+    UPDATE_DATETIME            DATE,
+    SYSTEM_TYPE                NVARCHAR2(100),
+    SPECIFIC_VALUE             VARCHAR2(4000),
+    CONFIG_PHASE               NVARCHAR2(200),
+    MIN                        NUMBER(10),
+    MAX                        NUMBER(10),
+    IS_REQUIRED                VARCHAR2(1),
+    NOTE                       NVARCHAR2(2000)
+)

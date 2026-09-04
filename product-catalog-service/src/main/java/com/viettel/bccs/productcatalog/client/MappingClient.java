@@ -1,8 +1,8 @@
 package com.viettel.bccs.productcatalog.client;
 
-import com.viettel.bccs.productcatalog.client.dto.ReasonDTO;
-
 import java.util.List;
+
+import com.viettel.bccs.productcatalog.client.dto.ReasonDTO;
 
 /**
  * Client gọi sang product-policy-service để truy vấn thông tin mapping dịch vụ bán hàng.
@@ -20,7 +20,8 @@ public interface MappingClient {
 
     /**
      * Lấy danh sách lý do theo productPackageId phục vụ quản lý cước PCCC.
-     * Gọi sang product-policy-service: GET /product-policy-service/v1/mapping/getMappingReasonProductOfferPrice/{productPackageId}
+     * Gọi sang product-policy-service: GET
+       * /product-policy-service/v1/mapping/getMappingReasonProductOfferPrice/{productPackageId}
      *
      * @param productPackageId id gói sản phẩm
      * @return danh sách ReasonDTO, hoặc null nếu không có kết quả

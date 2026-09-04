@@ -1,15 +1,16 @@
 package com.viettel.bccs.productcatalog.client;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.client.error.BccsClient4xxException;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.CustTypeDTO;
-import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Slf4j
 @Service

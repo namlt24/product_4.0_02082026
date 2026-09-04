@@ -1,29 +1,26 @@
 package com.viettel.bccs.policy.mapactiveinfo.controller;
 
-import com.viettel.bccs.common.api.response.StandardResponse;
-import com.viettel.bccs.common.api.response.StandardResponses;
-import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.ValidateInputMapActiveInfoRequest;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateInputMapActiveInfoResponse;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ValidateMapActiveInfoResponse;
-import com.viettel.bccs.policy.mapactiveinfo.openapi.ApiValidateFollowMapActiveInfoNew;
-import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoValidateService;
-import com.viettel.bccs.policy.utils.Const;
-import com.viettel.bccs.policy.utils.DataUtil;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.viettel.bccs.common.api.response.StandardResponse;
+import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.ValidateInputMapActiveInfoRequest;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
+import com.viettel.bccs.policy.mapactiveinfo.openapi.ApiValidateFollowMapActiveInfoNew;
+import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoValidateService;
+import com.viettel.bccs.policy.utils.Const;
+import com.viettel.bccs.policy.utils.DataUtil;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/product-policy-service/v1/map-active-info")
@@ -56,7 +53,7 @@ public class MapActiveInfoValidateController {
             lstBusinessNo = Collections.singletonList(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
         }
 
-        List<MapActiveInfoDTO> mapActiveInfoDTOs = service.validateMapActiveInfo(request.getStaffCode(),
+        List<MapActiveInfoDTO> mapActiveInfoDtos = service.validateMapActiveInfo(request.getStaffCode(),
                 request.getActionCode(),
                 request.getOfferIds() == null ? new ArrayList<Long>() : request.getOfferIds(),
                 request.getPromotionCode(),
@@ -76,8 +73,8 @@ public class MapActiveInfoValidateController {
                 request.getPayType(),
                 request.getTechnology(),
                 request.getMode(), null, lstBusinessNo, request.getProductCode());
-        if (!DataUtil.isNullOrEmpty(mapActiveInfoDTOs)) {
-            mapActiveInfoDTO = mapActiveInfoDTOs.get(0);
+        if (!DataUtil.isNullOrEmpty(mapActiveInfoDtos)) {
+            mapActiveInfoDTO = mapActiveInfoDtos.get(0);
         }
         return StandardResponses.success(mapActiveInfoDTO);
     }

@@ -1,15 +1,14 @@
 package com.viettel.bccs.productcatalog.optionset.repository;
 
-import com.viettel.bccs.productcatalog.optionset.entity.OptionSetValueEntity;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import jakarta.persistence.QueryHint;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.QueryHints;
-import org.springframework.data.repository.query.Param;
+import com.viettel.bccs.productcatalog.optionset.entity.OptionSetValueEntity;
 
-import java.util.List;
 
 @Repository
 public interface OptionSetValueRepository extends JpaRepository<OptionSetValueEntity, Long> {
@@ -18,7 +17,8 @@ public interface OptionSetValueRepository extends JpaRepository<OptionSetValueEn
 
     List<OptionSetValueEntity> findByOptionSetId(Long optionSetId);
 
-    @Query("SELECT osv FROM OptionSetValueEntity osv JOIN OptionSetEntity os ON osv.optionSetId = os.optionSetId WHERE os.code = :code AND os.status = '1'")
+    @Query("SELECT osv FROM OptionSetValueEntity osv JOIN OptionSetEntity os ON osv.optionSetId = os.optionSetId "
+            + "WHERE os.code = :code AND os.status = '1' and osv.status = '1'")
     List<OptionSetValueEntity> findByOptionSetCode(@Param("code") String code);
 
     @Query(value = "SELECT osv.*, os.code AS option_set_code " +

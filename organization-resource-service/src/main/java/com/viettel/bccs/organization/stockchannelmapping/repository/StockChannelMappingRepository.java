@@ -1,12 +1,11 @@
 package com.viettel.bccs.organization.stockchannelmapping.repository;
 
-import com.viettel.bccs.organization.stockchannelmapping.entity.StockChannelMappingEntity;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.viettel.bccs.organization.stockchannelmapping.entity.StockChannelMappingEntity;
 
 @Repository
 public interface StockChannelMappingRepository

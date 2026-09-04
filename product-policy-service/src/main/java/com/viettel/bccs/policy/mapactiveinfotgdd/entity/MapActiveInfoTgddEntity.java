@@ -1,12 +1,21 @@
 package com.viettel.bccs.policy.mapactiveinfotgdd.entity;
 
-import jakarta.persistence.*;
-
 import java.sql.Blob;
 import java.util.Date;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.Getter;
+import lombok.Setter;
+
 @Entity
 @Table(name = "MAP_ACTIVE_INFO_TGDD")
+@Getter
+@Setter
 public class MapActiveInfoTgddEntity {
 
     @Id
@@ -201,66 +210,4 @@ public class MapActiveInfoTgddEntity {
     private Long importOfflineId;
 
     // Getters
-    public Long getId() { return id; }
-    public Long getTelServiceId() { return telServiceId; }
-    public String getProductCode() { return productCode; }
-    public String getProductName() { return productName; }
-    public Long getRegReasonId() { return regReasonId; }
-    public String getReasonName() { return reasonName; }
-    public String getPromCode() { return promCode; }
-    public String getPromName() { return promName; }
-    public Long getChannelTypeId() { return channelTypeId; }
-    public String getChannelName() { return channelName; }
-    public String getProvinceCode() { return provinceCode; }
-    public String getDistrictCode() { return districtCode; }
-    public Date getEffectDate() { return effectDate; }
-    public Date getEndDate() { return endDate; }
-    public String getProvinceName() { return provinceName; }
-    public String getDistrictName() { return districtName; }
-    public Long getOfferId() { return offerId; }
-    public String getOfferName() { return offerName; }
-    public Long getStatus() { return status; }
-    public String getPrecinctName() { return precinctName; }
-    public String getPrecinctCode() { return precinctCode; }
-    public String getShopCode() { return shopCode; }
-    public String getStaffCode() { return staffCode; }
-    public String getActionCode() { return actionCode; }
-    public String getActionName() { return actionName; }
-    public String getLimitNumber() { return limitNumber; }
-    public Long getCaptcharRequire() { return captcharRequire; }
-    public String getUnit() { return unit; }
-    public String getCustomerGroup() { return customerGroup; }
-    public String getCustomerType() { return customerType; }
-    public String getSubType() { return subType; }
-    public String getSubGroup() { return subGroup; }
-    public String getPolicyDoc() { return policyDoc; }
-    public String getActionGroup() { return actionGroup; }
-    public String getActionGroupName() { return actionGroupName; }
-    public String getFileName() { return fileName; }
-    public Long getStationId() { return stationId; }
-    public Long getShopId() { return shopId; }
-    public Blob getFileAttach() { return fileAttach; }
-    public String getCreateUser() { return createUser; }
-    public Date getIssueDatetime() { return issueDatetime; }
-    public String getStationCodes() { return stationCodes; }
-    public String getPayType() { return payType; }
-    public String getTechnology() { return technology; }
-    public Date getUpdateDatetime() { return updateDatetime; }
-    public String getUpdateUser() { return updateUser; }
-    public String getAreaGroupCode() { return areaGroupCode; }
-    public String getVasCode() { return vasCode; }
-    public String getVasName() { return vasName; }
-    public String getNodeCode() { return nodeCode; }
-    public String getNote() { return note; }
-    public String getGroupNodeCode() { return groupNodeCode; }
-    public Long getConnectMethod() { return connectMethod; }
-    public Long getAttachTelServiceId() { return attachTelServiceId; }
-    public String getAttachProductCode() { return attachProductCode; }
-    public Long getSingleOrCombo() { return singleOrCombo; }
-    public String getOldProductCode() { return oldProductCode; }
-    public String getAttachPromCode() { return attachPromCode; }
-    public Long getAttachReasonId() { return attachReasonId; }
-    public String getSubGroupCode() { return subGroupCode; }
-    public String getProjectCode() { return projectCode; }
-    public Long getImportOfflineId() { return importOfflineId; }
 }

@@ -1,8 +1,9 @@
 package com.viettel.bccs.organization.shop.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.shop.dto.ShopDTO;
 import com.viettel.bccs.organization.shop.entity.ShopEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ShopMapper {

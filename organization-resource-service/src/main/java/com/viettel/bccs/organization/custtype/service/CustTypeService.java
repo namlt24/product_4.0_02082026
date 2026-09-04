@@ -1,18 +1,20 @@
 package com.viettel.bccs.organization.custtype.service;
 
+import java.util.List;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.organization.custtype.dto.CustTypeDTO;
 import com.viettel.bccs.organization.custtype.mapper.CustTypeMapper;
 import com.viettel.bccs.organization.custtype.repository.CustTypeRepository;
 import com.viettel.bccs.organization.utils.Const;
 import com.viettel.bccs.organization.utils.RequestValidator;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -27,15 +29,17 @@ public class CustTypeService {
     public CustTypeDTO findActiveByCustType(String custType) {
         RequestValidator.requireNotBlank(custType, "custType", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Truy vấn loại khách hàng từ DB theo mã: {}", custType);
-        return custTypeRepository.findByCustTypeAndStatus(custType, Const.STATUS.ACTIVE)
+        return custTypeRepository.findByCustTypeAndStatus(custType, Const.Status.ACTIVE)
                 .map(custTypeMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CUSTTYPE-0001", "Không tìm thấy loại khách hàng với mã: " + custType));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CUSTTYPE-0001",
+                        "Không tìm thấy loại khách hàng với mã: " + custType));
     }
 
+    @Cacheable(value = "custTypeCache", key = "'ALL_ACTIVE'")
     @Transactional(readOnly = true)
     public List<CustTypeDTO> getAllActive() {
         log.info("Truy vấn tất cả loại khách hàng đang hiệu lực");
-        return custTypeRepository.findAllByStatus(Const.STATUS.ACTIVE)
+        return custTypeRepository.findAllByStatus(Const.Status.ACTIVE)
                 .stream()
                 .map(custTypeMapper::toDTO)
                 .toList();

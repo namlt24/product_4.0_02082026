@@ -1,9 +1,9 @@
 package com.viettel.bccs.policy.mapping.repository;
 
-import com.viettel.bccs.policy.reason.entity.ReasonEntity;
-
 import java.util.List;
 import java.util.Map;
+
+import com.viettel.bccs.policy.reason.entity.ReasonEntity;
 
 public interface MappingRepositoryCustom {
 

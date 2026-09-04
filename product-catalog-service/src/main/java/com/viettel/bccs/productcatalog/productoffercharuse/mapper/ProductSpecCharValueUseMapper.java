@@ -1,14 +1,17 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductSpecCharValueUseMapper {
 
     public ProductSpecCharValueDTO toDto(ProductSpecCharValueEntity entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         return ProductSpecCharValueDTO.builder()
                 .productSpecCharValueId(entity.getProductSpecCharValueId())
                 .productSpecCharId(entity.getProductSpecCharId())

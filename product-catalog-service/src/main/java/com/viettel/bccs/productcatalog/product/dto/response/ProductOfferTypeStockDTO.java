@@ -1,10 +1,11 @@
 package com.viettel.bccs.productcatalog.product.dto.response;
 
+import java.util.List;
+
 import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOfferTypeDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
-
-import java.util.List;
 
 /**
  * 1 nhóm loại hàng hoá trong kết quả API getListStockTypeWS: loại mặt hàng (productOfferType)

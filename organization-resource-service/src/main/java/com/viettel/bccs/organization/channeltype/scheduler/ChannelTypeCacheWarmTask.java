@@ -1,12 +1,14 @@
 package com.viettel.bccs.organization.channeltype.scheduler;
 
+import java.time.Duration;
+
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.cache.warmer.BccsCacheWarmTask;
 import com.viettel.bccs.organization.channeltype.repository.ChannelTypeRepository;
 import com.viettel.bccs.organization.channeltype.service.ChannelTypeService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
-import java.time.Duration;
+import lombok.RequiredArgsConstructor;
 
 
 @Component

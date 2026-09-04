@@ -1,15 +1,8 @@
 package com.viettel.bccs.policy.discountpromotion.controller;
 
-import com.viettel.bccs.common.api.response.StandardResponse;
-import com.viettel.bccs.common.api.response.StandardResponses;
-import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
-import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionResponse;
-import com.viettel.bccs.policy.discountpromotion.openapi.ApiFindById;
-import com.viettel.bccs.policy.discountpromotion.openapi.ApiGetPromotionList;
-import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,8 +10,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.viettel.bccs.common.api.response.StandardResponse;
+import com.viettel.bccs.common.api.response.StandardResponses;
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionResponse;
+import com.viettel.bccs.policy.discountpromotion.openapi.ApiFindById;
+import com.viettel.bccs.policy.discountpromotion.openapi.ApiGetPromotionList;
+import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
+
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 @Tag(name = "DiscountPromotion", description = "APIs quản lý khuyến mãi giảm giá")
 @RestController

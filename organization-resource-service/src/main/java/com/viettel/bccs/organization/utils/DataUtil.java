@@ -3,15 +3,12 @@ package com.viettel.bccs.organization.utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -56,15 +53,25 @@ public class DataUtil {
     }
 
     public static boolean isNullOrEmpty(Object obj) {
-        if (obj == null) return true;
-        if (obj instanceof String) return ((String) obj).isEmpty();
-        if (obj instanceof Collection) return ((Collection<?>) obj).isEmpty();
+        if (obj == null) {
+            return true;
+        }
+        if (obj instanceof String) {
+            return ((String) obj).isEmpty();
+        }
+        if (obj instanceof Collection) {
+            return ((Collection<?>) obj).isEmpty();
+        }
         return false;
     }
 
     public static boolean isNullObject(Object obj) {
-        if (obj == null) return true;
-        if (obj instanceof String) return isNullOrEmpty((String) obj);
+        if (obj == null) {
+            return true;
+        }
+        if (obj instanceof String) {
+            return isNullOrEmpty((String) obj);
+        }
         return false;
     }
 
@@ -81,11 +88,19 @@ public class DataUtil {
     }
 
     public static Long safeToLong(Object obj, Long defaultValue) {
-        if (obj == null) return defaultValue;
+        if (obj == null) {
+            return defaultValue;
+        }
         try {
-            if (obj instanceof BigDecimal) return ((BigDecimal) obj).longValue();
-            if (obj instanceof BigInteger) return ((BigInteger) obj).longValue();
-            if (obj instanceof Double) return Math.round((Double) obj);
+            if (obj instanceof BigDecimal) {
+                return ((BigDecimal) obj).longValue();
+            }
+            if (obj instanceof BigInteger) {
+                return ((BigInteger) obj).longValue();
+            }
+            if (obj instanceof Double) {
+                return Math.round((Double) obj);
+            }
             return Long.parseLong(obj.toString().trim());
         } catch (Exception ignored) {
             return defaultValue;
@@ -97,7 +112,9 @@ public class DataUtil {
     }
 
     public static Integer safeToInt(Object obj, Integer defaultValue) {
-        if (obj == null) return defaultValue;
+        if (obj == null) {
+            return defaultValue;
+        }
         try {
             return Integer.parseInt(obj.toString().trim());
         } catch (Exception ignored) {
@@ -110,7 +127,9 @@ public class DataUtil {
     }
 
     public static Short safeToShort(Object obj, Short defaultValue) {
-        if (obj == null) return defaultValue;
+        if (obj == null) {
+            return defaultValue;
+        }
         try {
             return Short.parseShort(obj.toString().trim());
         } catch (Exception ignored) {
@@ -123,7 +142,9 @@ public class DataUtil {
     }
 
     public static Double safeToDouble(Object obj, Double defaultValue) {
-        if (obj == null) return defaultValue;
+        if (obj == null) {
+            return defaultValue;
+        }
         try {
             return Double.parseDouble(obj.toString().trim());
         } catch (Exception ignored) {
@@ -136,7 +157,9 @@ public class DataUtil {
     }
 
     public static BigDecimal safeToBigDecimal(Object obj, BigDecimal defaultValue) {
-        if (obj == null) return defaultValue;
+        if (obj == null) {
+            return defaultValue;
+        }
         try {
             return new BigDecimal(obj.toString().trim());
         } catch (Exception ignored) {
@@ -149,9 +172,13 @@ public class DataUtil {
     }
 
     public static BigInteger safeToBigInteger(Object obj, BigInteger defaultValue) {
-        if (obj == null) return defaultValue;
+        if (obj == null) {
+            return defaultValue;
+        }
         try {
-            if (obj instanceof BigInteger) return (BigInteger) obj;
+            if (obj instanceof BigInteger) {
+                return (BigInteger) obj;
+            }
             return new BigInteger(obj.toString().trim());
         } catch (Exception ignored) {
             return defaultValue;
@@ -163,7 +190,9 @@ public class DataUtil {
     }
 
     public static String safeToString(Object obj, String defaultValue) {
-        if (isNullObject(obj)) return defaultValue;
+        if (isNullObject(obj)) {
+            return defaultValue;
+        }
         return obj.toString();
     }
 
@@ -172,30 +201,44 @@ public class DataUtil {
     // region Safe equal
 
     public static boolean safeEqual(Long obj1, Long obj2) {
-        if (obj1 == obj2) return true;
+        if (obj1 == obj2) {
+            return true;
+        }
         return obj1 != null && obj2 != null && obj1.compareTo(obj2) == 0;
     }
 
     public static boolean safeEqual(BigInteger obj1, BigInteger obj2) {
-        if (obj1 == obj2) return true;
+        if (obj1 == obj2) {
+            return true;
+        }
         return obj1 != null && obj2 != null && obj1.equals(obj2);
     }
 
     public static boolean safeEqual(Short obj1, Short obj2) {
-        if (obj1 == obj2) return true;
+        if (obj1 == obj2) {
+            return true;
+        }
         return obj1 != null && obj2 != null && obj1.compareTo(obj2) == 0;
     }
 
     public static boolean safeEqual(String obj1, String obj2) {
-        if (obj1 == null && obj2 == null) return true;
-        if (obj1 == obj2) return true;
+        if (obj1 == null && obj2 == null) {
+            return true;
+        }
+        if (obj1 == obj2) {
+            return true;
+        }
         return obj1 != null && obj2 != null && obj1.equals(obj2);
     }
 
     public static boolean safeEqual(String obj1, String... obj2) {
-        if (obj2 == null) return false;
+        if (obj2 == null) {
+            return false;
+        }
         for (String s : obj2) {
-            if (safeEqual(obj1, s)) return true;
+            if (safeEqual(obj1, s)) {
+                return true;
+            }
         }
         return false;
     }
@@ -245,8 +288,12 @@ public class DataUtil {
     }
 
     public static BigInteger add(BigInteger obj1, BigInteger obj2) {
-        if (obj1 == null) return obj2;
-        if (obj2 == null) return obj1;
+        if (obj1 == null) {
+            return obj2;
+        }
+        if (obj2 == null) {
+            return obj1;
+        }
         return obj1.add(obj2);
     }
 
@@ -270,8 +317,12 @@ public class DataUtil {
     }
 
     public static <T> T defaultIfNullOrEmpty(T object, T defaultValue) {
-        if (object == null) return defaultValue;
-        if (object instanceof String && ((String) object).isEmpty()) return defaultValue;
+        if (object == null) {
+            return defaultValue;
+        }
+        if (object instanceof String && ((String) object).isEmpty()) {
+            return defaultValue;
+        }
         return object;
     }
 
@@ -282,9 +333,13 @@ public class DataUtil {
     public static boolean areAllNull(Object... objects) {
         for (Object o : objects) {
             if (o instanceof String) {
-                if (!isNullOrEmpty((String) o)) return false;
+                if (!isNullOrEmpty((String) o)) {
+                    return false;
+                }
             } else {
-                if (o != null) return false;
+                if (o != null) {
+                    return false;
+                }
             }
         }
         return true;
@@ -293,9 +348,13 @@ public class DataUtil {
     public static boolean isAnyNull(Object... objects) {
         for (Object o : objects) {
             if (o instanceof String) {
-                if (isNullOrEmpty((String) o)) return true;
+                if (isNullOrEmpty((String) o)) {
+                    return true;
+                }
             } else {
-                if (o == null) return true;
+                if (o == null) {
+                    return true;
+                }
             }
         }
         return false;
@@ -314,12 +373,16 @@ public class DataUtil {
     }
 
     public static String upperFirstChar(String input) {
-        if (isNullOrEmpty(input)) return input;
+        if (isNullOrEmpty(input)) {
+            return input;
+        }
         return input.substring(0, 1).toUpperCase() + input.substring(1);
     }
 
     public static String lowerFirstChar(String input) {
-        if (isNullOrEmpty(input)) return input;
+        if (isNullOrEmpty(input)) {
+            return input;
+        }
         return input.substring(0, 1).toLowerCase() + input.substring(1);
     }
 
@@ -337,7 +400,9 @@ public class DataUtil {
     }
 
     public static boolean isValidEmail(String email) {
-        if (isNullOrEmpty(email)) return false;
+        if (isNullOrEmpty(email)) {
+            return false;
+        }
         String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
         return Pattern.compile(emailRegex).matcher(email).matches();
     }
@@ -351,12 +416,16 @@ public class DataUtil {
     }
 
     public static String removeStartingZeroes(String number) {
-        if (isNullOrEmpty(number)) return "";
+        if (isNullOrEmpty(number)) {
+            return "";
+        }
         return number.replaceFirst("^0+", "");
     }
 
     public static String normalize(String str) {
-        if (str == null) return null;
+        if (str == null) {
+            return null;
+        }
         return java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFC);
     }
 
@@ -365,14 +434,18 @@ public class DataUtil {
     // region Collection helpers
 
     public static <T> List<T> subtract(Collection<T> a, Collection<T> b) {
-        if (a == null || b == null) return new ArrayList<>();
+        if (a == null || b == null) {
+            return new ArrayList<>();
+        }
         List<T> list = new ArrayList<>(a);
         list.removeAll(b);
         return list;
     }
 
     public static <T> List<T> intersection(Collection<T> a, Collection<T> b) {
-        if (a == null || b == null) return new ArrayList<>();
+        if (a == null || b == null) {
+            return new ArrayList<>();
+        }
         List<T> list = new ArrayList<>(a);
         list.retainAll(b);
         return list;

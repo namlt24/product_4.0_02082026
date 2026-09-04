@@ -1,8 +1,9 @@
 package com.viettel.bccs.organization.custtype.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.custtype.dto.CustTypeDTO;
 import com.viettel.bccs.organization.custtype.entity.CustTypeEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class CustTypeMapper {

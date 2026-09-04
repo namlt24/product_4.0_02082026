@@ -1,12 +1,12 @@
 package com.viettel.bccs.policy.discountpromotioncharuse.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài/precision cột thật của
@@ -75,4 +75,5 @@ public record DiscountPromotionCharUseResponse(
         @Size(max = 2000, message = "note tối đa 2000 ký tự")
         @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,2000}$", message = "note không được chứa ký tự điều khiển")
         String note
-) {}
+) {
+}

@@ -1,10 +1,11 @@
 package com.viettel.bccs.productcatalog.optionset.repository;
 
-import com.viettel.bccs.productcatalog.optionset.entity.OptionSetEntity;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import com.viettel.bccs.productcatalog.optionset.entity.OptionSetEntity;
 
 @Repository
 public interface OptionSetRepository extends JpaRepository<OptionSetEntity, Long> {

@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.productspeccharvalue.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productspeccharvalue.dto.response.ProductSpecCharValueResponse;
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductSpecCharValueMapper {

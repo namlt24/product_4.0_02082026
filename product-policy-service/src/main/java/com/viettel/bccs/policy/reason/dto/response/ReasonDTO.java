@@ -1,7 +1,11 @@
 package com.viettel.bccs.policy.reason.dto.response;
 
+import java.util.Date;
+import java.util.List;
+
 import com.viettel.bccs.policy.reasoncharuse.dto.response.ReasonCharUseDTO;
 import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -12,9 +16,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.Date;
-import java.util.List;
 
 @Getter
 @Setter
@@ -56,7 +57,8 @@ public class ReasonDTO {
     @Pattern(regexp = "^[12]$", message = "payType chỉ nhận giá trị 1 hoặc 2")
     private String payType;
 
-    @Schema(description = "Danh sách dịch vụ viễn thông áp dụng (danh sách ID phân tách bởi dấu phẩy)", example = "1,2,3")
+    @Schema(description = "Danh sách dịch vụ viễn thông áp dụng (danh sách ID phân tách bởi dấu phẩy)",
+            example = "1,2,3")
     @Size(max = 1000, message = "telService tối đa 1000 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "telService không được chứa ký tự điều khiển")
     private String telService;

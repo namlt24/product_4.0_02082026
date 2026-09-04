@@ -1,25 +1,25 @@
 package com.viettel.bccs.policy.reason.repository;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
+import com.viettel.bccs.policy.reason.entity.ReasonEntity;
 import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
+import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.DateUtil;
-import com.viettel.bccs.policy.reason.entity.ReasonEntity;
-import com.viettel.bccs.policy.utils.Const;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Repository
@@ -32,11 +32,12 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
     private ReasonMapper mapper;
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<ReasonEntity> getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(
             String actionCode, Long telServiceId, String payType, Long numProduct, boolean checkStatus,
             List<String> excludeProdOfferTypeIds) {
         StringBuilder strQuery = new StringBuilder("");
-        if (Const.ACTION_CODE.SUB_CONNECTION.equals(actionCode)) {
+        if (Const.ActionCode.SUB_CONNECTION.equals(actionCode)) {
             strQuery.append(" select distinct r.* from " + Const.DEFAULT_PRODUCT_SCHEMA + "reason r, " + Const.DEFAULT_PRODUCT_SCHEMA + "action a, " + Const.DEFAULT_PRODUCT_SCHEMA + "mapping m, " + Const.DEFAULT_PRODUCT_SCHEMA + "ref_product_package pp ");
             strQuery.append(" where 1=1 ");
             strQuery.append(" and m.reason_id = r.reason_id and m.sale_service_code = pp.code  " +
@@ -116,7 +117,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
         }
         strQuery.append(" order by NLSSORT(r.name,'NLS_SORT=vietnamese') ");
         Query query = em.createNativeQuery(strQuery.toString(), ReasonEntity.class);
-        query.setParameter("status", Const.STATUS.ACTIVE);
+        query.setParameter("status", Const.Status.ACTIVE);
         query.setParameter("actionCode", actionCode);
         query.setParameter("description", "%" + Const.STRING_DESCRIPTION_REASON_COMMITMENT + "%");
         if (!DataUtil.isNullOrEmpty(payType)) {
@@ -135,11 +136,12 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<ReasonEntity> getByActionCodeOrderByIdWithMappingChecking(String actionCode, Long telServiceId, Long numProduct, String productOfferType,
                                                                           List<String> excludeProdOfferTypeIds) {
         String strQuery;
         boolean setTelService = false;
-        if (Const.ACTION_CODE.SUB_CONNECTION.equals(actionCode) && !Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
+        if (Const.ActionCode.SUB_CONNECTION.equals(actionCode) && !Const.ProductOfferType.VAS.equals(productOfferType)) {
             strQuery = ("SELECT distinct a.* FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "reason a, " + Const.DEFAULT_PRODUCT_SCHEMA + "mapping m, " + Const.DEFAULT_PRODUCT_SCHEMA + "ref_product_package pp ") +
                     "WHERE 1 = 1 and m.reason_id = a.reason_id and m.sale_service_code = pp.code and m.status = '1' and pp.status = '1' and (pp.EXPIRE_DATETIME is null or pp.EXPIRE_DATETIME >= trunc(sysdate)) ";
             if (telServiceId != null) {
@@ -240,13 +242,13 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                 "                       AND c.code =  " + ":p_" + filterRequest.getProperty();
                         params.put("p_" + filterRequest.getProperty(), filterRequest.getProperty());
                         if (!DataUtil.isNullOrEmpty(filterRequest.getValueText())) {
-                            if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.SINGLE_OR_COMBO) || filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.IS_PROJECT)) {
+                            if (filterRequest.getProperty().equals(Const.ProductSpecChar.SINGLE_OR_COMBO) || filterRequest.getProperty().equals(Const.ProductSpecChar.IS_PROJECT)) {
                                 if ("1".equals(filterRequest.getValueText())) {
                                     sqlQuery += " AND d.VALUE IN ('1','3') )";
                                 } else {
                                     sqlQuery += " AND d.VALUE IN ('2','3') )";
                                 }
-                            }else if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.FTTH_PRODUCT_CODE) || filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.FTTH_OLD_CODE)) {
+                            }else if (filterRequest.getProperty().equals(Const.ProductSpecChar.FTTH_PRODUCT_CODE) || filterRequest.getProperty().equals(Const.ProductSpecChar.FTTH_OLD_CODE)) {
                                 if (!DataUtil.isNullOrEmpty(filterRequest.getProperty())) {
                                     sqlQuery += " AND (',' || d.VALUE || ',') LIKE ('%,' || :p_value_" + filterRequest.getProperty() + " || ',%')) ";
                                 }
@@ -315,13 +317,13 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     "                       AND c.code =  " + ":p_" + filterRequest.getProperty();
                             params.put("p_" + filterRequest.getProperty(), filterRequest.getProperty());
                             if (!DataUtil.isNullOrEmpty(filterRequest.getValueText())) {
-                                if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.SINGLE_OR_COMBO)) {
+                                if (filterRequest.getProperty().equals(Const.ProductSpecChar.SINGLE_OR_COMBO)) {
                                     if ("1".equals(filterRequest.getValueText())) {
                                         sqlQuery += " AND d.VALUE IN ('1','3') )";
                                     } else {
                                         sqlQuery += " AND d.VALUE IN ('2','3') )";
                                     }
-                                } else if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.ARPU_SINGLE)) {
+                                } else if (filterRequest.getProperty().equals(Const.ProductSpecChar.ARPU_SINGLE)) {
                                     if (!DataUtil.isNullOrEmpty(productCode)) {
                                         sqlQuery += "               AND upper(b.specific_value) = upper(:productCode) ";
                                         params.put("productCode", productCode);
@@ -343,7 +345,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                             }
                                         }
                                     }
-                                }else if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.FTTH_PRODUCT_CODE) || filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.FTTH_OLD_CODE)) {
+                                }else if (filterRequest.getProperty().equals(Const.ProductSpecChar.FTTH_PRODUCT_CODE) || filterRequest.getProperty().equals(Const.ProductSpecChar.FTTH_OLD_CODE)) {
                                     if (!DataUtil.isNullOrEmpty(filterRequest.getProperty())) {
                                         sqlQuery += " AND (',' || d.VALUE || ',') LIKE ('%,' || :p_value_" + filterRequest.getProperty() + " || ',%')) ";
                                     }
@@ -407,13 +409,13 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                     "                       AND c.code =  " + ":p_" + filterRequest.getProperty();
                             params.put("p_" + filterRequest.getProperty(), filterRequest.getProperty());
                             if (!DataUtil.isNullOrEmpty(filterRequest.getValueText())) {
-                                if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.SINGLE_OR_COMBO)) {
+                                if (filterRequest.getProperty().equals(Const.ProductSpecChar.SINGLE_OR_COMBO)) {
                                     if ("1".equals(filterRequest.getValueText())) {
                                         sqlQuery += " AND d.VALUE IN ('1','3') )";
                                     } else {
                                         sqlQuery += " AND d.VALUE IN ('2','3') )";
                                     }
-                                } else if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.ARPU_SINGLE)) {
+                                } else if (filterRequest.getProperty().equals(Const.ProductSpecChar.ARPU_SINGLE)) {
                                     if (!DataUtil.isNullOrEmpty(productCode)) {
                                         sqlQuery += "               AND (upper(b.specific_value) = upper(:productCode) OR b.specific_value is null) ";
                                         params.put("productCode", productCode);
@@ -438,7 +440,7 @@ public class ReasonRepositoryCustomImpl implements ReasonRepositoryCustom {
                                         sqlQuery += "               AND d.VALUE " + DataUtil.operatorToOracle(filterRequest) + " :p_value_" + filterRequest.getProperty() + ")";
                                     }
                                     params.put("p_value_" + filterRequest.getProperty(), DataUtil.safeToString(filterRequest.getValueText()));
-                                }else if (filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.FTTH_PRODUCT_CODE) || filterRequest.getProperty().equals(Const.PRODUCT_SPEC_CHAR.FTTH_OLD_CODE)) {
+                                }else if (filterRequest.getProperty().equals(Const.ProductSpecChar.FTTH_PRODUCT_CODE) || filterRequest.getProperty().equals(Const.ProductSpecChar.FTTH_OLD_CODE)) {
                                     if (!DataUtil.isNullOrEmpty(filterRequest.getProperty())) {
                                         sqlQuery += " AND (',' || d.VALUE || ',') LIKE ('%,' || :p_value_" + filterRequest.getProperty() + " || ',%')) ";
                                     }

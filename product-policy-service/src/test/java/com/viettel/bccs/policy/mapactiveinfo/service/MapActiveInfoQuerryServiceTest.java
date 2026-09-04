@@ -77,7 +77,7 @@ class MapActiveInfoQuerryServiceTest {
                 .shopChanelTypeId(2L)
                 .build();
         when(staffResolveHelper.resolveStaffDTO(999L))
-                .thenReturn(staffDTO(5L, Const.CHANNEL_TYPE.CHANNEL_TYPE_NV, null));
+                .thenReturn(staffDTO(5L, Const.ChannelType.CHANNEL_TYPE_NV, null));
 
         service.getChanelTypeIdMapActiveInfo(request);
 
@@ -88,7 +88,7 @@ class MapActiveInfoQuerryServiceTest {
     void getChanelTypeIdMapActiveInfo_channelTypeNv_returnsShopChanelTypeId() {
         ChanelTypeIdRequest request = ChanelTypeIdRequest.builder().staffId(1L).build();
         when(staffResolveHelper.resolveStaffDTO(1L))
-                .thenReturn(staffDTO(80L, Const.CHANNEL_TYPE.CHANNEL_TYPE_NV, null));
+                .thenReturn(staffDTO(80L, Const.ChannelType.CHANNEL_TYPE_NV, null));
 
         Long result = service.getChanelTypeIdMapActiveInfo(request);
 
@@ -99,22 +99,22 @@ class MapActiveInfoQuerryServiceTest {
     void getChanelTypeIdMapActiveInfo_channelTypeNvdb_pointOfSaleDb_returnsDecodedDbChannelType() {
         ChanelTypeIdRequest request = ChanelTypeIdRequest.builder().staffId(2L).build();
         when(staffResolveHelper.resolveStaffDTO(2L))
-                .thenReturn(staffDTO(80L, Const.CHANNEL_TYPE.CHANNEL_TYPE_NVDB, Const.CHANNEL_TYPE.POINT_OF_SALE_DB));
+                .thenReturn(staffDTO(80L, Const.ChannelType.CHANNEL_TYPE_NVDB, Const.ChannelType.POINT_OF_SALE_DB));
 
         Long result = service.getChanelTypeIdMapActiveInfo(request);
 
-        assertThat(result).isEqualTo(Const.CHANNEL_TYPE.CHANNEL_TYPE_DECODE_DB_POINT_OF_SALE);
+        assertThat(result).isEqualTo(Const.ChannelType.CHANNEL_TYPE_DECODE_DB_POINT_OF_SALE);
     }
 
     @Test
     void getChanelTypeIdMapActiveInfo_channelTypeNvdb_pointOfSaleNvdb_returnsDecodedNvdbChannelType() {
         ChanelTypeIdRequest request = ChanelTypeIdRequest.builder().staffId(3L).build();
         when(staffResolveHelper.resolveStaffDTO(3L))
-                .thenReturn(staffDTO(80L, Const.CHANNEL_TYPE.CHANNEL_TYPE_NVDB, Const.CHANNEL_TYPE.POINT_OF_SALE_NVDB));
+                .thenReturn(staffDTO(80L, Const.ChannelType.CHANNEL_TYPE_NVDB, Const.ChannelType.POINT_OF_SALE_NVDB));
 
         Long result = service.getChanelTypeIdMapActiveInfo(request);
 
-        assertThat(result).isEqualTo(Const.CHANNEL_TYPE.CHANNEL_TYPE_DECODE_NVDB_POINT_OF_SALE);
+        assertThat(result).isEqualTo(Const.ChannelType.CHANNEL_TYPE_DECODE_NVDB_POINT_OF_SALE);
     }
 
     @Test
@@ -132,7 +132,7 @@ class MapActiveInfoQuerryServiceTest {
     void getChanelTypeIdMapActiveInfo_shopChanelTypeIdNull_returnsNull() {
         ChanelTypeIdRequest request = ChanelTypeIdRequest.builder().staffId(5L).build();
         when(staffResolveHelper.resolveStaffDTO(5L))
-                .thenReturn(staffDTO(null, Const.CHANNEL_TYPE.CHANNEL_TYPE_NV, null));
+                .thenReturn(staffDTO(null, Const.ChannelType.CHANNEL_TYPE_NV, null));
 
         Long result = service.getChanelTypeIdMapActiveInfo(request);
 

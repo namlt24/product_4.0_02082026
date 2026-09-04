@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.productoffertype.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOfferTypeDTO;
 import com.viettel.bccs.productcatalog.productoffertype.entity.ProductOfferTypeEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductOfferTypeMapper {

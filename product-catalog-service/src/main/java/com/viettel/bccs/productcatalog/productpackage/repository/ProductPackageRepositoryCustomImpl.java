@@ -1,16 +1,18 @@
 package com.viettel.bccs.productcatalog.productpackage.repository;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackageDTO;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.Collections;
-import java.util.Optional;
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -72,7 +74,8 @@ public class ProductPackageRepositoryCustomImpl implements ProductPackageReposit
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<ProductPackageDTO> getProductPackageExtra(String code, String productPackageType, boolean isActive, boolean isUpperCode, boolean checkStatus) {
+    public List<ProductPackageDTO> getProductPackageExtra(String code, String productPackageType, boolean isActive,
+        boolean isUpperCode, boolean checkStatus) {
         StringBuilder sql = new StringBuilder();
         sql.append("""
                 SELECT TO_CHAR(prp.PRODUCT_PACKAGE_ID) AS PRODUCT_PACKAGE_ID,
@@ -115,7 +118,8 @@ public class ProductPackageRepositoryCustomImpl implements ProductPackageReposit
             sql.append(" AND prp.STATUS = :p_status");
         }
         if (isActive) {
-            sql.append(" AND (prp.EFFECT_DATETIME IS NULL OR prp.EFFECT_DATETIME < SYSDATE) AND (prp.EXPIRE_DATETIME IS NULL OR prp.EXPIRE_DATETIME >= TRUNC(SYSDATE))");
+            sql.append(" AND (prp.EFFECT_DATETIME IS NULL OR prp.EFFECT_DATETIME < SYSDATE) ")
+               .append("AND (prp.EXPIRE_DATETIME IS NULL OR prp.EXPIRE_DATETIME >= TRUNC(SYSDATE))");
         }
         if (isUpperCode) {
             sql.append(" AND UPPER(prp.CODE) = UPPER(:p_code)");
@@ -154,12 +158,12 @@ public class ProductPackageRepositoryCustomImpl implements ProductPackageReposit
                 .code(DataUtil.safeToString(tuple.get("CODE"), null))
                 .description(DataUtil.safeToString(tuple.get("DESCRIPTION"), null))
                 .status(DataUtil.safeToString(tuple.get("STATUS"), null))
-                .effectDatetime(DataUtil.toDate(tuple.get("EFFECT_DATETIME")))
-                .expireDatetime(DataUtil.toDate(tuple.get("EXPIRE_DATETIME")))
+                .effectDatetime(toDate(tuple.get("EFFECT_DATETIME")))
+                .expireDatetime(toDate(tuple.get("EXPIRE_DATETIME")))
                 .createUser(DataUtil.safeToString(tuple.get("CREATE_USER"), null))
-                .createDatetime(DataUtil.toDate(tuple.get("CREATE_DATETIME")))
+                .createDatetime(toDate(tuple.get("CREATE_DATETIME")))
                 .updateUser(DataUtil.safeToString(tuple.get("UPDATE_USER"), null))
-                .updateDatetime(DataUtil.toDate(tuple.get("UPDATE_DATETIME")))
+                .updateDatetime(toDate(tuple.get("UPDATE_DATETIME")))
                 .version(DataUtil.safeToString(tuple.get("VERSION"), null))
                 .type(DataUtil.safeToString(tuple.get("TYPE"), null))
                 .accountingId(DataUtil.safeToLong(tuple.get("ACCOUNTING_ID"), null))
@@ -173,5 +177,21 @@ public class ProductPackageRepositoryCustomImpl implements ProductPackageReposit
                 .itTelcol(DataUtil.safeToString(tuple.get("IT_TELCOL"), null))
                 .defaultName(DataUtil.safeToString(tuple.get("defaultName"), null))
                 .build();
+    }
+
+    private java.util.Date toDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof java.util.Date) {
+            return (java.util.Date) value;
+        }
+        if (value instanceof java.sql.Timestamp) {
+            return new java.util.Date(((java.sql.Timestamp) value).getTime());
+        }
+        if (value instanceof java.sql.Date) {
+            return new java.util.Date(((java.sql.Date) value).getTime());
+        }
+        return null;
     }
 }

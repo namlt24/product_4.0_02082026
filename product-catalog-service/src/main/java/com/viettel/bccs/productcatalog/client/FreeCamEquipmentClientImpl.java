@@ -1,15 +1,16 @@
 package com.viettel.bccs.productcatalog.client;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.FreeCamEquipmentDTO;
-import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -30,7 +31,8 @@ public class FreeCamEquipmentClientImpl implements FreeCamEquipmentClient {
         } catch (RuntimeException e) {
             log.error("Error calling checkReasonFreeCam for productPackageId={}", productPackageId, e);
             throw new IntegrationException("BCCS-SYS-CTP-0001",
-                    "Error calling product-policy-service checkReasonFreeCam for productPackageId=" + productPackageId, e);
+                    "Error calling product-policy-service checkReasonFreeCam for productPackageId="
+                            + productPackageId, e);
         }
     }
 }

@@ -8,8 +8,8 @@ import jakarta.validation.constraints.Size;
 /**
  * Shape nội bộ (không phải API contract công khai) mang 1 dòng kết quả thô của
  * {@code ProductOfferingRepositoryCustom.getListStockModelBySaleServiceCode} — dùng để truyền dữ
- * liệu giữa ProductOfferingService và StockTypeWSService, tránh rò rỉ {@code Object[]} ra khỏi
- * tầng repository. Chưa có giá bán — giá được StockTypeWSService tính riêng ở bước 8 rồi mới dựng
+ * liệu giữa ProductOfferingService và StockTypeWsService, tránh rò rỉ {@code Object[]} ra khỏi
+ * tầng repository. Chưa có giá bán — giá được StockTypeWsService tính riêng ở bước 8 rồi mới dựng
  * response DTO cuối cùng (ProductOfferingStockDTO). Không bao giờ serialize ra ngoài API, nhưng
  * vẫn gắn bound đầy đủ (theo đúng độ dài cột thật) để nhất quán và qua được OpenApiComplianceTest.
  */

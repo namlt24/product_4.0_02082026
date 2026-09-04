@@ -79,6 +79,40 @@ public final class ProductOfferingControllerExamples {
               ]
             }""";
 
+    public static final String PRODUCT_SUB_TYPE_MAP_LIST_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000015",
+              "requestId": "req-0015",
+              "timestamp": "2026-08-27T02:00:00Z",
+              "data": {
+                "12345": "1",
+                "12346": "2"
+              }
+            }""";
+
+    public static final String PRODUCT_SUMMARY_LIST_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000014",
+              "requestId": "req-0014",
+              "timestamp": "2026-08-11T02:00:00Z",
+              "data": [
+                {
+                  "code": "PACKAGE_001",
+                  "name": "Gói cước data 50GB",
+                  "productOfferingId": 12345
+                },
+                {
+                  "code": "PACKAGE_002",
+                  "name": "Gói cước thoại 30 phút",
+                  "productOfferingId": 12346
+                }
+              ]
+            }""";
+
     public static final String BOOLEAN_EXAMPLE = """
             {
               "code": "SUCCESS",
@@ -145,7 +179,8 @@ public final class ProductOfferingControllerExamples {
               "actionCode": "00",
               "regType": "2",
               "serviceType": "M",
-              "productCode": "POBAS"
+              "productCode": "POBAS",
+              "viewCode":"VIEW_PRODUCT_GROUP_DNTT"
             }""";
 
     public static final String STOCK_TYPE_WS_LIST_EXAMPLE = """

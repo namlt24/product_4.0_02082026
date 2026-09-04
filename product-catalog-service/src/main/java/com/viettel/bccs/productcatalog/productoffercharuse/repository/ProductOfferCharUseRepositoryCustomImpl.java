@@ -1,5 +1,11 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.repository;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Repository;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecExtensionDTO;
@@ -9,15 +15,11 @@ import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEnt
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Repository
@@ -97,7 +99,8 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
               d.NAME AS value_name_from
             FROM %sproduct_offer_char_use a
             JOIN %sproduct_spec_char c ON a.PRODUCT_SPEC_CHAR_ID = c.PRODUCT_SPEC_CHAR_ID AND c.STATUS = '1'
-            JOIN %sproduct_spec_char_value d ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
+            JOIN %sproduct_spec_char_value d
+              ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
             WHERE a.STATUS = '1'
               AND a.PRODUCT_OFFERING_ID IN (%s)
             ORDER BY a.PRODUCT_OFFERING_ID, c.CODE
@@ -168,7 +171,8 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
               d.NAME AS value_name_from
             FROM %sproduct_offer_char_use a
             JOIN %sproduct_spec_char c ON a.PRODUCT_SPEC_CHAR_ID = c.PRODUCT_SPEC_CHAR_ID AND c.STATUS = '1'
-            JOIN %sproduct_spec_char_value d ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
+            JOIN %sproduct_spec_char_value d
+              ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
             WHERE a.STATUS = '1'
               AND a.PRODUCT_OFFERING_ID = :offeringId
               AND c.CHAR_TYPE = :charType
@@ -241,7 +245,8 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
             FROM %sproduct_offering b
             JOIN %sproduct_offer_char_use a ON a.PRODUCT_OFFERING_ID = b.PRODUCT_OFFERING_ID AND a.STATUS = '1'
             JOIN %sproduct_spec_char c ON a.PRODUCT_SPEC_CHAR_ID = c.PRODUCT_SPEC_CHAR_ID AND c.STATUS = '1'
-            JOIN %sproduct_spec_char_value d ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
+            JOIN %sproduct_spec_char_value d
+              ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
             WHERE b.PRODUCT_OFFERING_ID = :offeringId
               AND b.STATUS = '1'
             ORDER BY c.CODE
@@ -265,7 +270,8 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
             SELECT COALESCE(a.SPECIFIC_VALUE, d.VALUE) AS attribute_value
             FROM %sproduct_offer_char_use a
             JOIN %sproduct_spec_char c ON a.PRODUCT_SPEC_CHAR_ID = c.PRODUCT_SPEC_CHAR_ID AND c.STATUS = '1'
-            LEFT JOIN %sproduct_spec_char_value d ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
+            LEFT JOIN %sproduct_spec_char_value d
+              ON a.PRODUCT_SPEC_CHAR_VALUE_ID = d.PRODUCT_SPEC_CHAR_VALUE_ID AND d.STATUS = '1'
             WHERE a.STATUS = '1'
               AND a.PRODUCT_OFFERING_ID = :offeringId
               AND c.CODE = :charCode
@@ -299,7 +305,8 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
                 + " d.PRODUCT_SPEC_CHAR_VALUE_ID, d.PRODUCT_SPEC_CHAR_ID, d.VALUE_TYPE, d.IS_DEFAULT, d.VALUE, "
                 + " d.UNIT_OF_MEASURE, d.VALUE_FROM, d.VALUE_TO, d.RANGE_INTERVAL, d.STATUS, "
                 + " d.NAME, d.SPECIFIC_VALUE, d.NOTE ");
-        strQuery.append(" FROM   product_spec_char_use a, product_offering b, product_spec_char c,  product_spec_Char_value d ");
+        strQuery.append(" FROM   product_spec_char_use a, product_offering b, product_spec_char c,"
+                + " product_spec_Char_value d ");
         strQuery.append(" WHERE      1= 1  ");
         strQuery.append(" AND b.product_offering_id = :productOfferingId    ");
         strQuery.append(" AND a.product_spec_id = b.product_spec_id    ");
@@ -320,7 +327,7 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
 
         Query query = entityManager.createNativeQuery(strQuery.toString());
         query.setParameter("productOfferingId", productOfferingId);
-        query.setParameter("charType", Const.CHAR_TYPE.PRICE_PLAN);
+        query.setParameter("charType", Const.CharType.PRICE_PLAN);
 
         List<Object[]> result = query.getResultList();
         for (Object[] temp : result) {
@@ -329,13 +336,15 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
             ProductOfferingCharacterFullDTO productOfferingCharacterFullDTO = new ProductOfferingCharacterFullDTO();
             productOfferingCharacterFullDTO.setProductOfferingId(productOfferingId);
             productOfferingCharacterFullDTO.setProductSpecCharDTO(productSpecCharUseMapper.toDto(productSpecChar));
-            productOfferingCharacterFullDTO.setProductSpecCharValueDTO(productSpecCharValueUseMapper.toDto(productSpecCharValue));
+            productOfferingCharacterFullDTO
+                    .setProductSpecCharValueDTO(productSpecCharValueUseMapper.toDto(productSpecCharValue));
             lst.add(productOfferingCharacterFullDTO);
         }
 
         strQuery.setLength(0);
         strQuery.append(" SELECT   c, d ,"
-                + " ( select offer.productOfferTypeId from ProductOfferingEntity offer where offer.productOfferingId = a.productOfferingId ) as offerType "
+                + " ( select offer.productOfferTypeId from ProductOfferingEntity offer"
+                + "   where offer.productOfferingId = a.productOfferingId ) as offerType "
                 + "  , a.specificValue ");
         strQuery.append(" FROM   ProductOfferCharUseEntity a,ProductSpecCharEntity c,  ProductSpecCharValueEntity d ");
         strQuery.append(" WHERE    1=1 ");
@@ -351,28 +360,33 @@ public class ProductOfferCharUseRepositoryCustomImpl implements ProductOfferChar
         strQuery.append(" AND c.charType = :charType   ");
         query = entityManager.createQuery(strQuery.toString());
         query.setParameter("productOfferingId", productOfferingId);
-        query.setParameter("charType", Const.CHAR_TYPE.PRICE_PLAN);
+        query.setParameter("charType", Const.CharType.PRICE_PLAN);
         result = query.getResultList();
         for (Object[] temp : result) {
             ProductSpecCharValueEntity productSpecCharValue = (ProductSpecCharValueEntity) temp[1];
-            if (!(productSpecCharValue != null && Const.STATUS.INACTIVE.equals(productSpecCharValue.getStatus()))) {
+            if (!(productSpecCharValue != null && Const.Status.INACTIVE.equals(productSpecCharValue.getStatus()))) {
                 ProductSpecCharEntity productSpecChar = (ProductSpecCharEntity) temp[0];
                 ProductOfferingCharacterFullDTO productOfferingCharacterFullDTO = new ProductOfferingCharacterFullDTO();
                 productOfferingCharacterFullDTO.setProductOfferingId(productOfferingId);
                 productOfferingCharacterFullDTO.setProductSpecCharDTO(productSpecCharUseMapper.toDto(productSpecChar));
-                productOfferingCharacterFullDTO.setProductSpecCharValueDTO(productSpecCharValueUseMapper.toDto(productSpecCharValue));
+                productOfferingCharacterFullDTO
+                        .setProductSpecCharValueDTO(productSpecCharValueUseMapper.toDto(productSpecCharValue));
                 Long productOfferTypeId = DataUtil.safeToLong(temp[2], null);
-                if (DataUtil.safeEqual(productOfferTypeId, Const.SPEC_CHAR_TYPE.OFFERING)) {
+                if (DataUtil.safeEqual(productOfferTypeId, Const.SpecCharType.OFFERING)) {
                     String specificValue = DataUtil.safeToString(temp[3]);
                     if (!DataUtil.isNullOrEmpty(specificValue)) {
                         try {
-                            ProductSpecExtensionDTO productSpecExtensionDTO = objectMapper.readValue(specificValue, ProductSpecExtensionDTO.class);
+                            ProductSpecExtensionDTO productSpecExtensionDTO = objectMapper.readValue(specificValue,
+                                ProductSpecExtensionDTO.class);
                             if (productSpecExtensionDTO != null) {
-                                productOfferingCharacterFullDTO.setExtensionType(productSpecExtensionDTO.getExtensionType());
-                                productOfferingCharacterFullDTO.setExtensionValue(productSpecExtensionDTO.getExtensionValue());
+                                productOfferingCharacterFullDTO
+                                        .setExtensionType(productSpecExtensionDTO.getExtensionType());
+                                productOfferingCharacterFullDTO
+                                        .setExtensionValue(productSpecExtensionDTO.getExtensionValue());
                             }
                         } catch (Exception e) {
-                            log.error("Parse specific_value failed for productOfferingId {}: {}", productOfferingId, specificValue, e);
+                            log.error("Parse specific_value failed for productOfferingId {}: {}", productOfferingId,
+                                specificValue, e);
                         }
 
                     }

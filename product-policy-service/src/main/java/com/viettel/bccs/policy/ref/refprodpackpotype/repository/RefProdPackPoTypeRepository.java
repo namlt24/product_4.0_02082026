@@ -1,10 +1,11 @@
 package com.viettel.bccs.policy.ref.refprodpackpotype.repository;
 
-import com.viettel.bccs.policy.ref.refprodpackpotype.entity.RefProdPackPoTypeEntity;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.viettel.bccs.policy.ref.refprodpackpotype.entity.RefProdPackPoTypeEntity;
 
 @Repository
 public interface RefProdPackPoTypeRepository extends JpaRepository<RefProdPackPoTypeEntity, Long> {

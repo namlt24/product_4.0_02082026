@@ -1,5 +1,12 @@
 package com.viettel.bccs.organization.shop.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.organization.channeltype.service.ChannelTypeService;
 import com.viettel.bccs.organization.shop.dto.ShopDTO;
@@ -11,17 +18,10 @@ import com.viettel.bccs.organization.staff.service.StaffService;
 import com.viettel.bccs.organization.utils.Const;
 import com.viettel.bccs.organization.utils.DataUtil;
 import com.viettel.bccs.organization.utils.RequestValidator;
-import io.swagger.v3.oas.annotations.Operation;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -38,18 +38,20 @@ public class ShopService {
     @Transactional(readOnly = true)
     public ShopDTO getActiveById(Long shopId) {
         log.info("Truy vấn cửa hàng active từ DB theo id: {}", shopId);
-        return shopRepository.findByShopIdAndStatus(shopId, Const.STATUS.ACTIVE)
+        return shopRepository.findByShopIdAndStatus(shopId, Const.Status.ACTIVE)
                 .map(shopMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0001", "Không tìm thấy cửa hàng với id: " + shopId));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0001",
+                        "Không tìm thấy cửa hàng với id: " + shopId));
     }
 
     @Cacheable(value = "shopCache", key = "'SHOP:' + #shopCode")
     @Transactional(readOnly = true)
     public ShopDTO getActiveByShopCode(String shopCode) {
         log.info("Truy vấn cửa hàng active từ DB theo mã: {}", shopCode);
-        return shopRepository.findByShopCodeAndStatus(shopCode, Const.STATUS.ACTIVE)
+        return shopRepository.findByShopCodeAndStatus(shopCode, Const.Status.ACTIVE)
                 .map(shopMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0002", "Không tìm thấy cửa hàng với mã: " + shopCode));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-SHOP-0002",
+                        "Không tìm thấy cửa hàng với mã: " + shopCode));
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +63,7 @@ public class ShopService {
     }
 
 
+    @Cacheable(value = "shopCache", key = "'STOCK_CODE:' + #ownerId + ':' + #ownerType")
     @Transactional(readOnly = true)
     public StockCodeResponse getStockCode(Long ownerId, Integer ownerType) {
         RequestValidator.requireNotNull(ownerId, "ownerId", "BCCS-PRODUCT-VALIDATE-0000");
@@ -78,12 +81,6 @@ public class ShopService {
 
     @Cacheable(value = "shopCache", key = "'ACTIVE_BATCH:' + #shopIds.stream().sorted().toList().toString()")
     @Transactional(readOnly = true)
-    @Operation(
-            summary = "Tìm danh sách cửa hàng active theo nhiều shopId",
-            description = "Truy vấn danh sách cửa hàng có status = 1 theo danh sách shopId. " +
-                    "Query được chia batch (100 bản ghi/batch) để tránh lỗi ORA-01795 khi danh sách lớn. " +
-                    "Kết quả được cache để tăng hiệu suất khi gọi lại với cùng danh sách shopId."
-    )
     public List<ShopDTO> findActiveByShopIds(
             @Parameter(description = "Danh sách ID cửa hàng cần truy vấn", required = true) List<Long> shopIds) {
         RequestValidator.requireNotEmpty(shopIds, "shopIds", "BCCS-PRODUCT-VALIDATE-0000");
@@ -95,10 +92,11 @@ public class ShopService {
                 .toList();
     }
 
+    @Cacheable(value = "shopCache", key = "'STOCK_ACTIVE_BY_CHANNEL_TYPE:' + #channelTypeId")
     @Transactional(readOnly = true)
     public List<ShopDTO> findActiveByChannelType(Long channelTypeId) {
         log.info("Truy vấn danh sách cửa hàng active theo loại kênh: {}", channelTypeId);
-        return shopRepository.findAllByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
+        return shopRepository.findAllByChannelTypeIdAndStatus(channelTypeId, Const.Status.ACTIVE)
                 .stream()
                 .map(shopMapper::toResponse)
                 .toList();

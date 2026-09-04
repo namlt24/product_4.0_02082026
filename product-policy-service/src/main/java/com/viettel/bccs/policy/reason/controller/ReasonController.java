@@ -1,5 +1,17 @@
 package com.viettel.bccs.policy.reason.controller;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.RequestMbccs;
@@ -13,14 +25,11 @@ import com.viettel.bccs.policy.reason.openapi.ApiGetListReasonByActionCodeAndTel
 import com.viettel.bccs.policy.reason.openapi.ApiGetReasonCharacter;
 import com.viettel.bccs.policy.reason.openapi.ApiGetReasonFull;
 import com.viettel.bccs.policy.reason.openapi.ApiGetReasonIdByTypeAndCode;
+import com.viettel.bccs.policy.reason.openapi.ApiGetValuesByReasonAndSpec;
 import com.viettel.bccs.policy.reason.service.ReasonService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/product-policy-service/v1/reason")
@@ -60,13 +69,25 @@ public class ReasonController {
         return StandardResponses.success(service.getReasonCharacter(reasonId));
     }
 
+    @GetMapping("/getValuesByReasonAndSpec")
+    @ApiGetValuesByReasonAndSpec
+    public StandardResponse<List<String>> getValuesByReasonAndSpec(
+            @Parameter(description = "ID hình thức hòa mạng", example = "1", required = true)
+            @RequestParam(required = false)
+            Long reasonId,
+            @Parameter(description = "Mã đặc tính (product_spec_char.code)", example = "COLOR", required = true)
+            @RequestParam(required = false)
+            String specCode) {
+        return StandardResponses.success(service.getValuesByReasonAndSpec(reasonId, specCode));
+    }
+
     @GetMapping("/getReasonIdByTypeAndCode")
     @ApiGetReasonIdByTypeAndCode
     public StandardResponse<Long> getReasonIdByTypeAndCode(
             @Parameter(description = "Mã lý do (REASON_CODE)", example = "2", required = true)
             @RequestParam(required = false)
             String reasonCode,
-            @Parameter(description = "Mã hành động (ACTION_CODE)", example = "00", required = true)
+            @Parameter(description = "Mã hành động (ActionCode)", example = "00", required = true)
             @RequestParam(required = false)
             String actionCode,
             @Parameter(description = "ID dịch vụ viễn thông", example = "1", required = true)
@@ -78,7 +99,7 @@ public class ReasonController {
     @GetMapping("/getListReasonByActionCodeAndTelServiceForAudit")
     @ApiGetListReasonByActionCodeAndTelServiceForAudit
     public StandardResponse<List<ReasonDTO>> getListReasonByActionCodeAndTelServiceForAudit(
-            @Parameter(description = "Mã hành động (ACTION_CODE)", example = "NEW", required = true)
+            @Parameter(description = "Mã hành động (ActionCode)", example = "NEW", required = true)
             @RequestParam(required = false)
             String actionCode,
             @Parameter(description = "ID dịch vụ viễn thông", example = "1", required = true)
@@ -87,7 +108,8 @@ public class ReasonController {
             @Parameter(description = "Hình thức thanh toán: 1 Trả sau, 2 Trả trước", example = "1", required = true)
             @RequestParam(required = false)
             String payType) {
-        return StandardResponses.success(service.getListReasonByActionCodeAndTelServiceForAudit(actionCode, telServiceId, payType));
+        return StandardResponses.success(service.getListReasonByActionCodeAndTelServiceForAudit(actionCode,
+                telServiceId, payType));
     }
 
     @RequestMapping(value = "/getReasonFull", method = RequestMethod.POST)
@@ -119,7 +141,8 @@ public class ReasonController {
         );
 
         List<String> reasonCodes = reasonDTOList.stream().map(ReasonDTO::getReasonCode).collect(Collectors.toList());
-        Map<String, String> mapReasonDVBH = mappingService.getLstMapPackageByActionCodeAndReasonCodes(reasonCodes, requestMbccs.getActionCode());
+        Map<String, String> mapReasonDvbh = mappingService.getLstMapPackageByActionCodeAndReasonCodes(reasonCodes,
+                requestMbccs.getActionCode());
 
         List<GetReasonFullResponse> responses = reasonDTOList.stream()
                 .map(reasonDTO -> GetReasonFullResponse.builder()
@@ -127,7 +150,8 @@ public class ReasonController {
                         .reasonCode(reasonDTO.getReasonCode())
                         .name(reasonDTO.getName())
                         .reasonType(reasonDTO.getReasonType())
-                        .saleServiceCode(mapReasonDVBH.getOrDefault(reasonDTO.getReasonCode(), reasonDTO.getSaleServiceCode()))
+                        .saleServiceCode(mapReasonDvbh.getOrDefault(reasonDTO.getReasonCode(),
+                                reasonDTO.getSaleServiceCode()))
                         .build())
                 .toList();
 

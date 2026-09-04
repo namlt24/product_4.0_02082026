@@ -1,14 +1,16 @@
 package com.viettel.bccs.policy.mapbusinessskipdebt.repository;
 
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.policy.mapbusinessskipdebt.entity.MapBusinessSkipDebtEntity;
 import com.viettel.bccs.policy.utils.DataUtil;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Slf4j
 @Repository
@@ -82,7 +84,7 @@ public class MapBusinessSkipDebtRepositoryCustomImpl implements MapBusinessSkipD
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<MapBusinessSkipDebtEntity> searchForAPI(String actionCode, Long telecomServiceId,
+    public List<MapBusinessSkipDebtEntity> searchForApi(String actionCode, Long telecomServiceId,
                                                         String effectDatetime, String shopCode,
                                                         String staffCode, String businessNo, String contractNo) {
         StringBuilder strQuery = new StringBuilder();

@@ -1,10 +1,11 @@
 package com.viettel.bccs.organization.client;
 
-import com.viettel.bccs.organization.client.dto.StandardClientResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+
+import com.viettel.bccs.organization.client.dto.StandardClientResponse;
 
 @FeignClient(
         name = ProductCatalogFeignClient.CLIENT_NAME,

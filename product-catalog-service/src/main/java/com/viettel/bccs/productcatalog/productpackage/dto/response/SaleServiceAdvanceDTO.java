@@ -1,25 +1,28 @@
 package com.viettel.bccs.productcatalog.productpackage.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
-import com.viettel.bccs.productcatalog.common.dto.BaseMessage;
-import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
-import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeDTO;
-import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
+import com.viettel.bccs.productcatalog.common.dto.BaseMessage;
+import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
+import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
+import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeDTO;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
 @Schema(description = "Thông tin dịch vụ bán hàng nâng cao")
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -51,7 +54,7 @@ public class SaleServiceAdvanceDTO extends BaseMessage implements Serializable {
 
     @Schema(description = "Cờ TLV")
     @Builder.Default
-    private boolean isTLV = false;
+    private boolean isTlv = false;
 
     @Schema(description = "Cờ thưởng")
     @Builder.Default

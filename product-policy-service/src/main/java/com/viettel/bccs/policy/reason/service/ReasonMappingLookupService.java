@@ -1,14 +1,16 @@
 package com.viettel.bccs.policy.reason.service;
 
-import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
-import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
-import com.viettel.bccs.policy.reason.repository.ReasonRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
+import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
+import com.viettel.bccs.policy.reason.repository.ReasonRepository;
+
+import lombok.RequiredArgsConstructor;
 
 
 @Service

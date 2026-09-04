@@ -1,10 +1,16 @@
 package com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
 import com.viettel.bccs.productcatalog.prodpackshop.dto.response.ProdPackShopDTO;
 import com.viettel.bccs.productcatalog.productpackage.dto.response.PackageOfferDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -14,11 +20,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của PROD_PACK_PRODUCT_OFFER_TYPE
@@ -132,11 +133,13 @@ public class ProdPackProductOfferTypeDTO implements Serializable {
     private List<ShopDTO> specShopList;
 
     @Schema(description = "Danh sách các kho chức năng của mặt hàng")
-    @Size(max = 1000, message = "prodPackShopDTOs tối đa 1000 phần tử")
-    private List<ProdPackShopDTO> prodPackShopDTOs = new ArrayList<>();//Danh sach cac kho chuc nang cua mat hang
+    @Size(max = 1000, message = "prodPackShopList tối đa 1000 phần tử")
+    @Builder.Default
+    private List<ProdPackShopDTO> prodPackShopList = new ArrayList<>();//Danh sach cac kho chuc nang cua mat hang
 
     @Schema(description = "Danh sách mặt hàng đi kèm")
-    @Size(max = 1000, message = "packageOfferDTOs tối đa 1000 phần tử")
-    private List<PackageOfferDTO> packageOfferDTOs = new ArrayList<>(); // danh sach mat hang di kem
+    @Size(max = 1000, message = "packageOfferList tối đa 1000 phần tử")
+    @Builder.Default
+    private List<PackageOfferDTO> packageOfferList = new ArrayList<>(); // danh sach mat hang di kem
 
 }

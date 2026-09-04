@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.action.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.action.dto.response.ActionResponse;
 import com.viettel.bccs.policy.action.entity.ActionEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ActionMapper {

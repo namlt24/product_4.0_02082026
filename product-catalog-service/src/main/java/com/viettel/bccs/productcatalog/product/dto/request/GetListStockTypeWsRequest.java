@@ -1,5 +1,7 @@
 package com.viettel.bccs.productcatalog.product.dto.request;
 
+import java.io.Serializable;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -7,8 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
 
 /**
  * Request cho API getListStockTypeWS — migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS
@@ -18,12 +18,13 @@ import java.io.Serializable;
  * BCCS-CATALOG-STOCKTYPE cụ thể (giữ đúng hành vi/mã lỗi nghiệp vụ cũ), thay vì lỗi Bean Validation
  * 400 chung chung nếu gắn @NotBlank ở đây.
  */
-@Schema(description = "Request lấy danh sách loại hàng hoá (kèm giá) cho 1 gói cước, theo lý do hoà mạng/dịch vụ/mã tác động")
+@Schema(description = "Request lấy danh sách loại hàng hoá (kèm giá) cho 1 gói cước,"
+        + " theo lý do hoà mạng/dịch vụ/mã tác động")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GetListStockTypeWSRequest implements Serializable {
+public class GetListStockTypeWsRequest implements Serializable {
 
     @Schema(description = "Mã tác động (ACTION_CODE) — bắt buộc", example = "00")
     @Size(max = 10, message = "actionCode tối đa 10 ký tự")

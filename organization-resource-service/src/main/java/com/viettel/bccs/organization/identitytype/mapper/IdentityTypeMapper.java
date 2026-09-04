@@ -1,8 +1,9 @@
 package com.viettel.bccs.organization.identitytype.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.identitytype.dto.IdentityTypeDTO;
 import com.viettel.bccs.organization.identitytype.entity.IdentityTypeEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class IdentityTypeMapper {

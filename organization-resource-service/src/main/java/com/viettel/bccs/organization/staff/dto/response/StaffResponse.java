@@ -1,7 +1,10 @@
 package com.viettel.bccs.organization.staff.dto.response;
 
+import java.util.Date;
+
 import com.viettel.bccs.organization.shop.dto.response.ShopResponse;
 import com.viettel.bccs.organization.staff.dto.StaffDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -11,8 +14,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
 
 @Data
 @Builder

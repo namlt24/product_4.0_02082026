@@ -1,17 +1,19 @@
 package com.viettel.bccs.policy.mapping.repository;
 
-import com.viettel.bccs.policy.reason.entity.ReasonEntity;
-import com.viettel.bccs.policy.utils.DataUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Repository;
+
+import com.viettel.bccs.policy.reason.entity.ReasonEntity;
+import com.viettel.bccs.policy.utils.DataUtil;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 
 @Repository
 public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
@@ -89,6 +91,7 @@ public class MappingRepositoryCustomImpl implements MappingRepositoryCustom {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Map<String, String> getLstMapPackageByActionCodeAndReasonCodes(List<String> reasonCodes, String actionCode) {
 
         if (DataUtil.isNullOrEmpty(reasonCodes) || DataUtil.isNullOrEmpty(actionCode)) {

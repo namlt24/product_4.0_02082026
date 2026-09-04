@@ -1,12 +1,28 @@
 package com.viettel.bccs.productcatalog.product.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.productcatalog.utils.RequestValidator;
 import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
+import com.viettel.bccs.productcatalog.product.dto.request.CheckProductAttByRuleTypeRequest;
+import com.viettel.bccs.productcatalog.product.dto.response.CheckProductAttByRuleTypeResponse;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingSumaryDTO;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingSummaryDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.StockOfferingRow;
 import com.viettel.bccs.productcatalog.product.dto.response.SubTypeDTO;
 import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
@@ -15,28 +31,14 @@ import com.viettel.bccs.productcatalog.product.repository.ProductOfferingReposit
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCharUseMapper;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
-import com.viettel.bccs.productcatalog.product.dto.request.CheckProductAttByRuleTypeRequest;
-import com.viettel.bccs.productcatalog.product.dto.response.CheckProductAttByRuleTypeResponse;
-import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
 import com.viettel.bccs.productcatalog.productspecchar.service.ProductSpecCharService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.viettel.bccs.productcatalog.utils.RequestValidator;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -64,13 +66,32 @@ public class ProductOfferingService {
         RequestValidator.requireNotBlank(productCode, "productCode", "BCCS-PRODUCT-VALIDATE-0000");
         return productOfferingRepository.findFirstByCode(productCode)
                 .map(productOfferingMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0001", "Product not found with code: " + productCode));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0001",
+                        "Product not found with code: " + productCode));
+    }
+
+    /**
+     * Tra ve list product theo cac ma productCode. Neu isList = true chi tra ve cac ma (String),
+     * nguoc lai tra ve toan bo thong tin {@link ProductOfferingResponse}. Giu thu tu theo listCode.
+     */
+    public Object getByProductCodes(List<String> listCode, boolean isList) {
+        RequestValidator.requireNotEmpty(listCode, "listCode", "BCCS-PRODUCT-VALIDATE-0000");
+
+        List<ProductOfferingEntity> entities = productOfferingRepository.findByCodeIn(listCode);
+
+        if (isList) {
+            return entities.stream()
+                    .map(ProductOfferingEntity::getCode)
+                    .toList();
+        }
+        return entities.stream()
+                .map(productOfferingMapper::toResponse)
+                .toList();
     }
 
     public SubTypeDTO getSubTypeByProductCode(String productCode) {
-        if (DataUtil.isNullOrEmpty(productCode)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0008", "Mã mặt hàng không được để trống");
-        }
+        RequestValidator.requireNotBlank(productCode, "productCode", "BCCS-PRODUCT-VALIDATE-0000");
+
         ProductOfferingResponse response = productOfferingRepository.findFirstByCode(productCode)
                 .map(productOfferingMapper::toResponse)
                 .orElseThrow(() -> new BusinessException("BCCS-CATALOG-PRODUCT-0009",
@@ -80,16 +101,17 @@ public class ProductOfferingService {
     }
 
     private String resolveSubTypeName(String subType) {
-        if (Const.SUB_TYPE.POST.equals(subType)) {
+        if (Const.SubType.POST.equals(subType)) {
             return "Trả sau";
         }
-        if (Const.SUB_TYPE.PRE.equals(subType)) {
+        if (Const.SubType.PRE.equals(subType)) {
             return "Trả trước";
         }
         return null;
     }
 
-    @Cacheable(value = "productOfferingCache", key = "'OFFER_ALTER:' + #offerId + ':' + '' + #changeChannel + ':' + #checkStatus")
+    @Cacheable(value = "productOfferingCache", key = "'OFFER_ALTER:' + #offerId + ':' + #changeChannel + ':'"
+            + " + #checkStatus")
     public List<ProductOfferingDTO> getListOfferAlterStatus(Long offerId, String changeChannel, boolean checkStatus) {
         RequestValidator.requireNotNull(offerId, "offerId", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotBlank(changeChannel, "changeChannel", "BCCS-PRODUCT-VALIDATE-0000");
@@ -98,28 +120,64 @@ public class ProductOfferingService {
                 .toList();
     }
 
-    @Cacheable(value = "productOfferingCache", key = "'TELECOM_SUB_TYPE:' + #telecomServiceId + ':' + '' + #subType + ':' + #offerTypeId + ':' + #getActiveProduct")
-    public List<ProductOfferingDTO> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId, String subType, Long offerTypeId, boolean getActiveProduct) {
-        return productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, getActiveProduct).stream()
+    @Cacheable(value = "productOfferingCache", key = "'TELECOM_SUB_TYPE:' + #telecomServiceId + ':' + #subType + ':'"
+            + " + #offerTypeId + ':' + #getActiveProduct")
+    public List<ProductOfferingDTO> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId,
+        String subType, Long offerTypeId, boolean getActiveProduct) {
+        return productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType,
+                offerTypeId, getActiveProduct).stream()
                 .map(productOfferingMapper::toDto)
                 .toList();
     }
 
-    @Cacheable(value = "productOfferingCache", key = "'TELECOM_SUB_TYPE_ACTIVE:' + #telecomServiceId + ':' + '' + #subType + ':' + #offerTypeId")
-    public List<ProductOfferingDTO> findByTelecomSubTypeOfferType(Long telecomServiceId, String subType, Long offerTypeId) {
-        return findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, true);
+    @Cacheable(value = "productOfferingCache", key = "'TELECOM_SUB_TYPE_ACTIVE:' + #telecomServiceId + ':'"
+            + " + #subType + ':' + #offerTypeId")
+    public List<ProductOfferingSummaryDTO> findByTelecomSubTypeOfferType(Long telecomServiceId, String subType,
+        Long offerTypeId) {
+        return productOfferingRepository.findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType,
+            offerTypeId, true).stream()
+                .map(productOfferingMapper::toSummary)
+                .toList();
     }
 
-    public List<ProductOfferingDTO> findByPayTypeWithSpec(String telecomServiceId, String payType, String productOfferTypeId, List<FilterRequest> listProductSpec) {
+    @Cacheable(value = "productOfferingCache", key = "'PAY_TYPE_SPEC:' + #telecomServiceId + ':' + #payType + ':'"
+            + " + #productOfferTypeId + ':'"
+            + " + T(com.viettel.bccs.productcatalog.product.service.ProductOfferingService)"
+            + ".specFilterKey(#listProductSpec)")
+    public List<ProductOfferingSumaryDTO> findByPayTypeWithSpec(String telecomServiceId, String payType,
+        String productOfferTypeId, List<FilterRequest> listProductSpec) {
         RequestValidator.requireNotBlank(payType, "payType", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotBlank(productOfferTypeId, "productOfferTypeId", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isAnyNull(payType, productOfferTypeId)) {
             throw new BusinessException("BCCS-CATALOG-PRODUCT-0002", "payType and productOfferTypeId are required");
         }
         validateOperators(listProductSpec);
-        return productOfferingRepository.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId, listProductSpec).stream()
-                .map(productOfferingMapper::toDto)
+        return productOfferingRepository.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId,
+            listProductSpec).stream()
+                .map(productOfferingMapper::toSumary)
                 .toList();
+    }
+
+    /**
+     * Xay dung chuoi key can nhat tu list bo loc spec char de dung lam thanh phan cache key.
+     * Khong co bo loc -> chuoi rong; co bo loc -> ghep theo thu tu xuat hien trong request
+     * (thu tu bo loc co y nghia nghiep vu, khong sap xep lai).
+     */
+    public static String specFilterKey(List<FilterRequest> listProductSpec) {
+        if (DataUtil.isNullOrEmpty(listProductSpec)) {
+            return "";
+        }
+        return listProductSpec.stream()
+                .map(ProductOfferingService::filterToKeyPart)
+                .collect(Collectors.joining("|"));
+    }
+
+    private static String filterToKeyPart(FilterRequest f) {
+        if (f == null) {
+            return "";
+        }
+        return f.getProperty() + "~" + f.getValueText() + "~" + f.getValueType()
+                + "~" + f.getOperator() + "~" + f.isNotEqual();
     }
 
     private void validateOperators(List<FilterRequest> listProductSpec) {
@@ -157,7 +215,8 @@ public class ProductOfferingService {
         }
     }
 
-    @Cacheable(value = "productOfferingCache", key = "'CODE_OR_ID:' + #proOfferId + ':' + #prodOfferCode + ':' + #status")
+    @Cacheable(value = "productOfferingCache", key = "'CODE_OR_ID:' + #proOfferId + ':' + #prodOfferCode + ':'"
+            + " + #status")
     public List<ProductOfferingDTO> findByCodeOrId(Long proOfferId, String prodOfferCode, String status) {
         if (DataUtil.isNullOrEmpty(proOfferId) && DataUtil.isNullOrEmpty(prodOfferCode)) {
             return List.of();
@@ -167,9 +226,12 @@ public class ProductOfferingService {
                 .toList();
     }
 
-    @Cacheable(value = "productOfferingCache", key = "'CODES_OFFER_TYPE:' + T(String).join(',', #codes.stream().sorted().toList()) + ':' + #productOfferTypeId")
+//    @Cacheable(value = "productOfferingCache", key = "'CODES_OFFER_TYPE:' + T(String).join(',',
+  // #codes.stream().sorted().toList()) + ':' + #productOfferTypeId")
     public List<ProductOfferingDTO> findByCodesAndProductOfferType(List<String> codes, Long productOfferTypeId) {
         RequestValidator.requireNotEmpty(codes, "codes", "BCCS-PRODUCT-VALIDATE-0000");
+        RequestValidator.requireNotNull(productOfferTypeId, "productOfferTypeId", "BCCS-PRODUCT-VALIDATE-0000");
+
         return productOfferingRepository.findByCodesAndProductOfferType(codes, productOfferTypeId).stream()
                 .map(productOfferingMapper::toDto)
                 .toList();
@@ -190,9 +252,11 @@ public class ProductOfferingService {
         RequestValidator.requireNotBlank(productType, "productType", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotBlank(attributeCode, "attributeCode", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isAnyNull(productCode, productType, attributeCode)) {
-            throw new BusinessException("BCCS-CATALOG-PRODUCT-0003", "productCode, productType and attributeCode are required");
+            throw new BusinessException("BCCS-CATALOG-PRODUCT-0003",
+                    "productCode, productType and attributeCode are required");
         }
-        return productOfferingRepository.checkAttProductOrVasByCode(productCode, Long.valueOf(productType.trim()), attributeCode);
+        return productOfferingRepository.checkAttProductOrVasByCode(productCode, Long.valueOf(productType.trim()),
+            attributeCode);
     }
 
     public boolean hasProductAtt(Long offerId, String attributeCode) {
@@ -204,9 +268,9 @@ public class ProductOfferingService {
     }
 
 
-    @Cacheable(value = "productOfferingCache", key = "'SPEC_CHARS:' + T(String).join(',', #specCodes.stream().sorted().toList()) + ':' + #productOfferTypeId")
+    @Cacheable(value = "productOfferingCache", key = "'SPEC_CHARS:' + T(String).join(',', "
+            + "#specCodes.stream().sorted().toList()) + ':' + #productOfferTypeId")
     public List<ProductOfferingDTO> getListProductOfferingBySpecChars(List<String> specCodes, Long productOfferTypeId) {
-        RequestValidator.requireNotEmpty(specCodes, "specCodes", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isNullOrEmpty(specCodes)) {
             throw new BusinessException("BCCS-CATALOG-PRODUCT-0005", "specCodes must not be empty");
         }
@@ -217,8 +281,6 @@ public class ProductOfferingService {
 
     public CheckProductAttByRuleTypeResponse checkProductAttByRuleType(CheckProductAttByRuleTypeRequest request) {
         RequestValidator.requireNotNull(request, "request", "BCCS-PRODUCT-VALIDATE-0000");
-        RequestValidator.requireNotBlank(request.getProductCode(), "productCode", "BCCS-PRODUCT-VALIDATE-0000");
-        RequestValidator.requireNotBlank(request.getRuleType(), "ruleType", "BCCS-PRODUCT-VALIDATE-0000");
         if (request == null || DataUtil.isNullOrEmpty(request.getProductCode())
                 || DataUtil.isNullOrEmpty(request.getRuleType())) {
             throw new BusinessException("BCCS-CATALOG-PRODUCT-0005", "productCode and ruleType are required");
@@ -282,7 +344,7 @@ public class ProductOfferingService {
         // dieu kien relationTypeId==VAS nhu code cu) - tranh quet lai toan bo mainOfferRelations
         // cho MOI phan tu cua lst (O(n*m) -> O(n+m)).
         Map<Long, List<ProductOfferRelationResponse>> relationsByOfferId = mainOfferRelations.stream()
-                .filter(x -> DataUtil.safeEqual(x.relationTypeId(), Const.RELATION_TYPE.VAS))
+                .filter(x -> DataUtil.safeEqual(x.relationTypeId(), Const.RelationType.VAS))
                 .collect(Collectors.groupingBy(ProductOfferRelationResponse::relationOfferId));
 
         // Batch 1 lan duy nhat cho ca lst (method nay da duoc thiet ke de nhan ca list va tu
@@ -291,16 +353,20 @@ public class ProductOfferingService {
         List<String> offeringIds = lst.stream()
                 .map(dto -> String.valueOf(dto.getProductOfferingId()))
                 .toList();
-        Map<Long, List<ProductSpecCharDTO>> specCharsByOfferingId = productOfferCharUseService.getProductSpecCharByOfferingIds(offeringIds);
+        Map<Long,
+            List<ProductSpecCharDTO>> specCharsByOfferingId = 
+                    productOfferCharUseService.getProductSpecCharByOfferingIds(offeringIds);
 
         for (ProductOfferingDTO productOfferingDTO : lst) {
 
-            List<ProductSpecCharDTO> lstAtt = specCharsByOfferingId.getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
+            List<ProductSpecCharDTO> lstAtt = 
+                    specCharsByOfferingId.getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
             if (!DataUtil.isNullOrEmpty(lstAtt)) {
                 productOfferingDTO.setLstProductSpecChars(lstAtt);
             }
 
-            List<ProductOfferRelationResponse> lstTemp = relationsByOfferId.getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
+            List<ProductOfferRelationResponse> lstTemp = 
+                    relationsByOfferId.getOrDefault(productOfferingDTO.getProductOfferingId(), List.of());
             if (!DataUtil.isNullOrEmpty(lstTemp)) {
                 productOfferingDTO.setLstProductOfferRelations(lstTemp);
             }
@@ -312,57 +378,60 @@ public class ProductOfferingService {
         if (!DataUtil.isNullOrEmpty(lst)) {
             // Fetch 1 lan duy nhat - truoc day getVasExcludeGroup tu query lai findByOptionSetCode
             // (khong cache) cho MOI 1 trong 8 nhom ben duoi, ra 8 query DB giong het nhau.
-            List<OptionSetValueResponse> vasExclusiveGroups = optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP);
-            List<String> PRE_GPRS = getVasExcludeGroup(vasExclusiveGroups, "PRE_GPRS");
-            List<String> POS_GPRS = getVasExcludeGroup(vasExclusiveGroups, "POS_GPRS");
-            List<String> PRE_G1 = getVasExcludeGroup(vasExclusiveGroups, "PRE_G1");
-            List<String> POS_G1 = getVasExcludeGroup(vasExclusiveGroups, "POS_G1");
-            List<String> POS_AP_BH = getVasExcludeGroup(vasExclusiveGroups, "POS_AP_BH");
-            List<String> POS_BB = getVasExcludeGroup(vasExclusiveGroups, "POS_BB");
-            List<String> PRE_BB = getVasExcludeGroup(vasExclusiveGroups, "PRE_BB");
+            List<OptionSetValueResponse> vasExclusiveGroups = optionSetValueService
+                    .findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP);
+            List<String> PreGprs = getVasExcludeGroup(vasExclusiveGroups, "PRE_GPRS");
+            List<String> PosGprs = getVasExcludeGroup(vasExclusiveGroups, "POS_GPRS");
+            List<String> PreG1 = getVasExcludeGroup(vasExclusiveGroups, "PRE_G1");
+            List<String> PosG1 = getVasExcludeGroup(vasExclusiveGroups, "POS_G1");
+            List<String> PosApBh = getVasExcludeGroup(vasExclusiveGroups, "POS_AP_BH");
+            List<String> PosBb = getVasExcludeGroup(vasExclusiveGroups, "POS_BB");
+            List<String> PreBb = getVasExcludeGroup(vasExclusiveGroups, "PRE_BB");
             // code cu dat ten bien la "PRE_IPP" nhung thuc chat goi getVasExclude("IPP", "POS")
             // -> doc du lieu tu property key POS_IPP_* (da xac nhan qua doi chieu source that),
-            // nen o day dat dung ten nhom theo ban chat du lieu la POS_IPP.
-            List<String> POS_IPP = getVasExcludeGroup(vasExclusiveGroups, "POS_IPP");
+            // nen o day dat dung ten nhom theo ban chat du lieu la PosIpp.
+            List<String> PosIpp = getVasExcludeGroup(vasExclusiveGroups, "POS_IPP");
 
             List<List<ProductOfferingDTO>> standList = new ArrayList<>();
-            List<ProductOfferingDTO> checkPreGPRS = new ArrayList<>();
-            List<ProductOfferingDTO> checkPosGPRS = new ArrayList<>();
+            List<ProductOfferingDTO> checkPreGprs = new ArrayList<>();
+            List<ProductOfferingDTO> checkPosGprs = new ArrayList<>();
             List<ProductOfferingDTO> checkPreG1 = new ArrayList<>();
             List<ProductOfferingDTO> checkPosG1 = new ArrayList<>();
             List<ProductOfferingDTO> checkPosAP = new ArrayList<>();
             List<ProductOfferingDTO> checkPosBB = new ArrayList<>();
             List<ProductOfferingDTO> checkPreBB = new ArrayList<>();
-            List<ProductOfferingDTO> checkPosIPP = new ArrayList<>();
+            List<ProductOfferingDTO> checkPosIpp = new ArrayList<>();
 
             for (ProductOfferingDTO aLst : lst) {
-                if (checkVasExclude(PRE_GPRS, aLst.getCode())) {
-                    checkPreGPRS.add(aLst);
-                } else if (checkVasExclude(POS_GPRS, aLst.getCode())) {
-                    checkPosGPRS.add(aLst);
-                } else if (checkVasExclude(PRE_G1, aLst.getCode())) {
+                if (checkVasExclude(PreGprs, aLst.getCode())) {
+                    checkPreGprs.add(aLst);
+                } else if (checkVasExclude(PosGprs, aLst.getCode())) {
+                    checkPosGprs.add(aLst);
+                } else if (checkVasExclude(PreG1, aLst.getCode())) {
                     checkPreG1.add(aLst);
-                } else if (checkVasExclude(POS_G1, aLst.getCode())) {
+                } else if (checkVasExclude(PosG1, aLst.getCode())) {
                     checkPosG1.add(aLst);
-                } else if (checkVasExclude(POS_AP_BH, aLst.getCode())) {
+                } else if (checkVasExclude(PosApBh, aLst.getCode())) {
                     checkPosAP.add(aLst);
-                } else if (checkVasExclude(PRE_BB, aLst.getCode()) && DataUtil.safeEqual(aLst.getSubType(), Const.SUB_TYPE.PRE)) {
+                } else if (checkVasExclude(PreBb, aLst.getCode()) && DataUtil.safeEqual(aLst.getSubType(),
+                    Const.SubType.PRE)) {
                     checkPreBB.add(aLst);
-                } else if (checkVasExclude(POS_BB, aLst.getCode()) && DataUtil.safeEqual(aLst.getSubType(), Const.SUB_TYPE.POST)) {
+                } else if (checkVasExclude(PosBb, aLst.getCode()) && DataUtil.safeEqual(aLst.getSubType(),
+                    Const.SubType.POST)) {
                     checkPosBB.add(aLst);
-                } else if (checkVasExclude(POS_IPP, aLst.getCode())) {
-                    checkPosIPP.add(aLst);
+                } else if (checkVasExclude(PosIpp, aLst.getCode())) {
+                    checkPosIpp.add(aLst);
                 } else {
                     List<ProductOfferingDTO> temp = new ArrayList<>();
                     temp.add(aLst);
                     standList.add(temp);
                 }
             }
-            if (checkPreGPRS.size() > 0) {
-                standList.add(checkPreGPRS);
+            if (checkPreGprs.size() > 0) {
+                standList.add(checkPreGprs);
             }
-            if (checkPosGPRS.size() > 0) {
-                standList.add(checkPosGPRS);
+            if (checkPosGprs.size() > 0) {
+                standList.add(checkPosGprs);
             }
             if (checkPreG1.size() > 0) {
                 standList.add(checkPreG1);
@@ -379,8 +448,8 @@ public class ProductOfferingService {
             if (checkPosBB.size() > 0) {
                 standList.add(checkPosBB);
             }
-            if (checkPosIPP.size() > 0) {
-                standList.add(checkPosIPP);
+            if (checkPosIpp.size() > 0) {
+                standList.add(checkPosIpp);
             }
 
             lst = new ArrayList<>(); // reset list tra ve
@@ -433,10 +502,11 @@ public class ProductOfferingService {
             List<String> lstProductOfferCode, List<String> lstSpecCode, String productOfferType) {
         RequestValidator.requireNotEmpty(lstSpecCode, "lstSpecCode", "BCCS-PRODUCT-VALIDATE-0000");
         Long productOfferTypeId = DataUtil.isNullOrEmpty(productOfferType)
-                ? Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE
+                ? Const.ProductOfferType.PRODUCT_CODE
                 : Long.valueOf(productOfferType.trim());
 
-        List<Object[]> rows = productSpecCharService.findByLstSpecCodeAndLstProductCode(lstSpecCode, lstProductOfferCode, productOfferTypeId);
+        List<Object[]> rows = productSpecCharService.findByLstSpecCodeAndLstProductCode(lstSpecCode,
+            lstProductOfferCode, productOfferTypeId);
         if (DataUtil.isNullOrEmpty(rows)) {
             return null;
         }
@@ -445,7 +515,8 @@ public class ProductOfferingService {
         for (Object[] row : rows) {
             Long productOfferingId = ((Number) row[ROW_IDX_OFFERING_ID]).longValue();
 
-            ProductSpecCharDTO specCharDto = productSpecCharUseMapper.toDto(productSpecCharUseMapper.buildSpecCharEntity(row));
+            ProductSpecCharDTO specCharDto = 
+                    productSpecCharUseMapper.toDto(productSpecCharUseMapper.buildSpecCharEntity(row));
             specCharDto.setProductOfferingId(productOfferingId);
 
             ProductOfferingDTO offeringDto = resultByOfferingId.get(productOfferingId);
@@ -456,7 +527,7 @@ public class ProductOfferingService {
                         .productOfferingId(productOfferingId)
                         .code(rowStr(row[ROW_IDX_OFFERING_CODE]))
                         .name(rowStr(row[ROW_IDX_OFFERING_NAME]))
-                        .status(Const.STATUS.ACTIVE)
+                        .status(Const.Status.ACTIVE)
                         .lstProductSpecChars(lstProductSpecChars)
                         .build();
                 resultByOfferingId.put(productOfferingId, offeringDto);

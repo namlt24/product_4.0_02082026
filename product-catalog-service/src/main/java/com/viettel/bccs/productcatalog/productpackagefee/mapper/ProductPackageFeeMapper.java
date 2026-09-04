@@ -1,10 +1,11 @@
 package com.viettel.bccs.productcatalog.productpackagefee.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeDTO;
 import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeResponse;
 import com.viettel.bccs.productcatalog.productpackagefee.entity.ProductPackageFeeEntity;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductPackageFeeMapper {

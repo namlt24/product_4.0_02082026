@@ -1,16 +1,16 @@
 package com.viettel.bccs.policy.mapactiveinfo.elasticsearch;
 
+import java.util.Date;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
-import java.util.List;
-
 /**
- * Document Elasticsearch cho bảng MAP_ACTIVE_INFO — mirror {@code MapActiveInfoEntity}, TRỪ
+ * Document Elasticsearch cho bảng MapActiveInfo — mirror {@code MapActiveInfoEntity}, TRỪ
  * {@code FILE_ATTACH} (BLOB, không index được). Field {@code id} dùng {@link Long} — lưu ý cột thật
  * trong Oracle là {@code NUMBER(18,0)}, không phải precision=10 như entity JPA khai (metadata entity
  * bị lệch so với DB thật, xem ghi chú lúc rà soát) — {@link Long} đủ rộng nên không có rủi ro tràn số.

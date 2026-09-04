@@ -1,17 +1,19 @@
 package com.viettel.bccs.productcatalog.prodpackshop.repository;
 
-import com.viettel.bccs.productcatalog.utils.Const;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import lombok.RequiredArgsConstructor;
-import org.hibernate.query.NativeQuery;
-import org.springframework.stereotype.Repository;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.hibernate.query.NativeQuery;
+import org.springframework.stereotype.Repository;
+
+import com.viettel.bccs.productcatalog.utils.Const;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import lombok.RequiredArgsConstructor;
 
 @Repository
 @RequiredArgsConstructor
@@ -61,7 +63,9 @@ public class ProdPackShopRepositoryCustomImpl implements ProdPackShopRepositoryC
         for (Object[] row : rows) {
             BigDecimal bdProdPackTypeId = (BigDecimal) row[0];
             BigDecimal bdShopId = (BigDecimal) row[1];
-            if (bdProdPackTypeId == null || bdShopId == null) continue;
+            if (bdProdPackTypeId == null || bdShopId == null) {
+                continue;
+            }
             result.computeIfAbsent(bdProdPackTypeId.longValue(), k -> new ArrayList<>()).add(bdShopId.longValue());
         }
     }

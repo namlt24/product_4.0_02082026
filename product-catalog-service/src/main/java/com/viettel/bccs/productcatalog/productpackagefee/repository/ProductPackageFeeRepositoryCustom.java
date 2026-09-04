@@ -1,8 +1,8 @@
 package com.viettel.bccs.productcatalog.productpackagefee.repository;
 
-import com.viettel.bccs.productcatalog.productpackagefee.entity.ProductPackageFeeEntity;
-
 import java.util.List;
+
+import com.viettel.bccs.productcatalog.productpackagefee.entity.ProductPackageFeeEntity;
 
 public interface ProductPackageFeeRepositoryCustom {
 

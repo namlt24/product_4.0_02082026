@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.telecomservice.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.telecomservice.dto.response.TelecomServiceDTO;
 import com.viettel.bccs.productcatalog.telecomservice.entity.TelecomServiceEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class TelecomServiceMapper {

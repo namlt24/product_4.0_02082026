@@ -1,7 +1,10 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 
+import java.util.List;
+
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -11,8 +14,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 /**
  * Request DTO cho API getProductCodeByMapActiveInfo.
@@ -129,7 +130,8 @@ public class RequestMbccs {
     @Schema(description = "par_name", example = "ACCEPT_USE_INFO_CUSTOMER_ND13", maxLength = 100)
     @Size(max = 100, message = "par_name tối đa 100 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "par_name không được chứa ký tự điều khiển")
-    private String par_name;
+    @com.fasterxml.jackson.annotation.JsonProperty("par_name")
+    private String parName;
     @Schema(description = "product_offer", maxLength = 100)
     @Size(max = 100, message = "productOffer tối đa 100 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "productOffer không được chứa ký tự điều khiển")
@@ -174,11 +176,13 @@ public class RequestMbccs {
     @Size(max = 200, message = "functionName tối đa 200 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,200}$", message = "functionName không được chứa ký tự điều khiển")
     private String functionName;
-    @Schema(description = "Chi tiết hành vi", example = "{\"serviceType\": \"7\", \"reasonId\": \"123\", \"productCode\": \"PoBas\"}") // JSON string
+    @Schema(description = "Chi tiết hành vi",
+            example = "{\"serviceType\": \"7\", \"reasonId\": \"123\", \"productCode\": \"PoBas\"}") // JSON string
     @Size(max = 4000, message = "behaviorDetail tối đa 4000 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$", message = "behaviorDetail không được chứa ký tự điều khiển")
     private String behaviorDetail;
-    @Schema(description = "Cấu hình chức năng", example = "{\"serviceType\": \"7\", \"reasonId\": \"123\", \"productCode\": \"PoBas\"}") // JSON string
+    @Schema(description = "Cấu hình chức năng",
+            example = "{\"serviceType\": \"7\", \"reasonId\": \"123\", \"productCode\": \"PoBas\"}") // JSON string
     @Size(max = 4000, message = "functionConfig tối đa 4000 ký tự")
     @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$", message = "functionConfig không được chứa ký tự điều khiển")
     private String functionConfig;
@@ -334,12 +338,12 @@ public class RequestMbccs {
         this.organizationType = organizationType;
     }
 
-    public String getPar_name() {
-        return par_name;
+    public String getParName() {
+        return parName;
     }
 
-    public void setPar_name(String par_name) {
-        this.par_name = par_name;
+    public void setParName(String parName) {
+        this.parName = parName;
     }
 
     public String getParentCode() {

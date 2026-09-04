@@ -1,14 +1,19 @@
 package com.viettel.bccs.organization.channeltype.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.channeltype.dto.ChannelTypeDTO;
 import com.viettel.bccs.organization.channeltype.openapi.ApiGetActiveById;
 import com.viettel.bccs.organization.channeltype.service.ChannelTypeService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/organization-resource-service/v1/channel-type")

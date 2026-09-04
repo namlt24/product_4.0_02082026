@@ -1,5 +1,8 @@
 package com.viettel.bccs.productcatalog.product.dto.response;
 
+import java.io.Serializable;
+import java.util.Set;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -7,9 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.Set;
 
 @Schema(description = "Kết quả kiểm tra gói cước theo rule type")
 @Data

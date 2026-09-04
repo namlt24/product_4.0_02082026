@@ -1,13 +1,15 @@
 package com.viettel.bccs.productcatalog.telecomservice.repository;
 
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.productcatalog.telecomservice.entity.TelecomServiceEntity;
 import com.viettel.bccs.productcatalog.utils.Const;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor

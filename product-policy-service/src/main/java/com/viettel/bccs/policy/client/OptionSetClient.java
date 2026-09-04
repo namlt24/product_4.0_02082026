@@ -1,9 +1,9 @@
 package com.viettel.bccs.policy.client;
 
-import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
-
 import java.util.List;
 import java.util.Map;
+
+import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 
 public interface OptionSetClient {
 

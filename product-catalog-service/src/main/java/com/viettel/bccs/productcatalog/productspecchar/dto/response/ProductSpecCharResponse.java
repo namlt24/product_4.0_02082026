@@ -1,12 +1,12 @@
 package com.viettel.bccs.productcatalog.productspecchar.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của PRODUCT_SPEC_CHAR (xem
@@ -78,7 +78,8 @@ public record ProductSpecCharResponse(
 
         @Schema(description = "ID loại thuộc tính sản phẩm")
         @Size(max = 100, message = "productSpecCharTypeId tối đa 100 ký tự")
-        @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "productSpecCharTypeId không được chứa ký tự điều khiển")
+        @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$",
+                message = "productSpecCharTypeId không được chứa ký tự điều khiển")
         String productSpecCharTypeId,
 
         @Schema(description = "Kiểu tập giá trị")

@@ -1,13 +1,16 @@
 package com.viettel.bccs.policy.common.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.*;
-
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder

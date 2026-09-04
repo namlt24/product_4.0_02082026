@@ -1,10 +1,15 @@
 package com.viettel.bccs.policy.ref.refprodpackpotype.entity;
 
-import jakarta.persistence.*;
+import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Date;
 
 @Entity
 @Table(name = "REF_PROD_PACK_PO_TYPE")

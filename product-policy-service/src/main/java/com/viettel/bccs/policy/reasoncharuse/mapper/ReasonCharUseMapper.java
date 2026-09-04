@@ -1,11 +1,12 @@
 package com.viettel.bccs.policy.reasoncharuse.mapper;
 
-import com.viettel.bccs.policy.reasoncharuse.dto.response.ReasonCharUseDTO;
-import com.viettel.bccs.policy.reasoncharuse.entity.ReasonCharUseEntity;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+import com.viettel.bccs.policy.reasoncharuse.dto.response.ReasonCharUseDTO;
+import com.viettel.bccs.policy.reasoncharuse.entity.ReasonCharUseEntity;
 
 @Component
 public class ReasonCharUseMapper {

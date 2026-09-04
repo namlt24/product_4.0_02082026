@@ -1,8 +1,9 @@
 package com.viettel.bccs.organization.channeltype.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.channeltype.dto.ChannelTypeDTO;
 import com.viettel.bccs.organization.channeltype.entity.ChannelTypeEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ChannelTypeMapper {

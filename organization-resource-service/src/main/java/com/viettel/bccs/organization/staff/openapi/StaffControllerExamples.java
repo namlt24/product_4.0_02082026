@@ -193,6 +193,20 @@ public final class StaffControllerExamples {
               }
             }""";
 
+    public static final String APPROVE_STAFF_ORDER_EXAMPLE = """
+            {
+              "code": "SUCCESS",
+              "message": "Thành công",
+              "traceId": "5f2a3b1c-1234-4d5e-8a9b-000000000026",
+              "requestId": "req-0026",
+              "timestamp": "2026-08-27T02:00:00Z",
+              "data": {
+                "staffCode": "NV_OWNER_01",
+                "name": "Trần Văn B",
+                "staffId": 12346
+              }
+            }""";
+
     public static final String CUST_TYPE_LIST_EXAMPLE = """
             {
               "code": "SUCCESS",

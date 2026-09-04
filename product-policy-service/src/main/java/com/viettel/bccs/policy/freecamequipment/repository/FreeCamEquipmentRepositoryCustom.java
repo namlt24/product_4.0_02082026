@@ -1,8 +1,8 @@
 package com.viettel.bccs.policy.freecamequipment.repository;
 
-import com.viettel.bccs.policy.freecamequipment.entity.FreeCamEquipmentEntity;
-
 import java.util.List;
+
+import com.viettel.bccs.policy.freecamequipment.entity.FreeCamEquipmentEntity;
 
 public interface FreeCamEquipmentRepositoryCustom {
 

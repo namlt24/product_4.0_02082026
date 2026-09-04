@@ -1,14 +1,12 @@
 package com.viettel.bccs.productcatalog.common.dto;
 
+import java.io.Serializable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.*;
-
-import java.io.Serializable;
 
 @Schema(description = "Yêu cầu lọc theo đặc tính sản phẩm")
 public class FilterRequest implements Serializable {
@@ -88,18 +86,48 @@ public class FilterRequest implements Serializable {
         return new FilterRequest(property, valueText, valueType, Operator.EQ, false);
     }
 
-    public static FilterRequest of(String property, String valueText, String valueType, Operator operator, boolean notEqual) {
+    public static FilterRequest of(String property, String valueText, String valueType,
+            Operator operator, boolean notEqual) {
         return new FilterRequest(property, valueText, valueType, operator, notEqual);
     }
 
-    public String getProperty() { return property; }
-    public void setProperty(String property) { this.property = property; }
-    public String getValueText() { return valueText; }
-    public void setValueText(String valueText) { this.valueText = valueText; }
-    public String getValueType() { return valueType; }
-    public void setValueType(String valueType) { this.valueType = valueType; }
-    public Operator getOperator() { return operator != null ? operator : Operator.EQ; }
-    public void setOperator(Operator operator) { this.operator = operator; }
-    public boolean isNotEqual() { return notEqual != null && notEqual; }
-    public void setNotEqual(Boolean notEqual) { this.notEqual = notEqual; }
+    public String getProperty() {
+        return property;
+    }
+
+    public void setProperty(String property) {
+        this.property = property;
+    }
+
+    public String getValueText() {
+        return valueText;
+    }
+
+    public void setValueText(String valueText) {
+        this.valueText = valueText;
+    }
+
+    public String getValueType() {
+        return valueType;
+    }
+
+    public void setValueType(String valueType) {
+        this.valueType = valueType;
+    }
+
+    public Operator getOperator() {
+        return operator != null ? operator : Operator.EQ;
+    }
+
+    public void setOperator(Operator operator) {
+        this.operator = operator;
+    }
+
+    public boolean isNotEqual() {
+        return notEqual != null && notEqual;
+    }
+
+    public void setNotEqual(Boolean notEqual) {
+        this.notEqual = notEqual;
+    }
 }

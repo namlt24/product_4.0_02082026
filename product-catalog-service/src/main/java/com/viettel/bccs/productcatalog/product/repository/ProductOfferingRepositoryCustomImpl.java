@@ -1,18 +1,24 @@
 package com.viettel.bccs.productcatalog.product.repository;
 
-import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
-import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
-import com.viettel.bccs.productcatalog.utils.Const;
-import com.viettel.bccs.productcatalog.utils.DataUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.stereotype.Repository;
+
+import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
+import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
+import com.viettel.bccs.productcatalog.utils.Const;
+import com.viettel.bccs.productcatalog.utils.DataUtil;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import lombok.RequiredArgsConstructor;
+
+// entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+// TypedQuery cho native query) - query.getResultList() vi vay tra ve List tho, khong the tranh
+// unchecked conversion khi return ve List<ProductOfferingEntity> o hau het method cua class nay.
+@SuppressWarnings("unchecked")
 @Repository
 @RequiredArgsConstructor
 public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepositoryCustom {
@@ -20,14 +26,16 @@ public class ProductOfferingRepositoryCustomImpl implements ProductOfferingRepos
     private final EntityManager entityManager;
 
     @Override
-    public List<ProductOfferingEntity> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId, String subType, Long offerTypeId, boolean getActiveProduct) {
+    public List<ProductOfferingEntity> findByTelecomSubTypeOfferTypeCheckProductStatus(Long telecomServiceId,
+        String subType, Long offerTypeId, boolean getActiveProduct) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT a.* FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a WHERE 1=1");
 
         if (getActiveProduct) {
             sql.append(" AND a.status = '1'");
         }
-        appendCondition(sql, "a.telecom_service_id = :telecomServiceId", telecomServiceId != null && telecomServiceId > 0);
+        appendCondition(sql, "a.telecom_service_id = :telecomServiceId",
+            telecomServiceId != null && telecomServiceId > 0);
         appendCondition(sql, "a.sub_type = :subType", subType != null && !subType.isEmpty());
         appendCondition(sql, "a.product_offer_type_id = :offerTypeId", offerTypeId != null && offerTypeId > 0);
 
@@ -83,8 +91,10 @@ public List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOf
     }
 
     @Override
-    public List<ProductOfferingEntity> getListOfferAlterStatus(Long offerId, String changeChannel, boolean checkStatus) {
-        String strQuery = " SELECT * FROM " + Const.DEFAULT_PRODUCT_SCHEMA + "product_offering WHERE status='1' AND product_offering_id IN ( " +
+    public List<ProductOfferingEntity> getListOfferAlterStatus(Long offerId, String changeChannel,
+        boolean checkStatus) {
+        String strQuery = " SELECT * FROM " + Const.DEFAULT_PRODUCT_SCHEMA
+                + "product_offering WHERE status='1' AND product_offering_id IN ( " +
                 " SELECT a.relation_offer_id FROM " +
                 Const.DEFAULT_PRODUCT_SCHEMA + "product_offer_relation a, " +
                 Const.DEFAULT_PRODUCT_SCHEMA + "product_offer_relation_detail b, " +
@@ -111,9 +121,11 @@ public List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOf
     }
 
     @Override
-    public List<ProductOfferingEntity> findByPayTypeWithSpec(String telecomServiceId, String payType, String productOfferTypeId, List<FilterRequest> listProductSpec) {
+    public List<ProductOfferingEntity> findByPayTypeWithSpec(String telecomServiceId, String payType,
+        String productOfferTypeId, List<FilterRequest> listProductSpec) {
         StringBuilder strQuery = new StringBuilder();
-        strQuery.append(" SELECT a.* FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_offering a WHERE a.status = '1' ");
+        strQuery.append(" SELECT a.* FROM ").append(Const.DEFAULT_PRODUCT_SCHEMA)
+                .append("product_offering a WHERE a.status = '1' ");
 
         Map<String, Object> params = new HashMap<>();
 
@@ -152,9 +164,12 @@ public List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOf
                 if (DataUtil.notNullOrEmpty(filterRequest.getValueText())) {
                     String valueStr = DataUtil.safeToString(filterRequest.getValueText());
                     if ("LONG".equalsIgnoreCase(DataUtil.safeToString(filterRequest.getValueType()))) {
-                        strQuery.append(" AND to_number(d.value) ").append(operatorToOracle(filterRequest)).append(" to_number(:p_value_").append(filterRequest.getProperty()).append(i).append("))");
+                        strQuery.append(" AND to_number(d.value) ").append(operatorToOracle(filterRequest))
+                                .append(" to_number(:p_value_").append(filterRequest.getProperty())
+                                .append(i).append("))");
                     } else {
-                        strQuery.append(" AND d.value ").append(operatorToOracle(filterRequest)).append(" :p_value_").append(filterRequest.getProperty()).append(i).append(")");
+                        strQuery.append(" AND d.value ").append(operatorToOracle(filterRequest))
+                                .append(" :p_value_").append(filterRequest.getProperty()).append(i).append(")");
                     }
                     params.put("p_value_" + filterRequest.getProperty() + i, valueStr);
                 } else {
@@ -286,7 +301,7 @@ public List<ProductOfferingEntity> findByCodeOrId(Long proOfferId, String prodOf
                 .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char c, ")
                 .append(Const.DEFAULT_PRODUCT_SCHEMA).append("product_spec_char_value d ");
         strQuery.append(" WHERE 1=1 AND a.main_offer_id = :offerId AND a.relation_type_id = ")
-                .append(Const.RELATION_TYPE.VAS).append(" ");
+                .append(Const.RelationType.VAS).append(" ");
         strQuery.append(" AND a.product_offer_relation_id = b.product_offer_relation_id ");
         strQuery.append(" AND b.product_spec_char_id = c.product_spec_char_id ");
         strQuery.append(" AND b.product_spec_char_value_id = d.product_spec_char_value_id ");

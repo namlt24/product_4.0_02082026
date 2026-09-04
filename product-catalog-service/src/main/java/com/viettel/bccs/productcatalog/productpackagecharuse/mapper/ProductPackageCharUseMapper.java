@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.productpackagecharuse.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productpackagecharuse.dto.response.ProductPackageCharUseDTO;
 import com.viettel.bccs.productcatalog.productpackagecharuse.entity.ProductPackageCharUseEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductPackageCharUseMapper {

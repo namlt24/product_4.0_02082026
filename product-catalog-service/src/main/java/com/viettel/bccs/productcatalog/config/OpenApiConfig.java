@@ -1,13 +1,14 @@
 package com.viettel.bccs.productcatalog.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenApiConfig {
@@ -20,14 +21,14 @@ public class OpenApiConfig {
             @Value("${bccs.observability.service-version:dev}") String applicationVersion,
             @Value("${bccs.security.jwt.enabled:true}") boolean jwtEnabled) {
 
-        OpenAPI openAPI = new OpenAPI()
+        OpenAPI openApi = new OpenAPI()
                 .info(new Info()
                         .title(applicationName + " API")
                         .version(applicationVersion)
                         .description("BCCS service API documentation"));
 
         if (jwtEnabled) {
-            openAPI.addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
+            openApi.addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
                    .components(new Components()
                            .addSecuritySchemes(SECURITY_SCHEME_NAME,
                                    new SecurityScheme()
@@ -37,6 +38,6 @@ public class OpenApiConfig {
                                            .bearerFormat("JWT")));
         }
 
-        return openAPI;
+        return openApi;
     }
 }

@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.prodpackshop.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.prodpackshop.dto.response.ProdPackShopDTO;
 import com.viettel.bccs.productcatalog.prodpackshop.entity.ProdPackShopEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProdPackShopMapper {

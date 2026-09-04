@@ -1,9 +1,9 @@
 package com.viettel.bccs.productcatalog.client;
 
+import java.util.List;
+
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
 import com.viettel.bccs.productcatalog.client.dto.StaffShopResponse;
-
-import java.util.List;
 
 public interface StaffShopClient {
 

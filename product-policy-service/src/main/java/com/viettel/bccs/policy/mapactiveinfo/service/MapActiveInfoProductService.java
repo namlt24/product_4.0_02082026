@@ -1,11 +1,31 @@
 package com.viettel.bccs.policy.mapactiveinfo.service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.policy.client.*;
-import com.viettel.bccs.policy.client.dto.*;
+import com.viettel.bccs.policy.client.OptionSetClient;
+import com.viettel.bccs.policy.client.ProductOfferCharUseClient;
+import com.viettel.bccs.policy.client.ProductOfferingClient;
+import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
+import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
+import com.viettel.bccs.policy.client.dto.ProductSpecCharDTO;
+import com.viettel.bccs.policy.client.dto.StaffDTO;
+import com.viettel.bccs.policy.client.dto.StaffResponse;
+import com.viettel.bccs.policy.client.StaffShopClient;
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.common.helper.StaffResolveHelper;
-
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeByMapActiveInfoRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.request.GetProductCodeRequest;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
@@ -13,19 +33,14 @@ import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoProductVs
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ProductCodeDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
 import com.viettel.bccs.policy.mapactiveinfo.mapper.ProductCodeMapper;
-
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.RequestValidator;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
 import com.viettel.bccs.policy.utils.ValidationPatterns;
+
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -82,15 +97,24 @@ public class MapActiveInfoProductService {
             return;
         }
         for (FilterRequest filter : filters) {
-            RequestValidator.checkMaxLength(filter.getProperty(), "listProductSpec.property", 100, "BCCS-POLICY-VALIDATE-SIZE");
-            RequestValidator.checkPattern(filter.getProperty(), "listProductSpec.property", ValidationPatterns.PROPERTY_CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-            RequestValidator.checkMaxLength(filter.getEntity(), "listProductSpec.entity", 100, "BCCS-POLICY-VALIDATE-SIZE");
-            RequestValidator.checkPattern(filter.getEntity(), "listProductSpec.entity", ValidationPatterns.PROPERTY_CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-            RequestValidator.checkMaxLength(filter.getValueText(), "listProductSpec.valueText", 1000, "BCCS-POLICY-VALIDATE-SIZE");
-            RequestValidator.checkPattern(filter.getValueText(), "listProductSpec.valueText", ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
-            RequestValidator.checkMaxLength(filter.getValueType(), "listProductSpec.valueType", 20, "BCCS-POLICY-VALIDATE-SIZE");
-            RequestValidator.checkPattern(filter.getValueType(), "listProductSpec.valueType", ValidationPatterns.CODE, "BCCS-POLICY-VALIDATE-PATTERN");
-            RequestValidator.checkSize(filter.getLstValue(), "listProductSpec.lstValue", 500, "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkMaxLength(filter.getProperty(), "listProductSpec.property", 100,
+                    "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getProperty(), "listProductSpec.property",
+                    ValidationPatterns.PROPERTY_CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filter.getEntity(), "listProductSpec.entity", 100,
+                    "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getEntity(), "listProductSpec.entity",
+                    ValidationPatterns.PROPERTY_CODE, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filter.getValueText(), "listProductSpec.valueText", 1000,
+                    "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getValueText(), "listProductSpec.valueText",
+                    ValidationPatterns.FREE_TEXT, "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkMaxLength(filter.getValueType(), "listProductSpec.valueType", 20,
+                    "BCCS-POLICY-VALIDATE-SIZE");
+            RequestValidator.checkPattern(filter.getValueType(), "listProductSpec.valueType", ValidationPatterns.CODE,
+                    "BCCS-POLICY-VALIDATE-PATTERN");
+            RequestValidator.checkSize(filter.getLstValue(), "listProductSpec.lstValue", 500,
+                    "BCCS-POLICY-VALIDATE-SIZE");
         }
     }
 
@@ -149,7 +173,7 @@ public class MapActiveInfoProductService {
                 "checkSerial", "checkDeposit", "unit", "accountingModelCode", "accountingModelName",
                 "accountingName", "accountingCode", "deviceType", "stockModelType", "ownerShopId",
                 "returnStockWhenCancelled", "sapMaterialNumber", "usageId", "isBundle", "subType", "demoDuration",
-                "createUser", "updateUser", "createDatetime", "updateDatetime", "lstProductSpecCharDTOs"
+                "createUser", "updateUser", "createDatetime", "updateDatetime", "lstProductSpecCharDto"
         );
         List<String> specCharFields = Arrays.asList(
                 "productSpecCharId", "code", "name", "status", "description", "value",
@@ -158,9 +182,10 @@ public class MapActiveInfoProductService {
 
         for (ProductOfferingDTO product : products) {
             DataUtil.setObjectFieldsNonnull(product, offeringFields);
-            if (!DataUtil.isNullOrEmpty(product.getLstProductSpecCharDTOs())) {
-                for (ProductSpecCharDTO psc : product.getLstProductSpecCharDTOs()) {
-                    if (psc.getProductSpecCharValueDTO() != null && psc.getProductSpecCharValueDTO().getValue() != null) {
+            if (!DataUtil.isNullOrEmpty(product.getLstProductSpecCharDto())) {
+                for (ProductSpecCharDTO psc : product.getLstProductSpecCharDto()) {
+                    if (psc.getProductSpecCharValueDTO() != null && psc.getProductSpecCharValueDTO().getValue(
+                            ) != null) {
                         psc.setValue(psc.getProductSpecCharValueDTO().getValue());
                     }
                     DataUtil.setObjectFieldsNonnull(psc, specCharFields);
@@ -172,64 +197,71 @@ public class MapActiveInfoProductService {
 
     public MapActiveInfoProductVsaleRoles loadMapActiveInfoProductVsaleRoles() {
         Map<String, List<OptionSetValueResponse>> allRoles = optionSetClient.findByOptionSetCodes(
-                Arrays.asList("ON_VSALE_ROLE", "VSALE_DIDONG_M2M", "VSALE_DIDONG_GOIDACBIET", "VSALE_DIDONG_GOITHUONG"));
+                Arrays.asList("ON_VSALE_ROLE", "VSALE_DIDONG_M2M", "VSALE_DIDONG_GOIDACBIET",
+                        "VSALE_DIDONG_GOITHUONG"));
 
         OptionSetValueResponse onVsaleRole = allRoles.getOrDefault("ON_VSALE_ROLE", Collections.emptyList()).stream()
-                .filter(v -> Const.STATUS.ACTIVE.equals(v.getValue()))
+                .filter(v -> Const.Status.ACTIVE.equals(v.getValue()))
                 .findFirst()
                 .orElse(null);
 
         List<String> roleM2Ms = toValueList(allRoles.get("VSALE_DIDONG_M2M"));
         List<String> roleDBs = toValueList(allRoles.get("VSALE_DIDONG_GOIDACBIET"));
-        List<String> roleGOITHUONGs = toValueList(allRoles.get("VSALE_DIDONG_GOITHUONG"));
+        List<String> roleGoiThuongs = toValueList(allRoles.get("VSALE_DIDONG_GOITHUONG"));
 
-        return new MapActiveInfoProductVsaleRoles(onVsaleRole, roleM2Ms, roleDBs, roleGOITHUONGs);
+        return new MapActiveInfoProductVsaleRoles(onVsaleRole, roleM2Ms, roleDBs, roleGoiThuongs);
     }
 
     public List<String> toValueList(List<OptionSetValueResponse> list) {
-        if (list == null) return List.of();
+        if (list == null) {
+            return List.of();
+        }
         return list.stream().map(OptionSetValueResponse::getValue).filter(Objects::nonNull).toList();
     }
 
     public void filterProductsByRole(List<ProductOfferingDTO> products, MapActiveInfoProductVsaleRoles roles,
-                                     RequiredRoleMap roleMap, List<ProductOfferingDTO> lstRemove, List<ProductOfferingDTO> lstAdd) {
-        if (roles.onVsaleRole() == null) return;
+                                     RequiredRoleMap roleMap, List<ProductOfferingDTO> lstRemove,
+                                             List<ProductOfferingDTO> lstAdd) {
+        if (roles.onVsaleRole() == null) {
+            return;
+        }
 
         for (ProductOfferingDTO product : products) {
-            if (DataUtil.isNullOrEmpty(product.getLstProductSpecCharDTOs())) {
-                if (!roleMap.hasListRole(roles.roleM2Ms(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOIM2M)
-                        && !roleMap.hasListRole(roles.roleDBs(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOIDACBIET)
-                        && !roleMap.hasListRole(roles.roleGOITHUONGs(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOITHUONG)) {
+            if (DataUtil.isNullOrEmpty(product.getLstProductSpecCharDto())) {
+                if (!roleMap.hasListRole(roles.roleM2Ms(), Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOIM2M)
+                        && !roleMap.hasListRole(roles.roleDBs(), Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOIDACBIET)
+                        && !roleMap.hasListRole(roles.roleGoiThuongs(),
+                                Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOITHUONG)) {
                     lstRemove.add(product);
                 }
                 continue;
             }
 
-            for (ProductSpecCharDTO psc : product.getLstProductSpecCharDTOs()) {
-                if (!roleMap.hasListRole(roles.roleM2Ms(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOIM2M)) {
+            for (ProductSpecCharDTO psc : product.getLstProductSpecCharDto()) {
+                if (!roleMap.hasListRole(roles.roleM2Ms(), Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOIM2M)) {
                     if (DataUtil.safeEqual(psc.getCode(),
-                            Const.PRODUCT_SPEC_CHAR.GOI_CUOC_DAC_THU,
-                            Const.PRODUCT_SPEC_CHAR.SPECIFIC_PACKAGE)) {
+                            Const.ProductSpecChar.GOI_CUOC_DAC_THU,
+                            Const.ProductSpecChar.SPECIFIC_PACKAGE)) {
                         lstRemove.add(product);
                         break;
                     }
                 }
-                if (!roleMap.hasListRole(roles.roleDBs(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOIDACBIET)) {
+                if (!roleMap.hasListRole(roles.roleDBs(), Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOIDACBIET)) {
                     if (DataUtil.safeEqual(psc.getCode(),
-                            Const.PRODUCT_SPEC_CHAR.PRODUCT_STUDENT,
-                            Const.PRODUCT_SPEC_CHAR.STU_PRO,
-                            Const.PRODUCT_SPEC_CHAR.SPEC_HISCL)) {
+                            Const.ProductSpecChar.PRODUCT_STUDENT,
+                            Const.ProductSpecChar.STU_PRO,
+                            Const.ProductSpecChar.SPEC_HISCL)) {
                         lstRemove.add(product);
                         break;
                     }
                 }
-                if (!roleMap.hasListRole(roles.roleGOITHUONGs(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOITHUONG)) {
+                if (!roleMap.hasListRole(roles.roleGoiThuongs(), Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOITHUONG)) {
                     if (DataUtil.safeEqual(psc.getCode(),
-                            Const.PRODUCT_SPEC_CHAR.PRODUCT_STUDENT,
-                            Const.PRODUCT_SPEC_CHAR.STU_PRO,
-                            Const.PRODUCT_SPEC_CHAR.SPEC_HISCL,
-                            Const.PRODUCT_SPEC_CHAR.GOI_CUOC_DAC_THU,
-                            Const.PRODUCT_SPEC_CHAR.SPECIFIC_PACKAGE)) {
+                            Const.ProductSpecChar.PRODUCT_STUDENT,
+                            Const.ProductSpecChar.STU_PRO,
+                            Const.ProductSpecChar.SPEC_HISCL,
+                            Const.ProductSpecChar.GOI_CUOC_DAC_THU,
+                            Const.ProductSpecChar.SPECIFIC_PACKAGE)) {
                         lstAdd.add(product);
                         break;
                     }
@@ -239,13 +271,14 @@ public class MapActiveInfoProductService {
     }
 
     private void applyRoleFilter(List<ProductOfferingDTO> products, MapActiveInfoProductVsaleRoles roles,
-                                 RequiredRoleMap roleMap, List<ProductOfferingDTO> lstRemove, List<ProductOfferingDTO> lstAdd) {
+                                 RequiredRoleMap roleMap, List<ProductOfferingDTO> lstRemove,
+                                         List<ProductOfferingDTO> lstAdd) {
         if (roles.onVsaleRole() != null) {
-            if (!roleMap.hasListRole(roles.roleGOITHUONGs(), Const.VSALE_ROLE.VSALE_DAUNOI_DIDONG_GOITHUONG)) {
+            if (!roleMap.hasListRole(roles.roleGoiThuongs(), Const.VsaleRole.VSALE_DAUNOI_DIDONG_GOITHUONG)) {
                 products.retainAll(lstAdd);
             }
         } else {
-            if (!roleMap.hasRole(Const.MDEALER_ROLE.MDEALER_DAUNOI_DIDONG_GOITHUONG)) {
+            if (!roleMap.hasRole(Const.MdealerRole.MDEALER_DAUNOI_DIDONG_GOITHUONG)) {
                 products.retainAll(lstAdd);
             }
         }
@@ -253,10 +286,15 @@ public class MapActiveInfoProductService {
     }
 
 
-    public List<ProductOfferingDTO> getProductCodeByMapActiveInfoWithSpec(String staffCode, String payType, String actionCode,
-                                                                          String telecomServiceId, String offerId, String changeMethod,
-                                                                          String technology, int mode, RequiredRoleMap roleMap, boolean checkProductStatus,
-                                                                          String productOfferTypeId, List<FilterRequest> listProductSpec,
+    public List<ProductOfferingDTO> getProductCodeByMapActiveInfoWithSpec(String staffCode, String payType,
+            String actionCode,
+                                                                          String telecomServiceId,
+                                                                                  String offerId, String changeMethod,
+                                                                          String technology, int mode,
+                                                                                  RequiredRoleMap roleMap,
+                                                                                  boolean checkProductStatus,
+                                                                          String productOfferTypeId,
+                                                                                  List<FilterRequest> listProductSpec,
                                                                           List<String> lstBusinessNo, Boolean mustGic) {
 
         StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffCode);
@@ -272,26 +310,29 @@ public class MapActiveInfoProductService {
                 }
             }
         }
-        List<ProductOfferingDTO> productOfferingDTOS = getProductOfferingCheckStatus(staffDTO, payType, actionCode, telecomServiceId, offerId, changeMethod, technology, mode,
+        List<ProductOfferingDTO> productOfferingDtoS = getProductOfferingCheckStatus(staffDTO, payType, actionCode,
+                telecomServiceId, offerId, changeMethod, technology, mode,
                 roleMap, checkProductStatus, productOfferTypeId, listProductSpec, null, lstBusinessNo, mustGic);
 
-        List<OptionSetValueResponse> listPriorityOffer = optionSetClient.findValueByOptionSetCode(Const.OPTION_SET.LIST_PRIORITY_OFFER);
+        List<OptionSetValueResponse> listPriorityOffer = optionSetClient.findValueByOptionSetCode(
+                Const.OptionSet.LIST_PRIORITY_OFFER);
         if (DataUtil.isNullOrEmpty(listPriorityOffer)) {
-            return productOfferingDTOS;
+            return productOfferingDtoS;
         }
         Map<String, Integer> orderMap = new HashMap<>();
         String regex = "-?\\d+";
         for (OptionSetValueResponse priority : listPriorityOffer) {
-            if (!DataUtil.isNullOrEmpty(priority.getValue()) && priority.getName() != null && priority.getName().matches(regex)) {
+            if (!DataUtil.isNullOrEmpty(priority.getValue()) && priority.getName() != null && priority.getName(
+                    ).matches(regex)) {
                 orderMap.put(priority.getValue(), Integer.parseInt(priority.getName()));
             }
         }
-        Collections.sort(productOfferingDTOS, (po1, po2) -> {
+        Collections.sort(productOfferingDtoS, (po1, po2) -> {
             Integer order1 = orderMap.getOrDefault(po1.getCode(), Integer.MAX_VALUE);
             Integer order2 = orderMap.getOrDefault(po2.getCode(), Integer.MAX_VALUE);
             return Integer.compare(order1, order2);
         });
-        return productOfferingDTOS;
+        return productOfferingDtoS;
     }
 
     public List<ProductOfferingDTO> getProductOfferingCheckStatus(StaffDTO staffDTO,
@@ -307,7 +348,7 @@ public class MapActiveInfoProductService {
                                                                   String productOfferingType,
                                                                   List<FilterRequest> listProductSpec, String infraType,
                                                                   List<String> lstBusinessNo, Boolean mustGic) {
-        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferingType)) {
+        if (Const.ProductOfferType.VAS.equals(productOfferingType)) {
             return getProductOfferingCheckStatusForVas(
                     staffDTO,
                     payType,
@@ -319,7 +360,7 @@ public class MapActiveInfoProductService {
                     mode,
                     roleMap,
                     true,
-                    Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE,
+                    Const.ProductOfferType.PRODUCT_CODE,
                     null,
                     listProductSpec
             );
@@ -341,7 +382,7 @@ public class MapActiveInfoProductService {
                     mode,
                     roleMap,
                     true,
-                    Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE,
+                    Const.ProductOfferType.PRODUCT_CODE,
                     null,
                     null,
                     listProductSpec,
@@ -370,13 +411,15 @@ public class MapActiveInfoProductService {
     }
 
     public List<ProductOfferingDTO> getProductCodeCheckStatus(String staffCode, String payType, String actionCode,
-                                                               String telecomServiceId, String offerId, String changeMethod,
+                                                               String telecomServiceId, String offerId,
+                                                                       String changeMethod,
                                                                String technology, int mode, RequiredRoleMap roleMap,
-                                                               boolean checkProductStatus, List<FilterRequest> listProductSpec,
+                                                               boolean checkProductStatus,
+                                                                       List<FilterRequest> listProductSpec,
                                                                String infraType, List<String> lstBusinessNo) {
         StaffDTO staffDTO = staffResolveHelper.resolveStaffDTO(staffCode);
         return getProductOfferingCheckStatus(staffDTO, payType, actionCode, telecomServiceId, offerId, changeMethod,
-                technology, mode, roleMap, checkProductStatus, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE,
+                technology, mode, roleMap, checkProductStatus, Const.ProductOfferType.PRODUCT_CODE,
                 listProductSpec, infraType, lstBusinessNo, null);
     }
 
@@ -400,9 +443,11 @@ public class MapActiveInfoProductService {
                                                                    Date historyDate,
                                                                    String nodeCode,
                                                                    List<FilterRequest> listProductSpec,
-                                                                   boolean isTgdd, String infraType, List<String> lstBusinessNo, Boolean mustGic) {
+                                                                   boolean isTgdd, String infraType,
+                                                                           List<String> lstBusinessNo,
+                                                                           Boolean mustGic) {
 
-        if (staffDTO.getMyViettelOrder() != null && staffDTO.getMyViettelOrder() == true) {
+        if (Boolean.TRUE.equals(staffDTO.getMyViettelOrder())) {
             String defaultStaffCode = "MY_VIETTEL_CD";
             StaffResponse expStaff = null;
             expStaff = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
@@ -411,9 +456,13 @@ public class MapActiveInfoProductService {
         }
         List<ProductOfferingDTO> lsProductOfferCode;
         if (!DataUtil.isNullOrEmpty(offerId) && !DataUtil.isNullOrEmpty(changeMethod)) {
-            lsProductOfferCode = DataUtil.defaultIfNull(productOfferingClient.getListOfferAlterStatus(DataUtil.safeToLong(offerId), changeMethod, checkProductStatus), new ArrayList<>());
+            lsProductOfferCode = DataUtil.defaultIfNull(productOfferingClient.getListOfferAlterStatus(
+                    DataUtil.safeToLong(offerId), changeMethod, checkProductStatus), new ArrayList<>());
         } else {
-            lsProductOfferCode = DataUtil.defaultIfNull(productOfferingClient.findByTelecomSubTypeOfferTypeCheckProductStatus(DataUtil.safeToLong(telecomServiceId), payType, DataUtil.safeToLong(productOfferingType), checkProductStatus), new ArrayList<>());
+            lsProductOfferCode = DataUtil.defaultIfNull(
+                    productOfferingClient.findByTelecomSubTypeOfferTypeCheckProductStatus(
+                            DataUtil.safeToLong(telecomServiceId), payType,
+                            DataUtil.safeToLong(productOfferingType), checkProductStatus), new ArrayList<>());
         }
 
         List<ProductOfferingDTO> lstRemove = new ArrayList<>();
@@ -439,7 +488,7 @@ public class MapActiveInfoProductService {
                     allSpecChars.getOrDefault(x.getProductOfferingId(), List.of());
             if (!lst.isEmpty()) {
                 for (ProductSpecCharDTO psc : lst) {
-                    if (DataUtil.safeEqual(psc.getCode(), Const.PRODUCT_SPEC_CHAR.IS_XGSPON)
+                    if (DataUtil.safeEqual(psc.getCode(), Const.ProductSpecChar.IS_XGSPON)
                             && psc.getProductSpecCharValueDTO() != null
                             && DataUtil.safeEqual(psc.getProductSpecCharValueDTO().getValue(), xgsponValue)) {
                         lstRemove.add(x);
@@ -455,49 +504,55 @@ public class MapActiveInfoProductService {
         if (!mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, Long.parseLong(telecomServiceId))) {
             lsProduct.addAll(lsProductOfferCode);
         } else {
-            mapActiveInfoExample = getMapActiveInfoExample(staffDTO, payType, Long.parseLong(Const.DEFAULT_VALUE_MAP_SELECT_ALL), actionCode,
+            mapActiveInfoExample = getMapActiveInfoExample(staffDTO, payType, Long.parseLong(
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL), actionCode,
                     DataUtil.safeToLong(telecomServiceId),
                     Long.parseLong(Const.DEFAULT_VALUE_MAP_SELECT_ALL),
                     Const.DEFAULT_VALUE_MAP_SELECT_ALL,
                     customerGroup, customerType,
                     subType, subGroup, stationCodes, technology, historyDate, nodeCode, false);
-            boolean isActiveCD = (!Const.TELECOM_SERVICE_ID.MOBILE.toString().equals(telecomServiceId)
-                    && !Const.TELECOM_SERVICE_ID.HOMEPHONE.toString().equals(telecomServiceId)
-                    && !Const.TELECOM_SERVICE_ID.SMAS.toString().equals(telecomServiceId)
-                    && !Const.TELECOM_SERVICE_ID.SMSPARENT.toString().equals(telecomServiceId));
+            boolean isActiveCD = (!Const.TelecomServiceId.MOBILE.toString().equals(telecomServiceId)
+                    && !Const.TelecomServiceId.HOMEPHONE.toString().equals(telecomServiceId)
+                    && !Const.TelecomServiceId.SMAS.toString().equals(telecomServiceId)
+                    && !Const.TelecomServiceId.SMSPARENT.toString().equals(telecomServiceId));
 
             if (isActiveCD) {
                 mapActiveInfoExample.setProvinceCode(DataUtil.toUpper(staffDTO.getShopProvince()));
                 mapActiveInfoExample.setDistrictCode(DataUtil.toUpper(staffDTO.getShopDistrict()));
-                if (Const.TELECOM_SERVICE_ID.CABLE_TV.toString().equals(telecomServiceId)) {
+                if (Const.TelecomServiceId.CABLE_TV.toString().equals(telecomServiceId)) {
                     mapActiveInfoExample.setPrecinctCode(DataUtil.toUpper(staffDTO.getShopPrecinct()));
                 } else {
                     mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
                 }
             }
 
-            List<MapActiveInfoDTO> mapActiveInfos = mapActiveInfoValidateService.findByExampleWithOfferType(mapActiveInfoExample, mode, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE);
+            List<MapActiveInfoDTO> mapActiveInfos = mapActiveInfoValidateService.findByExampleWithOfferType(
+                    mapActiveInfoExample, mode, Const.ProductOfferType.PRODUCT_CODE);
 
             lsProduct = getProductFromMapActiveInfos(mapActiveInfos, lsProductOfferCode, mode);
 
             if (!DataUtil.isNullObject(offerId) && DataUtil.isNullOrEmpty(changeMethod)) {
                 if (!DataUtil.isNullOrEmpty(lsProduct)) {
-                    lsProduct = lsProduct.stream().filter(x -> DataUtil.safeEqual(x.getProductOfferingId(), offerId)).collect(Collectors.toList());
+                    lsProduct = lsProduct.stream().filter(x -> DataUtil.safeEqual(x.getProductOfferingId(),
+                            offerId)).collect(Collectors.toList());
                 }
             }
         }
         String disableKey = "";
-        if (Const.PAY_TYPE.PREPAID.equals(payType)) {
+        if (Const.PayType.PREPAID.equals(payType)) {
             disableKey = "DISABLED_PRODUCT_CODE_PRE";
-        } else if (Const.PAY_TYPE.POSTPAID.equals(payType)) {
+        } else if (Const.PayType.POSTPAID.equals(payType)) {
             disableKey = "DISABLED_PRODUCT_CODE_POS";
         }
         String disableProductOffer = optionSetClient.getValueByTwoCodeOption("DISABLED_OBJECTS", disableKey);
-        List<String> disableProductOfferListByCode = Arrays.asList(disableProductOffer.split(",")).stream().filter(x -> !DataUtil.isNullOrEmpty(x)).map(x -> x.trim()).collect(Collectors.toList());
+        List<String> disableProductOfferListByCode = Arrays.asList(disableProductOffer.split(",")).stream()
+                .filter(x -> !DataUtil.isNullOrEmpty(x)).map(x -> x.trim()).collect(Collectors.toList());
         if (!DataUtil.isNullOrEmpty(disableProductOfferListByCode)) {
-            List<ProductOfferingDTO> productOfferingDTOs = productOfferingClient.findByCodesAndProductOfferType(disableProductOfferListByCode, Long.valueOf(Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE));
-            if (!DataUtil.isNullOrEmpty(productOfferingDTOs)) {
-                lsProduct = filterProductOffer(lsProduct, productOfferingDTOs.stream().map(x -> String.valueOf(x.getProductOfferingId())).collect(Collectors.toList()), false);
+            List<ProductOfferingDTO> productOfferingDtos = productOfferingClient.findByCodesAndProductOfferType(
+                    disableProductOfferListByCode, Long.valueOf(Const.ProductOfferType.PRODUCT_CODE));
+            if (!DataUtil.isNullOrEmpty(productOfferingDtos)) {
+                lsProduct = filterProductOffer(lsProduct, productOfferingDtos.stream().map(x -> String.valueOf(
+                        x.getProductOfferingId())).collect(Collectors.toList()), false);
             }
 
         }
@@ -517,18 +572,21 @@ public class MapActiveInfoProductService {
 
         if (!DataUtil.isNullOrEmpty(lsProduct)) {
             for (ProductOfferingDTO product : lsProduct) {
-                product.setDownloadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(), Const.PRODUCT_SPEC_CHAR.DOWNLOAD_SPEED), null));
-                product.setUploadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(), Const.PRODUCT_SPEC_CHAR.UPLOAD_SPEED), null));
-                product.setListingPrice(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(), Const.PRODUCT_SPEC_CHAR.LISTING_PRICE), null));
-                product.setLstProductSpecCharDTOs(mapOfferingSpecChar.get(product.getProductOfferingId()));
+                product.setDownloadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars,
+                        product.getProductOfferingId(), Const.ProductSpecChar.DOWNLOAD_SPEED), null));
+                product.setUploadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(
+                        ), Const.ProductSpecChar.UPLOAD_SPEED), null));
+                product.setListingPrice(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(
+                        ), Const.ProductSpecChar.LISTING_PRICE), null));
+                product.setLstProductSpecCharDto(mapOfferingSpecChar.get(product.getProductOfferingId()));
             }
         }
 
         if (DataUtil.safeEqual(telecomServiceId, 1L) && DataUtil.safeEqual(payType, 2)) {
-            reorderList(lsProduct, Const.PRIORITIZE_CODE.TOM690_12);
+            reorderList(lsProduct, Const.PrioritizeCode.TOM690_12);
         }
         if (DataUtil.safeEqual(telecomServiceId, 1L) && DataUtil.safeEqual(payType, 1)) {
-            reorderList(lsProduct, Const.PRIORITIZE_CODE.POBAS_BASIC);
+            reorderList(lsProduct, Const.PrioritizeCode.POBAS_BASIC);
         }
 
         return lsProduct;
@@ -547,7 +605,10 @@ public class MapActiveInfoProductService {
                                                                         String productOfferingType,
                                                                         Date historyDate,
                                                                         List<FilterRequest> listProductSpec){
-        List<ProductOfferingDTO> lsProductOfferCode = DataUtil.defaultIfNull(productOfferingClient.findByTelecomSubTypeOfferTypeCheckProductStatus(Long.parseLong(telecomServiceId), payType, Long.parseLong(productOfferingType), checkProductStatus), new ArrayList<>());
+        List<ProductOfferingDTO> lsProductOfferCode = DataUtil.defaultIfNull(
+                productOfferingClient.findByTelecomSubTypeOfferTypeCheckProductStatus(
+                        Long.parseLong(telecomServiceId), payType,
+                        Long.parseLong(productOfferingType), checkProductStatus), new ArrayList<>());
 
         Map<Long, List<ProductSpecCharDTO>> mapOfferingSpecChar = new HashMap<>();
 
@@ -574,25 +635,29 @@ public class MapActiveInfoProductService {
         if (!mapActiveInfoQuerryService.checkMapActiveInfo(actionCode, Long.parseLong(telecomServiceId))) {
             lsProduct.addAll(lsProductOfferCode);
         } else {
-            mapActiveInfoExample = getMapActiveInfoExample(staffDTO, payType, Long.parseLong(Const.DEFAULT_VALUE_MAP_SELECT_ALL), actionCode, DataUtil.safeToLong(telecomServiceId),
-                    Long.parseLong(Const.DEFAULT_VALUE_MAP_SELECT_ALL), Const.DEFAULT_VALUE_MAP_SELECT_ALL, Const.DEFAULT_VALUE_MAP_SELECT_ALL, Const.DEFAULT_VALUE_MAP_SELECT_ALL,
-                    Const.DEFAULT_VALUE_MAP_SELECT_ALL, Const.DEFAULT_VALUE_MAP_SELECT_ALL, Const.DEFAULT_VALUE_MAP_SELECT_ALL, technology, historyDate, null, false);
-            boolean isActiveCD = (!Const.TELECOM_SERVICE_ID.MOBILE.toString().equals(telecomServiceId)
-                    && !Const.TELECOM_SERVICE_ID.HOMEPHONE.toString().equals(telecomServiceId)
-                    && !Const.TELECOM_SERVICE_ID.SMAS.toString().equals(telecomServiceId)
-                    && !Const.TELECOM_SERVICE_ID.SMSPARENT.toString().equals(telecomServiceId));
+            mapActiveInfoExample = getMapActiveInfoExample(staffDTO, payType, Long.parseLong(
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL), actionCode, DataUtil.safeToLong(telecomServiceId),
+                    Long.parseLong(Const.DEFAULT_VALUE_MAP_SELECT_ALL), Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                            Const.DEFAULT_VALUE_MAP_SELECT_ALL, Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                    Const.DEFAULT_VALUE_MAP_SELECT_ALL, Const.DEFAULT_VALUE_MAP_SELECT_ALL,
+                            Const.DEFAULT_VALUE_MAP_SELECT_ALL, technology, historyDate, null, false);
+            boolean isActiveCD = (!Const.TelecomServiceId.MOBILE.toString().equals(telecomServiceId)
+                    && !Const.TelecomServiceId.HOMEPHONE.toString().equals(telecomServiceId)
+                    && !Const.TelecomServiceId.SMAS.toString().equals(telecomServiceId)
+                    && !Const.TelecomServiceId.SMSPARENT.toString().equals(telecomServiceId));
 
             if (isActiveCD) {
                 mapActiveInfoExample.setProvinceCode(DataUtil.toUpper(staffDTO.getShopProvince()));
                 mapActiveInfoExample.setDistrictCode(DataUtil.toUpper(staffDTO.getShopDistrict()));
-                if (Const.TELECOM_SERVICE_ID.CABLE_TV.toString().equals(telecomServiceId)) {
+                if (Const.TelecomServiceId.CABLE_TV.toString().equals(telecomServiceId)) {
                     mapActiveInfoExample.setPrecinctCode(DataUtil.toUpper(staffDTO.getShopPrecinct()));
                 } else {
                     mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
                 }
             }
 
-            List<MapActiveInfoDTO> mapActiveInfos = mapActiveInfoValidateService.findByExampleWithOfferType(mapActiveInfoExample, mode, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE);
+            List<MapActiveInfoDTO> mapActiveInfos = mapActiveInfoValidateService.findByExampleWithOfferType(
+                    mapActiveInfoExample, mode, Const.ProductOfferType.PRODUCT_CODE);
 
             lsProduct = getProductFromMapActiveInfos(mapActiveInfos, lsProductOfferCode, mode);
         }
@@ -603,10 +668,13 @@ public class MapActiveInfoProductService {
 
         if (!DataUtil.isNullOrEmpty(lsProduct)) {
             for (ProductOfferingDTO product : lsProduct) {
-                product.setDownloadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(), Const.PRODUCT_SPEC_CHAR.DOWNLOAD_SPEED), null));
-                product.setUploadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(), Const.PRODUCT_SPEC_CHAR.UPLOAD_SPEED), null));
-                product.setListingPrice(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(), Const.PRODUCT_SPEC_CHAR.LISTING_PRICE), null));
-                product.setLstProductSpecCharDTOs(mapOfferingSpecChar.get(product.getProductOfferingId()));
+                product.setDownloadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars,
+                        product.getProductOfferingId(), Const.ProductSpecChar.DOWNLOAD_SPEED), null));
+                product.setUploadSpeed(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(
+                        ), Const.ProductSpecChar.UPLOAD_SPEED), null));
+                product.setListingPrice(DataUtil.safeToLong(getSpecCharValue(allSpecChars, product.getProductOfferingId(
+                        ), Const.ProductSpecChar.LISTING_PRICE), null));
+                product.setLstProductSpecCharDto(mapOfferingSpecChar.get(product.getProductOfferingId()));
             }
         }
 
@@ -614,8 +682,11 @@ public class MapActiveInfoProductService {
     }
 
     public MapActiveInfoDTO getMapActiveInfoExample(StaffDTO staffDTO, String payType, Long offerId, String actionCode,
-                                                    Long telServiceId, Long regReasonId, String promotionCode, String customerGroup, String custTypeId,
-                                                    String subType, String subGroup, String stationCodes, String technology, Date historyDate, String nodeCode, boolean isTgdd) {
+                                                    Long telServiceId, Long regReasonId, String promotionCode,
+                                                            String customerGroup, String custTypeId,
+                                                    String subType, String subGroup, String stationCodes,
+                                                            String technology, Date historyDate, String nodeCode,
+                                                            boolean isTgdd) {
 
         if (staffDTO == null) {
             throw new BusinessException("BCCS-POLICY-MAPACTIVE-0007", "Staff info is required");
@@ -628,7 +699,8 @@ public class MapActiveInfoProductService {
 
         ShopResponse shop = staffResponse.getShop();
         if (shop == null) {
-            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006", "Shop info not found for staff: " + staffDTO.getStaffCode());
+            throw new BusinessException("BCCS-POLICY-MAPACTIVE-0006", "Shop info not found for staff: " +
+                    staffDTO.getStaffCode());
         }
 
         Long channelTypeId = mapActiveInfoQuerryService.getChanelTypeIdMapActiveInfo(staffDTO);
@@ -659,18 +731,23 @@ public class MapActiveInfoProductService {
         return mapActiveInfoExample;
     }
 
-    private List<ProductOfferingDTO> getProductFromMapActiveInfos(List<MapActiveInfoDTO> mapActiveInfos, List<ProductOfferingDTO> lsProductOfferCode, int mode) {
+    private List<ProductOfferingDTO> getProductFromMapActiveInfos(List<MapActiveInfoDTO> mapActiveInfos, List<
+            ProductOfferingDTO> lsProductOfferCode, int mode) {
         List<ProductOfferingDTO> lsResult = new ArrayList<>();
         if (DataUtil.isNullOrEmpty(mapActiveInfos) || DataUtil.isNullOrEmpty(lsProductOfferCode)) {
             return lsResult;
         }
-        List<MapActiveInfoDTO> mapActiveInfosByLevel = mapActiveInfoQuerryService.getMapActiveInfosByLevel(mapActiveInfos, "offerId", mode);
+        List<MapActiveInfoDTO> mapActiveInfosByLevel = mapActiveInfoQuerryService.getMapActiveInfosByLevel(
+                mapActiveInfos, "offerId", mode);
         if (!DataUtil.isNullOrEmpty(mapActiveInfosByLevel)) {
             Long offerIdTem;
             Long offerIdTemFull;
-            if (mapActiveInfosByLevel.size() == 1 && mapActiveInfosByLevel.get(0) != null && mapActiveInfosByLevel.get(0).getOfferId() != null &&
-                    mapActiveInfosByLevel.get(0).getOfferId().equals(Long.parseLong(Const.DEFAULT_VALUE_MAP_SELECT_ALL))) {
-                lsProductOfferCode.forEach(productOfferingDTO -> productOfferingDTO.setAttachPromCode(mapActiveInfosByLevel.get(0).getPromCode()));
+            if (mapActiveInfosByLevel.size() == 1 && mapActiveInfosByLevel.get(0) != null && mapActiveInfosByLevel.get(
+                    0).getOfferId() != null &&
+                    mapActiveInfosByLevel.get(0).getOfferId().equals(Long.parseLong(
+                            Const.DEFAULT_VALUE_MAP_SELECT_ALL))) {
+                lsProductOfferCode.forEach(productOfferingDTO -> productOfferingDTO.setAttachPromCode(
+                        mapActiveInfosByLevel.get(0).getPromCode()));
                 return lsProductOfferCode;
             }
 
@@ -706,7 +783,8 @@ public class MapActiveInfoProductService {
         }
     }
 
-    private List<ProductOfferingDTO> filterBySpecChars(List<ProductOfferingDTO> products, Map<Long, List<ProductSpecCharDTO>> specCharMap, List<FilterRequest> filters) {
+    private List<ProductOfferingDTO> filterBySpecChars(List<ProductOfferingDTO> products, Map<Long, List<
+            ProductSpecCharDTO>> specCharMap, List<FilterRequest> filters) {
         if (DataUtil.isNullOrEmpty(products) || DataUtil.isNullOrEmpty(filters)) {
             return products;
         }
@@ -715,9 +793,10 @@ public class MapActiveInfoProductService {
                 .collect(Collectors.toList());
     }
 
-    private List<String> getSpecCharValue(Map<Long, List<ProductSpecCharDTO>> specCharMap, Long offeringId, String specCharCode) {
+    private List<String> getSpecCharValue(Map<Long, List<ProductSpecCharDTO>> specCharMap, Long offeringId,
+            String specCharCode) {
         if (offeringId == null || DataUtil.isNullOrEmpty(specCharCode)) {
-            return List.of(null);
+            return List.of((String) null);
         }
         List<ProductSpecCharDTO> specChars = specCharMap.getOrDefault(offeringId, List.of());
         List<String> values = specChars.stream()
@@ -733,7 +812,8 @@ public class MapActiveInfoProductService {
         return values;
     }
 
-    private boolean matchesAllSpecCharFilters(Long offeringId, Map<Long, List<ProductSpecCharDTO>> specCharMap, List<FilterRequest> filters) {
+    private boolean matchesAllSpecCharFilters(Long offeringId, Map<Long, List<ProductSpecCharDTO>> specCharMap, List<
+            FilterRequest> filters) {
         List<ProductSpecCharDTO> specChars = specCharMap.getOrDefault(offeringId, List.of());
         for (FilterRequest filter : filters) {
             ProductSpecCharDTO matched = specChars.stream()
@@ -768,7 +848,8 @@ public class MapActiveInfoProductService {
         return true;
     }
 
-    public List<ProductOfferingDTO> filterProductOffer(List<ProductOfferingDTO> lsProduct, List<String> lsProductFilter, boolean isAllowOffer) {
+    public List<ProductOfferingDTO> filterProductOffer(List<ProductOfferingDTO> lsProduct, List<String> lsProductFilter,
+            boolean isAllowOffer) {
         List<ProductOfferingDTO> allowList = new ArrayList<>();
         List<ProductOfferingDTO> removeList = new ArrayList<>();
         for (ProductOfferingDTO productOffer : lsProduct) {
@@ -776,7 +857,8 @@ public class MapActiveInfoProductService {
                 break;
             }
             for (String offerId : lsProductFilter) {
-                if (productOffer.getProductOfferingId() != null && offerId.equals(productOffer.getProductOfferingId().toString())) {
+                if (productOffer.getProductOfferingId() != null && offerId.equals(productOffer.getProductOfferingId(
+                        ).toString())) {
                     if (isAllowOffer) {
                         allowList.add(productOffer);
                     } else {

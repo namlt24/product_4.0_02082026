@@ -10,70 +10,71 @@ public final class Const {
     public static final String DEFAULT_ALL = "-1";
 
 
-    public static final class ACTION_CODE {
+    public static final class ActionCode {
         public static final String SUB_CONNECTION = "00";
 
-        private ACTION_CODE() {
+        private ActionCode() {
         }
     }
-    public static final class PRIORITIZE_CODE {
+
+    public static final class PrioritizeCode {
         public static final String TOM690_12 = "TOM690_12";
         public static final String POBAS_BASIC = "POBAS_BASIC";
 
-        private PRIORITIZE_CODE() {
+        private PrioritizeCode() {
         }
     }
 
-    public static final class STATUS {
+    public static final class Status {
         public static final String ACTIVE = "1";
 
-        private STATUS() {
+        private Status() {
         }
     }
 
-    public static final class STAFF_EXT_KEY {
+    public static final class StaffExtKey {
         public static final String MAP_AREA_CHAIN_CHANNEL = "MAP_AREA_CHAIN_CHANNEL";
         public static final String BUSINESS_SPEC = "BUSINESS_SPEC";
         public static final String BUSINESS_TYPE_STAFF = "BUSINESS_TYPE_STAFF";
 
-        private STAFF_EXT_KEY() {
+        private StaffExtKey() {
         }
     }
 
     private Const() {
     }
 
-    public final static class PAY_TYPE {
+    public static final class PayType {
         public static final String POSTPAID = "1"; //tra sau
         public static final String PREPAID = "2";  //tra truoc
 
-        private PAY_TYPE() {
+        private PayType() {
         }
     }
 
-    public final static class PRODUCT_OFFER_TYPE {
-        public final static Long ACCESSORIES = 10L;
-        public final static String GOODS = "100";
-        public final static String PRODUCT_CODE = "200";
-        public final static String VAS = "300";
-        public final static Long MIN_NUMBER_OFFER = 0L;
-        public final static Long MAX_NUMBER_OFFER = 1000L;
-        public final static Long STOCK_HANDSET = 7L;
-        public final static Long NO_SERIAL = 11L;
-        public final static Long CARD = 6L;
-        public final static Long ISDN_MOBILE = 1L;
-        public final static Long ISDN_HOMEPHONE = 2L;
-        public final static Long ISDN_PSTN = 3L;
-        public final static Long SIM = 4L;
-        public final static Long PRODUCT_GOOD_LIMIT = 11L;
-        public final static Long SME_PRODUCT_OFFERING = 14L;
-        public final static Long SME_PRODUCT_OFFERING_VAS = 15L;
+    public static final class ProductOfferType {
+        public static final Long ACCESSORIES = 10L;
+        public static final String GOODS = "100";
+        public static final String PRODUCT_CODE = "200";
+        public static final String VAS = "300";
+        public static final Long MIN_NUMBER_OFFER = 0L;
+        public static final Long MAX_NUMBER_OFFER = 1000L;
+        public static final Long STOCK_HANDSET = 7L;
+        public static final Long NO_SERIAL = 11L;
+        public static final Long CARD = 6L;
+        public static final Long ISDN_MOBILE = 1L;
+        public static final Long ISDN_HOMEPHONE = 2L;
+        public static final Long ISDN_PSTN = 3L;
+        public static final Long SIM = 4L;
+        public static final Long PRODUCT_GOOD_LIMIT = 11L;
+        public static final Long SME_PRODUCT_OFFERING = 14L;
+        public static final Long SME_PRODUCT_OFFERING_VAS = 15L;
 
-        private PRODUCT_OFFER_TYPE() {
+        private ProductOfferType() {
         }
     }
 
-    public static final class OPTION_SET {
+    public static final class OptionSet {
         public static final String ACTION_REQUIRE_MAP_ACTIVE_INFO = "ACTION_REQUIRE_MAP_ACTIVE_INFO";
         public static final String ACTION_REQUIRE_MAP_ACTIVE_INFO_FOR_VAS = "ACTION_REQUIRE_MAP_ACTIVE_INFO_FOR_VAS";
         public static final String CUSTOM_ACTION_WITH_SERVICE = "CUSTOM_ACTION_WITH_SERVICE";
@@ -87,19 +88,19 @@ public final class Const {
         public static final String LIST_PRIORITY_OFFER = "LIST_PRIORITY_OFFER";
         public static final String MY_VIETTEL_USER = "MY_VIETTEL_USER";
 
-        private OPTION_SET() {
+        private OptionSet() {
         }
     }
 
-    public static final class PRODUCT_PACKAGE {
+    public static final class ProductPackage {
         public static final String EXCLUDE_PROD_OFFER_TYPE_ID = "EXCLUDE_PROD_OFFER_TYPE_ID";
 
-        private PRODUCT_PACKAGE() {
+        private ProductPackage() {
         }
     }
 
-    // VSALE_ROLE constants cho phan quyen goi cuoc vsale
-    public static final class VSALE_ROLE {
+    // VsaleRole constants cho phan quyen goi cuoc vsale
+    public static final class VsaleRole {
         // TODO: Xac nhan gia tri role M2M tu nguoi dung/DB
         public static final String VSALE_DAUNOI_DIDONG_GOIM2M = "VSALE_DAUNOI_DIDONG_GOIM2M";
         // TODO: Xac nhan gia tri role goi dac biet tu nguoi dung/DB
@@ -107,11 +108,11 @@ public final class Const {
         // TODO: Xac nhan gia tri role goi thuong tu nguoi dung/DB
         public static final String VSALE_DAUNOI_DIDONG_GOITHUONG = "VSALE_DAUNOI_DIDONG_GOITHUONG";
 
-        private VSALE_ROLE() {
+        private VsaleRole() {
         }
     }
 
-    public final static class PRODUCT_SPEC_CHAR {
+    public static final class ProductSpecChar {
 
         public static final String CUST_TYPE = "CUST_TYPE";
         public static final String LIST_VAS_BUNDLE = "LIST_VAS_BUNDLE";
@@ -135,11 +136,11 @@ public final class Const {
         public static final String GOODS_TBTP1C = "TBTP1C";
         public static final String IS_SPECIAL_PRODUCT = "IS_SPECIAL_PRODUCT";
         public static final String PRICE_COST = "PRICE_COST";
-        public static final Long VALUE_SET_TYPE_DEFAULT = 0l;
-        public static final Long VALUE_SET_TYPE_SQL = 1l;
-        public static final Long VALUE_SET_TYPE_SOLR = 2l;
-        public static final Long VALUE_SET_TYPE_WS = 3l;
-        public static final Long VALUE_SET_TYPE_REST = 4l;
+        public static final Long VALUE_SET_TYPE_DEFAULT = 0L;
+        public static final Long VALUE_SET_TYPE_SQL = 1L;
+        public static final Long VALUE_SET_TYPE_SOLR = 2L;
+        public static final Long VALUE_SET_TYPE_WS = 3L;
+        public static final Long VALUE_SET_TYPE_REST = 4L;
         public static final String VAS_SAFE_NET = "VAS_SAFE_NET";
         public static final String LISTING_PRICE = "LISTING_PRICE";
         public static final String ONT = "ONT";
@@ -179,20 +180,20 @@ public final class Const {
         public static final String FTTH_PRODUCT_CODE = "FTTH_PRODUCT_CODE";
         public static final String FTTH_OLD_CODE = "FTTH_OLD_CODE";
 
-        private PRODUCT_SPEC_CHAR() {
+        private ProductSpecChar() {
         }
     }
 
-    // MDEALER_ROLE constants
-    public static final class MDEALER_ROLE {
+    // MdealerRole constants
+    public static final class MdealerRole {
         // TODO: Xac nhan gia tri role MDealer goi thuong tu nguoi dung/DB
         public static final String MDEALER_DAUNOI_DIDONG_GOITHUONG = "MDEALER_DAUNOI_DIDONG_GOITHUONG";
 
-        private MDEALER_ROLE() {
+        private MdealerRole() {
         }
     }
 
-    public static final class TELECOM_SERVICE_ID {
+    public static final class TelecomServiceId {
         public static final Long MOBILE = 1L;
         public static final Long HOMEPHONE = 2L;
         public static final Long CABLE_TV = 19L;
@@ -238,25 +239,27 @@ public final class Const {
         public static final String SERVICE_ALIAS_SMS_PARENT = "R";
         public static final String SERVICE_ALIAS_V_TRACKING = "B";
 
-        private TELECOM_SERVICE_ID() {
+        private TelecomServiceId() {
         }
     }
 
-    public final static class CHANNEL_TYPE {
-        public static final Long CHANNEL_COMPONENT_IM = 1l;
+    public static final class ChannelType {
+        public static final Long CHANNEL_COMPONENT_IM = 1L;
 
         public static final String IS_VT_UNIT = "1"; //thuoc viettel
         public static final String IS_NOT_VT_UNIT = "2"; //Khong thuoc viettel
         public static final String OBJECT_TYPE_SHOP = "1"; //Cua hang dai ly
         public static final String OBJECT_TYPE_STAFF = "2"; //Chi nhanh
-        public static final Long ASSIGN_CUST_STATUS_TRANS = 1l;
-        public static final Long ASSIGN_CUST_STATUS_NO_TRANS = 0l;
+        public static final Long ASSIGN_CUST_STATUS_TRANS = 1L;
+        public static final Long ASSIGN_CUST_STATUS_NO_TRANS = 0L;
 
-        public static final Long CHANNEL_TYPE_SALE = 1l;// Kenh ban hang
+        public static final Long CHANNEL_TYPE_SALE = 1L;// Kenh ban hang
         public static final Long CHANNEL_TYPE_NV = 14L;// kenh nhan vien
         public static final Long CHANNEL_TYPE_NVDB = 10L;// kenh nhan vien diem ban
-        public static final Long CHANNEL_TYPE_DECODE_DB_POINT_OF_SALE = 80043L;// decode lai neu la diem ban ma co point of sale=1
-        public static final Long CHANNEL_TYPE_DECODE_NVDB_POINT_OF_SALE = 10L;// decode lai neu la nhan vien dia ban ma co point of sale=2
+        // decode lai neu la diem ban ma co point of sale=1
+        public static final Long CHANNEL_TYPE_DECODE_DB_POINT_OF_SALE = 80043L;
+        // decode lai neu la nhan vien dia ban ma co point of sale=2
+        public static final Long CHANNEL_TYPE_DECODE_NVDB_POINT_OF_SALE = 10L;
         public static final String POINT_OF_SALE_DB = "1";// kenh nhan diem ban
         public static final String POINT_OF_SALE_NVDB = "2";// kenh nhan dia ban
         public static final String CHANNEL_TYPE_CHECKCOM = "1";// co tinh hoa hong
@@ -283,11 +286,11 @@ public final class Const {
         public static final String CHANNEL_DL_XNK = "6";
         public static final String CHANNEL_CHUOI_ST = "80";
 
-        private CHANNEL_TYPE() {
+        private ChannelType() {
         }
     }
 
-    public final static class MAP_ACTIVE_INFO {
+    public static final class MapActiveInfo {
         public static final int MODE_1 = 1;//offerId,regReasonId,promCode
         public static final int MODE_2 = 2;//offerId,promCode,regReasonId
         public static final int MODE_3 = 3;//offerId,promCode,regReasonId
@@ -297,23 +300,22 @@ public final class Const {
         public static final int HYBRID = 2;
         public static final int MODE_6 = 6;
 
-        public static final String[] orderFields_1() {
-            return orderFields_1;
+        public static final String[] orderFields1() {
+            return orderFields1;
         }
 
-        ;
-
-        private static final String[] orderFields_1 = new String[]{"payType", "actionCode", "telServiceId", "staffCode", "shopCode",
+        private static final String[] orderFields1 = new String[]{"payType", "actionCode", "telServiceId", "staffCode",
+                "shopCode",
                 "channelTypeId", "districtCode", "provinceCode", "precinctCode", "technology",
                 "customerGroup", "customerType", "subGroup", "subType", "stationId",
                 "offerId", "regReasonId", "promCode"};
 
-        public static final int[] filterModes_1() {
-            return filterModes_1;
+        public static final int[] filterModes1() {
+            return filterModes1;
         }
 
-        ;
-        private static final int[] filterModes_1 = new int[]{FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
+        private static final int[] filterModes1 = new int[]{FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
+                FILTER_MODE_ALL, FILTER_MODE_ALL,
                 FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
                 FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
                 FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL};
@@ -332,70 +334,74 @@ public final class Const {
 
 
         //phuc vu kieu moi tim theo ElasticSearch hoac DB
-        public static final String[] nonElasticSearchMapFields_1() {
-            return nonElasticSearchMapFields_1;
+        public static final String[] nonElasticSearchMapFields1() {
+            return nonElasticSearchMapFields1;
         }
 
-        public static final int[] nonElasticSearchFilterModes_1() {
-            return nonElasticSearchFilterModes_1;
+        public static final int[] nonElasticSearchFilterModes1() {
+            return nonElasticSearchFilterModes1;
         }
 
-        private static final String[] nonElasticSearchMapFields_1 = new String[]{"offerId", "regReasonId", "promCode"};
-        private static final int[] nonElasticSearchFilterModes_1 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL,
+        private static final String[] nonElasticSearchMapFields1 = new String[]{"offerId", "regReasonId", "promCode"};
+        private static final int[] nonElasticSearchFilterModes1 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL,
                 FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL};
 
-        private static final String[] nonElasticSearchMapFields_3 = new String[]{"offerId", "promCode", "regReasonId"};
-        private static final int[] nonElasticSearchFilterModes_3 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL,
+        private static final String[] nonElasticSearchMapFields3 = new String[]{"offerId", "promCode", "regReasonId"};
+        private static final int[] nonElasticSearchFilterModes3 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL,
                 HYBRID, FILTER_MODE_ONLY_INDIVIDUAL};
 
-        public static final String[] nonElasticSearchMapFields_2() {
-            return nonElasticSearchMapFields_2;
+        public static final String[] nonElasticSearchMapFields2() {
+            return nonElasticSearchMapFields2;
         }
 
-        public static final String[] nonElasticSearchMapFields_3() {
-            return nonElasticSearchMapFields_3;
+        public static final String[] nonElasticSearchMapFields3() {
+            return nonElasticSearchMapFields3;
         }
 
-        public static final int[] nonElasticSearchFilterModes_2() {
-            return nonElasticSearchFilterModes_2;
+        public static final int[] nonElasticSearchFilterModes2() {
+            return nonElasticSearchFilterModes2;
         }
 
-        public static final int[] nonElasticSearchFilterModes_3() {
-            return nonElasticSearchFilterModes_3;
+        public static final int[] nonElasticSearchFilterModes3() {
+            return nonElasticSearchFilterModes3;
         }
 
-        private static final String[] nonElasticSearchMapFields_2 = new String[]{"offerId", "promCode", "regReasonId"};
-        private static final int[] nonElasticSearchFilterModes_2 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL,
+        private static final String[] nonElasticSearchMapFields2 = new String[]{"offerId", "promCode", "regReasonId"};
+        private static final int[] nonElasticSearchFilterModes2 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL,
                 FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL};
 
-        private static final String[] orderFields_2 = new String[]{"payType", "actionCode", "telServiceId", "staffCode", "shopCode",
+        private static final String[] orderFields2 = new String[]{"payType", "actionCode", "telServiceId", "staffCode",
+                "shopCode",
                 "channelTypeId", "districtCode", "provinceCode", "precinctCode", "technology",
                 "customerGroup", "customerType", "subGroup", "subType", "stationId",
                 "offerId", "promCode", "regReasonId"};
 
-        public static final String[] orderFields_2() {
-            return orderFields_2;
+        public static final String[] orderFields2() {
+            return orderFields2;
         }
 
-        private static final int[] filterModes_2 = new int[]{FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
+        private static final int[] filterModes2 = new int[]{FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
+                FILTER_MODE_ALL, FILTER_MODE_ALL,
                 FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
                 FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL, FILTER_MODE_ALL,
                 FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL};
 
-        public static final int[] filterModes_2() {
-            return filterModes_2;
+        public static final int[] filterModes2() {
+            return filterModes2;
         }
 
-        private static final String[] orderFields_6 = new String[]{"nodeCode", "precinctCode", "stationCodes", "districtCode", "provinceCode"};
+        private static final String[] orderFields6 = new String[]{"nodeCode", "precinctCode", "stationCodes",
+                "districtCode", "provinceCode"};
 
-        public static final String[] orderFields_6() {
-            return orderFields_6;
+        public static final String[] orderFields6() {
+            return orderFields6;
         }
 
-        private static final int[] filterModes_6 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL};
+        private static final int[] filterModes6 = new int[]{FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL,
+                FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL, FILTER_MODE_ONLY_INDIVIDUAL};
 
-        public static final int[] filterModes_6() {
-            return filterModes_6;
+        public static final int[] filterModes6() {
+            return filterModes6;
         }
     }
 }

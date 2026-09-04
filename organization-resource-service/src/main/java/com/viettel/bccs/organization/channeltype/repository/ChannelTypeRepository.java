@@ -1,10 +1,11 @@
 package com.viettel.bccs.organization.channeltype.repository;
 
-import com.viettel.bccs.organization.channeltype.entity.ChannelTypeEntity;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import com.viettel.bccs.organization.channeltype.entity.ChannelTypeEntity;
 
 @Repository
 public interface ChannelTypeRepository extends JpaRepository<ChannelTypeEntity, Long>, ChannelTypeRepositoryCustom {

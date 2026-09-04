@@ -11,5 +11,6 @@ public interface ProductSpecCharRepositoryCustom {
      * {@code List<Object[]>} (không map thẳng entity) vì mỗi dòng còn kèm product_offering_id/
      * code/name — không thuộc {@code ProductSpecCharEntity}.
      */
-    List<Object[]> findByListSpecCodeAndListProductCode(List<String> lstSpecCode, List<String> lstProductCode, Long productOfferTypeId);
+    List<Object[]> findByListSpecCodeAndListProductCode(List<String> lstSpecCode, List<String> lstProductCode,
+        Long productOfferTypeId);
 }

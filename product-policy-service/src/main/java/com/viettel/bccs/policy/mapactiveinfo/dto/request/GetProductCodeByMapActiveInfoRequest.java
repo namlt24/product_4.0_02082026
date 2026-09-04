@@ -1,7 +1,10 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 
+import java.util.List;
+
 import com.viettel.bccs.policy.common.dto.FilterRequest;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -9,8 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 /**
  * Request DTO riêng cho API getProductCodeByMapActiveInfo — chỉ gồm 6 field thực sự được

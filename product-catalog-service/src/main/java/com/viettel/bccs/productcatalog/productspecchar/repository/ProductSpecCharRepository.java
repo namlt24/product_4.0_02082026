@@ -1,14 +1,15 @@
 package com.viettel.bccs.productcatalog.productspecchar.repository;
 
-import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
 
 @Repository
-public interface ProductSpecCharRepository extends JpaRepository<ProductSpecCharEntity, Long>, ProductSpecCharRepositoryCustom {
-
+public interface ProductSpecCharRepository extends JpaRepository<ProductSpecCharEntity, Long>,
+    ProductSpecCharRepositoryCustom {
     Optional<ProductSpecCharEntity> findByCode(String code);
 
     Optional<ProductSpecCharEntity> findByCodeAndStatus(String code, String status);

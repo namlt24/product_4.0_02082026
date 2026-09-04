@@ -1,32 +1,17 @@
 package com.viettel.bccs.policy.mapactiveinfo.service;
 
-import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.policy.client.StaffExtClient;
-import com.viettel.bccs.policy.client.dto.*;
-import com.viettel.bccs.policy.client.OptionSetClient;
-import com.viettel.bccs.policy.client.ProductOfferingClient;
-import com.viettel.bccs.policy.client.ProductOfferCharUseClient;
-import com.viettel.bccs.policy.client.StaffShopClient;
-import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
-import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
-import com.viettel.bccs.policy.mapactiveinfo.dto.request.*;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
-import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
-import com.viettel.bccs.policy.mapactiveinfo.model.ValidationContext;
-import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
-import com.viettel.bccs.policy.mapping.dto.response.MappingResponse;
-import com.viettel.bccs.policy.mapping.service.MappingService;
-import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
-import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
-import com.viettel.bccs.policy.reason.service.ReasonService;
-import com.viettel.bccs.policy.utils.Const;
-import com.viettel.bccs.policy.utils.Const.OPTION_SET;
-import com.viettel.bccs.policy.utils.Const.TELECOM_SERVICE_ID;
-import com.viettel.bccs.policy.utils.DataUtil;
-import com.viettel.bccs.policy.utils.MessageUtil;
-import com.viettel.bccs.policy.utils.RequestValidator;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,11 +20,38 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.policy.client.OptionSetClient;
+import com.viettel.bccs.policy.client.ProductOfferCharUseClient;
+import com.viettel.bccs.policy.client.ProductOfferingClient;
+import com.viettel.bccs.policy.client.StaffExtClient;
+import com.viettel.bccs.policy.client.StaffShopClient;
+import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
+import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
+import com.viettel.bccs.policy.client.dto.StaffDTO;
+import com.viettel.bccs.policy.client.dto.StaffExtResponse;
+import com.viettel.bccs.policy.client.dto.StaffResponse;
+import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
+import com.viettel.bccs.policy.discountpromotion.service.DiscountPromotionService;
+import com.viettel.bccs.policy.discountpromotioncharuse.mapper.MapActiveInfoMapper;
+import com.viettel.bccs.policy.mapactiveinfo.dto.request.IsCheckMapActiveInfoRequest;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.ShopResponse;
+import com.viettel.bccs.policy.mapactiveinfo.model.ValidationContext;
+import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
+import com.viettel.bccs.policy.mapping.dto.response.MappingResponse;
+import com.viettel.bccs.policy.mapping.service.MappingService;
+import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
+import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
+import com.viettel.bccs.policy.reason.service.ReasonService;
+import com.viettel.bccs.policy.utils.Const;
+import com.viettel.bccs.policy.utils.Const.OptionSet;
+import com.viettel.bccs.policy.utils.Const.TelecomServiceId;
+import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.MessageUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -99,14 +111,18 @@ public class MapActiveInfoValidateService {
     }
 
     public List<MapActiveInfoDTO> validateMapActiveInfo(String staffCode, String actionCode, List<Long> offerIds,
-                                                        String promotionCode, Long regReasonId, String captchaAnswer, Long telServiceId, Date nowDate,
-                                                        boolean isNeedCheckCaptcha, String province, String district, String precinct, String customerGroup,
-                                                        String customerType, String subType, String subGroup, String stationCodes, String payType,
-                                                        String technology, int mode, String productOfferType, List<String> lstBusinessNo, String productCode) {
+                                                        String promotionCode, Long regReasonId,
+                                                                String captchaAnswer, Long telServiceId, Date nowDate,
+                                                        boolean isNeedCheckCaptcha, String province,
+                                                                String district, String precinct, String customerGroup,
+                                                        String customerType, String subType, String subGroup,
+                                                                String stationCodes, String payType,
+                                                        String technology, int mode, String productOfferType,
+                                                                List<String> lstBusinessNo, String productCode) {
 
 
         StaffDTO staffDTO = DataUtil.isNullOrEmpty(staffCode) ? null : new StaffDTO(staffCode);
-        List<MapActiveInfoDTO> mapActiveInfoDTOs = new ArrayList<>();
+        List<MapActiveInfoDTO> mapActiveInfoDtos = new ArrayList<>();
         MapActiveInfoDTO mapActiveInfo;
         List<ReasonDTO> lstReason;
         List<DiscountPromotionDTO> lstPromotions;
@@ -127,7 +143,8 @@ public class MapActiveInfoValidateService {
                             log.debug("[AsyncTask] getListReason END - {} results", result != null ? result.size() : 0);
                             return result;
                         } catch (Exception ex) {
-                            log.error("[AsyncTask] getListReason EXCEPTION: {}", ex.getClass().getName() + ": " + ex.getMessage(), ex);
+                            log.error("[AsyncTask] getListReason EXCEPTION: {}", ex.getClass().getName() + ": " +
+                                    ex.getMessage(), ex);
                             throw ex;
                         }
                     }, asyncExecutor)
@@ -140,10 +157,12 @@ public class MapActiveInfoValidateService {
                         try {
                             List<DiscountPromotionDTO> result = transactionTemplate.execute(status ->
                                     discountPromotionService.getPromotionList(telServiceId, true, true, null));
-                            log.debug("[AsyncTask] getPromotionList END - {} results", result != null ? result.size() : 0);
+                            log.debug("[AsyncTask] getPromotionList END - {} results", result != null ? result.size() :
+                                    0);
                             return result;
                         } catch (Exception ex) {
-                            log.error("[AsyncTask] getPromotionList EXCEPTION: {}", ex.getClass().getName() + ": " + ex.getMessage(), ex);
+                            log.error("[AsyncTask] getPromotionList EXCEPTION: {}", ex.getClass().getName() + ": " +
+                                    ex.getMessage(), ex);
                             throw ex;
                         }
                     }, asyncExecutor)
@@ -168,8 +187,10 @@ public class MapActiveInfoValidateService {
                         .collect(Collectors.toMap(ProductOfferingDTO::getProductOfferingId, p -> p, (a, b) -> a));
 
                 ValidationContext context = staffDTO != null
-                        ? resolveValidationContext(staffDTO, actionCode, payType, telServiceId, province, district, precinct)
-                        : new ValidationContext(Collections.emptyMap(), null, null, null, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
+                        ? resolveValidationContext(staffDTO, actionCode, payType, telServiceId, province, district,
+                                precinct)
+                        : new ValidationContext(Collections.emptyMap(), null, null, null,
+                                Const.DEFAULT_VALUE_MAP_SELECT_ALL);
                 for (Long offerId : offerIds) {
                     lstReason = new ArrayList<>();
                     lstPromotions = new ArrayList<>();
@@ -178,7 +199,8 @@ public class MapActiveInfoValidateService {
                     mapActiveInfo = getUniqueMapActiveInfo(staffDTO, actionCode, offerId,
                             DataUtil.isNullOrEmpty(promotionCode) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : promotionCode,
                             regReasonId, telServiceId,
-                            customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField, payType, technology, mode, productOfferType,
+                            customerGroup, custTypeId, subType, subGroup, stationCodes, errMsgNonMapField,
+                                    payType, technology, mode, productOfferType,
                             lstBusinessNo, mapProductOfferingById.get(offerId), context);
                     if (mapActiveInfo != null) {
                         List<MapActiveInfoDTO> lstMapActiveInfo = new ArrayList<>();
@@ -191,21 +213,23 @@ public class MapActiveInfoValidateService {
 
                         lstReason.addAll(reasonService.getReasonFromMapActiveInfos(lstMapActiveInfo, mode, null));
 
-                        lstPromotions.addAll(discountPromotionService.getPromFromMapActiveInfos(lstMapActiveInfo, mode, false));
+                        lstPromotions.addAll(discountPromotionService.getPromFromMapActiveInfos(lstMapActiveInfo, mode,
+                                false));
 
                         mapActiveInfo.setShopCode(staffDTO.getShopCode());
                         mapActiveInfo.setShopId(staffDTO.getShopId());
                         mapActiveInfo.setStaffCode(staffDTO.getStaffCode());
                         mapActiveInfo.setStaffId(staffDTO.getStaffId());
 
-                        mapActiveInfoDTOs.add(mapActiveInfo);
+                        mapActiveInfoDtos.add(mapActiveInfo);
 
                     } else {
                         if (!errMsgNonMapField.toString().isEmpty()) {
                             throw new BusinessException("BCCS-POLICY-MAPACTIVE-0005");
                         }
                         ProductOfferingDTO productOfferingDTO = mapProductOfferingById.get(offerId);
-                        String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : String.valueOf(offerId);
+                        String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() :
+                                String.valueOf(offerId);
                         String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-0002", offerCodeForMsg);
                         throw new BusinessException("BCCS-POLICY-MAPACTIVE-0002", textParam);
                     }
@@ -221,12 +245,13 @@ public class MapActiveInfoValidateService {
                 throw new BusinessException("BCCS-POLICY-MAPACTIVE-0017");
             }
         }
-        return mapActiveInfoDTOs;
+        return mapActiveInfoDtos;
     }
 
 
     private ValidationContext resolveValidationContext(StaffDTO staffDTO, String actionCode, String payType,
-                                                       Long telServiceId, String province, String district, String precinct) {
+                                                       Long telServiceId, String province, String district,
+                                                               String precinct) {
         StaffResponse staffResponse = staffShopClient.getStaffShopFullInfo(staffDTO.getStaffCode());
         if (staffResponse != null) {
             if (staffResponse.getShop() != null) {
@@ -245,11 +270,11 @@ public class MapActiveInfoValidateService {
         }
         var optionSetMap = optionSetClient.findByOptionSetCodes(
                 Arrays.asList(
-                        OPTION_SET.CHECK_MAP_BUSINESS_PRODUCT,
-                        OPTION_SET.CONFIG_MAPPING_BY_USER_AREA,
-                        OPTION_SET.CHECK_MAPPING_BY_USER_AREA,
-                        OPTION_SET.OFFER_FILTER_MODE,
-                        OPTION_SET.ACTION_CODE_ALLOW_OFFER_FILTER_MODE
+                        OptionSet.CHECK_MAP_BUSINESS_PRODUCT,
+                        OptionSet.CONFIG_MAPPING_BY_USER_AREA,
+                        OptionSet.CHECK_MAPPING_BY_USER_AREA,
+                        OptionSet.OFFER_FILTER_MODE,
+                        OptionSet.ACTION_CODE_ALLOW_OFFER_FILTER_MODE
                 )
         );
 
@@ -257,14 +282,15 @@ public class MapActiveInfoValidateService {
             return new ValidationContext(optionSetMap, null, null, null, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
         }
 
-        List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(OPTION_SET.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
-        List<OptionSetValueResponse> checkMapArea = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
+        List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(
+                OptionSet.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
+        List<OptionSetValueResponse> checkMapArea = optionSetMap.getOrDefault(OptionSet.CHECK_MAPPING_BY_USER_AREA,
+                Collections.emptyList());
 
-        boolean isActiveCD = true
-                && (!Const.TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
-                && !Const.TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
-                && !Const.TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
-                && !Const.TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId));
+        boolean isActiveCD = !Const.TelecomServiceId.MOBILE.equals(telServiceId)
+                && !Const.TelecomServiceId.HOMEPHONE.equals(telServiceId)
+                && !Const.TelecomServiceId.SMAS.equals(telServiceId)
+                && !Const.TelecomServiceId.SMSPARENT.equals(telServiceId);
 
         String provinceID;
         String districtID;
@@ -280,8 +306,10 @@ public class MapActiveInfoValidateService {
 
         Long chanelTypeId = getChanelTypeIdMapActiveInfo(staffDTO);
 
-        if (DataUtil.safeEqual(chanelTypeId, Const.CHANNEL_TYPE.CHUOI_TOAN_QUOC) && !DataUtil.isNullObject(staffDTO.getStaffId())) {
-            boolean isCheckMapAreaActive = !DataUtil.isNullOrEmpty(checkMapArea) && DataUtil.safeEqual(checkMapArea.get(0).getValue(), Const.STATUS.ACTIVE);
+        if (DataUtil.safeEqual(chanelTypeId, Const.ChannelType.CHUOI_TOAN_QUOC) && !DataUtil.isNullObject(
+                staffDTO.getStaffId())) {
+            boolean isCheckMapAreaActive = !DataUtil.isNullOrEmpty(checkMapArea) && DataUtil.safeEqual(checkMapArea.get(
+                    0).getValue(), Const.Status.ACTIVE);
             if (isCheckMapAreaActive) {
                 MapActiveInfoDTO userAreaCheckContext = new MapActiveInfoDTO();
                 userAreaCheckContext.setActionCode(actionCode);
@@ -289,7 +317,8 @@ public class MapActiveInfoValidateService {
                 userAreaCheckContext.setPayType(payType);
                 userAreaCheckContext.setShopCode(staffDTO.getShopCode());
                 if (checkMappingByUser(userAreaCheckContext, configMappingUserArea)) {
-                    StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(staffDTO.getStaffId(), Const.STAFF_EXT_KEY.MAP_AREA_CHAIN_CHANNEL);
+                    StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(staffDTO.getStaffId(),
+                            Const.StaffExtKey.MAP_AREA_CHAIN_CHANNEL);
                     if (!DataUtil.isNullObject(staffExtResponse)) {
                         provinceID = staffExtResponse.getValue();
                         districtID = null;
@@ -305,16 +334,19 @@ public class MapActiveInfoValidateService {
     private MapActiveInfoDTO getUniqueMapActiveInfo(StaffDTO staffDTO, String actionCode, Long offerId,
                                                     String promotionCode, Long regReasonId, Long telServiceId,
                                                     String customerGroup, String custTypeId, String subType,
-                                                    String subGroup, String stationCodes, StringBuilder errMsgNonMapField,
+                                                    String subGroup, String stationCodes,
+                                                            StringBuilder errMsgNonMapField,
                                                     String payType, String technology, int mode,
-                                                    String productOfferType, List<String> lstBusinessNo, ProductOfferingDTO productOfferingDTO,
+                                                    String productOfferType, List<String> lstBusinessNo,
+                                                            ProductOfferingDTO productOfferingDTO,
                                                     ValidationContext context) {
         if (staffDTO == null || staffDTO.getShopId() == null) {
             return null;
         }
 
         Map<String, List<OptionSetValueResponse>> optionSetMap = context.optionSetMap();
-        List<OptionSetValueResponse> checkMapBusiness = optionSetMap.getOrDefault(OPTION_SET.CHECK_MAP_BUSINESS_PRODUCT, Collections.emptyList());
+        List<OptionSetValueResponse> checkMapBusiness = optionSetMap.getOrDefault(OptionSet.CHECK_MAP_BUSINESS_PRODUCT,
+                Collections.emptyList());
 
         String provinceID = context.provinceID();
         String districtID = context.districtID();
@@ -327,8 +359,8 @@ public class MapActiveInfoValidateService {
         mapActiveInfoExample.setShopCode(staffDTO.getShopCode());
         mapActiveInfoExample.setProvinceCode(provinceID);
         mapActiveInfoExample.setDistrictCode(districtID);
-        if (Const.TELECOM_SERVICE_ID.CABLE_TV.equals(telServiceId)
-                || Const.TELECOM_SERVICE_ID.INTERNET_EOC.equals(telServiceId)) {
+        if (Const.TelecomServiceId.CABLE_TV.equals(telServiceId)
+                || Const.TelecomServiceId.INTERNET_EOC.equals(telServiceId)) {
             mapActiveInfoExample.setPrecinctCode(precintId);
         } else {
             mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
@@ -348,23 +380,26 @@ public class MapActiveInfoValidateService {
         mapActiveInfoExample.setPayType(payType);
         mapActiveInfoExample.setTechnology(technology);
 
-        if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(), Const.STATUS.ACTIVE)) {
+        if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(),
+                Const.Status.ACTIVE)) {
             mapActiveInfoExample.setLstBusinessNo(lstBusinessNo);
         }
 
-        List<MapActiveInfoDTO> mapActiveInfos = findByExampleWithOfferType(mapActiveInfoExample, mode, productOfferType);
+        List<MapActiveInfoDTO> mapActiveInfos = findByExampleWithOfferType(mapActiveInfoExample, mode,
+                productOfferType);
 
         if ((DataUtil.safeEqual(mapActiveInfos.size(), 0))
                 && (!DataUtil.isNullOrEmpty(lstBusinessNo) && (lstBusinessNo.size() != 1
                 || (!DataUtil.safeEqual(lstBusinessNo.get(0), Const.DEFAULT_VALUE_MAP_SELECT_ALL))))) {
-            if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(), Const.STATUS.ACTIVE)) {
+            if (!DataUtil.isNullOrEmpty(checkMapBusiness) && DataUtil.safeEqual(checkMapBusiness.get(0).getValue(),
+                    Const.Status.ACTIVE)) {
                 String businessNos = String.join(" , ", lstBusinessNo);
                 String textParam = messageUtil.getTextParam("BCCS-POLICY-MAPACTIVE-0001", businessNos);
                 throw new BusinessException("BCCS-POLICY-MAPACTIVE-0001", textParam);
             }
         }
 
-        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
+        if (Const.ProductOfferType.VAS.equals(productOfferType)) {
             mapActiveInfos = getMapActiveInfosByLevelForVas(mapActiveInfos, "promCode", mode);
         } else {
             mapActiveInfos = getMapActiveInfosByLevel(mapActiveInfos, "promCode", mode, optionSetMap);
@@ -379,12 +414,12 @@ public class MapActiveInfoValidateService {
         }
         log.info("getUniqueMapActiveInfo: khong tim thay mapping");
 
-        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(productOfferType)) {
-            String[] keys = new String[]{MapActiveInfoDTO.COLUMNS.ID.name(),
-                    MapActiveInfoDTO.COLUMNS.PAY_TYPE.name(),
-                    MapActiveInfoDTO.COLUMNS.ACTION_CODE.name(),
-                    MapActiveInfoDTO.COLUMNS.TEL_SERVICE_ID.name(),
-                    MapActiveInfoDTO.COLUMNS.OFFER_ID.name()};
+        if (Const.ProductOfferType.VAS.equals(productOfferType)) {
+            String[] keys = new String[]{MapActiveInfoDTO.Columns.ID.name(),
+                    MapActiveInfoDTO.Columns.PAY_TYPE.name(),
+                    MapActiveInfoDTO.Columns.ACTION_CODE.name(),
+                    MapActiveInfoDTO.Columns.TEL_SERVICE_ID.name(),
+                    MapActiveInfoDTO.Columns.OFFER_ID.name()};
             mapActiveInfos = new ArrayList<>();
             log.info("Lay dc " + mapActiveInfos.size() + " ban ghi map active info sau khi thuc hien kiem tra lai");
             if (!DataUtil.isNullOrEmpty(mapActiveInfos)) {
@@ -393,7 +428,8 @@ public class MapActiveInfoValidateService {
                                 && DataUtil.isNullOrEmpty(x.getProductCode())).collect(Collectors.toList());
             }
             if (!DataUtil.isNullOrEmpty(mapActiveInfos)) {
-                log.info("vas co khai bao thong tin, nhung khong phu hop voi dieu kien gui len, khong cho phep thuc hien");
+                log.info("vas co khai bao thong tin, nhung khong phu hop voi dieu kien gui len,"
+                        + " khong cho phep thuc hien");
 
                 //lay thong tin ly do
                 String reasonCode = "";
@@ -420,9 +456,11 @@ public class MapActiveInfoValidateService {
                 String offerCodeForMsg = productOfferingDTO != null ? productOfferingDTO.getCode() : null;
                 String textParam;
                 String errorCodeForVas;
-                if (!DataUtil.isNullOrEmpty(promotionCode) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(promotionCode)) {
+                if (!DataUtil.isNullOrEmpty(promotionCode) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(
+                        promotionCode)) {
                     errorCodeForVas = "BCCS-POLICY-MAPACTIVE-0003";
-                    textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, promotionCode, offerCodeForMsg);
+                    textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, promotionCode,
+                            offerCodeForMsg);
                 } else {
                     errorCodeForVas = "BCCS-POLICY-MAPACTIVE-0004";
                     textParam = messageUtil.getTextParam(errorCodeForVas, areaName, reasonCode, offerCodeForMsg);
@@ -440,10 +478,10 @@ public class MapActiveInfoValidateService {
                                             Long telServiceId, List<ReasonDTO> lstReason,
                                             List<DiscountPromotionDTO> lstPromotions) {
         log.debug("[validateMapActiveInfoCommon] regReasonId={}, isActiveCD={}, promotionCode={}",
-                regReasonId, !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
-                        && !TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
-                        && !TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
-                        && !TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId),
+                regReasonId, !TelecomServiceId.MOBILE.equals(telServiceId)
+                        && !TelecomServiceId.HOMEPHONE.equals(telServiceId)
+                        && !TelecomServiceId.SMAS.equals(telServiceId)
+                        && !TelecomServiceId.SMSPARENT.equals(telServiceId),
                 promotionCode);
 
         if (lstReason == null || lstReason.isEmpty()) {
@@ -455,10 +493,10 @@ public class MapActiveInfoValidateService {
             throw new BusinessException("BCCS-POLICY-MAPACTIVE-0018");
         }
 
-        boolean isActiveCD = !TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
-                && !TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
-                && !TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
-                && !TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId);
+        boolean isActiveCD = !TelecomServiceId.MOBILE.equals(telServiceId)
+                && !TelecomServiceId.HOMEPHONE.equals(telServiceId)
+                && !TelecomServiceId.SMAS.equals(telServiceId)
+                && !TelecomServiceId.SMSPARENT.equals(telServiceId);
 
         boolean wrongPromotions;
         if (isActiveCD && promotionCode != null
@@ -526,19 +564,20 @@ public class MapActiveInfoValidateService {
         return false;
     }
 
-    private List<MapActiveInfoDTO> getMapActiveInfosByLevelForVas(List<MapActiveInfoDTO> mapActiveInfos, String levelName, int mode) {
+    private List<MapActiveInfoDTO> getMapActiveInfosByLevelForVas(List<MapActiveInfoDTO> mapActiveInfos,
+            String levelName, int mode) {
         List<MapActiveInfoDTO> subMapActiveInfos = new ArrayList<>();
         if (mapActiveInfos == null || mapActiveInfos.isEmpty()) {
             return subMapActiveInfos;
         }
-        String[] mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
-        int[] filterModes = Const.MAP_ACTIVE_INFO.filterModes_1();
+        String[] mapFilelds = Const.MapActiveInfo.orderFields1();
+        int[] filterModes = Const.MapActiveInfo.filterModes1();
         if (mode == 1) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_1();
+            mapFilelds = Const.MapActiveInfo.orderFields1();
+            filterModes = Const.MapActiveInfo.filterModes1();
         } else if (mode == 2) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_2();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_2();
+            mapFilelds = Const.MapActiveInfo.orderFields2();
+            filterModes = Const.MapActiveInfo.filterModes2();
         }
 
         int maxLevel;
@@ -553,7 +592,7 @@ public class MapActiveInfoValidateService {
             String fieldName = mapFilelds[j];
             int fieldMode = filterModes[j];
 
-            if (fieldMode == Const.MAP_ACTIVE_INFO.FILTER_MODE_ONLY_INDIVIDUAL) {
+            if (fieldMode == Const.MapActiveInfo.FILTER_MODE_ONLY_INDIVIDUAL) {
                 List<MapActiveInfoDTO> tempListAll = new ArrayList<>();
                 List<MapActiveInfoDTO> tempListIndi = new ArrayList<>();
                 for (int i = 0; i < subMapActiveInfos.size(); i++) {
@@ -577,33 +616,40 @@ public class MapActiveInfoValidateService {
         return subMapActiveInfos;
     }
 
-    public List<MapActiveInfoDTO> getMapActiveInfosByLevel(List<MapActiveInfoDTO> mapActiveInfos, String levelName, int mode, Map<String, List<OptionSetValueResponse>> optionSetMap) {
-        List<OptionSetValueResponse> offerfiltermode = optionSetMap.getOrDefault(OPTION_SET.OFFER_FILTER_MODE, Collections.emptyList());
-        List<OptionSetValueResponse> actionCodeAllowOfferFilterMode = optionSetMap.getOrDefault(OPTION_SET.ACTION_CODE_ALLOW_OFFER_FILTER_MODE, Collections.emptyList());
+    public List<MapActiveInfoDTO> getMapActiveInfosByLevel(List<MapActiveInfoDTO> mapActiveInfos, String levelName,
+            int mode, Map<String, List<OptionSetValueResponse>> optionSetMap) {
+        List<OptionSetValueResponse> offerfiltermode = optionSetMap.getOrDefault(OptionSet.OFFER_FILTER_MODE,
+                Collections.emptyList());
+        List<OptionSetValueResponse> actionCodeAllowOfferFilterMode = optionSetMap.getOrDefault(
+                OptionSet.ACTION_CODE_ALLOW_OFFER_FILTER_MODE, Collections.emptyList());
 
         List<MapActiveInfoDTO> subMapActiveInfos = new ArrayList<>();
         if (mapActiveInfos == null || mapActiveInfos.isEmpty()) {
             return subMapActiveInfos;
         }
-        String[] mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
-        int[] filterModes = Const.MAP_ACTIVE_INFO.filterModes_1();
+        String[] mapFilelds = Const.MapActiveInfo.orderFields1();
+        int[] filterModes = Const.MapActiveInfo.filterModes1();
         if (mode == 1) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_1();
+            mapFilelds = Const.MapActiveInfo.orderFields1();
+            filterModes = Const.MapActiveInfo.filterModes1();
         } else if (mode == 2) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_2();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_2();
+            mapFilelds = Const.MapActiveInfo.orderFields2();
+            filterModes = Const.MapActiveInfo.filterModes2();
         } else if (mode == 6) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_6();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_6();
+            mapFilelds = Const.MapActiveInfo.orderFields6();
+            filterModes = Const.MapActiveInfo.filterModes6();
         }
 
-        if (!DataUtil.isNullOrEmpty(offerfiltermode) && DataUtil.safeEqual(offerfiltermode.get(0).getValue(), Const.STATUS.ACTIVE)) {
+        if (!DataUtil.isNullOrEmpty(offerfiltermode) && DataUtil.safeEqual(offerfiltermode.get(0).getValue(),
+                Const.Status.ACTIVE)) {
             if (mapActiveInfos.get(0) != null
                     && !DataUtil.isNullOrEmpty(mapActiveInfos.get(0).getActionCode())
-                    && actionCodeAllowOfferFilterMode.stream().anyMatch(v -> Objects.equals(v.getValue(), mapActiveInfos.get(0).getActionCode()))) {
+                    && actionCodeAllowOfferFilterMode.stream().anyMatch(v -> Objects.equals(v.getValue(),
+                            mapActiveInfos.get(0).getActionCode()))) {
                 for (int i = 0; i < mapFilelds.length; i++) {
-                    if (mapFilelds[i].equals("offerId") || mapFilelds[i].equals("channelTypeId") || mapFilelds[i].equals("provinceCode") || mapFilelds[i].equals("districtCode") || mapFilelds[i].equals("precinctCode")) {
+                    if (mapFilelds[i].equals("offerId") || mapFilelds[i].equals("channelTypeId") ||
+                            mapFilelds[i].equals("provinceCode") || mapFilelds[i].equals("districtCode")
+                            || mapFilelds[i].equals("precinctCode")) {
                         filterModes[i] = 0;
                     }
                 }
@@ -622,7 +668,7 @@ public class MapActiveInfoValidateService {
             String fieldName = mapFilelds[j];
             int fieldMode = filterModes[j];
 
-            if (fieldMode == Const.MAP_ACTIVE_INFO.FILTER_MODE_ONLY_INDIVIDUAL) {
+            if (fieldMode == Const.MapActiveInfo.FILTER_MODE_ONLY_INDIVIDUAL) {
                 List<MapActiveInfoDTO> tempListAll = new ArrayList<>();
                 List<MapActiveInfoDTO> tempListIndi = new ArrayList<>();
 
@@ -648,26 +694,29 @@ public class MapActiveInfoValidateService {
         }
         if (!DataUtil.isNullOrEmpty(subMapActiveInfos)) {
             if (mapActiveInfos.size() < 100) {
-                log.info("list mapId: " + subMapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(Collectors.toList()));
+                log.info("list mapId: " + subMapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(
+                        Collectors.toList()));
             }
         }
         return subMapActiveInfos;
     }
 
-    private List<MapActiveInfoDTO> filterNonMapFields(StringBuilder errMsg, List<MapActiveInfoDTO> mapActiveInfos, MapActiveInfoDTO mapActiveInfoExample) {
+    private List<MapActiveInfoDTO> filterNonMapFields(StringBuilder errMsg, List<MapActiveInfoDTO> mapActiveInfos,
+            MapActiveInfoDTO mapActiveInfoExample) {
         List<MapActiveInfoDTO> subMapActiveInfos = new ArrayList<>();
         if (DataUtil.isNullOrEmpty(mapActiveInfos)) {
             return subMapActiveInfos;
         }
         subMapActiveInfos = mapActiveInfos;
-        for (int i = 0; i < Const.MAP_ACTIVE_INFO.nonMapFields().length; i++) {
+        for (int i = 0; i < Const.MapActiveInfo.nonMapFields().length; i++) {
 
             //Thuc hien loc theo tung field
-            String nonMapField = Const.MAP_ACTIVE_INFO.nonMapFields()[i];
-            int filterMode = Const.MAP_ACTIVE_INFO.filterModes3()[i];
+            String nonMapField = Const.MapActiveInfo.nonMapFields()[i];
+            int filterMode = Const.MapActiveInfo.filterModes3()[i];
             String searchFieldValue = DataUtil.safeToString(mapActiveInfoExample.getByProperty(nonMapField));
 
-            if (filterMode == Const.MAP_ACTIVE_INFO.FILTER_MODE_ONLY_INDIVIDUAL && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(searchFieldValue)) {
+            if (filterMode == Const.MapActiveInfo.FILTER_MODE_ONLY_INDIVIDUAL &&
+                    !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(searchFieldValue)) {
                 List<MapActiveInfoDTO> tempListAll = new ArrayList<>();
                 List<MapActiveInfoDTO> tempListIndi = new ArrayList<>();
 
@@ -700,13 +749,14 @@ public class MapActiveInfoValidateService {
                         tempList.add(mapActiveInfo);
                     } else {
                         if ((Const.ATTRIBUTE_PARAM_SPLIT + fieldValue + Const.ATTRIBUTE_PARAM_SPLIT)
-                                .contains(Const.ATTRIBUTE_PARAM_SPLIT + searchFieldValue + Const.ATTRIBUTE_PARAM_SPLIT)) {
+                                .contains(Const.ATTRIBUTE_PARAM_SPLIT + searchFieldValue +
+                                        Const.ATTRIBUTE_PARAM_SPLIT)) {
                             tempList.add(mapActiveInfo);
                         }
                     }
                 }
                 subMapActiveInfos = tempList;
-                if (tempList.isEmpty() && Const.MAP_ACTIVE_INFO.STATION_CODES.equals(nonMapField)) {
+                if (tempList.isEmpty() && Const.MapActiveInfo.STATION_CODES.equals(nonMapField)) {
                     errMsg.append(messageUtil.getText("BCCS-POLICY-MAPACTIVE-0005"));
                     break;
                 }
@@ -716,14 +766,15 @@ public class MapActiveInfoValidateService {
         return subMapActiveInfos;
     }
 
-    public static int compareMapActiveInfoDTO(MapActiveInfoDTO mapActiveInfo1, MapActiveInfoDTO mapActiveInfo2, int mode) {
-        String[] mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
+    public static int compareMapActiveInfoDTO(MapActiveInfoDTO mapActiveInfo1, MapActiveInfoDTO mapActiveInfo2,
+            int mode) {
+        String[] mapFilelds = Const.MapActiveInfo.orderFields1();
 
         if (mode == 1) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
+            mapFilelds = Const.MapActiveInfo.orderFields1();
 
         } else if (mode == 2) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_2();
+            mapFilelds = Const.MapActiveInfo.orderFields2();
 
         }
         for (String mapField : mapFilelds) {
@@ -732,11 +783,13 @@ public class MapActiveInfoValidateService {
             Object fieldValue2 = mapActiveInfo2.getByProperty(mapField);
 
             int compareResult = 0;
-            //Sua compareTo - neu 1 trong 2 gia tri null hoac khac kieu, coi nhu bang nhau o field nay, chuyen sang field uu tien tiep theo
-            if (fieldValue1 instanceof String && fieldValue2 instanceof String)
+            //Sua compareTo - neu 1 trong 2 gia tri null hoac khac kieu, coi nhu bang nhau o field
+            //nay, chuyen sang field uu tien tiep theo
+            if (fieldValue1 instanceof String && fieldValue2 instanceof String) {
                 compareResult = ((String) fieldValue2).compareTo((String) fieldValue1);
-            else if (fieldValue1 instanceof Long && fieldValue2 instanceof Long)
+            } else if (fieldValue1 instanceof Long && fieldValue2 instanceof Long) {
                 compareResult = ((Long) fieldValue2).compareTo((Long) fieldValue1);
+            }
 
             if (compareResult != 0) {
                 return compareResult;
@@ -746,7 +799,8 @@ public class MapActiveInfoValidateService {
         return 0;
     }
 
-    public List<MapActiveInfoDTO> findByExampleWithOfferType(MapActiveInfoDTO exampleMapActiveInfo, int mode, String offerType) {
+    public List<MapActiveInfoDTO> findByExampleWithOfferType(MapActiveInfoDTO exampleMapActiveInfo, int mode,
+            String offerType) {
         return mapActiveInfoQuerryService.findByExampleWithOfferType(exampleMapActiveInfo, mode, offerType);
     }
 

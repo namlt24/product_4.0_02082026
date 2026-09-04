@@ -1,12 +1,13 @@
 package com.viettel.bccs.policy.discountpromotioncharuse.mapper;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class MapActiveInfoMapper {

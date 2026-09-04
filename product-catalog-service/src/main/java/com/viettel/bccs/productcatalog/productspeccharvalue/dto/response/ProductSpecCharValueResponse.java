@@ -1,12 +1,12 @@
 package com.viettel.bccs.productcatalog.productspeccharvalue.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của PRODUCT_SPEC_CHAR_VALUE (xem

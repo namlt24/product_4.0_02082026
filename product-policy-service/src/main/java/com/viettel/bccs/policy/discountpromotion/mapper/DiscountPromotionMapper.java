@@ -1,11 +1,12 @@
 package com.viettel.bccs.policy.discountpromotion.mapper;
 
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionResponse;
 import com.viettel.bccs.policy.discountpromotion.entity.DiscountPromotionEntity;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class DiscountPromotionMapper {

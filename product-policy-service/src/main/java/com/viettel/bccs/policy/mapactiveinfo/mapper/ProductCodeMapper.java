@@ -1,11 +1,12 @@
 package com.viettel.bccs.policy.mapactiveinfo.mapper;
 
-import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.ProductCodeDTO;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Component;
+
+import com.viettel.bccs.policy.client.dto.ProductOfferingDTO;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.ProductCodeDTO;
 
 @Component
 public class ProductCodeMapper {

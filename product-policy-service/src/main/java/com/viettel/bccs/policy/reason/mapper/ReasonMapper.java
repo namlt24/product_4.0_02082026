@@ -1,13 +1,13 @@
 package com.viettel.bccs.policy.reason.mapper;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.entity.ReasonEntity;
-import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 @Component
 public class ReasonMapper {

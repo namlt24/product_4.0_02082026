@@ -1,20 +1,22 @@
 package com.viettel.bccs.organization.identitytype.controller;
 
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.identitytype.dto.IdentityTypeDTO;
 import com.viettel.bccs.organization.identitytype.openapi.ApiFindByIdType;
 import com.viettel.bccs.organization.identitytype.openapi.ApiGetListIdentityType;
 import com.viettel.bccs.organization.identitytype.service.IdentityTypeService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/organization-resource-service/v1/identity-type")

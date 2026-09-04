@@ -1,11 +1,12 @@
 package com.viettel.bccs.policy.reasonpause.mapper;
 
-import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
-import com.viettel.bccs.policy.reasonpause.entity.ReasonPauseEntity;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
+import com.viettel.bccs.policy.reasonpause.entity.ReasonPauseEntity;
 
 @Component
 public class ReasonPauseMapper {

@@ -1,5 +1,7 @@
 package com.viettel.bccs.policy.mapskipdebtcharges.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -10,8 +12,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của MAP_SKIP_DEBT_CHARGES
@@ -24,7 +24,7 @@ import java.util.Date;
 @Builder
 public class MapSkipDebtChargesDTO {
 
-    public static enum COLUMNS {
+    public static enum Columns {
         ID, TEL_SERVICE_ID, PRODUCT_CODE, PRODUCT_NAME, REG_REASON_ID, REASON_NAME,
         CHANNEL_TYPE_ID, CHANNEL_NAME, PROVINCE_CODE, PROVINCE_NAME, DISTRICT_CODE, DISTRICT_NAME,
         PRECINCT_CODE, PRECINCT_NAME, SHOP_CODE, STAFF_CODE, ACTION_CODE, ACTION_NAME, STATUS,

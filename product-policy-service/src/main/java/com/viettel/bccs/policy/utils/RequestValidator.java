@@ -1,9 +1,9 @@
 package com.viettel.bccs.policy.utils;
 
-import com.viettel.bccs.common.error.exception.ValidationException;
-
 import java.util.Collection;
 import java.util.regex.Pattern;
+
+import com.viettel.bccs.common.error.exception.ValidationException;
 
 /**
  * Validate thủ công cho field/param nhận input từ client, thay cho Jakarta Bean Validation

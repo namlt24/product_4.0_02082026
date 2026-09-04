@@ -1,12 +1,14 @@
 package com.viettel.bccs.policy.common.helper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.client.StaffShopClient;
 import com.viettel.bccs.policy.client.dto.StaffDTO;
 import com.viettel.bccs.policy.client.dto.StaffResponse;
 import com.viettel.bccs.policy.utils.DataUtil;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 /**
  * Helper dùng chung để resolve StaffDTO (kèm thông tin shop: shopCode/shopProvince/shopDistrict/

@@ -1,7 +1,12 @@
 package com.viettel.bccs.productcatalog.productpackagefee.dto.response;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -13,10 +18,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.Date;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @Data

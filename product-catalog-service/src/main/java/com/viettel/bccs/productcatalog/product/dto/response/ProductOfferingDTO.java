@@ -1,8 +1,14 @@
 package com.viettel.bccs.productcatalog.product.dto.response;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -14,11 +20,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
 
 @Schema(description = "Thông tin sản phẩm gói cước")
 @Data
@@ -445,7 +446,8 @@ public class ProductOfferingDTO implements Serializable {
 
     @Schema(description = "Đặc tả sản phẩm")
     @Size(max = 1000, message = "productSpecification tối đa 1000 ký tự")
-    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "productSpecification không được chứa ký tự điều khiển")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$",
+            message = "productSpecification không được chứa ký tự điều khiển")
     private String productSpecification;
 
     @Schema(description = "Ngày bắt đầu lọc")

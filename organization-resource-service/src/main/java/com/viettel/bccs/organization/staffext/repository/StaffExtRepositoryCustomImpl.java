@@ -1,12 +1,14 @@
 package com.viettel.bccs.organization.staffext.repository;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.organization.staffext.entity.StaffExtEntity;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor

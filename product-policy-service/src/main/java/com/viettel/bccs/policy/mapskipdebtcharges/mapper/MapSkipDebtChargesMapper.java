@@ -1,11 +1,12 @@
 package com.viettel.bccs.policy.mapskipdebtcharges.mapper;
 
-import com.viettel.bccs.policy.mapskipdebtcharges.dto.response.MapSkipDebtChargesDTO;
-import com.viettel.bccs.policy.mapskipdebtcharges.entity.MapSkipDebtChargesEntity;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+import com.viettel.bccs.policy.mapskipdebtcharges.dto.response.MapSkipDebtChargesDTO;
+import com.viettel.bccs.policy.mapskipdebtcharges.entity.MapSkipDebtChargesEntity;
 
 @Component
 public class MapSkipDebtChargesMapper {

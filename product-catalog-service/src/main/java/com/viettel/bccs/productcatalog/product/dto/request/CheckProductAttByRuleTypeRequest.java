@@ -1,5 +1,7 @@
 package com.viettel.bccs.productcatalog.product.dto.request;
 
+import java.io.Serializable;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -7,8 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
 
 /**
  * Request cho API checkProductAttByRuleType — kiểm tra gói cước theo rule type.

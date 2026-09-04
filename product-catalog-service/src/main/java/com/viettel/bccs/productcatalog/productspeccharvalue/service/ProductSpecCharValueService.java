@@ -1,6 +1,12 @@
 package com.viettel.bccs.productcatalog.productspeccharvalue.service;
 
-import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.productcatalog.productspeccharvalue.dto.response.ProductSpecCharValueResponse;
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
 import com.viettel.bccs.productcatalog.productspeccharvalue.mapper.ProductSpecCharValueMapper;
@@ -8,14 +14,8 @@ import com.viettel.bccs.productcatalog.productspeccharvalue.repository.ProductSp
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.RequestValidator;
-import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +31,7 @@ public class ProductSpecCharValueService {
             return List.of();
         }
         return productSpecCharValueRepository.findAllById(ids).stream()
-                .filter(entity -> Const.STATUS.ACTIVE.equals(entity.getStatus()))
+                .filter(entity -> Const.Status.ACTIVE.equals(entity.getStatus()))
                 .map(productSpecCharValueMapper::toResponse)
                 .toList();
     }

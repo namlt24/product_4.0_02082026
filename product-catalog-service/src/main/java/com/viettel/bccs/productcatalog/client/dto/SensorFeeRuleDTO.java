@@ -1,12 +1,12 @@
 package com.viettel.bccs.productcatalog.client.dto;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
 
 @Schema(description = "Thông tin quy tắc phí cảm biến")
 @Data

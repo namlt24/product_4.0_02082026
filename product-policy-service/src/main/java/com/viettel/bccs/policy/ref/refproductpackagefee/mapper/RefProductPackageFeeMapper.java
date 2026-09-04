@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.ref.refproductpackagefee.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.ref.refproductpackagefee.dto.RefProductPackageFeeDTO;
 import com.viettel.bccs.policy.ref.refproductpackagefee.entity.RefProductPackageFeeEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class RefProductPackageFeeMapper {

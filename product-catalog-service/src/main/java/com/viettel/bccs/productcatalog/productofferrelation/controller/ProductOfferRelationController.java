@@ -1,10 +1,11 @@
 package com.viettel.bccs.productcatalog.productofferrelation.controller;
 
-import com.viettel.bccs.common.api.response.StandardResponse;
-import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.productcatalog.productofferrelation.service.ProductOfferRelationService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/product-catalog-service/v1/productofferrelation")

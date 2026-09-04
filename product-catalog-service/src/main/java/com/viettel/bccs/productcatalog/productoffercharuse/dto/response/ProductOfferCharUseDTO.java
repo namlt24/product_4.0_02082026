@@ -1,5 +1,7 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -9,8 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
 
 @Schema
 @Data

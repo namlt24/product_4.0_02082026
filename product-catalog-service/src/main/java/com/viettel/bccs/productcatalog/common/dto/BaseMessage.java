@@ -1,9 +1,13 @@
 package com.viettel.bccs.productcatalog.common.dto;
 
+import java.io.Serializable;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.viettel.bccs.productcatalog.common.dto.GetTextFromBundleHelper;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -11,10 +15,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Data

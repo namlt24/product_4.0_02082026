@@ -1,5 +1,15 @@
 package com.viettel.bccs.productcatalog.optionset.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.optionset.dto.response.GetSubObjectResponse;
@@ -12,14 +22,11 @@ import com.viettel.bccs.productcatalog.optionset.openapi.ApiGetByOptionSetIdAndS
 import com.viettel.bccs.productcatalog.optionset.openapi.ApiGetSubObject;
 import com.viettel.bccs.productcatalog.optionset.openapi.ApiGetValueByTwoCodeOption;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/product-catalog-service/v1/optionsetvalue")
@@ -62,8 +69,8 @@ public class OptionSetValueController {
     @ApiFindByOptionSetCodes
     @GetMapping("/findByOptionSetCodes")
     public StandardResponse<Map<String, List<OptionSetValueResponse>>> findByOptionSetCodes(
-            @Parameter(description = "Danh sách mã nhóm option set", example = "[\"CUST_TYPE_GROUP_TYPE\"]", required = true)
-            @RequestParam(required = false)
+            @Parameter(description = "Danh sách mã nhóm option set", example = "[\"CUST_TYPE_GROUP_TYPE\"]",
+                required = true)            @RequestParam(required = false)
             List<String> codes) {
         return StandardResponses.success(optionSetValueService.findByOptionSetCodes(codes));
     }

@@ -1,13 +1,25 @@
 package com.viettel.bccs.productcatalog.product.service;
 
-import com.viettel.bccs.common.error.exception.BusinessException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.client.optionset.OptionItemSnapshot;
 import com.viettel.bccs.client.optionset.OptionSetResolver;
+import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.client.MappingClient;
 import com.viettel.bccs.productcatalog.client.ReasonClient;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
-import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWSRequest;
+import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWsRequest;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferTypeStockDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingStockDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.StockOfferingRow;
@@ -21,26 +33,16 @@ import com.viettel.bccs.productcatalog.telecomservice.dto.response.TelecomServic
 import com.viettel.bccs.productcatalog.telecomservice.service.TelecomServiceService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class StockTypeWSService {
+public class StockTypeWsService {
 
     /** Migrate từ mono: pricePolicy mặc định dùng khi tính giá trong getListStockTypeWS. */
     private static final Long DEFAULT_PRICE_POLICY = 1L;
@@ -60,7 +62,7 @@ public class StockTypeWSService {
     private final ObjectProvider<OptionSetResolver> optionSetResolverProvider;
     private final OptionSetValueService optionSetValueService;
 
-    public List<ProductOfferTypeStockDTO> getListStockTypeWS(GetListStockTypeWSRequest request) {
+    public List<ProductOfferTypeStockDTO> getListStockTypeWS(GetListStockTypeWsRequest request) {
         String actionCode = request.getActionCode();
         String regType = request.getRegType();
         String serviceType = request.getServiceType();
@@ -94,10 +96,11 @@ public class StockTypeWSService {
 
         // Bước 4: tìm reasonId theo regType + actionCode (mặc định "00" nếu rỗng) + telecomServiceId.
 
-        String actionCodeForReason = DataUtil.isNullOrEmpty(actionCode) ? Const.ACTION_CODE.SUB_CONNECTION : actionCode;
+        String actionCodeForReason = DataUtil.isNullOrEmpty(actionCode) ? Const.ActionCode.SUB_CONNECTION : actionCode;
         Long reasonId = reasonClient.getReasonIdByTypeAndCode(regType, actionCodeForReason, telecomServiceId);
         if (reasonId == null || reasonId == 0L) {
-            throw new BusinessException("BCCS-CATALOG-STOCKTYPE-0006", "reasonId not found or invalid for regType: " + regType);
+            throw new BusinessException("BCCS-CATALOG-STOCKTYPE-0006",
+                    "reasonId not found or invalid for regType: " + regType);
         }
 
         // Bước 5: tìm saleServiceCode. Dùng actionCode GỐC (không default), đúng chữ ký legacy.
@@ -106,10 +109,11 @@ public class StockTypeWSService {
             throw new BusinessException("BCCS-CATALOG-STOCKTYPE-0007", "saleServiceCode not found or invalid");
         }
 
-        boolean didongFilter = DataUtil.safeEqual(viewCode, Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG);
+        boolean didongFilter = DataUtil.safeEqual(viewCode, Const.OptionSet.VIEW_PRODUCT_GROUP_DIDONG);
 
         // Bước 6: danh sách loại hàng hoá của gói.
-        List<ProductOfferTypeDTO> productOfferTypes = productOfferTypeService.findBySaleServiceCodeWithProductOffering(saleServiceCode);
+        List<ProductOfferTypeDTO> productOfferTypes =
+                productOfferTypeService.findBySaleServiceCodeWithProductOffering(saleServiceCode);
         if (DataUtil.isNullOrEmpty(productOfferTypes)) {
             return List.of();
         }
@@ -143,7 +147,8 @@ public class StockTypeWSService {
                     if (PRODUCT_OFFER_TYPE_HANG.equals(type.getProductOfferTypeId())) {
                         type.setName(PRODUCT_OFFER_TYPE_HANG_NAME);
                     }
-                    List<ProductOfferingStockDTO> offerings = offeringsByType.getOrDefault(type.getProductOfferTypeId(), List.of());
+                    List<ProductOfferingStockDTO> offerings =
+                            offeringsByType.getOrDefault(type.getProductOfferTypeId(), List.of());
                     return new ProductOfferTypeStockDTO(type, offerings);
                 })
                 .toList();
@@ -161,7 +166,7 @@ public class StockTypeWSService {
             // Resolver không tồn tại (option-set bị disable) → đọc trực tiếp từ bảng OPTION_SET_VALUE.
             return resolveFromOptionSetValue();
         }
-        for (OptionItemSnapshot item : resolver.getActiveItems(Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG)) {
+        for (OptionItemSnapshot item : resolver.getActiveItems(Const.OptionSet.VIEW_PRODUCT_GROUP_DIDONG)) {
             if (item.getValue() != null && DataUtil.notNullOrEmpty(item.getValue().asText())) {
                 allowedOfferTypeIds.add(DataUtil.safeToLong(item.getValue().asText()));
             }
@@ -169,14 +174,14 @@ public class StockTypeWSService {
         if (allowedOfferTypeIds.isEmpty()) {
             // Cache resolver trống (không load được từ config-service) → fallback đọc DB.
             log.warn("OptionSetResolver không có dữ liệu cho [{}], fallback đọc bảng OPTION_SET_VALUE",
-                    Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG);
+                    Const.OptionSet.VIEW_PRODUCT_GROUP_DIDONG);
             return resolveFromOptionSetValue();
         }
         return allowedOfferTypeIds;
     }
 
     private Set<Long> resolveFromOptionSetValue() {
-        return optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VIEW_PRODUCT_GROUP_DIDONG).stream()
+        return optionSetValueService.findByOptionSetCode(Const.OptionSet.VIEW_PRODUCT_GROUP_DIDONG).stream()
                 .map(OptionSetValueResponse::value)
                 .filter(Objects::nonNull)
                 .map(String::valueOf)
@@ -187,8 +192,9 @@ public class StockTypeWSService {
 
     private ProductOfferingStockDTO buildOffering(StockOfferingRow row, String saleServiceCode) {
         List<ProductOfferPriceResponse> prices;
-        if (TELECOM_SERVICE_PCCC_1.equals(row.telecomServiceId()) || TELECOM_SERVICE_PCCC_2.equals(row.telecomServiceId())) {
-            List<ProductOfferPriceDTO> pcccPrices = productOfferPriceService.getPriceInServicesForPCCC(
+        if (TELECOM_SERVICE_PCCC_1.equals(row.telecomServiceId())
+                || TELECOM_SERVICE_PCCC_2.equals(row.telecomServiceId())) {
+            List<ProductOfferPriceDTO> pcccPrices = productOfferPriceService.getPriceInServicesForPccc(
                     null, saleServiceCode, row.productOfferTypeId(), row.productOfferingId(), DEFAULT_PRICE_POLICY);
             prices = productOfferPriceMapper.toResponseFromDto(pcccPrices);
         } else {

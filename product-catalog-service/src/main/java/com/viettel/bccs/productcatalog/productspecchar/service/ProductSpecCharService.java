@@ -1,5 +1,10 @@
 package com.viettel.bccs.productcatalog.productspecchar.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.productspecchar.dto.response.ProductSpecCharResponse;
 import com.viettel.bccs.productcatalog.productspecchar.mapper.ProductSpecCharMapper;
@@ -7,11 +12,8 @@ import com.viettel.bccs.productcatalog.productspecchar.repository.ProductSpecCha
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.RequestValidator;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -25,14 +27,16 @@ public class ProductSpecCharService {
         RequestValidator.requireNotBlank(code, "code", "BCCS-PRODUCT-VALIDATE-0000");
         return productSpecCharRepository.findByCode(code)
                 .map(productSpecCharMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001", "Product spec char not found with code: " + code));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001",
+                        "Product spec char not found with code: " + code));
     }
 
     @Transactional(readOnly = true)
     public ProductSpecCharResponse getById(Long id) {
         return productSpecCharRepository.findById(id)
                 .map(productSpecCharMapper::toResponse)
-                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001", "Product spec char not found with id: " + id));
+                .orElseThrow(() -> new BusinessException("BCCS-CATALOG-CHAR-0001",
+                        "Product spec char not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -44,12 +48,11 @@ public class ProductSpecCharService {
 
     @Transactional(readOnly = true)
     public List<ProductSpecCharResponse> findByIds(List<Long> ids) {
-        RequestValidator.requireNotEmpty(ids, "ids", "BCCS-PRODUCT-VALIDATE-0000");
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
         return productSpecCharRepository.findAllById(ids).stream()
-                .filter(entity -> Const.STATUS.ACTIVE.equals(entity.getStatus()))
+                .filter(entity -> Const.Status.ACTIVE.equals(entity.getStatus()))
                 .map(productSpecCharMapper::toResponse)
                 .toList();
     }
@@ -65,11 +68,13 @@ public class ProductSpecCharService {
      * {@code ProductOfferingService.findProductOfferingByListCodeListSpecCode}.</p>
      */
     @Transactional(readOnly = true)
-    public List<Object[]> findByLstSpecCodeAndLstProductCode(List<String> lstSpecCode, List<String> lstProductCode, Long productOfferTypeId) {
+    public List<Object[]> findByLstSpecCodeAndLstProductCode(List<String> lstSpecCode, List<String> lstProductCode,
+            Long productOfferTypeId) {
         if (DataUtil.isNullOrEmpty(lstSpecCode)) {
             return List.of();
         }
-        return productSpecCharRepository.findByListSpecCodeAndListProductCode(lstSpecCode, lstProductCode, productOfferTypeId);
+        return productSpecCharRepository.findByListSpecCodeAndListProductCode(lstSpecCode, lstProductCode,
+                productOfferTypeId);
     }
 
 }

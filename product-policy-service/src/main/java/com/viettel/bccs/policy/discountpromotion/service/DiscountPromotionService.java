@@ -1,5 +1,13 @@
 package com.viettel.bccs.policy.discountpromotion.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionResponse;
@@ -9,15 +17,8 @@ import com.viettel.bccs.policy.discountpromotion.repository.DiscountPromotionRep
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.service.MapActiveInfoQuerryService;
 import com.viettel.bccs.policy.utils.DataUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -47,11 +48,13 @@ public class DiscountPromotionService {
         return mapper.toDTOList(entities);
     }
 
-    public List<DiscountPromotionDTO> getPromFromMapActiveInfos(List<MapActiveInfoDTO> mapActiveInfos, int mode, boolean getDuplicateProm) {
+    public List<DiscountPromotionDTO> getPromFromMapActiveInfos(List<MapActiveInfoDTO> mapActiveInfos, int mode,
+            boolean getDuplicateProm) {
         if (DataUtil.isNullOrEmpty(mapActiveInfos)) {
             return new ArrayList<>();
         }
-        List<MapActiveInfoDTO> tMapActiveInfos = mapActiveInfoQuerryService.getMapActiveInfosByLevel(mapActiveInfos, "promCode", mode);
-        return repository.getPromFromMapActiveInfosCheckDuplicate(tMapActiveInfos, getDuplicateProm);
+        List<MapActiveInfoDTO> mapActiveInfosByLevel = mapActiveInfoQuerryService.getMapActiveInfosByLevel(
+                mapActiveInfos, "promCode", mode);
+        return repository.getPromFromMapActiveInfosCheckDuplicate(mapActiveInfosByLevel, getDuplicateProm);
     }
 }

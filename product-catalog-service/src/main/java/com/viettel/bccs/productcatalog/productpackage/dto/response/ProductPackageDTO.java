@@ -1,7 +1,13 @@
 package com.viettel.bccs.productcatalog.productpackage.dto.response;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -11,11 +17,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 @Schema(description = "Thông tin gói sản phẩm")
 @Data
@@ -87,12 +88,14 @@ public class ProductPackageDTO implements Serializable {
 
     @Schema(description = "Ngày bắt đầu hiệu lực (string)")
     @Size(max = 30, message = "strEffectDatetime tối đa 30 ký tự")
-    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}([ T]\\d{2}:\\d{2}:\\d{2})?$", message = "strEffectDatetime phải theo định dạng yyyy-MM-dd hoặc yyyy-MM-dd HH:mm:ss")
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}([ T]\\d{2}:\\d{2}:\\d{2})?$",
+            message = "strEffectDatetime phải theo định dạng yyyy-MM-dd hoặc yyyy-MM-dd HH:mm:ss")
     private String strEffectDatetime;
 
     @Schema(description = "Ngày hết hạn (string)")
     @Size(max = 30, message = "strExpireDatetime tối đa 30 ký tự")
-    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}([ T]\\d{2}:\\d{2}:\\d{2})?$", message = "strExpireDatetime phải theo định dạng yyyy-MM-dd hoặc yyyy-MM-dd HH:mm:ss")
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}([ T]\\d{2}:\\d{2}:\\d{2})?$",
+            message = "strExpireDatetime phải theo định dạng yyyy-MM-dd hoặc yyyy-MM-dd HH:mm:ss")
     private String strExpireDatetime;
 
     // === User & version ===
@@ -172,7 +175,8 @@ public class ProductPackageDTO implements Serializable {
     private Long sapMaterialNumber;
 
     @Size(max = 100, message = "sapMaterialNumberValue tối đa 100 ký tự")
-    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$", message = "sapMaterialNumberValue không được chứa ký tự điều khiển")
+    @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,100}$",
+            message = "sapMaterialNumberValue không được chứa ký tự điều khiển")
     private String sapMaterialNumberValue;
 
     @Size(max = 100, message = "productHierarchy tối đa 100 ký tự")
@@ -243,6 +247,7 @@ public class ProductPackageDTO implements Serializable {
     private String defaultName;
 
     @Size(max = 500, message = "listProdPackType tối đa 500 phần tử")
+    @Builder.Default
     private List<ProdPackProductOfferTypeDTO> listProdPackType = new ArrayList<>();
 
 }

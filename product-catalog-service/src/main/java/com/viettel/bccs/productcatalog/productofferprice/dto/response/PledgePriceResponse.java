@@ -1,13 +1,13 @@
 package com.viettel.bccs.productcatalog.productofferprice.dto.response;
 
+import java.math.BigDecimal;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
-
-import java.math.BigDecimal;
 
 public record PledgePriceResponse(
 
@@ -29,4 +29,5 @@ public record PledgePriceResponse(
     @Schema(description = "Số tháng ứng trước", example = "3")
     @Size(max = 10, message = "priorPay tối đa 10 ký tự")
     String priorPay
-) {}
+) {
+}

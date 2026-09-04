@@ -1,5 +1,11 @@
 package com.viettel.bccs.organization.identitytype.service;
 
+import java.util.List;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.organization.client.OptionSetClient;
 import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
@@ -9,13 +15,9 @@ import com.viettel.bccs.organization.identitytype.mapper.IdentityTypeMapper;
 import com.viettel.bccs.organization.identitytype.repository.IdentityTypeRepository;
 import com.viettel.bccs.organization.utils.Const;
 import com.viettel.bccs.organization.utils.RequestValidator;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -30,7 +32,7 @@ public class IdentityTypeService {
     @Transactional(readOnly = true)
     public List<IdentityTypeDTO> findAllActive() {
         log.info("Truy vấn tất cả loại giấy tờ đang hiệu lực");
-        return identityTypeRepository.findAllByStatus(Const.STATUS.ACTIVE)
+        return identityTypeRepository.findAllByStatus(Const.Status.ACTIVE)
                 .stream()
                 .map(identityTypeMapper::toDTO)
                 .toList();
@@ -41,9 +43,10 @@ public class IdentityTypeService {
     public IdentityTypeDTO findByIdType(String idType) {
         RequestValidator.requireNotBlank(idType, "idType", "BCCS-PRODUCT-VALIDATE-0000");
         log.info("Truy vấn loại giấy tờ theo mã: {}", idType);
-        return identityTypeRepository.findByIdTypeAndStatus(idType, Const.STATUS.ACTIVE)
+        return identityTypeRepository.findByIdTypeAndStatus(idType, Const.Status.ACTIVE)
                 .map(identityTypeMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-IDENTITYTYPE-0001", "Không tìm thấy loại giấy tờ với mã: " + idType));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-IDENTITYTYPE-0001",
+                        "Không tìm thấy loại giấy tờ với mã: " + idType));
     }
 
     // TODO: re-enable cache after fixing Redis serializer compatibility with product-catalog-service

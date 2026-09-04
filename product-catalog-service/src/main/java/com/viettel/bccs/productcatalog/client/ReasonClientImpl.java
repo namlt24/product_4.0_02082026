@@ -1,10 +1,12 @@
 package com.viettel.bccs.productcatalog.client;
 
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.common.error.exception.IntegrationException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -17,7 +19,8 @@ public class ReasonClientImpl implements ReasonClient {
     @Override
     public Long getReasonIdByTypeAndCode(String reasonCode, String actionCode, Long telecomServiceId) {
         try {
-            var response = productPolicyFeignClient.getReasonIdByTypeAndCode(reasonCode, actionCode, telecomServiceId).getBody();
+            var response = productPolicyFeignClient.getReasonIdByTypeAndCode(reasonCode, actionCode,
+                telecomServiceId).getBody();
             if (response != null && response.getData() != null) {
                 return objectMapper.convertValue(response.getData(), Long.class);
             }

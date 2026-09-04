@@ -1,6 +1,8 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.request;
 
-import io.swagger.v3.oas.annotations.media.ExampleObject;
+import java.util.Date;
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -11,9 +13,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.Date;
-import java.util.List;
 
 @Getter
 @Setter
@@ -67,7 +66,9 @@ public class ValidateInputMapActiveInfoRequest {
     @Pattern(regexp = "^[A-Za-z0-9_-]{0,50}$", message = "promotionCode chỉ gồm chữ, số, '_' hoặc '-'")
     private String promotionCode;
 
-    @Schema(description = "ID lý do đăng ký; bắt buộc, validate thủ công trong MapActiveInfoValidateService (ném BCCS-POLICY-MAPACTIVE-0016 nếu thiếu) thay vì Bean Validation", example = "9003998100", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "ID lý do đăng ký; bắt buộc, validate thủ công trong MapActiveInfoValidateService"
+            + " (ném BCCS-POLICY-MAPACTIVE-0016 nếu thiếu) thay vì Bean Validation", example = "9003998100",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @Min(value = 0, message = "regReasonId phải >= 0")
     @Max(value = 9999999999L, message = "regReasonId vượt quá độ dài cột (precision 10)")
     private Long regReasonId;

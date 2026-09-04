@@ -1,23 +1,26 @@
 package com.viettel.bccs.policy.discountpromotion.repository;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.discountpromotion.entity.DiscountPromotionEntity;
 import com.viettel.bccs.policy.discountpromotion.mapper.DiscountPromotionMapper;
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Repository
@@ -65,7 +68,7 @@ public class DiscountPromotionRepositoryCustomImpl implements DiscountPromotionR
 
         queryString.append("ORDER BY FUNCTION('NLSSORT', dp.code, 'NLS_SORT=vietnamese')");
 
-        Query query = em.createQuery(queryString.toString(), DiscountPromotionEntity.class);
+        TypedQuery<DiscountPromotionEntity> query = em.createQuery(queryString.toString(), DiscountPromotionEntity.class);
 
         for (Map.Entry<String, Object> entry : parameters.entrySet()) {
             query.setParameter(entry.getKey(), entry.getValue());

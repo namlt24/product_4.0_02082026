@@ -84,10 +84,10 @@ class OpenApiExampleSmokeIT {
     @BeforeAll
     void loadRealSampleData() {
         var reason = jdbcTemplate.queryForMap(
-                "SELECT REASON_ID, TEL_SERVICE, PAY_TYPE FROM REASON WHERE STATUS='1' AND ROWNUM <= 1");
+                "SELECT REASON_ID, TEL_SERVICE, PayType FROM REASON WHERE STATUS='1' AND ROWNUM <= 1");
         reasonId = ((Number) reason.get("REASON_ID")).longValue();
         reasonTelService = String.valueOf(reason.get("TEL_SERVICE"));
-        reasonPayType = String.valueOf(reason.get("PAY_TYPE"));
+        reasonPayType = String.valueOf(reason.get("PayType"));
 
         var promo = jdbcTemplate.queryForMap(
                 "SELECT DISCOUNT_PROMOTION_ID FROM DISCOUNT_PROMOTION WHERE STATUS='1' AND ROWNUM <= 1");

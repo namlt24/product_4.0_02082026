@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.discountpromotioncharuse.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.discountpromotioncharuse.dto.response.DiscountPromotionCharUseResponse;
 import com.viettel.bccs.policy.discountpromotioncharuse.entity.DiscountPromotionCharUseEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class DiscountPromotionCharUseMapper {

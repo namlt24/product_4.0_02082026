@@ -76,13 +76,13 @@ class ProductOfferingServiceTest {
         Long vasId = 10L;
 
         when(productOfferingRepository.getListVas(mainOfferId, null))
-                .thenReturn(List.of(offering(vasId, "VAS1", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+                .thenReturn(List.of(offering(vasId, "VAS1", Const.Status.ACTIVE, Const.SubType.PRE)));
 
         when(productOfferRelationService.findByMainOfferId(mainOfferId))
                 .thenReturn(List.of(relation(1L, mainOfferId, vasId)));
 
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
-        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
+        when(optionSetValueService.findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
         List<ProductOfferingDTO> result = service.getListVas(mainOfferId, null);
 
@@ -95,19 +95,19 @@ class ProductOfferingServiceTest {
     @Test
     void getListVas_relationWithDifferentRelationType_isNotAttached() {
         // Map 1:1 code cu: mainOfferRelations lay KHONG loc theo relationTypeId, loc lai trong Java
-        // theo relationTypeId == Const.RELATION_TYPE.VAS -- quan he sai type phai bi bo qua.
+        // theo relationTypeId == Const.RelationType.VAS -- quan he sai type phai bi bo qua.
         Long mainOfferId = 100L;
         Long vasId = 10L;
 
         when(productOfferingRepository.getListVas(mainOfferId, null))
-                .thenReturn(List.of(offering(vasId, "VAS1", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+                .thenReturn(List.of(offering(vasId, "VAS1", Const.Status.ACTIVE, Const.SubType.PRE)));
 
         ProductOfferRelationResponse wrongTypeRelation = new ProductOfferRelationResponse(
-                1L, 999L, mainOfferId, vasId, Const.STATUS.ACTIVE, "system", null, "system", null, null, null, null, null);
+                1L, 999L, mainOfferId, vasId, Const.Status.ACTIVE, "system", null, "system", null, null, null, null, null);
         when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of(wrongTypeRelation));
 
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
-        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
+        when(optionSetValueService.findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
         List<ProductOfferingDTO> result = service.getListVas(mainOfferId, null);
 
@@ -119,14 +119,14 @@ class ProductOfferingServiceTest {
     void getListVas_sameExclusiveGroup_shareTypeIndex_andUngroupedVasEachGetOwnIndex() {
         Long mainOfferId = 100L;
         when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
-                offering(10L, "GPRS0", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(11L, "GPRS5", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(12L, "STANDALONE_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(13L, "STANDALONE_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+                offering(10L, "GPRS0", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(11L, "GPRS5", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(12L, "STANDALONE_A", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(13L, "STANDALONE_B", Const.Status.ACTIVE, Const.SubType.PRE)));
 
         when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of());
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
-        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of(
+        when(optionSetValueService.findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of(
                 groupRow("PRE_GPRS", "GPRS0"),
                 groupRow("PRE_GPRS", "GPRS5")
         ));
@@ -138,7 +138,7 @@ class ProductOfferingServiceTest {
         Integer indexC = typeIndexOf(result, 12L);
         Integer indexD = typeIndexOf(result, 13L);
 
-        assertThat(indexA).isEqualTo(indexB); // cung nhom PRE_GPRS -> loai tru lan nhau
+        assertThat(indexA).isEqualTo(indexB); // cung nhom PreGprs -> loai tru lan nhau
         assertThat(indexC).isNotEqualTo(indexA);
         assertThat(indexD).isNotEqualTo(indexA);
         assertThat(indexC).isNotEqualTo(indexD); // 2 VAS khong thuoc nhom nao -> moi ma 1 nhom rieng, KHAC nhau
@@ -146,8 +146,8 @@ class ProductOfferingServiceTest {
 
     /**
      * Regression: mot ma VAS (giong BBMAIL/BBCHT trong config cu) co the la ung vien cua CA HAI
-     * nhom PRE_BB va POS_BB cung luc (2 ban ghi khac product_offering_id, cung code, khac subType).
-     * Vi PRE_BB/POS_BB duoc doc thanh 2 List<String> DOC LAP (dung getVasExcludeGroup rieng cho
+     * nhom PreBb va PosBb cung luc (2 ban ghi khac product_offering_id, cung code, khac subType).
+     * Vi PreBb/PosBb duoc doc thanh 2 List<String> DOC LAP (dung getVasExcludeGroup rieng cho
      * tung nhom, giong het code cu goi getVasExclude rieng cho tung nhom) roi kiem tra qua chuoi
      * if-else-if + dieu kien subType, khong con bi gop chung vao 1 map nhu thiet ke truoc do nen
      * khong the tai hien lai bug "1 ma chi giu duoc 1 nhom".
@@ -156,12 +156,12 @@ class ProductOfferingServiceTest {
     void getListVas_sameCodeInBothPreAndPostBbGroup_disambiguatedBySubType() {
         Long mainOfferId = 100L;
         when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
-                offering(10L, "BBMAIL", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(11L, "BBMAIL", Const.STATUS.ACTIVE, Const.SUB_TYPE.POST)));
+                offering(10L, "BBMAIL", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(11L, "BBMAIL", Const.Status.ACTIVE, Const.SubType.POST)));
 
         when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of());
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
-        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of(
+        when(optionSetValueService.findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of(
                 groupRow("PRE_BB", "BBMAIL"),
                 groupRow("POS_BB", "BBMAIL")
         ));
@@ -185,8 +185,8 @@ class ProductOfferingServiceTest {
     }
 
     private ProductOfferRelationResponse relation(Long relationId, Long mainOfferId, Long relationOfferId) {
-        return new ProductOfferRelationResponse(relationId, Const.RELATION_TYPE.VAS, mainOfferId, relationOfferId,
-                Const.STATUS.ACTIVE, "system", null, "system", null, null, null, null, null);
+        return new ProductOfferRelationResponse(relationId, Const.RelationType.VAS, mainOfferId, relationOfferId,
+                Const.Status.ACTIVE, "system", null, "system", null, null, null, null, null);
     }
 
     private ProductOfferingEntity offering(Long id, String code, String status, String subType) {
@@ -195,25 +195,25 @@ class ProductOfferingServiceTest {
                 .code(code)
                 .name(code)
                 .status(status)
-                .productOfferTypeId(Const.PRODUCT_OFFER_TYPE.VAS)
+                .productOfferTypeId(Const.ProductOfferType.VAS)
                 .subType(subType)
                 .build();
     }
 
     private OptionSetValueResponse groupRow(String groupName, String vasCode) {
-        return new OptionSetValueResponse(null, null, null, groupName, vasCode, Const.STATUS.ACTIVE, null, null, null, null, null, null);
+        return new OptionSetValueResponse(null, null, null, groupName, vasCode, Const.Status.ACTIVE, null, null, null, null, null, null);
     }
 
     @Test
     void getListVas_multipleOffers_batchesSpecCharLookupInOneCall() {
         Long mainOfferId = 100L;
         when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
-                offering(10L, "VAS_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(11L, "VAS_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(12L, "VAS_C", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+                offering(10L, "VAS_A", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(11L, "VAS_B", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(12L, "VAS_C", Const.Status.ACTIVE, Const.SubType.PRE)));
         when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of());
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
-        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
+        when(optionSetValueService.findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
         service.getListVas(mainOfferId, null);
 
@@ -226,17 +226,17 @@ class ProductOfferingServiceTest {
     void getListVas_multipleOffers_fetchesExclusiveGroupOnce() {
         Long mainOfferId = 100L;
         when(productOfferingRepository.getListVas(mainOfferId, null)).thenReturn(List.of(
-                offering(10L, "VAS_A", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE),
-                offering(11L, "VAS_B", Const.STATUS.ACTIVE, Const.SUB_TYPE.PRE)));
+                offering(10L, "VAS_A", Const.Status.ACTIVE, Const.SubType.PRE),
+                offering(11L, "VAS_B", Const.Status.ACTIVE, Const.SubType.PRE)));
         when(productOfferRelationService.findByMainOfferId(mainOfferId)).thenReturn(List.of());
         when(productOfferCharUseService.getProductSpecCharByOfferingIds(anyList())).thenReturn(Map.of());
-        when(optionSetValueService.findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
+        when(optionSetValueService.findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP)).thenReturn(List.of());
 
         service.getListVas(mainOfferId, null);
 
         // Truoc day getVasExcludeGroup tu query lai findByOptionSetCode cho MOI 1 trong 8 nhom
-        // loai tru (PRE_GPRS, POS_GPRS, ...) -> 8 lan goi giong het nhau. Phai gom ve 1 lan.
-        verify(optionSetValueService, times(1)).findByOptionSetCode(Const.OPTION_SET.VAS_EXCLUSIVE_GROUP);
+        // loai tru (PreGprs, PosGprs, ...) -> 8 lan goi giong het nhau. Phai gom ve 1 lan.
+        verify(optionSetValueService, times(1)).findByOptionSetCode(Const.OptionSet.VAS_EXCLUSIVE_GROUP);
     }
 
     @Test

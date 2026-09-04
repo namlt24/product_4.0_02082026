@@ -1,9 +1,9 @@
 package com.viettel.bccs.productcatalog.utils;
 
-import com.viettel.bccs.common.error.exception.ValidationException;
-
 import java.util.Collection;
 import java.util.regex.Pattern;
+
+import com.viettel.bccs.common.error.exception.ValidationException;
 
 
 public final class RequestValidator {

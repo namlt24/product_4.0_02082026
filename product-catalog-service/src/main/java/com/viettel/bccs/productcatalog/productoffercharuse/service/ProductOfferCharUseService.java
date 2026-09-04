@@ -1,5 +1,11 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.service;
 
+import java.util.*;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
@@ -8,15 +14,10 @@ import com.viettel.bccs.productcatalog.productoffercharuse.mapper.ProductSpecCha
 import com.viettel.bccs.productcatalog.productoffercharuse.repository.ProductOfferCharUseRepositoryCustom;
 import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
-import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.RequestValidator;
-import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +28,9 @@ public class ProductOfferCharUseService {
     private final ProductSpecCharUseMapper productSpecCharUseMapper;
     private final ProductSpecCharValueUseMapper productSpecCharValueUseMapper;
 
-    @Cacheable(value = "productOfferCharUseCache", key = "'OFFERING_SPEC_CHAR_BATCH:' + T(String).join(',', #offeringIds.stream().sorted().toList())")
+    @Cacheable(value = "productOfferCharUseCache", key = "'OFFERING_SPEC_CHAR_BATCH:' + T(String).join(',', "
+            + "#offeringIds.stream().sorted().toList())")
     public Map<Long, List<ProductSpecCharDTO>> getProductSpecCharByOfferingIds(List<String> offeringIds) {
-        RequestValidator.requireNotEmpty(offeringIds, "offeringIds", "BCCS-PRODUCT-VALIDATE-0000");
         if (DataUtil.isNullOrEmpty(offeringIds)) {
             return Collections.emptyMap();
         }
@@ -38,8 +39,11 @@ public class ProductOfferCharUseService {
 
         List<String> validIds = offeringIds.stream()
                 .filter(id -> {
-                    try { return Long.parseLong(id) <= Integer.MAX_VALUE; }
-                    catch (NumberFormatException e) { return false; }
+                    try {
+                        return Long.parseLong(id) <= Integer.MAX_VALUE;
+                    } catch (NumberFormatException e) {
+                        return false;
+                    }
                 })
                 .toList();
 
@@ -69,8 +73,6 @@ public class ProductOfferCharUseService {
 
     @Cacheable(value = "productOfferCharUseCache", key = "'ATTR_VALUE:' + #offerId + ':' + #attributeName")
     public Optional<String> getAttributeValue(Long offerId, String attributeName) {
-        RequestValidator.requireNotNull(offerId, "offerId", "BCCS-PRODUCT-VALIDATE-0000");
-        RequestValidator.requireNotBlank(attributeName, "attributeName", "BCCS-PRODUCT-VALIDATE-0000");
         if (offerId == null || DataUtil.isNullOrEmpty(attributeName)) {
             return Optional.empty();
         }
@@ -79,7 +81,6 @@ public class ProductOfferCharUseService {
 
     @Cacheable(value = "productOfferCharUseCache", key = "'OFFER_CHARACTER:' + #productOfferingId")
     public List<ProductOfferingCharacterFullDTO> getProductOfferCharacter(Long productOfferingId) {
-        RequestValidator.requireNotNull(productOfferingId, "productOfferingId", "BCCS-PRODUCT-VALIDATE-0000");
         if (productOfferingId == null) {
             return null;
         }

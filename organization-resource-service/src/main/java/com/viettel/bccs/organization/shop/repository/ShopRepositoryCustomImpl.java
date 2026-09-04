@@ -1,18 +1,18 @@
 package com.viettel.bccs.organization.shop.repository;
 
-import com.viettel.bccs.organization.shop.entity.ShopEntity;
-import com.viettel.bccs.organization.utils.DataUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.Tuple;
-import lombok.RequiredArgsConstructor;
-import org.hibernate.query.NativeQuery;
-import org.springframework.stereotype.Repository;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import org.hibernate.query.NativeQuery;
+import org.springframework.stereotype.Repository;
+
+import com.viettel.bccs.organization.shop.entity.ShopEntity;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Implement custom repository cho Shop - xử lý batch query để tránh ORA-01795.
@@ -40,6 +40,10 @@ public class ShopRepositoryCustomImpl implements ShopRepositoryCustom {
         return new ArrayList<>(results);
     }
 
+    // entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+    // TypedQuery cho native query) - ep ve NativeQuery<Tuple> cua Hibernate la cach duy nhat de lay
+    // lai generic an toan luc goi getResultList(), khong the loai bo cast nay.
+    @SuppressWarnings("unchecked")
     private List<ShopEntity> executeQuery(List<Long> shopIds) {
         StringBuilder inClause = new StringBuilder();
         for (int i = 0; i < shopIds.size(); i++) {

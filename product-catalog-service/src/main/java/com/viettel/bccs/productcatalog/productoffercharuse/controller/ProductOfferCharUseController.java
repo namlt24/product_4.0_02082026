@@ -1,5 +1,16 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.controller;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
@@ -8,14 +19,10 @@ import com.viettel.bccs.productcatalog.productoffercharuse.openapi.ApiGetAttribu
 import com.viettel.bccs.productcatalog.productoffercharuse.openapi.ApiGetProductOfferCharacter;
 import com.viettel.bccs.productcatalog.productoffercharuse.openapi.ApiGetProductSpecCharByOfferingIds;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/product-catalog-service/v1/product-offer-char-use")

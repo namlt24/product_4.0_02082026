@@ -1,9 +1,9 @@
 package com.viettel.bccs.policy.mapskipdebtcharges.repository;
 
+import java.util.List;
+
 import com.viettel.bccs.policy.mapskipdebtcharges.dto.response.MapSkipDebtChargesDTO;
 import com.viettel.bccs.policy.mapskipdebtcharges.entity.MapSkipDebtChargesEntity;
-
-import java.util.List;
 
 public interface MapSkipDebtChargesRepositoryCustom {
 

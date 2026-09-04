@@ -1,26 +1,32 @@
 package com.viettel.bccs.organization.stockchannelmapping.controller;
 
+import java.util.List;
+
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.organization.stockchannelmapping.dto.response.StockChannelMappingResponse;
 import com.viettel.bccs.organization.stockchannelmapping.openapi.ApiFindActive;
 import com.viettel.bccs.organization.stockchannelmapping.openapi.ApiFindByChannelType;
 import com.viettel.bccs.organization.stockchannelmapping.service.StockChannelMappingService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/organization-resource-service/v1/stock-channel-mapping")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "StockChannelMapping", description = "Mapping kho số chức năng - loại kênh > cửa hàng > user (STOCK_CHANNEL_MAPPING)")
+@Tag(name = "StockChannelMapping",
+        description = "Mapping kho số chức năng - loại kênh > cửa hàng > user (STOCK_CHANNEL_MAPPING)")
 public class StockChannelMappingController {
 
     private final StockChannelMappingService mappingService;

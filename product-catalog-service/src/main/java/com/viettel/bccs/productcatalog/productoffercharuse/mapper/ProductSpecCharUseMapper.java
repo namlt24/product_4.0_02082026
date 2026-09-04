@@ -1,15 +1,18 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
 import com.viettel.bccs.productcatalog.productspecchar.entity.ProductSpecCharEntity;
-import org.springframework.stereotype.Component;
 
-@Component
+@Component("productOfferSpecCharUseMapper")
 public class ProductSpecCharUseMapper {
 
     public ProductSpecCharDTO toDto(ProductSpecCharEntity entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         return ProductSpecCharDTO.builder()
                 .productSpecCharId(entity.getProductSpecCharId())
                 .name(entity.getName())
@@ -38,8 +41,11 @@ public class ProductSpecCharUseMapper {
                 .build();
     }
 
-    public ProductSpecCharDTO toDtoWithValue(ProductSpecCharEntity entity, ProductSpecCharValueDTO valueDto, String valueName, Long productOfferingId, Long offerCharUseId, String offerCharUseType) {
-        if (entity == null) return null;
+    public ProductSpecCharDTO toDtoWithValue(ProductSpecCharEntity entity, ProductSpecCharValueDTO valueDto,
+        String valueName, Long productOfferingId, Long offerCharUseId, String offerCharUseType) {
+        if (entity == null) {
+            return null;
+        }
         ProductSpecCharDTO dto = toDto(entity);
         dto.setProductSpecCharValueDTO(valueDto);
         dto.setValueName(valueName);

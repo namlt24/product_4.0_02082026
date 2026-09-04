@@ -1,12 +1,12 @@
 package com.viettel.bccs.organization.shop.dto;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài/precision cột thật của SHOP (xem ShopEntity).
@@ -345,143 +345,551 @@ public class ShopDTO {
 
     // --- Getters ---
 
-    public Long getShopId() { return shopId; }
-    public String getName() { return name; }
-    public Long getParentShopId() { return parentShopId; }
-    public String getAccount() { return account; }
-    public String getBankName() { return bankName; }
-    public String getAddress() { return address; }
-    public String getTel() { return tel; }
-    public String getFax() { return fax; }
-    public String getShopCode() { return shopCode; }
-    public String getShopType() { return shopType; }
-    public String getContactName() { return contactName; }
-    public String getContactTitle() { return contactTitle; }
-    public String getTelNumber() { return telNumber; }
-    public String getEmail() { return email; }
-    public String getDescription() { return description; }
-    public String getProvince() { return province; }
-    public String getParShopCode() { return parShopCode; }
-    public String getCenterCode() { return centerCode; }
-    public String getOldShopCode() { return oldShopCode; }
-    public String getCompany() { return company; }
-    public String getTin() { return tin; }
-    public String getShop() { return shop; }
-    public String getProvinceCode() { return provinceCode; }
-    public String getPayComm() { return payComm; }
-    public Date getCreateDate() { return createDate; }
-    public Long getChannelTypeId() { return channelTypeId; }
-    public String getDiscountPolicy() { return discountPolicy; }
-    public String getPricePolicy() { return pricePolicy; }
-    public String getShopPath() { return shopPath; }
-    public String getDistrict() { return district; }
-    public String getPrecinct() { return precinct; }
-    public String getAreaCode() { return areaCode; }
-    public String getIdNo() { return idNo; }
-    public String getIdIssuePlace() { return idIssuePlace; }
-    public Date getIdIssueDate() { return idIssueDate; }
-    public String getStreetBlock() { return streetBlock; }
-    public String getStreet() { return street; }
-    public String getHome() { return home; }
-    public Integer getIdType() { return idType; }
-    public String getShopPathName() { return shopPathName; }
-    public String getContractNo() { return contractNo; }
-    public String getFileName() { return fileName; }
-    public String getBusinessLicence() { return businessLicence; }
-    public String getBankplusMobile() { return bankplusMobile; }
-    public Integer getStockNum() { return stockNum; }
-    public Integer getStockNumImp() { return stockNumImp; }
-    public Date getUpdateDateTime() { return updateDateTime; }
-    public String getBankCode() { return bankCode; }
-    public Long getShopKeeperId() { return shopKeeperId; }
-    public Long getShopDirectorId() { return shopDirectorId; }
-    public Long getGroupChannelTypeId() { return groupChannelTypeId; }
-    public Long getStaffOwnerId() { return staffOwnerId; }
-    public Long getTenantId() { return tenantId; }
-    public String getBusinessProvince() { return businessProvince; }
-    public String getBusinessDistrict() { return businessDistrict; }
-    public String getBusinessPrecinct() { return businessPrecinct; }
-    public String getBusinessStreetBlock() { return businessStreetBlock; }
-    public String getBusinessStreet() { return businessStreet; }
-    public String getBusinessHome() { return businessHome; }
-    public String getBusinessAreacode() { return businessAreacode; }
-    public String getBusinessAddress() { return businessAddress; }
-    public String getCreateUser() { return createUser; }
-    public String getUpdateUser() { return updateUser; }
-    public Date getCreateDatetime() { return createDatetime; }
-    public String getStatus() { return status; }
-    public String getTurnover() { return turnover; }
-    public Date getBirthday() { return birthday; }
-    public Boolean getIsChannelOfAgent() { return isChannelOfAgent; }
+    public Long getShopId() {
+        return shopId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Long getParentShopId() {
+        return parentShopId;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public String getBankName() {
+        return bankName;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getTel() {
+        return tel;
+    }
+
+    public String getFax() {
+        return fax;
+    }
+
+    public String getShopCode() {
+        return shopCode;
+    }
+
+    public String getShopType() {
+        return shopType;
+    }
+
+    public String getContactName() {
+        return contactName;
+    }
+
+    public String getContactTitle() {
+        return contactTitle;
+    }
+
+    public String getTelNumber() {
+        return telNumber;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getProvince() {
+        return province;
+    }
+
+    public String getParShopCode() {
+        return parShopCode;
+    }
+
+    public String getCenterCode() {
+        return centerCode;
+    }
+
+    public String getOldShopCode() {
+        return oldShopCode;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public String getTin() {
+        return tin;
+    }
+
+    public String getShop() {
+        return shop;
+    }
+
+    public String getProvinceCode() {
+        return provinceCode;
+    }
+
+    public String getPayComm() {
+        return payComm;
+    }
+
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public Long getChannelTypeId() {
+        return channelTypeId;
+    }
+
+    public String getDiscountPolicy() {
+        return discountPolicy;
+    }
+
+    public String getPricePolicy() {
+        return pricePolicy;
+    }
+
+    public String getShopPath() {
+        return shopPath;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public String getPrecinct() {
+        return precinct;
+    }
+
+    public String getAreaCode() {
+        return areaCode;
+    }
+
+    public String getIdNo() {
+        return idNo;
+    }
+
+    public String getIdIssuePlace() {
+        return idIssuePlace;
+    }
+
+    public Date getIdIssueDate() {
+        return idIssueDate;
+    }
+
+    public String getStreetBlock() {
+        return streetBlock;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public String getHome() {
+        return home;
+    }
+
+    public Integer getIdType() {
+        return idType;
+    }
+
+    public String getShopPathName() {
+        return shopPathName;
+    }
+
+    public String getContractNo() {
+        return contractNo;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getBusinessLicence() {
+        return businessLicence;
+    }
+
+    public String getBankplusMobile() {
+        return bankplusMobile;
+    }
+
+    public Integer getStockNum() {
+        return stockNum;
+    }
+
+    public Integer getStockNumImp() {
+        return stockNumImp;
+    }
+
+    public Date getUpdateDateTime() {
+        return updateDateTime;
+    }
+
+    public String getBankCode() {
+        return bankCode;
+    }
+
+    public Long getShopKeeperId() {
+        return shopKeeperId;
+    }
+
+    public Long getShopDirectorId() {
+        return shopDirectorId;
+    }
+
+    public Long getGroupChannelTypeId() {
+        return groupChannelTypeId;
+    }
+
+    public Long getStaffOwnerId() {
+        return staffOwnerId;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public String getBusinessProvince() {
+        return businessProvince;
+    }
+
+    public String getBusinessDistrict() {
+        return businessDistrict;
+    }
+
+    public String getBusinessPrecinct() {
+        return businessPrecinct;
+    }
+
+    public String getBusinessStreetBlock() {
+        return businessStreetBlock;
+    }
+
+    public String getBusinessStreet() {
+        return businessStreet;
+    }
+
+    public String getBusinessHome() {
+        return businessHome;
+    }
+
+    public String getBusinessAreacode() {
+        return businessAreacode;
+    }
+
+    public String getBusinessAddress() {
+        return businessAddress;
+    }
+
+    public String getCreateUser() {
+        return createUser;
+    }
+
+    public String getUpdateUser() {
+        return updateUser;
+    }
+
+    public Date getCreateDatetime() {
+        return createDatetime;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getTurnover() {
+        return turnover;
+    }
+
+    public Date getBirthday() {
+        return birthday;
+    }
+
+    public Boolean getIsChannelOfAgent() {
+        return isChannelOfAgent;
+    }
+
 
     // --- Setters ---
 
-    public void setShopId(Long shopId) { this.shopId = shopId; }
-    public void setName(String name) { this.name = name; }
-    public void setParentShopId(Long parentShopId) { this.parentShopId = parentShopId; }
-    public void setAccount(String account) { this.account = account; }
-    public void setBankName(String bankName) { this.bankName = bankName; }
-    public void setAddress(String address) { this.address = address; }
-    public void setTel(String tel) { this.tel = tel; }
-    public void setFax(String fax) { this.fax = fax; }
-    public void setShopCode(String shopCode) { this.shopCode = shopCode; }
-    public void setShopType(String shopType) { this.shopType = shopType; }
-    public void setContactName(String contactName) { this.contactName = contactName; }
-    public void setContactTitle(String contactTitle) { this.contactTitle = contactTitle; }
-    public void setTelNumber(String telNumber) { this.telNumber = telNumber; }
-    public void setEmail(String email) { this.email = email; }
-    public void setDescription(String description) { this.description = description; }
-    public void setProvince(String province) { this.province = province; }
-    public void setParShopCode(String parShopCode) { this.parShopCode = parShopCode; }
-    public void setCenterCode(String centerCode) { this.centerCode = centerCode; }
-    public void setOldShopCode(String oldShopCode) { this.oldShopCode = oldShopCode; }
-    public void setCompany(String company) { this.company = company; }
-    public void setTin(String tin) { this.tin = tin; }
-    public void setShop(String shop) { this.shop = shop; }
-    public void setProvinceCode(String provinceCode) { this.provinceCode = provinceCode; }
-    public void setPayComm(String payComm) { this.payComm = payComm; }
-    public void setCreateDate(Date createDate) { this.createDate = createDate; }
-    public void setChannelTypeId(Long channelTypeId) { this.channelTypeId = channelTypeId; }
-    public void setDiscountPolicy(String discountPolicy) { this.discountPolicy = discountPolicy; }
-    public void setPricePolicy(String pricePolicy) { this.pricePolicy = pricePolicy; }
-    public void setShopPath(String shopPath) { this.shopPath = shopPath; }
-    public void setDistrict(String district) { this.district = district; }
-    public void setPrecinct(String precinct) { this.precinct = precinct; }
-    public void setAreaCode(String areaCode) { this.areaCode = areaCode; }
-    public void setIdNo(String idNo) { this.idNo = idNo; }
-    public void setIdIssuePlace(String idIssuePlace) { this.idIssuePlace = idIssuePlace; }
-    public void setIdIssueDate(Date idIssueDate) { this.idIssueDate = idIssueDate; }
-    public void setStreetBlock(String streetBlock) { this.streetBlock = streetBlock; }
-    public void setStreet(String street) { this.street = street; }
-    public void setHome(String home) { this.home = home; }
-    public void setIdType(Integer idType) { this.idType = idType; }
-    public void setShopPathName(String shopPathName) { this.shopPathName = shopPathName; }
-    public void setContractNo(String contractNo) { this.contractNo = contractNo; }
-    public void setFileName(String fileName) { this.fileName = fileName; }
-    public void setBusinessLicence(String businessLicence) { this.businessLicence = businessLicence; }
-    public void setBankplusMobile(String bankplusMobile) { this.bankplusMobile = bankplusMobile; }
-    public void setStockNum(Integer stockNum) { this.stockNum = stockNum; }
-    public void setStockNumImp(Integer stockNumImp) { this.stockNumImp = stockNumImp; }
-    public void setUpdateDateTime(Date updateDateTime) { this.updateDateTime = updateDateTime; }
-    public void setBankCode(String bankCode) { this.bankCode = bankCode; }
-    public void setShopKeeperId(Long shopKeeperId) { this.shopKeeperId = shopKeeperId; }
-    public void setShopDirectorId(Long shopDirectorId) { this.shopDirectorId = shopDirectorId; }
-    public void setGroupChannelTypeId(Long groupChannelTypeId) { this.groupChannelTypeId = groupChannelTypeId; }
-    public void setStaffOwnerId(Long staffOwnerId) { this.staffOwnerId = staffOwnerId; }
-    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
-    public void setBusinessProvince(String businessProvince) { this.businessProvince = businessProvince; }
-    public void setBusinessDistrict(String businessDistrict) { this.businessDistrict = businessDistrict; }
-    public void setBusinessPrecinct(String businessPrecinct) { this.businessPrecinct = businessPrecinct; }
-    public void setBusinessStreetBlock(String businessStreetBlock) { this.businessStreetBlock = businessStreetBlock; }
-    public void setBusinessStreet(String businessStreet) { this.businessStreet = businessStreet; }
-    public void setBusinessHome(String businessHome) { this.businessHome = businessHome; }
-    public void setBusinessAreacode(String businessAreacode) { this.businessAreacode = businessAreacode; }
-    public void setBusinessAddress(String businessAddress) { this.businessAddress = businessAddress; }
-    public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
-    public void setCreateDatetime(Date createDatetime) { this.createDatetime = createDatetime; }
-    public void setStatus(String status) { this.status = status; }
-    public void setTurnover(String turnover) { this.turnover = turnover; }
-    public void setBirthday(Date birthday) { this.birthday = birthday; }
-    public void setIsChannelOfAgent(Boolean isChannelOfAgent) { this.isChannelOfAgent = isChannelOfAgent; }
+    public void setShopId(Long shopId) {
+        this.shopId = shopId;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setParentShopId(Long parentShopId) {
+        this.parentShopId = parentShopId;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public void setTel(String tel) {
+        this.tel = tel;
+    }
+
+    public void setFax(String fax) {
+        this.fax = fax;
+    }
+
+    public void setShopCode(String shopCode) {
+        this.shopCode = shopCode;
+    }
+
+    public void setShopType(String shopType) {
+        this.shopType = shopType;
+    }
+
+    public void setContactName(String contactName) {
+        this.contactName = contactName;
+    }
+
+    public void setContactTitle(String contactTitle) {
+        this.contactTitle = contactTitle;
+    }
+
+    public void setTelNumber(String telNumber) {
+        this.telNumber = telNumber;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setProvince(String province) {
+        this.province = province;
+    }
+
+    public void setParShopCode(String parShopCode) {
+        this.parShopCode = parShopCode;
+    }
+
+    public void setCenterCode(String centerCode) {
+        this.centerCode = centerCode;
+    }
+
+    public void setOldShopCode(String oldShopCode) {
+        this.oldShopCode = oldShopCode;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    public void setTin(String tin) {
+        this.tin = tin;
+    }
+
+    public void setShop(String shop) {
+        this.shop = shop;
+    }
+
+    public void setProvinceCode(String provinceCode) {
+        this.provinceCode = provinceCode;
+    }
+
+    public void setPayComm(String payComm) {
+        this.payComm = payComm;
+    }
+
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
+    }
+
+    public void setChannelTypeId(Long channelTypeId) {
+        this.channelTypeId = channelTypeId;
+    }
+
+    public void setDiscountPolicy(String discountPolicy) {
+        this.discountPolicy = discountPolicy;
+    }
+
+    public void setPricePolicy(String pricePolicy) {
+        this.pricePolicy = pricePolicy;
+    }
+
+    public void setShopPath(String shopPath) {
+        this.shopPath = shopPath;
+    }
+
+    public void setDistrict(String district) {
+        this.district = district;
+    }
+
+    public void setPrecinct(String precinct) {
+        this.precinct = precinct;
+    }
+
+    public void setAreaCode(String areaCode) {
+        this.areaCode = areaCode;
+    }
+
+    public void setIdNo(String idNo) {
+        this.idNo = idNo;
+    }
+
+    public void setIdIssuePlace(String idIssuePlace) {
+        this.idIssuePlace = idIssuePlace;
+    }
+
+    public void setIdIssueDate(Date idIssueDate) {
+        this.idIssueDate = idIssueDate;
+    }
+
+    public void setStreetBlock(String streetBlock) {
+        this.streetBlock = streetBlock;
+    }
+
+    public void setStreet(String street) {
+        this.street = street;
+    }
+
+    public void setHome(String home) {
+        this.home = home;
+    }
+
+    public void setIdType(Integer idType) {
+        this.idType = idType;
+    }
+
+    public void setShopPathName(String shopPathName) {
+        this.shopPathName = shopPathName;
+    }
+
+    public void setContractNo(String contractNo) {
+        this.contractNo = contractNo;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public void setBusinessLicence(String businessLicence) {
+        this.businessLicence = businessLicence;
+    }
+
+    public void setBankplusMobile(String bankplusMobile) {
+        this.bankplusMobile = bankplusMobile;
+    }
+
+    public void setStockNum(Integer stockNum) {
+        this.stockNum = stockNum;
+    }
+
+    public void setStockNumImp(Integer stockNumImp) {
+        this.stockNumImp = stockNumImp;
+    }
+
+    public void setUpdateDateTime(Date updateDateTime) {
+        this.updateDateTime = updateDateTime;
+    }
+
+    public void setBankCode(String bankCode) {
+        this.bankCode = bankCode;
+    }
+
+    public void setShopKeeperId(Long shopKeeperId) {
+        this.shopKeeperId = shopKeeperId;
+    }
+
+    public void setShopDirectorId(Long shopDirectorId) {
+        this.shopDirectorId = shopDirectorId;
+    }
+
+    public void setGroupChannelTypeId(Long groupChannelTypeId) {
+        this.groupChannelTypeId = groupChannelTypeId;
+    }
+
+    public void setStaffOwnerId(Long staffOwnerId) {
+        this.staffOwnerId = staffOwnerId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public void setBusinessProvince(String businessProvince) {
+        this.businessProvince = businessProvince;
+    }
+
+    public void setBusinessDistrict(String businessDistrict) {
+        this.businessDistrict = businessDistrict;
+    }
+
+    public void setBusinessPrecinct(String businessPrecinct) {
+        this.businessPrecinct = businessPrecinct;
+    }
+
+    public void setBusinessStreetBlock(String businessStreetBlock) {
+        this.businessStreetBlock = businessStreetBlock;
+    }
+
+    public void setBusinessStreet(String businessStreet) {
+        this.businessStreet = businessStreet;
+    }
+
+    public void setBusinessHome(String businessHome) {
+        this.businessHome = businessHome;
+    }
+
+    public void setBusinessAreacode(String businessAreacode) {
+        this.businessAreacode = businessAreacode;
+    }
+
+    public void setBusinessAddress(String businessAddress) {
+        this.businessAddress = businessAddress;
+    }
+
+    public void setCreateUser(String createUser) {
+        this.createUser = createUser;
+    }
+
+    public void setUpdateUser(String updateUser) {
+        this.updateUser = updateUser;
+    }
+
+    public void setCreateDatetime(Date createDatetime) {
+        this.createDatetime = createDatetime;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void setTurnover(String turnover) {
+        this.turnover = turnover;
+    }
+
+    public void setBirthday(Date birthday) {
+        this.birthday = birthday;
+    }
+
+    public void setIsChannelOfAgent(Boolean isChannelOfAgent) {
+        this.isChannelOfAgent = isChannelOfAgent;
+    }
+
 }

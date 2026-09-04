@@ -1,19 +1,20 @@
 package com.viettel.bccs.policy.mapping.service;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.policy.mapping.dto.response.MappingResponse;
 import com.viettel.bccs.policy.mapping.mapper.MappingMapper;
 import com.viettel.bccs.policy.mapping.repository.MappingRepository;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
 import com.viettel.bccs.policy.reason.mapper.ReasonMapper;
 import com.viettel.bccs.policy.utils.Const;
-import com.viettel.bccs.policy.utils.DataUtil;
 import com.viettel.bccs.policy.utils.RequestValidator;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +42,8 @@ public class MappingService {
     }
 
     public List<MappingResponse> getMappingByMultiParams(Long reasonId, String actionCode, Long telServiceId) {
-        return repository.findByReasonIdAndActionCodeAndTelServiceIdAndStatus(reasonId, actionCode, telServiceId, Const.STATUS.ACTIVE)
+        return repository.findByReasonIdAndActionCodeAndTelServiceIdAndStatus(reasonId, actionCode, telServiceId,
+                Const.Status.ACTIVE)
                 .stream()
                 .map(mapper::toResponse)
                 .toList();

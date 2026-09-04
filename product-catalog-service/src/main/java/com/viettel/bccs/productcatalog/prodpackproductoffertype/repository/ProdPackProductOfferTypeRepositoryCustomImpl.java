@@ -1,13 +1,15 @@
 package com.viettel.bccs.productcatalog.prodpackproductoffertype.repository;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.Collections;
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -74,7 +76,9 @@ public class ProdPackProductOfferTypeRepositoryCustomImpl implements ProdPackPro
     }
 
     private Long toLong(Object obj) {
-        if (obj == null) return null;
+        if (obj == null) {
+            return null;
+        }
         String str = obj.toString().trim();
         return str.isEmpty() ? null : Long.parseLong(str);
     }
@@ -84,14 +88,21 @@ public class ProdPackProductOfferTypeRepositoryCustomImpl implements ProdPackPro
     }
 
     private java.util.Date toDate(Object obj) {
-        if (obj == null) return null;
-        if (obj instanceof java.util.Date date) return date;
-        if (obj instanceof java.sql.Timestamp ts) return new java.util.Date(ts.getTime());
+        if (obj == null) {
+            return null;
+        }
+        if (obj instanceof java.util.Date date) {
+            return date;
+        }
+        if (obj instanceof java.sql.Timestamp ts) {
+            return new java.util.Date(ts.getTime());
+        }
         return null;
     }
 
     @Override
-    public List<ProdPackProductOfferTypeDTO> getListByProductPackageIdAndOfferTypeIds(Long productPackageId, List<Long> offerTypeIds) {
+    public List<ProdPackProductOfferTypeDTO> getListByProductPackageIdAndOfferTypeIds(Long productPackageId,
+        List<Long> offerTypeIds) {
         String sql = """
             SELECT TO_CHAR(PROD_PACK_TYPE_ID) AS PROD_PACK_TYPE_ID,
                    TO_CHAR(PRODUCT_PACKAGE_ID) AS PRODUCT_PACKAGE_ID,

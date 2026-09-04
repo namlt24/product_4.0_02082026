@@ -1,13 +1,15 @@
 package com.viettel.bccs.productcatalog.productspecchar.repository;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.productcatalog.utils.Const;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Migrate từ mono: ExternalServiceForMbccsImpl.findProductOfferingByListCodeListSpecCode
@@ -23,7 +25,8 @@ public class ProductSpecCharRepositoryCustomImpl implements ProductSpecCharRepos
     private final EntityManager entityManager;
 
     @Override
-    public List<Object[]> findByListSpecCodeAndListProductCode(List<String> lstSpecCode, List<String> lstProductCode, Long productOfferTypeId) {
+    public List<Object[]> findByListSpecCodeAndListProductCode(List<String> lstSpecCode, List<String> lstProductCode,
+        Long productOfferTypeId) {
         if (lstSpecCode == null || lstSpecCode.isEmpty()) {
             return new ArrayList<>();
         }
@@ -79,7 +82,7 @@ public class ProductSpecCharRepositoryCustomImpl implements ProductSpecCharRepos
                 query.setParameter("productCode" + i, lstProductCode.get(i));
             }
         }
-        query.setParameter("status", Const.STATUS.ACTIVE);
+        query.setParameter("status", Const.Status.ACTIVE);
         query.setParameter("productOfferType", productOfferTypeId);
 
         @SuppressWarnings("unchecked")

@@ -98,7 +98,7 @@ public final class ProductPackageControllerExamples {
                 "listSaleServicePrice": [],
                 "lstProductSpecCharDTO": [],
                 "listProductOfferType": [],
-                "isTLV": false,
+                "isTlv": false,
                 "isBonus": true,
                 "removePackage": false,
                 "shopIds": [],

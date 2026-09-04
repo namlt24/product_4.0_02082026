@@ -1,6 +1,12 @@
 package com.viettel.bccs.productcatalog.productpackage.dto.response;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -10,11 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 @Schema(description = "Cửa hàng trong gói sản phẩm")
 @Data

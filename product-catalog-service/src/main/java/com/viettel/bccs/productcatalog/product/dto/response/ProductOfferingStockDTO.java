@@ -1,13 +1,14 @@
 package com.viettel.bccs.productcatalog.product.dto.response;
 
+import java.util.List;
+
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.util.List;
 
 /**
  * 1 mặt hàng (product offering) trong kết quả API getListStockTypeWS, kèm danh sách giá bán
@@ -32,7 +33,8 @@ public record ProductOfferingStockDTO(
         @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,500}$", message = "name không được chứa ký tự điều khiển")
         String name,
 
-        @Schema(description = "Tên loại mặt hàng (\"Mặt hàng\" nếu productOfferTypeId = 7)", example = "Thiết bị đầu cuối")
+        @Schema(description = "Tên loại mặt hàng (\"Mặt hàng\" nếu productOfferTypeId = 7)",
+                example = "Thiết bị đầu cuối")
         @Size(max = 50, message = "productTypeName tối đa 50 ký tự")
         @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,50}$", message = "productTypeName không được chứa ký tự điều khiển")
         String productTypeName,
@@ -47,7 +49,8 @@ public record ProductOfferingStockDTO(
         @Max(value = 9999999999L, message = "telecomServiceId vượt quá độ dài cột (precision 10)")
         Long telecomServiceId,
 
-        @Schema(description = "Danh sách giá bán (bước 8: nhánh PCCC nếu telecomServiceId=241/254, ngược lại nhánh thường)")
+        @Schema(description = "Danh sách giá bán (bước 8: nhánh PCCC nếu telecomServiceId=241/254,"
+                + " ngược lại nhánh thường)")
         @Size(max = 100, message = "lstProductOfferPrice tối đa 100 phần tử")
         List<ProductOfferPriceResponse> lstProductOfferPrice
 ) {

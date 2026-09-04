@@ -1,10 +1,18 @@
 package com.viettel.bccs.policy.reasonpause.entity;
 
-import jakarta.persistence.*;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "REASON_PAUSE")
+@Getter
+@Setter
 public class ReasonPauseEntity {
 
     @Id
@@ -36,24 +44,6 @@ public class ReasonPauseEntity {
     private String updateUser;
 
     // Getters
-    public Long getReasonPauseId() { return reasonPauseId; }
-    public Long getNumMonth() { return numMonth; }
-    public Long getPrice() { return price; }
-    public Long getReasonId() { return reasonId; }
-    public String getStatus() { return status; }
-    public Date getCreateDatetime() { return createDatetime; }
-    public String getCreateUser() { return createUser; }
-    public Date getUpdateDatetime() { return updateDatetime; }
-    public String getUpdateUser() { return updateUser; }
 
     // Setters
-    public void setReasonPauseId(Long reasonPauseId) { this.reasonPauseId = reasonPauseId; }
-    public void setNumMonth(Long numMonth) { this.numMonth = numMonth; }
-    public void setPrice(Long price) { this.price = price; }
-    public void setReasonId(Long reasonId) { this.reasonId = reasonId; }
-    public void setStatus(String status) { this.status = status; }
-    public void setCreateDatetime(Date createDatetime) { this.createDatetime = createDatetime; }
-    public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setUpdateDatetime(Date updateDatetime) { this.updateDatetime = updateDatetime; }
-    public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
 }

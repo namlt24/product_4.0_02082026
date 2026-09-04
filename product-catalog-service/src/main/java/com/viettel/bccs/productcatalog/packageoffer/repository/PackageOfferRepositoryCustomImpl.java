@@ -1,18 +1,20 @@
 package com.viettel.bccs.productcatalog.packageoffer.repository;
 
-import com.viettel.bccs.productcatalog.packageoffer.entity.PackageOfferEntity;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Tuple;
-import lombok.RequiredArgsConstructor;
-import org.hibernate.query.NativeQuery;
-import org.springframework.stereotype.Repository;
-
 import java.math.BigDecimal;
 import java.sql.Clob;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.hibernate.query.NativeQuery;
+import org.springframework.stereotype.Repository;
+
+import com.viettel.bccs.productcatalog.packageoffer.entity.PackageOfferEntity;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import lombok.RequiredArgsConstructor;
 
 @Repository
 @RequiredArgsConstructor
@@ -34,6 +36,10 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
         return result;
     }
 
+    // entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+    // TypedQuery cho native query) - ep ve NativeQuery<Tuple> cua Hibernate la cach duy nhat de lay
+    // lai generic an toan luc goi getResultList(), khong the loai bo cast nay.
+    @SuppressWarnings("unchecked")
     private void executeQuery(List<Long> prodPackTypeIds, Map<Long, List<PackageOfferEntity>> result) {
         StringBuilder inClause = new StringBuilder();
         for (int i = 0; i < prodPackTypeIds.size(); i++) {
@@ -122,30 +128,50 @@ public class PackageOfferRepositoryCustomImpl implements PackageOfferRepositoryC
     }
 
     private BigDecimal toBigDecimal(Object value) {
-        if (value == null) return null;
-        if (value instanceof BigDecimal bd) return bd;
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
         String str = value.toString().trim();
         return str.isEmpty() ? null : new BigDecimal(str);
     }
 
     private Long toLong(Object value) {
-        if (value == null) return null;
-        if (value instanceof BigDecimal bd) return bd.longValue();
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd.longValue();
+        }
         String str = value.toString().trim();
         return str.isEmpty() ? null : Long.parseLong(str);
     }
 
     private java.util.Date toDate(Object value) {
-        if (value == null) return null;
-        if (value instanceof java.util.Date) return (java.util.Date) value;
-        if (value instanceof java.sql.Date) return new java.util.Date(((java.sql.Date) value).getTime());
-        if (value instanceof java.sql.Timestamp) return new java.util.Date(((java.sql.Timestamp) value).getTime());
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof java.util.Date) {
+            return (java.util.Date) value;
+        }
+        if (value instanceof java.sql.Date) {
+            return new java.util.Date(((java.sql.Date) value).getTime());
+        }
+        if (value instanceof java.sql.Timestamp) {
+            return new java.util.Date(((java.sql.Timestamp) value).getTime());
+        }
         return null;
     }
 
     private String toString(Object value) {
-        if (value == null) return null;
-        if (value instanceof String) return (String) value;
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String) {
+            return (String) value;
+        }
         if (value instanceof Clob) {
             try { return ((Clob) value).getSubString(1, (int) Math.min(((Clob) value).length(), 4000)); }
             catch (Exception ex) { return null; }

@@ -34,7 +34,9 @@ public class ChanelTypeIdRequest {
     @Max(value = 9999999999L, message = "shopChanelTypeId vượt quá độ dài cho phép")
     private Long shopChanelTypeId;
 
-    @Schema(description = "ID nhân viên (STAFF_ID) — dùng để server tự resolve thông tin nhân viên/shop; bắt buộc, validate thủ công trong MapActiveInfoQuerryService (ném BCCS-PRODUCT-VALIDATE-0001 nếu thiếu) thay vì Bean Validation", example = "12345", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "ID nhân viên (STAFF_ID) — dùng để server tự resolve thông tin nhân viên/shop;"
+            + " bắt buộc, validate thủ công trong MapActiveInfoQuerryService (ném BCCS-PRODUCT-VALIDATE-0001"
+            + " nếu thiếu) thay vì Bean Validation", example = "12345", requiredMode = Schema.RequiredMode.REQUIRED)
     @Min(value = 1, message = "staffId phải >= 1")
     @Max(value = 9999999999L, message = "staffId vượt quá độ dài cho phép")
     private Long staffId;

@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.freecamequipment.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.freecamequipment.dto.response.FreeCamEquipmentDTO;
 import com.viettel.bccs.policy.freecamequipment.entity.FreeCamEquipmentEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class FreeCamEquipmentMapper {

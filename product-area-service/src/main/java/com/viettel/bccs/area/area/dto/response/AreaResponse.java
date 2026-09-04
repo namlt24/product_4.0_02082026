@@ -1,13 +1,13 @@
 package com.viettel.bccs.area.area.dto.response;
 
+import java.math.BigDecimal;
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của AREA (xem AreaEntity) —

@@ -1,5 +1,13 @@
 package com.viettel.bccs.policy.mapping.controller;
 
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.mapping.openapi.ApiFindSaleServiceCodeByReason;
@@ -7,16 +15,10 @@ import com.viettel.bccs.policy.mapping.openapi.ApiGetMappingReasonProductOfferPr
 import com.viettel.bccs.policy.mapping.openapi.ApiGetSaleServiceCode;
 import com.viettel.bccs.policy.mapping.service.MappingService;
 import com.viettel.bccs.policy.reason.dto.response.ReasonResponse;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @Tag(name = "Mapping", description = "APIs quản lý mapping dịch vụ bán hàng")
 @RestController
@@ -59,6 +61,7 @@ public class MappingController {
             @Parameter(description = "Mã hành động", example = "00")
             @RequestParam(required = false)
             String actionCode) {
-        return StandardResponses.success(service.getSaleServiceCode(telecomServiceId, reasonId, productCode, actionCode));
+        return StandardResponses.success(service.getSaleServiceCode(telecomServiceId, reasonId, productCode,
+                actionCode));
     }
 }

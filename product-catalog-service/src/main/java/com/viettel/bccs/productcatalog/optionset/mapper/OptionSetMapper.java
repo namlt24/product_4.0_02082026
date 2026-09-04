@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.optionset.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetResponse;
 import com.viettel.bccs.productcatalog.optionset.entity.OptionSetEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class OptionSetMapper {

@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.ref.refproductpackage.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.ref.refproductpackage.dto.RefProductPackageDTO;
 import com.viettel.bccs.policy.ref.refproductpackage.entity.RefProductPackageEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class RefProductPackageMapper {

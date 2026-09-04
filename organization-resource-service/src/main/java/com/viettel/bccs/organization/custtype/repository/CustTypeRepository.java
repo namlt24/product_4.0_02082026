@@ -1,11 +1,12 @@
 package com.viettel.bccs.organization.custtype.repository;
 
-import com.viettel.bccs.organization.custtype.entity.CustTypeEntity;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.viettel.bccs.organization.custtype.entity.CustTypeEntity;
 
 @Repository
 public interface CustTypeRepository extends JpaRepository<CustTypeEntity, String>, CustTypeRepositoryCustom {

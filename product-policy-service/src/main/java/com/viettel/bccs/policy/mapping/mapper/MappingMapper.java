@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.mapping.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.mapping.dto.response.MappingResponse;
 import com.viettel.bccs.policy.mapping.entity.MappingEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class MappingMapper {

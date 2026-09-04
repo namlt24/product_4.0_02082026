@@ -1,10 +1,18 @@
 package com.viettel.bccs.organization.shop.entity;
 
-import jakarta.persistence.*;
+import java.util.Date;
+
+import jakarta.persistence.Basic;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Date;
 
 @Entity
 @Table(name = "SHOP")

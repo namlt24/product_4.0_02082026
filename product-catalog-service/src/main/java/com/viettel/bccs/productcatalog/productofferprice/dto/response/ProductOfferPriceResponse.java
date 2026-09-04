@@ -1,5 +1,8 @@
 package com.viettel.bccs.productcatalog.productofferprice.dto.response;
 
+import java.math.BigDecimal;
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -7,9 +10,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.math.BigDecimal;
-import java.util.Date;
 
 /**
  * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của PRODUCT_OFFER_PRICE
@@ -148,7 +148,8 @@ public record ProductOfferPriceResponse(
         @Max(value = 999999999999999L, message = "priceEquipment vượt quá độ dài cột (precision 15)")
         Long priceEquipment,
 
-        @Schema(description = "ID giá bán thiết bị nguồn của giá thiết bị khuyến mãi (ProductOfferPriceEntity.productOfferPriceId)")
+        @Schema(description = "ID giá bán thiết bị nguồn của giá thiết bị khuyến mãi"
+                + " (ProductOfferPriceEntity.productOfferPriceId)")
         @Min(value = 1, message = "priceEquipmentId phải >= 1")
         @Max(value = 999999999999999L, message = "priceEquipmentId vượt quá độ dài cột (precision 15)")
         Long priceEquipmentId,

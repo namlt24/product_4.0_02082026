@@ -1,8 +1,9 @@
 package com.viettel.bccs.organization.staffext.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.staffext.dto.response.StaffExtResponse;
 import com.viettel.bccs.organization.staffext.entity.StaffExtEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class StaffExtMapper {

@@ -1,8 +1,9 @@
 package com.viettel.bccs.area.area.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.area.area.dto.response.AreaResponse;
 import com.viettel.bccs.area.area.entity.AreaEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class AreaMapper {

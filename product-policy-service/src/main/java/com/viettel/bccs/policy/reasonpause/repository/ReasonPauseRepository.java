@@ -1,10 +1,11 @@
 package com.viettel.bccs.policy.reasonpause.repository;
 
-import com.viettel.bccs.policy.reasonpause.entity.ReasonPauseEntity;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.viettel.bccs.policy.reasonpause.entity.ReasonPauseEntity;
 
 @Repository
 public interface ReasonPauseRepository extends JpaRepository<ReasonPauseEntity, Long> {

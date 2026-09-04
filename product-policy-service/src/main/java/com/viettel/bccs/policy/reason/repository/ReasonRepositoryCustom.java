@@ -1,11 +1,10 @@
 package com.viettel.bccs.policy.reason.repository;
 
+import java.util.List;
+
 import com.viettel.bccs.policy.common.dto.FilterRequest;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.reason.entity.ReasonEntity;
-
-import java.util.List;
 
 public interface ReasonRepositoryCustom {
 
@@ -17,7 +16,8 @@ public interface ReasonRepositoryCustom {
             String actionCode, Long telServiceId, Long numProduct, String productOfferType,
             List<String> excludeProdOfferTypeIds);
 
-    List<ReasonDTO> findByLstIdWithSpec(List<Long> lstReasonId, List<FilterRequest> listProductSpec, String productCode);
+    List<ReasonDTO> findByLstIdWithSpec(List<Long> lstReasonId, List<FilterRequest> listProductSpec,
+            String productCode);
 
     /**
      * Migrate từ mono: ExternalServiceForMbccs.getListStockTypeWS bước tìm reasonId theo

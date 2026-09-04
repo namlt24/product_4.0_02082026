@@ -1,19 +1,22 @@
 package com.viettel.bccs.productcatalog.product.repository;
 
-import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
-import com.viettel.bccs.productcatalog.utils.Const;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
+import com.viettel.bccs.productcatalog.utils.Const;
 
 @Repository
-public interface ProductOfferingRepository extends JpaRepository<ProductOfferingEntity, Long>, ProductOfferingRepositoryCustom {
-
+public interface ProductOfferingRepository extends JpaRepository<ProductOfferingEntity, Long>,
+    ProductOfferingRepositoryCustom {
     Optional<ProductOfferingEntity> findFirstByCode(String code);
+
+    List<ProductOfferingEntity> findByCodeIn(List<String> codes);
 
 
     @Query(value = "select CAST(b.prod_pack_type_id AS NUMBER(19)) prod_pack_type_id, " +
@@ -35,7 +38,7 @@ public interface ProductOfferingRepository extends JpaRepository<ProductOffering
             "  and f.effect_datetime <= sysdate " +
             "  and (f.expire_datetime >= sysdate or f.expire_datetime is null) " +
             "  and LOWER(a.code) = LOWER(:saleServiceCode) " +
-            "  and a.TYPE = '" + Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE + "' " +
+            "  and a.TYPE = '" + Const.ProductPackageType.SALE_SERVICE + "' " +
             "order by c.name, e.name",
             nativeQuery = true)
     List<Object[]> getListStockModelBySaleServiceCode(@Param("saleServiceCode") String saleServiceCode);

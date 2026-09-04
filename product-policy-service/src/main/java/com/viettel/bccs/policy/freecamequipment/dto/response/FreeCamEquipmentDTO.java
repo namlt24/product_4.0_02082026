@@ -1,5 +1,7 @@
 package com.viettel.bccs.policy.freecamequipment.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -9,8 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
 
 /**
  * Migrate từ mono: FreeCamEquipmentDTO, dùng bởi getPriceInServices (nhánh giá thiết bị CAM).
@@ -102,7 +102,8 @@ public class FreeCamEquipmentDTO {
 
     @Schema(description = "Mã nhân viên")
     @Size(max = 4000, message = "staffCode tối đa 4000 ký tự")
-    @Pattern(regexp = "^[A-Za-z0-9,;_\\- ]{0,4000}$", message = "staffCode chỉ gồm chữ, số, ',', ';', '_', '-' hoặc khoảng trắng")
+    @Pattern(regexp = "^[A-Za-z0-9,;_\\- ]{0,4000}$",
+            message = "staffCode chỉ gồm chữ, số, ',', ';', '_', '-' hoặc khoảng trắng")
     private String staffCode;
 
     @Schema(description = "Ngày tạo")
@@ -113,11 +114,13 @@ public class FreeCamEquipmentDTO {
 
     @Schema(description = "Nhóm khách hàng")
     @Size(max = 4000, message = "customerGroup tối đa 4000 ký tự")
-    @Pattern(regexp = "^[A-Za-z0-9,;_\\- ]{0,4000}$", message = "customerGroup chỉ gồm chữ, số, ',', ';', '_', '-' hoặc khoảng trắng")
+    @Pattern(regexp = "^[A-Za-z0-9,;_\\- ]{0,4000}$",
+            message = "customerGroup chỉ gồm chữ, số, ',', ';', '_', '-' hoặc khoảng trắng")
     private String customerGroup;
 
     @Schema(description = "Loại khách hàng")
     @Size(max = 4000, message = "customerType tối đa 4000 ký tự")
-    @Pattern(regexp = "^[A-Za-z0-9,;_\\- ]{0,4000}$", message = "customerType chỉ gồm chữ, số, ',', ';', '_', '-' hoặc khoảng trắng")
+    @Pattern(regexp = "^[A-Za-z0-9,;_\\- ]{0,4000}$",
+            message = "customerType chỉ gồm chữ, số, ',', ';', '_', '-' hoặc khoảng trắng")
     private String customerType;
 }

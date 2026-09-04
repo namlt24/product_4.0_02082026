@@ -1,14 +1,17 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductOfferCharUseDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.entity.ProductOfferCharUseEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductOfferCharUseMapper {
 
     public ProductOfferCharUseDTO toDto(ProductOfferCharUseEntity entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         return ProductOfferCharUseDTO.builder()
                 .productOfferCharUseId(entity.getProductOfferCharUseId())
                 .orderChar(entity.getOrderChar())

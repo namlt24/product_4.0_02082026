@@ -1,15 +1,14 @@
 package com.viettel.bccs.productcatalog.productofferprice.repository;
 
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
-import com.viettel.bccs.productcatalog.utils.Const;
-import com.viettel.bccs.productcatalog.utils.DataUtil;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -19,7 +18,8 @@ public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceR
     private final EntityManager entityManager;
 
     @Override
-    public List<ProductOfferPriceEntity> getPriceInServices(Long productPackageId, Long productOfferType, Long productOfferId, Long pricePolicy) {
+    public List<ProductOfferPriceEntity> getPriceInServices(Long productPackageId, Long productOfferType,
+        Long productOfferId, Long pricePolicy) {
         String sql = """
             SELECT a.*
             FROM BCCS_PRODUCT.PRODUCT_OFFER_PRICE a
@@ -57,7 +57,8 @@ public class ProductOfferPriceRepositoryCustomImpl implements ProductOfferPriceR
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<ProductOfferPriceEntity> getPriceEquipment(Long productPackageId, Long productOfferType, Long productOfferId) {
+    public List<ProductOfferPriceEntity> getPriceEquipment(Long productPackageId, Long productOfferType,
+        Long productOfferId) {
         String sql = """
             SELECT a.*
             FROM BCCS_PRODUCT.PRODUCT_OFFER_PRICE a

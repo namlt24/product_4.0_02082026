@@ -1,0 +1,224 @@
+openapi: 3.1.0
+info:
+  title: product-catalog-service API
+  description: >-
+    API tra cứu thông tin giá cam kết của mặt hàng trong hệ thống quản lý danh mục sản phẩm
+    (product-catalog-service). Trả về giá tiền, số tiền cam kết, số tháng cam kết và số tháng
+    ứng trước của các bản ghi giá loại cam kết (PRICE_TYPE_ID = 2) đang hoạt động và còn hiệu lực.
+  version: local
+servers:
+  - url: http://localhost:8001
+    description: Môi trường phát triển cục bộ
+tags:
+  - name: Product Offer Price
+    description: API quản lý giá bán thiết bị
+paths:
+  /product-catalog-service/v1/productofferprice/getPledgePriceInfoByOfferId:
+    get:
+      tags:
+        - Product Offer Price
+      operationId: getPledgePriceInfoByOfferId
+      summary: Lấy thông tin giá cam kết theo ID mặt hàng
+      description: >-
+        Truy vấn giá tiền, số tiền cam kết, số tháng cam kết và số tháng ứng trước
+        (PRICE_TYPE_ID = 2) từ bảng PRODUCT_OFFER_PRICE theo product_offering_id,
+        chỉ lấy bản ghi đang active (STATUS = '1') và còn hiệu lực theo thời điểm hiện tại
+        (EFFECT_DATETIME để trống hoặc đã qua, EXPIRE_DATETIME để trống hoặc chưa tới).
+        Kết quả được lưu bộ nhớ đệm theo ID mặt hàng, kể cả khi rỗng.
+        Nếu không có bản ghi nào thoả điều kiện, API trả HTTP 200 với data là mảng rỗng.
+      parameters:
+        - name: productOfferingId
+          in: query
+          required: true
+          description: >-
+            ID mặt hàng (cột PRODUCT_OFFERING_ID). Bắt buộc về mặt nghiệp vụ - nếu không truyền,
+            tầng nghiệp vụ trả lỗi BCCS-PRODUCT-VALIDATE-0000 (HTTP 400).
+            Giá trị âm hoặc bằng 0 không bị chặn, chỉ dẫn tới kết quả rỗng.
+          schema:
+            type: integer
+            format: int64
+            example: 456
+      responses:
+        '200':
+          description: Thành công - trả về danh sách giá cam kết của mặt hàng (có thể là mảng rỗng)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponsePledgePriceList'
+              examples:
+                success:
+                  summary: Mặt hàng có cấu hình giá cam kết
+                  value:
+                    code: SUCCESS
+                    message: Thành công
+                    traceId: 5f2a3b1c-1234-4d5e-8a9b-000000000004
+                    requestId: req-0004
+                    timestamp: '2026-08-20T02:00:00Z'
+                    data:
+                      - price: 1500000
+                        pledgeAmount: 500000
+                        pledgeTime: 12
+                        priorPay: '3'
+                empty:
+                  summary: Mặt hàng không có giá cam kết còn hiệu lực
+                  value:
+                    code: SUCCESS
+                    message: Thành công
+                    traceId: 5f2a3b1c-1234-4d5e-8a9b-000000000005
+                    requestId: req-0005
+                    timestamp: '2026-08-20T02:05:00Z'
+                    data: []
+        '400':
+          description: >-
+            Thiếu tham số productOfferingId (BCCS-PRODUCT-VALIDATE-0000) hoặc giá trị truyền vào
+            không ép được về số nguyên (lỗi tầng khung).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingParam:
+                  summary: Không truyền productOfferingId
+                  value:
+                    code: BCCS-PRODUCT-VALIDATE-0000
+                    message: Tham số productOfferingId không được để trống
+                    traceId: 5f2a3b1c-1234-4d5e-8a9b-000000000006
+                    requestId: req-0006
+                    timestamp: '2026-08-20T02:10:00Z'
+                    data: null
+                typeMismatch:
+                  summary: productOfferingId không phải số
+                  value:
+                    code: BAD_REQUEST
+                    message: Tham số productOfferingId không đúng định dạng số
+                    traceId: 5f2a3b1c-1234-4d5e-8a9b-000000000007
+                    requestId: req-0007
+                    timestamp: '2026-08-20T02:11:00Z'
+                    data: null
+        '401':
+          description: Chưa xác thực hoặc token bearer không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  summary: Thiếu token
+                  value:
+                    code: UNAUTHORIZED
+                    message: Yêu cầu chưa được xác thực
+                    traceId: 5f2a3b1c-1234-4d5e-8a9b-000000000008
+                    requestId: req-0008
+                    timestamp: '2026-08-20T02:12:00Z'
+                    data: null
+        '500':
+          description: Lỗi hệ thống khi thực thi truy vấn trên bảng PRODUCT_OFFER_PRICE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                systemError:
+                  summary: Lỗi truy cập cơ sở dữ liệu
+                  value:
+                    code: INTERNAL_SERVER_ERROR
+                    message: Hệ thống đang bận, vui lòng thử lại sau
+                    traceId: 5f2a3b1c-1234-4d5e-8a9b-000000000009
+                    requestId: req-0009
+                    timestamp: '2026-08-20T02:13:00Z'
+                    data: null
+components:
+  schemas:
+    PledgePriceResponse:
+      type: object
+      description: Thông tin giá cam kết rút gọn của một bản ghi giá mặt hàng
+      properties:
+        price:
+          type: number
+          description: Giá tiền
+          minimum: 0
+          maximum: 99999999999999999999
+          example: 1500000
+        pledgeAmount:
+          type: number
+          description: Số tiền cam kết
+          minimum: 0
+          maximum: 9999999999
+          example: 500000
+        pledgeTime:
+          type: integer
+          format: int64
+          description: Số tháng cam kết
+          minimum: 0
+          maximum: 9999999999
+          example: 12
+        priorPay:
+          type: string
+          description: Số tháng ứng trước (lưu dạng chuỗi ký tự trên cơ sở dữ liệu)
+          maxLength: 10
+          example: '3'
+    StandardResponsePledgePriceList:
+      type: object
+      description: Khung phản hồi chuẩn của nền tảng BCCS với dữ liệu là danh sách giá cam kết
+      properties:
+        code:
+          type: string
+          description: Mã kết quả xử lý
+          example: SUCCESS
+        message:
+          type: string
+          description: Mô tả kết quả xử lý
+          example: Thành công
+        traceId:
+          type: string
+          description: Mã truy vết phân tán
+          example: 5f2a3b1c-1234-4d5e-8a9b-000000000004
+        requestId:
+          type: string
+          description: Mã định danh yêu cầu
+          example: req-0004
+        data:
+          type: array
+          description: Danh sách giá cam kết của mặt hàng, có thể rỗng
+          items:
+            $ref: '#/components/schemas/PledgePriceResponse'
+        timestamp:
+          type: string
+          format: date-time
+          description: Thời điểm trả kết quả (RFC 3339)
+          example: '2026-08-20T02:00:00Z'
+    ErrorResponse:
+      type: object
+      description: Khung phản hồi chuẩn khi xảy ra lỗi
+      properties:
+        code:
+          type: string
+          description: Mã lỗi
+          example: BCCS-PRODUCT-VALIDATE-0000
+        message:
+          type: string
+          description: Thông điệp lỗi
+          example: Tham số productOfferingId không được để trống
+        traceId:
+          type: string
+          description: Mã truy vết phân tán
+          example: 5f2a3b1c-1234-4d5e-8a9b-000000000006
+        requestId:
+          type: string
+          description: Mã định danh yêu cầu
+          example: req-0006
+        data:
+          type: 'null'
+          description: Luôn null khi có lỗi
+        timestamp:
+          type: string
+          format: date-time
+          description: Thời điểm trả kết quả (RFC 3339)
+          example: '2026-08-20T02:10:00Z'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

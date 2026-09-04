@@ -1,8 +1,9 @@
 package com.viettel.bccs.policy.mapactiveinfotgdd.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoResponse;
 import com.viettel.bccs.policy.mapactiveinfotgdd.entity.MapActiveInfoTgddEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class MapActiveInfoTgddMapper {

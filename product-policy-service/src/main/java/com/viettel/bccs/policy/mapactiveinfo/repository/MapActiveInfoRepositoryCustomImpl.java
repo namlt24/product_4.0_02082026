@@ -1,17 +1,19 @@
 package com.viettel.bccs.policy.mapactiveinfo.repository;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
 import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
 import com.viettel.bccs.policy.mapactiveinfotgdd.entity.MapActiveInfoTgddEntity;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Repository
 public class MapActiveInfoRepositoryCustomImpl implements MapActiveInfoRepositoryCustom {
@@ -19,7 +21,11 @@ public class MapActiveInfoRepositoryCustomImpl implements MapActiveInfoRepositor
     @PersistenceContext
     private EntityManager em;
 
+    // entityManager.createNativeQuery(sql, Class) tra ve Query tho theo dung dac ta JPA (khong co
+    // TypedQuery cho native query) - query.getResultList() vi vay tra ve List tho, khong the tranh
+    // unchecked conversion khi return ve List<MapActiveInfoEntity>.
     @Override
+    @SuppressWarnings("unchecked")
     public List<MapActiveInfoEntity> findByExample(MapActiveInfoDTO exampleMapActiveInfo, boolean searchInvidualField, boolean isTgdd) throws Exception {
         List<Object> param = new ArrayList<>();
         String sql = buildQuery(exampleMapActiveInfo, param, searchInvidualField, isTgdd);

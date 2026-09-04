@@ -1,11 +1,10 @@
 package com.viettel.bccs.organization.stockchannelmapping.mapper;
 
-import com.viettel.bccs.organization.stockchannelmapping.dto.response.StockChannelMappingResponse;
-import com.viettel.bccs.organization.stockchannelmapping.entity.StockChannelMappingEntity;
-import com.viettel.bccs.organization.utils.Const;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
+import com.viettel.bccs.organization.stockchannelmapping.dto.response.StockChannelMappingResponse;
+import com.viettel.bccs.organization.stockchannelmapping.entity.StockChannelMappingEntity;
+
 
 @Component
 public class StockChannelMappingMapper {

@@ -1,5 +1,25 @@
 package com.viettel.bccs.policy.mapactiveinfo.elasticsearch;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+
+import com.viettel.bccs.common.error.code.CommonErrorCode;
+import com.viettel.bccs.common.error.exception.BusinessException;
+import com.viettel.bccs.common.error.exception.IntegrationException;
+import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
+import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
+import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
+import com.viettel.bccs.policy.utils.Const;
+import com.viettel.bccs.policy.utils.DataUtil;
+
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.FieldValue;
@@ -11,26 +31,8 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import co.elastic.clients.json.JsonData;
-import com.viettel.bccs.common.error.code.CommonErrorCode;
-import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.common.error.exception.IntegrationException;
-import com.viettel.bccs.policy.mapactiveinfo.dto.response.MapActiveInfoDTO;
-import com.viettel.bccs.policy.mapactiveinfo.entity.MapActiveInfoEntity;
-import com.viettel.bccs.policy.mapactiveinfo.repository.MapActiveInfoRepository;
-import com.viettel.bccs.policy.utils.Const;
-import com.viettel.bccs.policy.utils.DataUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
 
 
 @Slf4j
@@ -88,7 +90,7 @@ public class MapActiveInfoElasticsearchService {
     }
 
     /**
-     * Đọc toàn bộ MAP_ACTIVE_INFO từ Oracle (phân trang) và bulk-index
+     * Đọc toàn bộ MapActiveInfo từ Oracle (phân trang) và bulk-index
      * sang Elasticsearch. Trả về tổng số document đã index.
      */
     public long reindexAll() {
@@ -156,7 +158,8 @@ public class MapActiveInfoElasticsearchService {
         addSelectAllCondition(root, "subType", dto.getSubType());
         addSelectAllCondition(root, "technology", dto.getTechnology());
 
-        if (!DataUtil.isNullOrEmpty(dto.getStationCodes()) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(dto.getStationCodes())) {
+        if (!DataUtil.isNullOrEmpty(dto.getStationCodes()) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(
+                dto.getStationCodes())) {
             String stationCode = dto.getStationCodes();
             root.filter(f -> f.bool(b -> b
                     .should(sh -> sh.terms(t -> t.field("stationCodesList")
@@ -167,10 +170,12 @@ public class MapActiveInfoElasticsearchService {
         }
 
         // NODE_CODE: chỉ dịch phần match/null/sentinel — nhánh EXISTS join group_node không dịch được (xem javadoc)
-        if (!DataUtil.isNullOrEmpty(dto.getNodeCode()) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(dto.getNodeCode())) {
+        if (!DataUtil.isNullOrEmpty(dto.getNodeCode()) && !Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(dto.getNodeCode(
+                ))) {
             String nodeCode = dto.getNodeCode();
             root.filter(f -> f.bool(b -> b
-                    .should(sh -> sh.wildcard(w -> w.field("nodeCode").value("*" + nodeCode + "*").caseInsensitive(true)))
+                    .should(sh -> sh.wildcard(w -> w.field("nodeCode").value("*" + nodeCode + "*").caseInsensitive(
+                            true)))
                     .should(sh -> sh.bool(bb -> bb.mustNot(mn -> mn.exists(e -> e.field("nodeCode")))))
                     .should(sh -> sh.terms(t -> t.field("nodeCode")
                             .terms(tt -> tt.value(List.of(FieldValue.of("-1"), FieldValue.of("-1;"))))))

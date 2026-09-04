@@ -1,9 +1,12 @@
 package com.viettel.bccs.productcatalog.product.dto.response;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonView;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
 import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -13,9 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Schema(description = "Thông tin sản phẩm gói cước kèm đặc tính và giá trị đặc tính")
 @Data
@@ -52,6 +52,7 @@ public class ProductOfferingCharacterFullDTO {
 
     @Schema(description = "Danh sách mã VAS xung đột", example = "[\"VAS_A\", \"VAS_B\"]")
     @Size(max = 1000, message = "vasCodesConflict tối đa 1000 phần tử")
+    @Builder.Default
     private List<String> vasCodesConflict = new ArrayList<>();
 
 }

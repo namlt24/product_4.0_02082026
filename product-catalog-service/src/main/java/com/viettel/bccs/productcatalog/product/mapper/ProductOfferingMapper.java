@@ -1,10 +1,13 @@
 package com.viettel.bccs.productcatalog.product.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingSumaryDTO;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingSummaryDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.StockOfferingRow;
 import com.viettel.bccs.productcatalog.product.entity.ProductOfferingEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductOfferingMapper {
@@ -92,6 +95,31 @@ public class ProductOfferingMapper {
             .usageId(entity.getUsageId())
             .isBundle(entity.getIsBundle())
             .sapProductType(entity.getSapProductType())
+            .build();
+    }
+
+    public ProductOfferingSummaryDTO toSummary(ProductOfferingEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return ProductOfferingSummaryDTO.builder()
+            .code(entity.getCode())
+            .name(entity.getName())
+            .productOfferingId(entity.getProductOfferingId())
+            .build();
+    }
+
+    public ProductOfferingSumaryDTO toSumary(ProductOfferingEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return ProductOfferingSumaryDTO.builder()
+            .code(entity.getCode())
+            .name(entity.getName())
+            .productOfferingId(entity.getProductOfferingId())
+            .productOfferTypeId(entity.getProductOfferTypeId())
+            .telecomServiceId(entity.getTelecomServiceId())
+            .status(entity.getStatus())
             .build();
     }
 

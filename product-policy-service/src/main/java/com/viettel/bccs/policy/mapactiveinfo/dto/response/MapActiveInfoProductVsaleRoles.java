@@ -1,10 +1,11 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.response;
 
+import java.util.List;
+
 import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
-
-import java.util.List;
 
 public record MapActiveInfoProductVsaleRoles(
 
@@ -20,6 +21,7 @@ public record MapActiveInfoProductVsaleRoles(
         List<String> roleDBs,
 
         @Schema(description = "Danh sách vai trò gọi thưởng (GOITHUONG)")
-        @Size(max = 100, message = "roleGOITHUONGs tối đa 100 phần tử")
-        List<String> roleGOITHUONGs
-) {}
+        @Size(max = 100, message = "roleGoiThuongs tối đa 100 phần tử")
+        List<String> roleGoiThuongs
+) {
+}

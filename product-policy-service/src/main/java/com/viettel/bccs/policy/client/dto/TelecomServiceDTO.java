@@ -1,15 +1,16 @@
 package com.viettel.bccs.policy.client.dto;
 
+import java.io.Serializable;
+import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.io.Serializable;
-import java.util.Date;
 
 @Schema(description = "Thông tin dịch vụ viễn thông")
 @Data

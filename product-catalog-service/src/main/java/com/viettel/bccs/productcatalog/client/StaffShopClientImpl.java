@@ -1,19 +1,20 @@
 package com.viettel.bccs.productcatalog.client;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
 import com.viettel.bccs.productcatalog.client.dto.StaffShopResponse;
-import com.viettel.bccs.productcatalog.client.dto.StandardClientResponse;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -37,7 +38,8 @@ public class StaffShopClientImpl implements StaffShopClient {
         } catch (RuntimeException e) {
             log.error("Error calling findActiveByShopIds for {} shopIds", shopIds.size(), e);
             throw new IntegrationException("BCCS-SYS-CTR-0001",
-                    "Error calling organization-resource-service findActiveByShopIds for " + shopIds.size() + " shopIds", e);
+                    "Error calling organization-resource-service findActiveByShopIds for " + shopIds.size()
+                            + " shopIds", e);
         }
     }
 

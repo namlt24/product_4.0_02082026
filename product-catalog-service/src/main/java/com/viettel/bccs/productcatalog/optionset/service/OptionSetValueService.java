@@ -1,25 +1,27 @@
 package com.viettel.bccs.productcatalog.optionset.service;
 
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.productcatalog.client.CustTypeClient;
 import com.viettel.bccs.productcatalog.client.dto.CustTypeDTO;
-import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.dto.response.GetSubObjectResponse;
+import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.entity.OptionSetValueEntity;
 import com.viettel.bccs.productcatalog.optionset.mapper.OptionSetValueMapper;
 import com.viettel.bccs.productcatalog.optionset.repository.OptionSetValueRepository;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.RequestValidator;
-import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.Period;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -71,7 +73,7 @@ public class OptionSetValueService {
 
     @Transactional(readOnly = true)
     public List<OptionSetValueResponse> getAllGroupCustType() {
-        return optionSetValueRepository.findByOptionSetCode(Const.OPTION_SET.CUST_TYPE_GROUP_TYPE).stream()
+        return optionSetValueRepository.findByOptionSetCode(Const.OptionSet.CUST_TYPE_GROUP_TYPE).stream()
                 .map(optionSetValueMapper::toResponse)
                 .toList();
     }
@@ -89,9 +91,9 @@ public class OptionSetValueService {
         RequestValidator.requireNotBlank(custType, "custType", "BCCS-PRODUCT-VALIDATE-0000");
         GetSubObjectResponse response = new GetSubObjectResponse();
 
-        Optional<CustTypeDTO> custTypeOpt = custTypeClient.findActiveByCustType(custType, Const.STATUS.ACTIVE);
+        Optional<CustTypeDTO> custTypeOpt = custTypeClient.findActiveByCustType(custType, Const.Status.ACTIVE);
         if (custTypeOpt.isEmpty()) {
-            response.setCode(Const.REST_RESPONSE_CODE.DATA_NOT_FOUND);
+            response.setCode(Const.RestResponseCode.DATA_NOT_FOUND);
             return response;
         }
 
@@ -100,7 +102,7 @@ public class OptionSetValueService {
         if (DataUtil.safeEqual(groupType, "1") || DataUtil.safeEqual(groupType, "3")) {
             int age = calculateAge(birthDate);
             if (age < 6) {
-                response.setCode(Const.REST_RESPONSE_CODE.DATA_NOT_FOUND);
+                response.setCode(Const.RestResponseCode.DATA_NOT_FOUND);
                 return response;
             }
             if (age >= 16) {
@@ -117,7 +119,7 @@ public class OptionSetValueService {
             response.setLstOptionSetValue(findByOptionSetCode("SUB_OBJECT_BY_AGE_BUSINESS"));
         }
 
-        response.setCode(Const.REST_RESPONSE_CODE.SUCCESS);
+        response.setCode(Const.RestResponseCode.SUCCESS);
         return response;
     }
 
@@ -135,6 +137,7 @@ public class OptionSetValueService {
             return 0;
         }
     }
+
     @Transactional(readOnly = true)
     public OptionSetValueResponse findOneByCodeAndValue(String code, String value) {
         List<OptionSetValueEntity> result = optionSetValueRepository.findByCodeAndValue(code, value);

@@ -1,12 +1,21 @@
 package com.viettel.bccs.policy.mapactiveinfo.entity;
 
-import jakarta.persistence.*;
-
 import java.sql.Blob;
 import java.util.Date;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.Getter;
+import lombok.Setter;
+
 @Entity
 @Table(name = "MAP_ACTIVE_INFO")
+@Getter
+@Setter
 public class MapActiveInfoEntity {
 
     @Id
@@ -186,120 +195,6 @@ public class MapActiveInfoEntity {
     private Long importOfflineId;
 
     // Getters
-    public Long getId() { return id; }
-    public Long getTelServiceId() { return telServiceId; }
-    public String getProductCode() { return productCode; }
-    public String getProductName() { return productName; }
-    public Long getRegReasonId() { return regReasonId; }
-    public String getReasonName() { return reasonName; }
-    public String getPromCode() { return promCode; }
-    public String getPromName() { return promName; }
-    public Long getChannelTypeId() { return channelTypeId; }
-    public String getChannelName() { return channelName; }
-    public String getProvinceCode() { return provinceCode; }
-    public String getDistrictCode() { return districtCode; }
-    public Date getEffectDate() { return effectDate; }
-    public Date getEndDate() { return endDate; }
-    public String getProvinceName() { return provinceName; }
-    public String getDistrictName() { return districtName; }
-    public Long getOfferId() { return offerId; }
-    public String getOfferName() { return offerName; }
-    public Long getStatus() { return status; }
-    public String getPrecinctName() { return precinctName; }
-    public String getPrecinctCode() { return precinctCode; }
-    public String getShopCode() { return shopCode; }
-    public String getStaffCode() { return staffCode; }
-    public String getActionCode() { return actionCode; }
-    public String getActionName() { return actionName; }
-    public String getLimitNumber() { return limitNumber; }
-    public Long getCaptcharRequire() { return captcharRequire; }
-    public String getUnit() { return unit; }
-    public String getCustomerGroup() { return customerGroup; }
-    public String getCustomerType() { return customerType; }
-    public String getSubType() { return subType; }
-    public String getSubGroup() { return subGroup; }
-    public String getPolicyDoc() { return policyDoc; }
-    public String getActionGroup() { return actionGroup; }
-    public String getActionGroupName() { return actionGroupName; }
-    public String getFileName() { return fileName; }
-    public Long getStationId() { return stationId; }
-    public Long getShopId() { return shopId; }
-    public Blob getFileAttach() { return fileAttach; }
-    public String getCreateUser() { return createUser; }
-    public Date getIssueDatetime() { return issueDatetime; }
-    public String getStationCodes() { return stationCodes; }
-    public String getPayType() { return payType; }
-    public String getTechnology() { return technology; }
-    public Date getUpdateDatetime() { return updateDatetime; }
-    public String getUpdateUser() { return updateUser; }
-    public String getAreaGroupCode() { return areaGroupCode; }
-    public String getVasCode() { return vasCode; }
-    public String getVasName() { return vasName; }
-    public String getNodeCode() { return nodeCode; }
-    public String getNote() { return note; }
-    public String getGroupNodeCode() { return groupNodeCode; }
-    public String getStaffType() { return staffType; }
-    public String getBusinessNo() { return businessNo; }
-    public String getSubGroupCode() { return subGroupCode; }
-    public String getSmeCustomerGroup() { return smeCustomerGroup; }
-    public Long getImportOfflineId() { return importOfflineId; }
 
     // Setters
-    public void setId(Long id) { this.id = id; }
-    public void setTelServiceId(Long telServiceId) { this.telServiceId = telServiceId; }
-    public void setProductCode(String productCode) { this.productCode = productCode; }
-    public void setProductName(String productName) { this.productName = productName; }
-    public void setRegReasonId(Long regReasonId) { this.regReasonId = regReasonId; }
-    public void setReasonName(String reasonName) { this.reasonName = reasonName; }
-    public void setPromCode(String promCode) { this.promCode = promCode; }
-    public void setPromName(String promName) { this.promName = promName; }
-    public void setChannelTypeId(Long channelTypeId) { this.channelTypeId = channelTypeId; }
-    public void setChannelName(String channelName) { this.channelName = channelName; }
-    public void setProvinceCode(String provinceCode) { this.provinceCode = provinceCode; }
-    public void setDistrictCode(String districtCode) { this.districtCode = districtCode; }
-    public void setEffectDate(Date effectDate) { this.effectDate = effectDate; }
-    public void setEndDate(Date endDate) { this.endDate = endDate; }
-    public void setProvinceName(String provinceName) { this.provinceName = provinceName; }
-    public void setDistrictName(String districtName) { this.districtName = districtName; }
-    public void setOfferId(Long offerId) { this.offerId = offerId; }
-    public void setOfferName(String offerName) { this.offerName = offerName; }
-    public void setStatus(Long status) { this.status = status; }
-    public void setPrecinctName(String precinctName) { this.precinctName = precinctName; }
-    public void setPrecinctCode(String precinctCode) { this.precinctCode = precinctCode; }
-    public void setShopCode(String shopCode) { this.shopCode = shopCode; }
-    public void setStaffCode(String staffCode) { this.staffCode = staffCode; }
-    public void setActionCode(String actionCode) { this.actionCode = actionCode; }
-    public void setActionName(String actionName) { this.actionName = actionName; }
-    public void setLimitNumber(String limitNumber) { this.limitNumber = limitNumber; }
-    public void setCaptcharRequire(Long captcharRequire) { this.captcharRequire = captcharRequire; }
-    public void setUnit(String unit) { this.unit = unit; }
-    public void setCustomerGroup(String customerGroup) { this.customerGroup = customerGroup; }
-    public void setCustomerType(String customerType) { this.customerType = customerType; }
-    public void setSubType(String subType) { this.subType = subType; }
-    public void setSubGroup(String subGroup) { this.subGroup = subGroup; }
-    public void setPolicyDoc(String policyDoc) { this.policyDoc = policyDoc; }
-    public void setActionGroup(String actionGroup) { this.actionGroup = actionGroup; }
-    public void setActionGroupName(String actionGroupName) { this.actionGroupName = actionGroupName; }
-    public void setFileName(String fileName) { this.fileName = fileName; }
-    public void setStationId(Long stationId) { this.stationId = stationId; }
-    public void setShopId(Long shopId) { this.shopId = shopId; }
-    public void setFileAttach(Blob fileAttach) { this.fileAttach = fileAttach; }
-    public void setCreateUser(String createUser) { this.createUser = createUser; }
-    public void setIssueDatetime(Date issueDatetime) { this.issueDatetime = issueDatetime; }
-    public void setStationCodes(String stationCodes) { this.stationCodes = stationCodes; }
-    public void setPayType(String payType) { this.payType = payType; }
-    public void setTechnology(String technology) { this.technology = technology; }
-    public void setUpdateDatetime(Date updateDatetime) { this.updateDatetime = updateDatetime; }
-    public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
-    public void setAreaGroupCode(String areaGroupCode) { this.areaGroupCode = areaGroupCode; }
-    public void setVasCode(String vasCode) { this.vasCode = vasCode; }
-    public void setVasName(String vasName) { this.vasName = vasName; }
-    public void setNodeCode(String nodeCode) { this.nodeCode = nodeCode; }
-    public void setNote(String note) { this.note = note; }
-    public void setGroupNodeCode(String groupNodeCode) { this.groupNodeCode = groupNodeCode; }
-    public void setStaffType(String staffType) { this.staffType = staffType; }
-    public void setBusinessNo(String businessNo) { this.businessNo = businessNo; }
-    public void setSubGroupCode(String subGroupCode) { this.subGroupCode = subGroupCode; }
-    public void setSmeCustomerGroup(String smeCustomerGroup) { this.smeCustomerGroup = smeCustomerGroup; }
-    public void setImportOfflineId(Long importOfflineId) { this.importOfflineId = importOfflineId; }
 }

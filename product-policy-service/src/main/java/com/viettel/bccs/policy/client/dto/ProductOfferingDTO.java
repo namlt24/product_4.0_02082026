@@ -1,17 +1,18 @@
 package com.viettel.bccs.policy.client.dto;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.viettel.bccs.policy.client.dto.ProductSpecCharDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import com.viettel.bccs.policy.client.dto.ProductSpecCharDTO;
-import java.io.Serializable;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
 
 @Schema(description = "Thông tin sản phẩm gói cước")
 @Data
@@ -457,5 +458,5 @@ public class ProductOfferingDTO implements Serializable {
     private Date imageUpdateDatetime;
 
     @Schema(description = "Danh sách đặc tính sản phẩm")
-    private List<ProductSpecCharDTO> lstProductSpecCharDTOs;
+    private List<ProductSpecCharDTO> lstProductSpecCharDto;
 }

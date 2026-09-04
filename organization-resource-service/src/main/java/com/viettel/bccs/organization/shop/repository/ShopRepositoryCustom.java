@@ -1,8 +1,8 @@
 package com.viettel.bccs.organization.shop.repository;
 
-import com.viettel.bccs.organization.shop.entity.ShopEntity;
-
 import java.util.List;
+
+import com.viettel.bccs.organization.shop.entity.ShopEntity;
 
 /**
  * Custom repository cho Shop - hỗ trợ các truy vấn phức tạp không thể biểu diễn bằng Spring Data JPA đơn thuần.

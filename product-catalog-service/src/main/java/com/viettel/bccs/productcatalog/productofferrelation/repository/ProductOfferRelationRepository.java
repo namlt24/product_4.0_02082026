@@ -1,11 +1,12 @@
 package com.viettel.bccs.productcatalog.productofferrelation.repository;
 
-import com.viettel.bccs.productcatalog.productofferrelation.entity.ProductOfferRelationEntity;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.viettel.bccs.productcatalog.productofferrelation.entity.ProductOfferRelationEntity;
 
 @Repository
 public interface ProductOfferRelationRepository extends JpaRepository<ProductOfferRelationEntity, Long> {
@@ -14,7 +15,8 @@ public interface ProductOfferRelationRepository extends JpaRepository<ProductOff
 
     List<ProductOfferRelationEntity> findByRelationOfferId(Long relationOfferId);
 
-    Optional<ProductOfferRelationEntity> findByMainOfferIdAndRelationOfferIdAndStatus(Long mainOfferId, Long relationOfferId, String status);
+    Optional<ProductOfferRelationEntity> findByMainOfferIdAndRelationOfferIdAndStatus(Long mainOfferId,
+        Long relationOfferId, String status);
 
     List<ProductOfferRelationEntity> findByMainOfferIdAndStatus(Long mainOfferId, String status);
 

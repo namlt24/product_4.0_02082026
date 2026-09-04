@@ -1,9 +1,14 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.response;
 
+import java.util.Date;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.viettel.bccs.policy.discountpromotion.dto.response.DiscountPromotionDTO;
 import com.viettel.bccs.policy.reason.dto.response.ReasonDTO;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -16,16 +21,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema
 public class MapActiveInfoDTO {
-    public static enum COLUMNS {
+    public static enum Columns {
         VAS_CODE, VAS_NAME,
         ACTION_CODE, ACTION_GROUP, ACTION_GROUP_NAME, ACTION_NAME, CAPTCHAR_REQUIRE,
         CHANNEL_NAME, CHANNEL_TYPE_ID, CREATE_USER, CUSTOMER_GROUP, CUSTOMER_TYPE,
@@ -33,8 +35,10 @@ public class MapActiveInfoDTO {
         ISSUE_DATETIME, LIMIT_NUMBER, OFFER_ID, OFFER_NAME, PAY_TYPE,
         POLICY_DOC, PRECINCT_CODE, PRECINCT_NAME, PRODUCT_CODE, PRODUCT_NAME, PROM_CODE, PROM_NAME, PROVINCE_CODE,
         PROVINCE_NAME, REASON_NAME, REG_REASON_ID, SHOP_CODE, SHOP_ID, STAFF_CODE, STATION_CODES,
-        STATION_ID, STATUS, SUB_GROUP, SUB_TYPE, TEL_SERVICE_ID, UNIT, EXCLUSE_ID_LIST, TECHNOLOGY, UPDATE_USER, UPDATE_DATETIME, AREA_GROUP_CODE, HISTORY_DATE, NODE_CODE,NOTE,
-        ATTACH_PRODUCT_CODE, ATTACH_PROM_CODE, ATTACH_REASON_ID, ATTACH_TEL_SERVICE_ID, GROUP_NODE_CODE,STAFF_TYPE, BUSINESS_NO, SUB_GROUP_CODE, SME_CUSTOMER_GROUP, IMPORT_OFFLINE_ID
+        STATION_ID, STATUS, SUB_GROUP, SUB_TYPE, TEL_SERVICE_ID, UNIT, EXCLUSE_ID_LIST, TECHNOLOGY, UPDATE_USER,
+                UPDATE_DATETIME, AREA_GROUP_CODE, HISTORY_DATE, NODE_CODE,NOTE,
+        ATTACH_PRODUCT_CODE, ATTACH_PROM_CODE, ATTACH_REASON_ID, ATTACH_TEL_SERVICE_ID, GROUP_NODE_CODE,
+                STAFF_TYPE, BUSINESS_NO, SUB_GROUP_CODE, SME_CUSTOMER_GROUP, IMPORT_OFFLINE_ID
     }
 
     @Schema(description = "Mã hành động", example = "00")
@@ -463,9 +467,12 @@ public class MapActiveInfoDTO {
     private Long priorityLevel;
 
     @Schema(description = "Tổng giá trị CDT", example = "500000")
-    @Size(max = 20, message = "totalCDTValue tối đa 20 ký tự")
-    @Pattern(regexp = "^[0-9]{0,20}$", message = "totalCDTValue chỉ gồm chữ số")
-    private String totalCDTValue;
+    // Ten field giu checkstyle-compliant (totalCdtValue, toi da 2 chu hoa lien tiep), nhung
+    // @JsonProperty pin lai dung ten JSON goc "totalCDTValue" de khong doi hop dong wire.
+    @Size(max = 20, message = "totalCdtValue tối đa 20 ký tự")
+    @Pattern(regexp = "^[0-9]{0,20}$", message = "totalCdtValue chỉ gồm chữ số")
+    @JsonProperty("totalCDTValue")
+    private String totalCdtValue;
 
     @Schema(description = "Tổng giá trị", example = "600000")
     @Size(max = 20, message = "grandTotalValue tối đa 20 ký tự")
@@ -794,7 +801,8 @@ public class MapActiveInfoDTO {
 
     public Object getByProperty(String propertyName) {
         if ("telServiceId".equals(propertyName)) {
-            return this.getTelServiceId() == null ? Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL : this.getTelServiceId();
+            return this.getTelServiceId() == null ? Const.TelecomServiceId.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getTelServiceId();
         }
         if ("productCode".equals(propertyName)) {
             return this.getProductCode();
@@ -803,10 +811,11 @@ public class MapActiveInfoDTO {
             return this.getOfferName();
         }
         if ("offerId".equals(propertyName)) {
-            return this.getOfferId() == null ? Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL : this.getOfferId();
+            return this.getOfferId() == null ? Const.TelecomServiceId.DEFAULT_VALUE_MAP_SELECT_ALL : this.getOfferId();
         }
         if ("regReasonId".equals(propertyName)) {
-            return this.getRegReasonId() == null ? Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL : this.getRegReasonId();
+            return this.getRegReasonId() == null ? Const.TelecomServiceId.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getRegReasonId();
         }
         if ("reasonName".equals(propertyName)) {
             return this.getReasonName();
@@ -818,7 +827,8 @@ public class MapActiveInfoDTO {
             return this.getPromName();
         }
         if ("channelTypeId".equals(propertyName)) {
-            return this.getChannelTypeId() == null ? Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL : this.getChannelTypeId();
+            return this.getChannelTypeId() == null ? Const.TelecomServiceId.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getChannelTypeId();
         }
         if ("status".equals(propertyName)) {
             return this.getStatus();
@@ -827,19 +837,22 @@ public class MapActiveInfoDTO {
             return this.getChannelName();
         }
         if ("provinceCode".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getProvinceCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getProvinceCode();
+            return DataUtil.isNullOrEmpty(this.getProvinceCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getProvinceCode();
         }
         if ("provinceName".equals(propertyName)) {
             return this.getProvinceName();
         }
         if ("precinctCode".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getPrecinctCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getPrecinctCode();
+            return DataUtil.isNullOrEmpty(this.getPrecinctCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getPrecinctCode();
         }
         if ("precinctName".equals(propertyName)) {
             return this.getPrecinctName();
         }
         if ("districtCode".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getDistrictCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getDistrictCode();
+            return DataUtil.isNullOrEmpty(this.getDistrictCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getDistrictCode();
         }
         if ("districtName".equals(propertyName)) {
             return this.getDistrictName();
@@ -854,7 +867,8 @@ public class MapActiveInfoDTO {
             return DataUtil.isNullOrEmpty(this.getPayType()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getPayType();
         }
         if ("actionCode".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getActionCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getActionCode();
+            return DataUtil.isNullOrEmpty(this.getActionCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getActionCode();
         }
         if ("actionName".equals(propertyName)) {
             return this.getActionName();
@@ -866,7 +880,8 @@ public class MapActiveInfoDTO {
             return DataUtil.isNullOrEmpty(this.getShopCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getShopCode();
         }
         if ("staffCode".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getStaffCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getStaffCode();
+            return DataUtil.isNullOrEmpty(this.getStaffCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getStaffCode(
+                    );
         }
         if ("captcharRequire".equals(propertyName)) {
             return this.getCaptcharRequire();
@@ -875,10 +890,12 @@ public class MapActiveInfoDTO {
             return this.getUnit();
         }
         if ("customerGroup".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getCustomerGroup()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getCustomerGroup();
+            return DataUtil.isNullOrEmpty(this.getCustomerGroup()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getCustomerGroup();
         }
         if ("customerType".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getCustomerType()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getCustomerType();
+            return DataUtil.isNullOrEmpty(this.getCustomerType()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getCustomerType();
         }
         if ("subType".equals(propertyName)) {
             return DataUtil.isNullOrEmpty(this.getSubType()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getSubType();
@@ -899,13 +916,16 @@ public class MapActiveInfoDTO {
             return this.getFileName();
         }
         if ("stationId".equals(propertyName)) {
-            return this.getStationId() == null ? Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL : this.getStationId();
+            return this.getStationId() == null ? Const.TelecomServiceId.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getStationId();
         }
         if ("stationCodes".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getStationCodes()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getStationCodes();
+            return DataUtil.isNullOrEmpty(this.getStationCodes()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getStationCodes();
         }
         if ("technology".equals(propertyName)) {
-            return DataUtil.isNullOrEmpty(this.getTechnology()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getTechnology();
+            return DataUtil.isNullOrEmpty(this.getTechnology()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL :
+                    this.getTechnology();
         }
         if ("nodeCode".equals(propertyName)) {
             return DataUtil.isNullOrEmpty(this.getNodeCode()) ? Const.DEFAULT_VALUE_MAP_SELECT_ALL : this.getNodeCode();

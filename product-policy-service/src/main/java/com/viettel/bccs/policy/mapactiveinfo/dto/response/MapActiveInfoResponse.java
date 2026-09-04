@@ -1,15 +1,15 @@
 package com.viettel.bccs.policy.mapactiveinfo.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-import java.util.Date;
-
 /**
- * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của MAP_ACTIVE_INFO
+ * Bound/pattern trên từng field lấy đúng theo độ dài cột thật của MapActiveInfo
  * (xem MapActiveInfoEntity) — field không nullable ở DB vẫn cho phép null ở response
  * record (record component không có @NotNull), @Size/@Pattern chỉ áp dụng khi giá trị khác null.
  */
@@ -279,7 +279,8 @@ public record MapActiveInfoResponse(
 
         @Schema(description = "Nhóm khách hàng SME", example = "SME_GRP")
         @Size(max = 4000, message = "smeCustomerGroup tối đa 4000 ký tự")
-        @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$", message = "smeCustomerGroup không được chứa ký tự điều khiển")
+        @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,4000}$",
+                message = "smeCustomerGroup không được chứa ký tự điều khiển")
         String smeCustomerGroup,
 
         @Schema(description = "ID offline", example = "123")

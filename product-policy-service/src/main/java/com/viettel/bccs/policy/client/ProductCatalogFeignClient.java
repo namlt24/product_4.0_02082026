@@ -1,6 +1,7 @@
 package com.viettel.bccs.policy.client;
 
-import com.viettel.bccs.policy.client.dto.StandardClientResponse;
+import java.util.List;
+
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.List;
+import com.viettel.bccs.policy.client.dto.StandardClientResponse;
 
 @FeignClient(
         name = ProductCatalogFeignClient.CLIENT_NAME,
@@ -26,14 +27,15 @@ public interface ProductCatalogFeignClient {
     ResponseEntity<StandardClientResponse> findByOptionSetCodes(@RequestParam List<String> codes);
 
     @GetMapping("/v1/optionsetvalue/getValueByTwoCodeOption")
-    ResponseEntity<StandardClientResponse> getValueByTwoCodeOption(@RequestParam String optSetCode, @RequestParam String name);
+    ResponseEntity<StandardClientResponse> getValueByTwoCodeOption(@RequestParam String optSetCode,
+            @RequestParam String name);
 
     @PostMapping("/v1/product-offer-char-use/getProductSpecCharByOfferingIds")
     ResponseEntity<StandardClientResponse> getProductSpecCharByOfferingIds(@RequestBody List<String> offeringIds);
 
     @GetMapping("/v1/product-package/getPackageCodesByProductOfferTypeCount")
     ResponseEntity<StandardClientResponse> getPackageCodesByProductOfferTypeCount(
-            @RequestParam String excludeProdOfferType, @RequestParam(required = false) Integer pNumber);
+            @RequestParam String excludeProdOfferType, @RequestParam(required = false) Integer packageNumber);
 
     @PostMapping("/v1/productspecchar/findByIds")
     ResponseEntity<StandardClientResponse> findSpecCharByIds(@RequestBody List<Long> ids);

@@ -1,9 +1,9 @@
 package com.viettel.bccs.policy.mapactiveinfo.model;
 
-import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
-
 import java.util.List;
 import java.util.Map;
+
+import com.viettel.bccs.policy.client.dto.OptionSetValueResponse;
 
 /**
  * Các giá trị không đổi theo từng offerId trong 1 lần gọi validateMapActiveInfo:

@@ -1,16 +1,17 @@
 package com.viettel.bccs.organization.client;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.bccs.common.error.exception.IntegrationException;
 import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
-import com.viettel.bccs.organization.client.dto.StandardClientResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-import java.util.List;
 
 @Service
 @Slf4j

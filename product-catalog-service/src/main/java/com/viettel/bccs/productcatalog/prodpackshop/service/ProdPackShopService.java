@@ -1,16 +1,17 @@
 package com.viettel.bccs.productcatalog.prodpackshop.service;
 
-import com.viettel.bccs.productcatalog.prodpackshop.mapper.ProdPackShopMapper;
-import com.viettel.bccs.productcatalog.prodpackshop.repository.ProdPackShopRepository;
-import com.viettel.bccs.productcatalog.utils.DataUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
+import com.viettel.bccs.productcatalog.prodpackshop.mapper.ProdPackShopMapper;
+import com.viettel.bccs.productcatalog.prodpackshop.repository.ProdPackShopRepository;
+import com.viettel.bccs.productcatalog.utils.DataUtil;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -28,7 +29,8 @@ public class ProdPackShopService {
      * @param prodPackTypeIds danh sách prodPackTypeId cần lọc, chỉ lấy các bản ghi có status = 1
      * @return Map với key = prodPackTypeId, value = danh sách shopId tương ứng
      */
-//    @Cacheable(value = "prodPackShopCache", key = "'SHOP_IDS:' + T(String).join(',', #prodPackTypeIds.stream().sorted().toList())")
+//    @Cacheable(value = "prodPackShopCache", key = "'SHOP_IDS:' + T(String).join(',',
+  // #prodPackTypeIds.stream().sorted().toList())")
     public Map<Long, List<Long>> findShopIdsByProdPackTypeIds(List<Long> prodPackTypeIds) {
         if (DataUtil.isNullOrEmpty(prodPackTypeIds)) {
             return Map.of();

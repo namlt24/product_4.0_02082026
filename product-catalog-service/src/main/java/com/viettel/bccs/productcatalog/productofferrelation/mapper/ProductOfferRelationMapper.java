@@ -1,8 +1,9 @@
 package com.viettel.bccs.productcatalog.productofferrelation.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productofferrelation.dto.response.ProductOfferRelationResponse;
 import com.viettel.bccs.productcatalog.productofferrelation.entity.ProductOfferRelationEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ProductOfferRelationMapper {

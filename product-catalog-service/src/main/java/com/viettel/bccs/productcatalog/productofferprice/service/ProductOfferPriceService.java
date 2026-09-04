@@ -1,5 +1,12 @@
 package com.viettel.bccs.productcatalog.productofferprice.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.client.FreeCamEquipmentClient;
 import com.viettel.bccs.productcatalog.client.MappingClient;
@@ -11,8 +18,6 @@ import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.mapper.ProductOfferingMapper;
 import com.viettel.bccs.productcatalog.product.repository.ProductOfferingRepository;
-import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
-import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharValueDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
@@ -20,22 +25,14 @@ import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPric
 import com.viettel.bccs.productcatalog.productofferprice.mapper.ProductOfferPriceMapper;
 import com.viettel.bccs.productcatalog.productofferprice.repository.ProductOfferPriceRepository;
 import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackageDTO;
-import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackageResponse;
 import com.viettel.bccs.productcatalog.productpackage.service.ProductPackageService;
 import com.viettel.bccs.productcatalog.productspeccharvalue.entity.ProductSpecCharValueEntity;
 import com.viettel.bccs.productcatalog.productspeccharvalue.service.ProductSpecCharValueService;
-import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.RequestValidator;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +54,6 @@ public class ProductOfferPriceService {
     private final SensorFreeClient sensorFreeClient;
     private final FreeCamEquipmentClient freeCamEquipmentClient;
 
-    private final ProductOfferingService productOfferingService;
     private final OptionSetValueService optionSetValueService;
     private final ProductOfferPriceMapper mapper;
     private final ProductOfferPriceRepository repository;
@@ -79,7 +75,8 @@ public class ProductOfferPriceService {
     }
 
 
-    @Cacheable(value = "productOfferPriceCache", key = "'TYPE_POLICY:' + #productOfferId + ':' + #priceTypeId + ':' + #pricePolicy")
+    @Cacheable(value = "productOfferPriceCache", key = "'TYPE_POLICY:' + #productOfferId + ':' + #priceTypeId + ':'"
+            + " + #pricePolicy")
     public List<ProductOfferPriceDTO> getPriceByTypePolicy(Long productOfferId, Long priceTypeId, Long pricePolicy) {
         RequestValidator.requireNotNull(productOfferId, "productOfferId", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotNull(priceTypeId, "priceTypeId", "BCCS-PRODUCT-VALIDATE-0000");
@@ -88,9 +85,10 @@ public class ProductOfferPriceService {
     }
 
     @Cacheable(value = "productOfferPriceCache",
-            key = "'PCCC:' + #productPackageId + ':' + #productPackageCode + ':' + #productOfferType + ':' + #productOfferId + ':' + #pricePolicy")
-    public List<ProductOfferPriceDTO> getPriceInServicesForPCCC(Long productPackageId, String productPackageCode,
-                                                                Long productOfferType, Long productOfferId, Long pricePolicy) {
+            key = "'PCCC:' + #productPackageId + ':' + #productPackageCode + ':' + #productOfferType + ':'"
+                    + " + #productOfferId + ':' + #pricePolicy")
+    public List<ProductOfferPriceDTO> getPriceInServicesForPccc(Long productPackageId, String productPackageCode,
+            Long productOfferType, Long productOfferId, Long pricePolicy) {
         Long temp = productPackageId;
 
         if (DataUtil.isNullOrEmpty(productPackageId)) {
@@ -154,10 +152,11 @@ public class ProductOfferPriceService {
     // Migrate từ mono: ProductOfferPriceServiceImpl.getPriceInServices (ProductOfferPriceServiceImpl.java:320-408).
     // Bảng ánh xạ line-by-line: xem plan tại C:\Users\Admin\.claude\plans\humble-knitting-waterfall.md
     //    @Cacheable(value = "productOfferPriceCache",
-//            key = "'GET_PRICE_IN_SERVICES:' + #productPackageId + ':' + #productPackageCode + ':' + #productOfferType + ':' + #productOfferId + ':' + #pricePolicy")
+//            key = "'GET_PRICE_IN_SERVICES:' + #productPackageId + ':' + #productPackageCode + ':' + #productOfferType
+  // + ':' + #productOfferId + ':' + #pricePolicy")
     public List<ProductOfferPriceResponse> getPriceInServices(Long productPackageId, String productPackageCode,
-                                                              Long productOfferType, Long productOfferId, Long pricePolicy) {
-        // L322-334 (legacy dùng isNullOrZero, KHÔNG phải isNullOrEmpty như bản getPriceInServicesForPCCC bên trên)
+            Long productOfferType, Long productOfferId, Long pricePolicy) {
+        // L322-334 (legacy dùng isNullOrZero, KHÔNG phải isNullOrEmpty như bản getPriceInServicesForPccc bên trên)
         Long temp = productPackageId;
         if (DataUtil.isNullOrZero(productPackageId)) {
             if (DataUtil.isNullOrEmpty(productPackageCode)) {
@@ -240,7 +239,8 @@ public class ProductOfferPriceService {
                 price = item.getCamInsidePrice().longValue();
                 break;
             }
-            if (DataUtil.safeEqual(specCharValue.getValue(), DEVICE_TYPE_OUTDOOR) && item.getCamOutsidePrice() != null) {
+            if (DataUtil.safeEqual(specCharValue.getValue(),
+                DEVICE_TYPE_OUTDOOR) && item.getCamOutsidePrice() != null) {
                 price = item.getCamOutsidePrice().longValue();
                 break;
             }
@@ -251,12 +251,12 @@ public class ProductOfferPriceService {
     /**
      * Mục "L388-403" trong bảng ánh xạ: nhánh giá thiết bị thông thường (không cấu hình ON_CAM_EQUIPMENT_PRICE).
      * ⚠️ Mục E của plan: productOfferPriceRepository.getPriceEquipment khai báo thứ tự tham số
-     * (productPackageId, productOfferType, productOfferId) — KHÁC thứ tự legacy (productOfferId, productOfferType, temp).
+     * (productPackageId, productOfferType, productOfferId) — KHÁC thứ tự legacy (productOfferId, productOfferType,
+       * temp).
      * Gọi đúng theo tên tham số của repo hiện tại, không copy nguyên văn thứ tự legacy.
      */
     private List<ProductOfferPriceResponse> applyNormalEquipmentPrice(List<ProductOfferPriceResponse> lstResult,
-                                                                       Long productPackageId, Long productOfferType,
-                                                                       Long productOfferId) {
+            Long productPackageId, Long productOfferType, Long productOfferId) {
         List<ProductOfferPriceEntity> list =
                 productOfferPriceRepository.getPriceEquipment(productPackageId, productOfferType, productOfferId);
         if (DataUtil.isNullOrEmpty(list)) {

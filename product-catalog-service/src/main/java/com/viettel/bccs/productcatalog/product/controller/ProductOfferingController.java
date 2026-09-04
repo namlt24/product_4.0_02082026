@@ -1,16 +1,27 @@
 package com.viettel.bccs.productcatalog.product.controller;
 
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.common.dto.FilterRequest;
 import com.viettel.bccs.productcatalog.product.dto.request.CheckProductAttByRuleTypeRequest;
 import com.viettel.bccs.productcatalog.product.dto.request.FindProductOfferingByListCodeListSpecCodeRequest;
-import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWSRequest;
+import com.viettel.bccs.productcatalog.product.dto.request.GetListStockTypeWsRequest;
 import com.viettel.bccs.productcatalog.product.dto.response.CheckProductAttByRuleTypeResponse;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferTypeStockDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingCharacterFullDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingResponse;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingSumaryDTO;
+import com.viettel.bccs.productcatalog.product.dto.response.ProductOfferingSummaryDTO;
 import com.viettel.bccs.productcatalog.product.dto.response.SubTypeDTO;
 import com.viettel.bccs.productcatalog.product.openapi.ApiCheckAttProductOrVasByCode;
 import com.viettel.bccs.productcatalog.product.openapi.ApiCheckProductAttByRuleType;
@@ -22,6 +33,7 @@ import com.viettel.bccs.productcatalog.product.openapi.ApiFindByTelecomSubTypeOf
 import com.viettel.bccs.productcatalog.product.openapi.ApiFindByTelecomSubTypeOfferTypeCheckProductStatus;
 import com.viettel.bccs.productcatalog.product.openapi.ApiFindProductOfferingByListCodeListSpecCode;
 import com.viettel.bccs.productcatalog.product.openapi.ApiGetByProductCode;
+import com.viettel.bccs.productcatalog.product.openapi.ApiGetByProductCodes;
 import com.viettel.bccs.productcatalog.product.openapi.ApiGetListOfferAlterStatus;
 import com.viettel.bccs.productcatalog.product.openapi.ApiGetListPricePlanByOfferId;
 import com.viettel.bccs.productcatalog.product.openapi.ApiGetListProductOfferingBySpecChars;
@@ -30,16 +42,12 @@ import com.viettel.bccs.productcatalog.product.openapi.ApiGetListVas;
 import com.viettel.bccs.productcatalog.product.openapi.ApiGetSubTypeByProductCode;
 import com.viettel.bccs.productcatalog.product.openapi.ApiHasProductAtt;
 import com.viettel.bccs.productcatalog.product.service.ProductOfferingService;
-import com.viettel.bccs.productcatalog.product.service.StockTypeWSService;
-import com.viettel.bccs.productcatalog.productoffercharuse.dto.response.ProductSpecCharDTO;
+import com.viettel.bccs.productcatalog.product.service.StockTypeWsService;
 import com.viettel.bccs.productcatalog.productoffercharuse.service.ProductOfferCharUseService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/product-catalog-service/v1/product")
@@ -49,7 +57,7 @@ public class ProductOfferingController {
 
     private final ProductOfferingService productOfferingService;
     private final ProductOfferCharUseService productOfferCharUseService;
-    private final StockTypeWSService stockTypeWSService;
+    private final StockTypeWsService stockTypeWsService;
 
     @ApiGetByProductCode
     @GetMapping("/getByProductCode")
@@ -58,6 +66,20 @@ public class ProductOfferingController {
             @RequestParam(required = false)
             String productCode) {
         return StandardResponses.success(productOfferingService.getByProductCode(productCode));
+    }
+
+    @ApiGetByProductCodes
+    @PostMapping("/getByProductCodes")
+    public StandardResponse<?> getByProductCodes(
+            @Parameter(example = "[\"PACKAGE_001\", \"PACKAGE_002\"]", required = true)
+            @RequestBody
+            List<String> listCode,
+            @Parameter(description = "true: trả List<String> productCodes; false hoặc bỏ trống:"
+                    + " trả List<ProductOfferingResponse>",
+                    example = "false")
+            @RequestParam(required = false, defaultValue = "false")
+            boolean isList) {
+        return StandardResponses.success(productOfferingService.getByProductCodes(listCode, isList));
     }
 
     @ApiGetListOfferAlterStatus
@@ -73,7 +95,9 @@ public class ProductOfferingController {
 
             @Parameter(example = "true")
             @RequestParam boolean checkStatus) {
-        return StandardResponses.success(productOfferingService.getListOfferAlterStatus(offerId, changeChannel, checkStatus));
+        return 
+                StandardResponses.success(productOfferingService.getListOfferAlterStatus(offerId, changeChannel,
+                    checkStatus));
     }
 
     @GetMapping("/findByTelecomSubTypeOfferTypeCheckProductStatus")
@@ -89,13 +113,16 @@ public class ProductOfferingController {
             @RequestParam(required = false)
             Long offerTypeId,
             @Parameter(example = "true")
-            @RequestParam boolean getActiveProduct) {
-        return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferTypeCheckProductStatus(telecomServiceId, subType, offerTypeId, getActiveProduct));
+            @RequestParam
+            boolean getActiveProduct) {
+        return StandardResponses.success(productOfferingService
+                .findByTelecomSubTypeOfferTypeCheckProductStatus(
+                        telecomServiceId, subType, offerTypeId, getActiveProduct));
     }
 
     @GetMapping("/findByTelecomSubTypeOfferType")
     @ApiFindByTelecomSubTypeOfferType
-    public StandardResponse<List<ProductOfferingDTO>> findByTelecomSubTypeOfferType(
+    public StandardResponse<List<ProductOfferingSummaryDTO>> findByTelecomSubTypeOfferType(
             @Parameter(example = "1")
             @RequestParam(required = false)
             Long telecomServiceId,
@@ -105,7 +132,9 @@ public class ProductOfferingController {
             @Parameter(example = "1")
             @RequestParam(required = false)
             Long offerTypeId) {
-        return StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferType(telecomServiceId, subType, offerTypeId));
+        return 
+                StandardResponses.success(productOfferingService.findByTelecomSubTypeOfferType(telecomServiceId,
+                    subType, offerTypeId));
     }
 
     @GetMapping("/findByCodeOrId")
@@ -125,7 +154,7 @@ public class ProductOfferingController {
 
     @PostMapping("/findByPayTypeWithSpec")
     @ApiFindByPayTypeWithSpec
-    public StandardResponse<List<ProductOfferingDTO>> findByPayTypeWithSpec(
+    public StandardResponse<List<ProductOfferingSumaryDTO>> findByPayTypeWithSpec(
             @Parameter(example = "1")
             @RequestParam(required = false)
             String telecomServiceId,
@@ -141,7 +170,9 @@ public class ProductOfferingController {
             @Parameter
             @RequestBody(required = false)
             List<FilterRequest> listProductSpec) {
-        return StandardResponses.success(productOfferingService.findByPayTypeWithSpec(telecomServiceId, payType, productOfferTypeId, listProductSpec));
+        return 
+                StandardResponses.success(productOfferingService.findByPayTypeWithSpec(telecomServiceId, payType,
+                    productOfferTypeId, listProductSpec));
     }
 
     @GetMapping("/checkAttProductOrVasByCode")
@@ -158,7 +189,9 @@ public class ProductOfferingController {
             @Parameter(example = "IS_CONNECTED", required = true)
             @RequestParam(required = false)
             String attributeCode) {
-        return StandardResponses.success(productOfferingService.checkAttProductOrVasByCode(productCode, productType, attributeCode));
+        return 
+                StandardResponses.success(productOfferingService.checkAttProductOrVasByCode(productCode, productType,
+                    attributeCode));
     }
 
     @GetMapping("/hasProductAtt")
@@ -184,7 +217,9 @@ public class ProductOfferingController {
             @Parameter(example = "1")
             @RequestParam(required = false)
             Long productOfferTypeId) {
-        return StandardResponses.success(productOfferingService.getListProductOfferingBySpecChars(specCodes, productOfferTypeId));
+        return 
+                StandardResponses.success(productOfferingService.getListProductOfferingBySpecChars(specCodes,
+                    productOfferTypeId));
     }
 
     @PostMapping("/checkProductAttByRuleType")
@@ -199,13 +234,15 @@ public class ProductOfferingController {
     @PostMapping("/findByCodesAndProductOfferType")
     @ApiFindByCodesAndProductOfferType
     public StandardResponse<List<ProductOfferingDTO>> findByCodesAndProductOfferType(
-            @Parameter(example = "[\"CODE_001\", \"CODE_002\"]")
-            @RequestBody
+            @Parameter(example = "[\"CODE_001\", \"CODE_002\"]",required = false)
+            @RequestBody(required = false)
             List<String> codes,
-            @Parameter(example = "1", required = true)
+            @Parameter(example = "1", required = false)
             @RequestParam(required = false)
             Long productOfferTypeId) {
-        return StandardResponses.success(productOfferingService.findByCodesAndProductOfferType(codes, productOfferTypeId));
+        return 
+                StandardResponses.success(productOfferingService.findByCodesAndProductOfferType(codes,
+                    productOfferTypeId));
     }
 
     @PostMapping("/findByIds")
@@ -241,8 +278,9 @@ public class ProductOfferingController {
 
     @PostMapping("/getListStockTypeWS")
     @ApiGetListStockTypeWS
-    public StandardResponse<List<ProductOfferTypeStockDTO>> getListStockTypeWS(@RequestBody GetListStockTypeWSRequest request) {
-        return StandardResponses.success(stockTypeWSService.getListStockTypeWS(request));
+    public StandardResponse<List<ProductOfferTypeStockDTO>> getListStockTypeWS(
+            @RequestBody GetListStockTypeWsRequest request) {
+        return StandardResponses.success(stockTypeWsService.getListStockTypeWS(request));
     }
 
     @GetMapping("/getSubTypeByProductCode")

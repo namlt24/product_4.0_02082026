@@ -1,14 +1,16 @@
 package com.viettel.bccs.productcatalog.productoffertype.repository;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
 import com.viettel.bccs.productcatalog.productoffertype.entity.ProductOfferTypeEntity;
 import com.viettel.bccs.productcatalog.utils.Const;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -65,7 +67,7 @@ public class ProductOfferTypeRepositoryCustomImpl implements ProductOfferTypeRep
               AND c.STATUS = '1'
               AND c.CODE = :saleServiceCode
               AND c.TYPE = '%s'
-            """.formatted(Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE);
+            """.formatted(Const.ProductPackageType.SALE_SERVICE);
 
         Query query = entityManager.createNativeQuery(sql, ProductOfferTypeEntity.class);
         query.setParameter("saleServiceCode", saleServiceCode);

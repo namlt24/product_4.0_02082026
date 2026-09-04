@@ -1,8 +1,8 @@
 package com.viettel.bccs.organization.custtype.repository;
 
-import com.viettel.bccs.organization.custtype.entity.CustTypeEntity;
-
 import java.util.List;
+
+import com.viettel.bccs.organization.custtype.entity.CustTypeEntity;
 
 public interface CustTypeRepositoryCustom {
 

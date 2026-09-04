@@ -1,5 +1,11 @@
 package com.viettel.bccs.policy.mapbusinessskipdebt.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.policy.mapbusinessskipdebt.dto.request.SearchSkipDebtRequest;
 import com.viettel.bccs.policy.mapbusinessskipdebt.dto.response.MapBusinessSkipDebtResponse;
@@ -8,13 +14,9 @@ import com.viettel.bccs.policy.mapbusinessskipdebt.entity.MapBusinessSkipDebtEnt
 import com.viettel.bccs.policy.mapbusinessskipdebt.mapper.MapBusinessSkipDebtMapper;
 import com.viettel.bccs.policy.mapbusinessskipdebt.repository.MapBusinessSkipDebtRepository;
 import com.viettel.bccs.policy.utils.RequestValidator;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -28,7 +30,8 @@ public class MapBusinessSkipDebtService {
     public MapBusinessSkipDebtResponse findById(Long mapId) {
         Optional<MapBusinessSkipDebtEntity> entity = repository.findById(mapId);
         if (entity.isEmpty()) {
-            throw new BusinessException("BCCS-POLICY-SKIPDEBT-0001", "Map business skip debt not found with id: " + mapId);
+            throw new BusinessException("BCCS-POLICY-SKIPDEBT-0001", "Map business skip debt not found with id: " +
+                    mapId);
         }
         return mapper.toResponse(entity.get());
     }
@@ -55,7 +58,7 @@ public class MapBusinessSkipDebtService {
     }
 
 
-    public List<SkipDebtResultResponse> searchForAPI(SearchSkipDebtRequest request) {
+    public List<SkipDebtResultResponse> searchForApi(SearchSkipDebtRequest request) {
         RequestValidator.requireNotBlank(request.actionCode(), "actionCode", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotNull(request.telecomServiceId(), "telecomServiceId", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotBlank(request.effectDatetime(), "effectDatetime", "BCCS-PRODUCT-VALIDATE-0000");
@@ -63,7 +66,7 @@ public class MapBusinessSkipDebtService {
         RequestValidator.requireNotBlank(request.staffCode(), "staffCode", "BCCS-PRODUCT-VALIDATE-0000");
         RequestValidator.requireNotBlank(request.businessNo(), "businessNo", "BCCS-PRODUCT-VALIDATE-0000");
 
-        List<MapBusinessSkipDebtEntity> entities = repository.searchForAPI(
+        List<MapBusinessSkipDebtEntity> entities = repository.searchForApi(
                 request.actionCode(),
                 request.telecomServiceId(),
                 request.effectDatetime(),

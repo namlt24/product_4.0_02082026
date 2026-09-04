@@ -1,11 +1,12 @@
 package com.viettel.bccs.organization.staff.dto.response;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import com.viettel.bccs.organization.staff.dto.StockDTO;
-import jakarta.validation.constraints.Size;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.viettel.bccs.organization.staff.dto.StockDTO;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 
 @Schema
 public class StockCodeResponse {
@@ -21,6 +22,11 @@ public class StockCodeResponse {
         this.lstShop = lstShop;
     }
 
-    public List<StockDTO> getLstShop() { return lstShop; }
-    public void setLstShop(List<StockDTO> lstShop) { this.lstShop = lstShop; }
+    public List<StockDTO> getLstShop() {
+        return lstShop;
+    }
+
+    public void setLstShop(List<StockDTO> lstShop) {
+        this.lstShop = lstShop;
+    }
 }

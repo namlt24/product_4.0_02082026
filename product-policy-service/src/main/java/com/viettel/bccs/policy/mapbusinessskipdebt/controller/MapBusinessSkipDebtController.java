@@ -1,5 +1,15 @@
 package com.viettel.bccs.policy.mapbusinessskipdebt.controller;
 
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.policy.mapbusinessskipdebt.dto.request.SearchSkipDebtRequest;
@@ -10,15 +20,13 @@ import com.viettel.bccs.policy.mapbusinessskipdebt.openapi.ApiFindActiveByShopId
 import com.viettel.bccs.policy.mapbusinessskipdebt.openapi.ApiFindActiveByStaffId;
 import com.viettel.bccs.policy.mapbusinessskipdebt.openapi.ApiFindAll;
 import com.viettel.bccs.policy.mapbusinessskipdebt.openapi.ApiFindById;
-import com.viettel.bccs.policy.mapbusinessskipdebt.openapi.ApiSearchForAPI;
+import com.viettel.bccs.policy.mapbusinessskipdebt.openapi.ApiSearchForApi;
 import com.viettel.bccs.policy.mapbusinessskipdebt.service.MapBusinessSkipDebtService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "MapBusinessSkipDebt", description = "APIs quản lý cấu hình bỏ qua công nợ kinh doanh")
 @RestController
@@ -74,9 +82,9 @@ public class MapBusinessSkipDebtController {
         return StandardResponses.success(service.findActiveByStaffId(staffId));
     }
 
-    @ApiSearchForAPI
-    @PostMapping("/searchForAPI")
-    public StandardResponse<List<SkipDebtResultResponse>> searchForAPI(
+    @ApiSearchForApi
+    @PostMapping("/searchForApi")
+    public StandardResponse<List<SkipDebtResultResponse>> searchForApi(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Thông tin tra cứu",
                     required = true,
@@ -84,6 +92,6 @@ public class MapBusinessSkipDebtController {
                             schema = @Schema(implementation = SearchSkipDebtRequest.class)
                     ))
             @RequestBody SearchSkipDebtRequest request) {
-        return StandardResponses.success(service.searchForAPI(request));
+        return StandardResponses.success(service.searchForApi(request));
     }
 }

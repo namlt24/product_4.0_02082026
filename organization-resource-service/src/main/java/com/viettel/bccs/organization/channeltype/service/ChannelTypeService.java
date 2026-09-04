@@ -1,16 +1,18 @@
 package com.viettel.bccs.organization.channeltype.service;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.organization.channeltype.dto.ChannelTypeDTO;
 import com.viettel.bccs.organization.channeltype.mapper.ChannelTypeMapper;
 import com.viettel.bccs.organization.channeltype.repository.ChannelTypeRepository;
 import com.viettel.bccs.organization.utils.Const;
 import com.viettel.bccs.organization.utils.DataUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -24,9 +26,10 @@ public class ChannelTypeService {
     @Transactional(readOnly = true)
     public ChannelTypeDTO getActiveById(Long channelTypeId) {
         log.info("Truy vấn loại kênh active từ DB theo id: {}", channelTypeId);
-        return channelTypeRepository.findByChannelTypeIdAndStatus(channelTypeId, Const.STATUS.ACTIVE)
+        return channelTypeRepository.findByChannelTypeIdAndStatus(channelTypeId, Const.Status.ACTIVE)
                 .map(channelTypeMapper::toDTO)
-                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CHANNELTYPE-0001", "Không tìm thấy loại kênh với id: " + channelTypeId));
+                .orElseThrow(() -> new BusinessException("BCCS-ORGANIZATION-CHANNELTYPE-0001",
+                        "Không tìm thấy loại kênh với id: " + channelTypeId));
     }
 
 
@@ -45,8 +48,8 @@ public class ChannelTypeService {
         if (DataUtil.isNullObject(channelTypeDTO)) {
             return false;
         }
-        return DataUtil.safeEqual(Const.CHANNEL_TYPE.IS_NOT_VT_UNIT, channelTypeDTO.getIsVtUnit())
-                && DataUtil.safeEqual(Const.CHANNEL_TYPE.OBJECT_TYPE_STAFF, channelTypeDTO.getObjectType());
+        return DataUtil.safeEqual(Const.ChannelType.IS_NOT_VT_UNIT, channelTypeDTO.getIsVtUnit())
+                && DataUtil.safeEqual(Const.ChannelType.OBJECT_TYPE_STAFF, channelTypeDTO.getObjectType());
     }
 
 
@@ -65,8 +68,8 @@ public class ChannelTypeService {
         if (DataUtil.isNullObject(channelTypeDTO)) {
             return false;
         }
-        return DataUtil.safeEqual(Const.CHANNEL_TYPE.IS_NOT_VT_UNIT, channelTypeDTO.getIsVtUnit())
-                && DataUtil.safeEqual(Const.CHANNEL_TYPE.OBJECT_TYPE_SHOP, channelTypeDTO.getObjectType());
+        return DataUtil.safeEqual(Const.ChannelType.IS_NOT_VT_UNIT, channelTypeDTO.getIsVtUnit())
+                && DataUtil.safeEqual(Const.ChannelType.OBJECT_TYPE_SHOP, channelTypeDTO.getObjectType());
     }
 
 }

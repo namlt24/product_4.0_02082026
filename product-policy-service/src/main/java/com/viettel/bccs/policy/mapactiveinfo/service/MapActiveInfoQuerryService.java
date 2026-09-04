@@ -1,7 +1,21 @@
 package com.viettel.bccs.policy.mapactiveinfo.service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
-import com.viettel.bccs.policy.utils.RequestValidator;
 import com.viettel.bccs.policy.client.OptionSetClient;
 import com.viettel.bccs.policy.client.StaffExtClient;
 import com.viettel.bccs.policy.client.TelecomServiceClient;
@@ -23,15 +37,10 @@ import com.viettel.bccs.policy.reason.service.ReasonService;
 import com.viettel.bccs.policy.reasonpause.dto.response.ReasonPauseDTO;
 import com.viettel.bccs.policy.utils.Const;
 import com.viettel.bccs.policy.utils.DataUtil;
+import com.viettel.bccs.policy.utils.RequestValidator;
 import com.viettel.bccs.policy.utils.RequiredRoleMap;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -54,7 +63,7 @@ public class MapActiveInfoQuerryService {
      * trên chính class đó). Dùng {@link ObjectProvider} thay vì inject trực tiếp để service này vẫn
      * khởi động bình thường ở môi trường chưa bật Elasticsearch.
      */
-    private final ObjectProvider<MapActiveInfoElasticsearchService> mapActiveInfoElasticsearchServiceProvider;
+    private final ObjectProvider<MapActiveInfoElasticsearchService> esServiceProvider;
 
     public MapActiveInfoQuerryService(MapActiveInfoRepository repository, MapActiveInfoMapper mapper,
                                       OptionSetClient optionSetClient, TelecomServiceClient telecomServiceClient,
@@ -62,7 +71,7 @@ public class MapActiveInfoQuerryService {
                                       StaffExtClient staffExtClient,
                                       @Lazy ReasonService reasonService,
                                       StaffResolveHelper staffResolveHelper,
-                                      ObjectProvider<MapActiveInfoElasticsearchService> mapActiveInfoElasticsearchServiceProvider) {
+                                      ObjectProvider<MapActiveInfoElasticsearchService> esServiceProvider) {
         this.repository = repository;
         this.mapper = mapper;
         this.optionSetClient = optionSetClient;
@@ -71,7 +80,7 @@ public class MapActiveInfoQuerryService {
         this.staffExtClient = staffExtClient;
         this.reasonService = reasonService;
         this.staffResolveHelper = staffResolveHelper;
-        this.mapActiveInfoElasticsearchServiceProvider = mapActiveInfoElasticsearchServiceProvider;
+        this.esServiceProvider = esServiceProvider;
     }
 
 
@@ -83,14 +92,15 @@ public class MapActiveInfoQuerryService {
         return mapper.toResponse(entity.get());
     }
 
-    public List<MapActiveInfoDTO> findByExampleWithOfferType(MapActiveInfoDTO exampleMapActiveInfo, int mode, String offerType) {
+    public List<MapActiveInfoDTO> findByExampleWithOfferType(MapActiveInfoDTO exampleMapActiveInfo, int mode,
+            String offerType) {
         return findByExample(exampleMapActiveInfo, mode, true, offerType, false);
     }
 
     /**
-     * Đọc toàn bộ MAP_ACTIVE_INFO từ Oracle và bulk-index sang Elasticsearch. Trả về số document đã
+     * Đọc toàn bộ MapActiveInfo từ Oracle và bulk-index sang Elasticsearch. Trả về số document đã
      * index. Dùng để nạp/đồng bộ thủ công cho local/thử nghiệm — service này không có write-path ghi
-     * MAP_ACTIVE_INFO nên không thể tự động đồng bộ real-time (xem javadoc MapActiveInfoElasticsearchService).
+     * MapActiveInfo nên không thể tự động đồng bộ real-time (xem javadoc MapActiveInfoElasticsearchService).
      */
     public long reindexElasticsearch() {
         MapActiveInfoElasticsearchService esService = requireElasticsearchService();
@@ -103,15 +113,16 @@ public class MapActiveInfoQuerryService {
     }
 
     private MapActiveInfoElasticsearchService requireElasticsearchService() {
-        MapActiveInfoElasticsearchService esService = mapActiveInfoElasticsearchServiceProvider.getIfAvailable();
+        MapActiveInfoElasticsearchService esService = esServiceProvider.getIfAvailable();
         if (esService == null) {
             throw new BusinessException("BCCS-POLICY-MAPACTIVE-0021");
         }
         return esService;
     }
 
-    private List<MapActiveInfoDTO> findByExample(MapActiveInfoDTO exampleMapActiveInfo, int mode, boolean searchCache, String offerType, boolean isTgdd) {
-        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(offerType)) {
+    private List<MapActiveInfoDTO> findByExample(MapActiveInfoDTO exampleMapActiveInfo, int mode, boolean searchCache,
+            String offerType, boolean isTgdd) {
+        if (Const.ProductOfferType.VAS.equals(offerType)) {
             return findByExampleForVas(exampleMapActiveInfo, mode, searchCache);
 
         } else {
@@ -119,7 +130,8 @@ public class MapActiveInfoQuerryService {
         }
     }
 
-    private List<MapActiveInfoDTO> findByExampleForProduct(MapActiveInfoDTO exampleMapActiveInfo, int mode, boolean searchCache, boolean isTgdd) {
+    private List<MapActiveInfoDTO> findByExampleForProduct(MapActiveInfoDTO exampleMapActiveInfo, int mode,
+            boolean searchCache, boolean isTgdd) {
         List<MapActiveInfoDTO> mapActiveInfos = new ArrayList<>();
         if (DataUtil.isNullOrEmpty(exampleMapActiveInfo.getProvinceCode())) {
             log.warn("sale.wired.connect.mapActiveInfo.provinceCode.not.set");
@@ -149,14 +161,19 @@ public class MapActiveInfoQuerryService {
                         });
                     }
                     if (!DataUtil.isNullOrEmpty(exampleMapActiveInfo.getNodeCode())) {
-                        mapActiveInfos = mapper.toDtoBean(repository.getListMapActiveInfoByNode(exampleMapActiveInfo.getNodeCode(), elasticListId));
-                        List<Long> mapIds = mapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(Collectors.toList());
-                        List<Long> minusIds = elasticListId.stream().filter(id -> !mapIds.contains(id)).collect(Collectors.toList());
+                        mapActiveInfos = mapper.toDtoBean(repository.getListMapActiveInfoByNode(
+                                exampleMapActiveInfo.getNodeCode(), elasticListId));
+                        List<Long> mapIds = mapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(
+                                Collectors.toList());
+                        List<Long> minusIds = elasticListId.stream().filter(id -> !mapIds.contains(id)).collect(
+                                Collectors.toList());
                         log.info("minus lstMapId: " + minusIds);
                     }
 
-                    List<Long> mapIds = mapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(Collectors.toList());
-                    List<Long> minusIds = elasticListId.stream().filter(id -> !mapIds.contains(id)).collect(Collectors.toList());
+                    List<Long> mapIds = mapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(Collectors.toList(
+                            ));
+                    List<Long> minusIds = elasticListId.stream().filter(id -> !mapIds.contains(id)).collect(
+                            Collectors.toList());
                     log.info("minus lstMapId: " + minusIds);
 
                 } else {
@@ -183,17 +200,17 @@ public class MapActiveInfoQuerryService {
         }
 
 
-        String[] mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_1();
-        int[] filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_1();
-        if (Const.MAP_ACTIVE_INFO.MODE_1 == mode) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_1();
-            filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_1();
-        } else if (Const.MAP_ACTIVE_INFO.MODE_2 == mode) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_2();
-            filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_2();
-        } else if (Const.MAP_ACTIVE_INFO.MODE_3 == mode) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_3();
-            filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_3();
+        String[] mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields1();
+        int[] filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes1();
+        if (Const.MapActiveInfo.MODE_1 == mode) {
+            mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields1();
+            filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes1();
+        } else if (Const.MapActiveInfo.MODE_2 == mode) {
+            mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields2();
+            filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes2();
+        } else if (Const.MapActiveInfo.MODE_3 == mode) {
+            mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields3();
+            filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes3();
         }
 
         for (int i = 0; i < mapFilelds.length; i++) {
@@ -205,7 +222,7 @@ public class MapActiveInfoQuerryService {
             List<MapActiveInfoDTO> tempMapActiveInfoList = new ArrayList<>();
 
             boolean isIncludeAll = true;
-            if (filterMode == Const.MAP_ACTIVE_INFO.FILTER_MODE_ONLY_INDIVIDUAL
+            if (filterMode == Const.MapActiveInfo.FILTER_MODE_ONLY_INDIVIDUAL
                     && (!Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(filterValue))) {
                 for (MapActiveInfoDTO curentMapActiveInfo : mapActiveInfos) {
                     String recordValue = DataUtil.safeToString(curentMapActiveInfo.getByProperty(mapField));
@@ -246,38 +263,41 @@ public class MapActiveInfoQuerryService {
 
         if (!DataUtil.isNullOrEmpty(mapActiveInfos)) {
             if (mapActiveInfos.size() < 100) {
-                log.info("list mapId: " + mapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(Collectors.toList()));
+                log.info("list mapId: " + mapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(
+                        Collectors.toList()));
             }
         }
 
         return mapActiveInfos;
     }
 
-    private List<MapActiveInfoDTO> findByExampleForVas(MapActiveInfoDTO exampleMapActiveInfo, int mode, boolean searchCache) {
+    private List<MapActiveInfoDTO> findByExampleForVas(MapActiveInfoDTO exampleMapActiveInfo, int mode,
+            boolean searchCache) {
         String[] keys = new String[]{
-                MapActiveInfoDTO.COLUMNS.ID.name(),
-                MapActiveInfoDTO.COLUMNS.PAY_TYPE.name(),
-                MapActiveInfoDTO.COLUMNS.ACTION_CODE.name(),
-                MapActiveInfoDTO.COLUMNS.TEL_SERVICE_ID.name(),
-                MapActiveInfoDTO.COLUMNS.STAFF_CODE.name(),
-                MapActiveInfoDTO.COLUMNS.SHOP_CODE.name(),
-                MapActiveInfoDTO.COLUMNS.CHANNEL_TYPE_ID.name(),
-                MapActiveInfoDTO.COLUMNS.DISTRICT_CODE.name(),
-                MapActiveInfoDTO.COLUMNS.PROVINCE_CODE.name(),
-                MapActiveInfoDTO.COLUMNS.PRECINCT_CODE.name(),
-                MapActiveInfoDTO.COLUMNS.TECHNOLOGY.name(),
-                MapActiveInfoDTO.COLUMNS.CUSTOMER_GROUP.name(),
-                MapActiveInfoDTO.COLUMNS.CUSTOMER_TYPE.name(),
-                MapActiveInfoDTO.COLUMNS.SUB_GROUP.name(),
-                MapActiveInfoDTO.COLUMNS.SUB_TYPE.name(),
-                MapActiveInfoDTO.COLUMNS.STATION_ID.name(),
-                MapActiveInfoDTO.COLUMNS.HISTORY_DATE.name(),
-                MapActiveInfoDTO.COLUMNS.REG_REASON_ID.name()
+                MapActiveInfoDTO.Columns.ID.name(),
+                MapActiveInfoDTO.Columns.PAY_TYPE.name(),
+                MapActiveInfoDTO.Columns.ACTION_CODE.name(),
+                MapActiveInfoDTO.Columns.TEL_SERVICE_ID.name(),
+                MapActiveInfoDTO.Columns.STAFF_CODE.name(),
+                MapActiveInfoDTO.Columns.SHOP_CODE.name(),
+                MapActiveInfoDTO.Columns.CHANNEL_TYPE_ID.name(),
+                MapActiveInfoDTO.Columns.DISTRICT_CODE.name(),
+                MapActiveInfoDTO.Columns.PROVINCE_CODE.name(),
+                MapActiveInfoDTO.Columns.PRECINCT_CODE.name(),
+                MapActiveInfoDTO.Columns.TECHNOLOGY.name(),
+                MapActiveInfoDTO.Columns.CUSTOMER_GROUP.name(),
+                MapActiveInfoDTO.Columns.CUSTOMER_TYPE.name(),
+                MapActiveInfoDTO.Columns.SUB_GROUP.name(),
+                MapActiveInfoDTO.Columns.SUB_TYPE.name(),
+                MapActiveInfoDTO.Columns.STATION_ID.name(),
+                MapActiveInfoDTO.Columns.HISTORY_DATE.name(),
+                MapActiveInfoDTO.Columns.REG_REASON_ID.name()
         };
         return findByExampleForVas(exampleMapActiveInfo, mode, searchCache, keys, keys.length);
     }
 
-    private List<MapActiveInfoDTO> findByExampleForVas(MapActiveInfoDTO exampleMapActiveInfo, int mode, boolean searchCache, String[] keys, int index) {
+    private List<MapActiveInfoDTO> findByExampleForVas(MapActiveInfoDTO exampleMapActiveInfo, int mode,
+            boolean searchCache, String[] keys, int index) {
         List<MapActiveInfoDTO> mapActiveInfos;
         if (DataUtil.isNullOrEmpty(exampleMapActiveInfo.getProvinceCode())) {
             log.warn("sale.wired.connect.mapActiveInfo.provinceCode.not.set");
@@ -300,14 +320,14 @@ public class MapActiveInfoQuerryService {
             return mapActiveInfos;
         }
 
-        String[] mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_1();
-        int[] filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_1();
-        if (Const.MAP_ACTIVE_INFO.MODE_1 == mode) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_1();
-            filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_1();
-        } else if (Const.MAP_ACTIVE_INFO.MODE_2 == mode) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.nonElasticSearchMapFields_2();
-            filterModes = Const.MAP_ACTIVE_INFO.nonElasticSearchFilterModes_2();
+        String[] mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields1();
+        int[] filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes1();
+        if (Const.MapActiveInfo.MODE_1 == mode) {
+            mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields1();
+            filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes1();
+        } else if (Const.MapActiveInfo.MODE_2 == mode) {
+            mapFilelds = Const.MapActiveInfo.nonElasticSearchMapFields2();
+            filterModes = Const.MapActiveInfo.nonElasticSearchFilterModes2();
         }
         for (int i = 0; i < mapFilelds.length; i++) {
             String mapField = mapFilelds[i];
@@ -316,7 +336,7 @@ public class MapActiveInfoQuerryService {
             log.info("gia tri filter: " + filterValue + " filter mode: " + filterMode);
             List<MapActiveInfoDTO> tempMapActiveInfoList = new ArrayList<>();
             boolean isIncludeAll = true;
-            if (filterMode == Const.MAP_ACTIVE_INFO.FILTER_MODE_ONLY_INDIVIDUAL
+            if (filterMode == Const.MapActiveInfo.FILTER_MODE_ONLY_INDIVIDUAL
                     && (!Const.DEFAULT_VALUE_MAP_SELECT_ALL.equals(filterValue))) {
                 for (MapActiveInfoDTO curentMapActiveInfo : mapActiveInfos) {
                     String recordValue = DataUtil.safeToString(curentMapActiveInfo.getByProperty(mapField));
@@ -356,35 +376,38 @@ public class MapActiveInfoQuerryService {
     }
 
     public boolean isCheckMapActiveInfo(IsCheckMapActiveInfoRequest request) {
-        if (Const.PRODUCT_OFFER_TYPE.VAS.equals(request.getProductOfferType())) {
+        if (Const.ProductOfferType.VAS.equals(request.getProductOfferType())) {
             return checkMapActiveInfoForVas(request.getActionCode(), request.getTelServiceId());
         }
         return checkMapActiveInfo(request.getActionCode(), request.getTelServiceId());
     }
 
     public boolean checkMapActiveInfo(String actionCode, Long telServiceId) {
-        List<String> actionCodeList = getActionCodeList(Const.OPTION_SET.ACTION_REQUIRE_MAP_ACTIVE_INFO);
+        List<String> actionCodeList = getActionCodeList(Const.OptionSet.ACTION_REQUIRE_MAP_ACTIVE_INFO);
         List<Long> telecomServiceIds = getTelecomServiceIds();
 
         boolean checkCustomActionWithService = false;
-        var customActionWithService = optionSetClient.findValueByOptionSetCode(Const.OPTION_SET.CUSTOM_ACTION_WITH_SERVICE);
+        var customActionWithService = optionSetClient.findValueByOptionSetCode(
+                Const.OptionSet.CUSTOM_ACTION_WITH_SERVICE);
         if (!customActionWithService.isEmpty()) {
             for (var osvDTO : customActionWithService) {
                 List<String> lstService = Arrays.stream(
                         Optional.ofNullable(osvDTO.getName()).orElse("").split(";")
                 ).toList();
-                if (Objects.equals(actionCode, osvDTO.getValue()) && lstService.contains(String.valueOf(telServiceId))) {
+                if (Objects.equals(actionCode, osvDTO.getValue()) && lstService.contains(String.valueOf(
+                        telServiceId))) {
                     checkCustomActionWithService = true;
                     break;
                 }
             }
         }
 
-        return actionCodeList.contains(actionCode) || telecomServiceIds.contains(telServiceId) || checkCustomActionWithService;
+        return actionCodeList.contains(actionCode) || telecomServiceIds.contains(telServiceId) ||
+                checkCustomActionWithService;
     }
 
     public boolean checkMapActiveInfoForVas(String actionCode, Long telServiceId) {
-        List<String> actionCodeList = getActionCodeList(Const.OPTION_SET.ACTION_REQUIRE_MAP_ACTIVE_INFO_FOR_VAS);
+        List<String> actionCodeList = getActionCodeList(Const.OptionSet.ACTION_REQUIRE_MAP_ACTIVE_INFO_FOR_VAS);
         List<Long> telecomServiceIds = getTelecomServiceIds();
         return actionCodeList.contains(actionCode) || telecomServiceIds.contains(telServiceId);
     }
@@ -403,12 +426,12 @@ public class MapActiveInfoQuerryService {
 
     private List<Long> getTelecomServiceIds() {
         return Arrays.asList(
-                Const.TELECOM_SERVICE_ID.V_TRACKING,
-                Const.TELECOM_SERVICE_ID.SMAS,
-                Const.TELECOM_SERVICE_ID.SMSPARENT,
-                Const.TELECOM_SERVICE_ID.MOBILE,
-                Const.TELECOM_SERVICE_ID.HOMEPHONE,
-                Const.TELECOM_SERVICE_ID.DEFAULT_VALUE_MAP_SELECT_ALL
+                Const.TelecomServiceId.V_TRACKING,
+                Const.TelecomServiceId.SMAS,
+                Const.TelecomServiceId.SMSPARENT,
+                Const.TelecomServiceId.MOBILE,
+                Const.TelecomServiceId.HOMEPHONE,
+                Const.TelecomServiceId.DEFAULT_VALUE_MAP_SELECT_ALL
         );
     }
 
@@ -426,41 +449,42 @@ public class MapActiveInfoQuerryService {
             return chanelTypeId;
         }
 
-        if (DataUtil.safeEqual(staffDTO.getChannelTypeId(), Const.CHANNEL_TYPE.CHANNEL_TYPE_NV)) {
+        if (DataUtil.safeEqual(staffDTO.getChannelTypeId(), Const.ChannelType.CHANNEL_TYPE_NV)) {
             return chanelTypeId;
         }
 
-        if (!DataUtil.safeEqual(staffDTO.getChannelTypeId(), Const.CHANNEL_TYPE.CHANNEL_TYPE_NVDB)) {
+        if (!DataUtil.safeEqual(staffDTO.getChannelTypeId(), Const.ChannelType.CHANNEL_TYPE_NVDB)) {
             return staffDTO.getChannelTypeId();
         }
 
         String pointOfSale = staffDTO.getPointOfSale();
-        if (DataUtil.safeEqual(pointOfSale, Const.CHANNEL_TYPE.POINT_OF_SALE_DB)) {
-            return Const.CHANNEL_TYPE.CHANNEL_TYPE_DECODE_DB_POINT_OF_SALE;
+        if (DataUtil.safeEqual(pointOfSale, Const.ChannelType.POINT_OF_SALE_DB)) {
+            return Const.ChannelType.CHANNEL_TYPE_DECODE_DB_POINT_OF_SALE;
         }
 
-        if (DataUtil.safeEqual(pointOfSale, Const.CHANNEL_TYPE.POINT_OF_SALE_NVDB)) {
-            return Const.CHANNEL_TYPE.CHANNEL_TYPE_DECODE_NVDB_POINT_OF_SALE;
+        if (DataUtil.safeEqual(pointOfSale, Const.ChannelType.POINT_OF_SALE_NVDB)) {
+            return Const.ChannelType.CHANNEL_TYPE_DECODE_NVDB_POINT_OF_SALE;
         }
         return null;
     }
 
-    public List<MapActiveInfoDTO> getMapActiveInfosByLevel(List<MapActiveInfoDTO> mapActiveInfos, String levelName, int mode) {
+    public List<MapActiveInfoDTO> getMapActiveInfosByLevel(List<MapActiveInfoDTO> mapActiveInfos, String levelName,
+            int mode) {
         List<MapActiveInfoDTO> subMapActiveInfos = new ArrayList<>();
         if (mapActiveInfos == null || mapActiveInfos.isEmpty()) {
             return subMapActiveInfos;
         }
-        String[] mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
-        int[] filterModes = Const.MAP_ACTIVE_INFO.filterModes_1();
+        String[] mapFilelds = Const.MapActiveInfo.orderFields1();
+        int[] filterModes = Const.MapActiveInfo.filterModes1();
         if (mode == 1) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_1();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_1();
+            mapFilelds = Const.MapActiveInfo.orderFields1();
+            filterModes = Const.MapActiveInfo.filterModes1();
         } else if (mode == 2) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_2();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_2();
+            mapFilelds = Const.MapActiveInfo.orderFields2();
+            filterModes = Const.MapActiveInfo.filterModes2();
         } else if (mode == 6) {
-            mapFilelds = Const.MAP_ACTIVE_INFO.orderFields_6();
-            filterModes = Const.MAP_ACTIVE_INFO.filterModes_6();
+            mapFilelds = Const.MapActiveInfo.orderFields6();
+            filterModes = Const.MapActiveInfo.filterModes6();
         }
 
         int maxLevel;
@@ -475,7 +499,7 @@ public class MapActiveInfoQuerryService {
             String fieldName = mapFilelds[j];
             int fieldMode = filterModes[j];
 
-            if (fieldMode == Const.MAP_ACTIVE_INFO.FILTER_MODE_ONLY_INDIVIDUAL) {
+            if (fieldMode == Const.MapActiveInfo.FILTER_MODE_ONLY_INDIVIDUAL) {
                 List<MapActiveInfoDTO> tempListAll = new ArrayList<>();
                 List<MapActiveInfoDTO> tempListIndi = new ArrayList<>();
 
@@ -502,13 +526,19 @@ public class MapActiveInfoQuerryService {
 
         if (!DataUtil.isNullOrEmpty(subMapActiveInfos)) {
             if (mapActiveInfos.size() < 100) {
-                log.info("list mapId: " + subMapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(Collectors.toList()));
+                log.info("list mapId: " + subMapActiveInfos.stream().map(MapActiveInfoDTO::getId).collect(
+                        Collectors.toList()));
             }
         }
         return subMapActiveInfos;
     }
 
-    public List<ReasonDTO> getReasonFullWithBusinessNo(StaffDTO staffDTO, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, boolean isTdd, List<String> lstBusinessNo) {
+    public List<ReasonDTO> getReasonFullWithBusinessNo(StaffDTO staffDTO, String payType, Long offerId,
+            String actionCode, String serviceType, String province, String district, String precint,
+            String customerGroup, String customerType, String subType, String subGroup, String stationCodes,
+            String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap,
+            String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, boolean isTdd,
+            List<String> lstBusinessNo) {
         return getReasonFullCheckOfferAndHistory(staffDTO,
                 payType,
                 offerId,
@@ -538,10 +568,15 @@ public class MapActiveInfoQuerryService {
         );
     }
 
-    private List<ReasonDTO> getReasonFullCheckOfferAndHistory(StaffDTO staffDTO, String payType, Long offerId, String actionCode, String serviceType, String province, String district, String precint, String customerGroup, String customerType, String subType, String subGroup, String stationCodes, String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap, Long numOffer, Date historyDate, boolean checkStatus, String nodeCode, Long singleOrCombo, List<FilterRequest> listProductSpec, boolean isTgdd, List<String> lstBusinessNo) {
+    private List<ReasonDTO> getReasonFullCheckOfferAndHistory(StaffDTO staffDTO, String payType, Long offerId,
+            String actionCode, String serviceType, String province, String district, String precint,
+            String customerGroup, String customerType, String subType, String subGroup, String stationCodes,
+            String promotionCode, String technology, Integer mode, Boolean getReasonCharUse, RequiredRoleMap roleMap,
+            Long numOffer, Date historyDate, boolean checkStatus, String nodeCode, Long singleOrCombo,
+            List<FilterRequest> listProductSpec, boolean isTgdd, List<String> lstBusinessNo) {
         var optionSetMap = optionSetClient.findByOptionSetCodes(
                 Arrays.asList(
-                        Const.OPTION_SET.CHECK_MAPPING_BY_USER_AREA,
+                        Const.OptionSet.CHECK_MAPPING_BY_USER_AREA,
                         "SERVICE_CHECK_PRECINT_REASON",
                         "CHECK_MAP_BUSINESS",
                         "CONFIG_MAPPING_BY_USER_AREA"
@@ -552,43 +587,49 @@ public class MapActiveInfoQuerryService {
             lstBusinessNo = lstBusinessNo.stream().map(x -> x.trim()).collect(Collectors.toList());
             for (String businessNo : lstBusinessNo) {
                 if (businessNo.length() > 3500) {
-                    throw new BusinessException("BCCS-POLICY-MAPACTIVE-0015", "Tham số businessNo vượt quá độ dài cho phép (3500 ký tự)");
+                    throw new BusinessException("BCCS-POLICY-MAPACTIVE-0015",
+                            "Tham số businessNo vượt quá độ dài cho phép (3500 ký tự)");
                 }
             }
         }
         String tPromotionCode = DataUtil.defaultIfNull(promotionCode, Const.DEFAULT_VALUE_MAP_SELECT_ALL);
-        Long telServiceId = DataUtil.defaultIfNull(telecomServiceClient.getServiceIdByAlias(serviceType), Long.valueOf(Const.DEFAULT_VALUE_MAP_SELECT_ALL));
+        Long telServiceId = DataUtil.defaultIfNull(telecomServiceClient.getServiceIdByAlias(serviceType), Long.valueOf(
+                Const.DEFAULT_VALUE_MAP_SELECT_ALL));
 
         List<ReasonDTO> lstReason;
         MapActiveInfoDTO mapActiveInfoExample;
 
         if (!checkMapActiveInfo(actionCode, telServiceId)) {
-            lstReason = reasonService.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode, telServiceId, payType, numOffer, checkStatus);
+            lstReason = reasonService.getListReasonByActionCodeAndTelServiceForAuditWithMappingChecking(actionCode,
+                    telServiceId, payType, numOffer, checkStatus);
         } else {
             String custTypeId = convertCustTypeCode2Id(customerType);
             mapActiveInfoExample = getMapActiveInfoExample(staffDTO, payType, offerId, actionCode, telServiceId,
                     Long.valueOf(Const.DEFAULT_VALUE_MAP_SELECT_ALL), tPromotionCode,
-                    customerGroup, custTypeId, subType, subGroup, stationCodes, technology, historyDate, nodeCode, isTgdd);
+                    customerGroup, custTypeId, subType, subGroup, stationCodes, technology, historyDate,
+                            nodeCode, isTgdd);
 
-            boolean isActiveCD = (!Const.TELECOM_SERVICE_ID.MOBILE.equals(telServiceId)
-                    && !Const.TELECOM_SERVICE_ID.HOMEPHONE.equals(telServiceId)
-                    && !Const.TELECOM_SERVICE_ID.SMAS.equals(telServiceId)
-                    && !Const.TELECOM_SERVICE_ID.SMSPARENT.equals(telServiceId));
+            boolean isActiveCD = (!Const.TelecomServiceId.MOBILE.equals(telServiceId)
+                    && !Const.TelecomServiceId.HOMEPHONE.equals(telServiceId)
+                    && !Const.TelecomServiceId.SMAS.equals(telServiceId)
+                    && !Const.TelecomServiceId.SMSPARENT.equals(telServiceId));
 
             if (isActiveCD) {
                 mapActiveInfoExample.setProvinceCode(DataUtil.toUpper(province));
                 mapActiveInfoExample.setDistrictCode(DataUtil.toUpper(district));
 
-                List<OptionSetValueResponse> lstOption = optionSetMap.getOrDefault("SERVICE_CHECK_PRECINT_REASON", Collections.emptyList());
+                List<OptionSetValueResponse> lstOption = optionSetMap.getOrDefault("SERVICE_CHECK_PRECINT_REASON",
+                        Collections.emptyList());
                 if (!DataUtil.isNullOrEmpty(lstOption)) {
-                    List<String> lstValidService = lstOption.stream().map(OptionSetValueResponse::getValue).collect(Collectors.toList());
+                    List<String> lstValidService = lstOption.stream().map(OptionSetValueResponse::getValue).collect(
+                            Collectors.toList());
                     if (lstValidService.contains(DataUtil.safeToString(telServiceId))) {
                         mapActiveInfoExample.setPrecinctCode(DataUtil.toUpper(precint));
                     } else {
                         mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
                     }
                 } else {
-                    if (Const.TELECOM_SERVICE_ID.CABLE_TV.equals(telServiceId)) {
+                    if (Const.TelecomServiceId.CABLE_TV.equals(telServiceId)) {
                         mapActiveInfoExample.setPrecinctCode(DataUtil.toUpper(precint));
                     } else {
                         mapActiveInfoExample.setPrecinctCode(Const.DEFAULT_VALUE_MAP_SELECT_ALL);
@@ -597,8 +638,10 @@ public class MapActiveInfoQuerryService {
 
             }
 
-            List<OptionSetValueResponse> checkMapBusinessOptions = optionSetMap.getOrDefault("CHECK_MAP_BUSINESS", Collections.emptyList());
-            if (!DataUtil.isNullOrEmpty(checkMapBusinessOptions) && DataUtil.safeEqual(checkMapBusinessOptions.get(0).getValue(), Const.STATUS.ACTIVE)) {
+            List<OptionSetValueResponse> checkMapBusinessOptions = optionSetMap.getOrDefault("CHECK_MAP_BUSINESS",
+                    Collections.emptyList());
+            if (!DataUtil.isNullOrEmpty(checkMapBusinessOptions) && DataUtil.safeEqual(checkMapBusinessOptions.get(
+                    0).getValue(), Const.Status.ACTIVE)) {
                 if (!DataUtil.isNullOrEmpty(lstBusinessNo)) {
                     mapActiveInfoExample.setLstBusinessNo(lstBusinessNo);
                 } else {
@@ -607,13 +650,18 @@ public class MapActiveInfoQuerryService {
 
             }
             //techasians: dau noi dia ban theo user
-            List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(Const.OPTION_SET.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
+            List<OptionSetValueResponse> configMappingUserArea = optionSetMap.getOrDefault(
+                    Const.OptionSet.CONFIG_MAPPING_BY_USER_AREA, Collections.emptyList());
 
-            if (DataUtil.safeEqual(mapActiveInfoExample.getChannelTypeId(), Const.CHANNEL_TYPE.CHUOI_TOAN_QUOC) && !DataUtil.isNullObject(staffDTO.getStaffId())) {
-                List<OptionSetValueResponse> checkMappingByUserAreaOptions = optionSetMap.getOrDefault(Const.OPTION_SET.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
-                if (!DataUtil.isNullOrEmpty(checkMappingByUserAreaOptions) && DataUtil.safeEqual(checkMappingByUserAreaOptions.get(0).getValue(), Const.STATUS.ACTIVE)) {
+            if (DataUtil.safeEqual(mapActiveInfoExample.getChannelTypeId(), Const.ChannelType.CHUOI_TOAN_QUOC) &&
+                    !DataUtil.isNullObject(staffDTO.getStaffId())) {
+                List<OptionSetValueResponse> checkMappingByUserAreaOptions = optionSetMap.getOrDefault(
+                        Const.OptionSet.CHECK_MAPPING_BY_USER_AREA, Collections.emptyList());
+                if (!DataUtil.isNullOrEmpty(checkMappingByUserAreaOptions) && DataUtil.safeEqual(
+                        checkMappingByUserAreaOptions.get(0).getValue(), Const.Status.ACTIVE)) {
                     if (mapActiveInfoValidateService.checkMappingByUser(mapActiveInfoExample, configMappingUserArea)) {
-                        StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(staffDTO.getStaffId(), Const.STAFF_EXT_KEY.MAP_AREA_CHAIN_CHANNEL);
+                        StaffExtResponse staffExtResponse = staffExtClient.getStaffExtByStaffIDAndKey(
+                                staffDTO.getStaffId(), Const.StaffExtKey.MAP_AREA_CHAIN_CHANNEL);
                         if (!DataUtil.isNullObject(staffExtResponse)) {
                             //voi shop chuoi toan quoc chi tim theo dia ban tinh
                             mapActiveInfoExample.setProvinceCode(staffExtResponse.getValue());
@@ -624,36 +672,41 @@ public class MapActiveInfoQuerryService {
                 }
             }
 
-            List<MapActiveInfoDTO> mapActiveInfos = findByExample(mapActiveInfoExample, mode, true, Const.PRODUCT_OFFER_TYPE.PRODUCT_CODE, false);
+            List<MapActiveInfoDTO> mapActiveInfos = findByExample(mapActiveInfoExample, mode, true,
+                    Const.ProductOfferType.PRODUCT_CODE, false);
 
             List<MapActiveInfoDTO> lstMapRemoveCheckBusinessNo = new ArrayList<>();
             List<Long> lstRemoveReasonId = new ArrayList<>();
 
-            log.info("list reasonId from MapActiveInfo: " + mapActiveInfos.stream().map(MapActiveInfoDTO::getRegReasonId).collect(Collectors.toList()));
+            log.info("list reasonId from MapActiveInfo: " + mapActiveInfos.stream().map(MapActiveInfoDTO::
+                    getRegReasonId).collect(Collectors.toList()));
 
 
             lstReason = reasonService.getReasonFromMapActiveInfos(mapActiveInfos, mode, numOffer);
 
             if (!DataUtil.isNullOrEmpty(lstRemoveReasonId) && !DataUtil.isNullOrEmpty(lstReason)) {
                 List<Long> finalLstRemoveReasonId = lstRemoveReasonId;
-                lstReason = lstReason.stream().filter(x -> !finalLstRemoveReasonId.contains(x.getReasonId())).collect(Collectors.toList());
+                lstReason = lstReason.stream().filter(x -> !finalLstRemoveReasonId.contains(x.getReasonId())).collect(
+                        Collectors.toList());
             }
 
         }
-        log.info("list reasonId before check spec : " + lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()));
+        log.info("list reasonId before check spec : " + lstReason.stream().map(ReasonDTO::getReasonId).collect(
+                Collectors.toList()));
         // Loc thuoc tinh single_or_combo
         if (DataUtil.isNullObject(listProductSpec)) {
             listProductSpec = new ArrayList<>();
         }
         if (!DataUtil.isNullObject(singleOrCombo)) {
             listProductSpec.add(FilterRequest.builder()
-                    .property(Const.PRODUCT_SPEC_CHAR.SINGLE_OR_COMBO)
+                    .property(Const.ProductSpecChar.SINGLE_OR_COMBO)
                     .operator(FilterRequest.Operator.EQ)
                     .valueText(DataUtil.safeToString(singleOrCombo))
                     .build());
         }
         if (!DataUtil.isNullOrEmpty(listProductSpec)) {
-            lstReason = reasonService.findByLstIdWithSpec(lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()), listProductSpec, null);
+            lstReason = reasonService.findByLstIdWithSpec(lstReason.stream().map(ReasonDTO::getReasonId).collect(
+                    Collectors.toList()), listProductSpec, null);
         }
         if (Boolean.TRUE.equals(getReasonCharUse)) {
             lstReason = reasonService.getReasonCharUse(lstReason);
@@ -662,16 +715,20 @@ public class MapActiveInfoQuerryService {
         Map<Long, List<ReasonPauseDTO>> reasonPauseByReasonId = reasonService.getReasonPauseByReasonIds(
                 lstReason.stream().map(ReasonDTO::getReasonId).collect(Collectors.toList()));
         for (ReasonDTO dto : lstReason) {
-            List<ReasonPauseDTO> reasonPauseDTOS = reasonPauseByReasonId.getOrDefault(dto.getReasonId(), Collections.emptyList());
-            dto.setListReasonPause(reasonPauseDTOS);
+            List<ReasonPauseDTO> reasonPauseDtoS = reasonPauseByReasonId.getOrDefault(dto.getReasonId(),
+                    Collections.emptyList());
+            dto.setListReasonPause(reasonPauseDtoS);
         }
 
         return lstReason;
     }
 
     public MapActiveInfoDTO getMapActiveInfoExample(StaffDTO staffDTO, String payType, Long offerId, String actionCode,
-                                                    Long telServiceId, Long regReasonId, String promotionCode, String customerGroup, String custTypeId,
-                                                    String subType, String subGroup, String stationCodes, String technology, Date historyDate, String nodeCode, boolean isTgdd) {
+                                                    Long telServiceId, Long regReasonId, String promotionCode,
+                                                            String customerGroup, String custTypeId,
+                                                    String subType, String subGroup, String stationCodes,
+                                                            String technology, Date historyDate, String nodeCode,
+                                                            boolean isTgdd) {
 
         MapActiveInfoDTO mapActiveInfoExample;
 

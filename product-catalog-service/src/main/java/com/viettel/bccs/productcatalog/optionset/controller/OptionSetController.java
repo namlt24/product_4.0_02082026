@@ -1,5 +1,12 @@
 package com.viettel.bccs.productcatalog.optionset.controller;
 
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetResponse;
@@ -7,12 +14,10 @@ import com.viettel.bccs.productcatalog.optionset.openapi.ApiGetAll;
 import com.viettel.bccs.productcatalog.optionset.openapi.ApiGetByCode;
 import com.viettel.bccs.productcatalog.optionset.openapi.ApiGetById;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/product-catalog-service/v1/optionset")

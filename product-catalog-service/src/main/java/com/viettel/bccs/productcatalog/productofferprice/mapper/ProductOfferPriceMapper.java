@@ -1,12 +1,13 @@
 package com.viettel.bccs.productcatalog.productofferprice.mapper;
 
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceDTO;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.ProductOfferPriceResponse;
 import com.viettel.bccs.productcatalog.productofferprice.entity.ProductOfferPriceEntity;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class ProductOfferPriceMapper {
@@ -97,7 +98,7 @@ public class ProductOfferPriceMapper {
     }
 
     /**
-     * Chuyển ProductOfferPriceDTO (kết quả getPriceInServicesForPCCC, nhánh PCCC) sang
+     * Chuyển ProductOfferPriceDTO (kết quả getPriceInServicesForPccc, nhánh PCCC) sang
      * ProductOfferPriceResponse (kết quả getPriceInServices, nhánh thường) để 2 nhánh dùng chung
      * 1 shape khi gộp kết quả cho API getListStockTypeWS. priceEquipmentId/priceEquipmentTypeId
      * không có ở nhánh PCCC (chỉ ghi đè priceEquipment) nên luôn null.
@@ -153,7 +154,8 @@ public class ProductOfferPriceMapper {
      * thiết bị lên từng dòng kết quả (thay cho việc mutate trực tiếp như legacy).
      */
     public ProductOfferPriceResponse withPriceInfo(ProductOfferPriceResponse base, String productOfferName,
-                                                    Long priceEquipment, Long priceEquipmentId, Long priceEquipmentTypeId) {
+                                                    Long priceEquipment, Long priceEquipmentId,
+                                                    Long priceEquipmentTypeId) {
         if (base == null) {
             return null;
         }
@@ -200,7 +202,8 @@ public class ProductOfferPriceMapper {
         if (entity == null) {
             return null;
         }
-        return new PledgePriceResponse(entity.getPrice(), entity.getPledgeAmount(), entity.getPledgeTime(), entity.getPriorPay());
+        return new PledgePriceResponse(entity.getPrice(), entity.getPledgeAmount(), entity.getPledgeTime(),
+                entity.getPriorPay());
     }
 
     public List<PledgePriceResponse> toPledgePriceResponseList(List<ProductOfferPriceEntity> entities) {

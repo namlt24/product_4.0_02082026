@@ -1,8 +1,8 @@
 package com.viettel.bccs.organization.client;
 
-import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
-
 import java.util.List;
+
+import com.viettel.bccs.organization.client.dto.OptionSetValueResponse;
 
 public interface OptionSetClient {
 

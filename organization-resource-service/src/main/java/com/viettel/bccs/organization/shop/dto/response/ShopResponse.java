@@ -1,6 +1,9 @@
 package com.viettel.bccs.organization.shop.dto.response;
 
+import java.util.Date;
+
 import com.viettel.bccs.organization.shop.dto.ShopDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -10,8 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Date;
 
 @Data
 @Builder
@@ -103,6 +104,11 @@ public class ShopResponse {
     @Max(value = 9999999999L, message = "groupChannelTypeId vượt quá độ dài cột (precision 10)")
     private Long groupChannelTypeId;
 
+    @Schema(description = "ID nhân viên quản lý cửa hàng", example = "100")
+    @Min(value = 0, message = "staffOwnerId phải >= 0")
+    @Max(value = 9999999999L, message = "staffOwnerId vượt quá độ dài cột (precision 10)")
+    private Long staffOwnerId;
+
     public ShopDTO toDTO() {
         ShopDTO dto = new ShopDTO();
         dto.setShopId(this.shopId);
@@ -122,6 +128,7 @@ public class ShopResponse {
         dto.setAreaCode(this.areaCode);
         dto.setCreateDatetime(this.createDatetime);
         dto.setGroupChannelTypeId(this.groupChannelTypeId);
+        dto.setStaffOwnerId(this.staffOwnerId);
         return dto;
     }
 }

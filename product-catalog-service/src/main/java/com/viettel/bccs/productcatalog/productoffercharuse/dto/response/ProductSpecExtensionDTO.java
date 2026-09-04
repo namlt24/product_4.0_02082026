@@ -1,6 +1,7 @@
 package com.viettel.bccs.productcatalog.productoffercharuse.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;

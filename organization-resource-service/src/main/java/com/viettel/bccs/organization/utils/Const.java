@@ -11,16 +11,16 @@ public class Const {
         public static final String STAFF_KEY_PREFIX = "STAFF_";
     }
 
-    public static final class STAFF_EXT_KEY {
+    public static final class StaffExtKey {
         public static final String BUSINESS_SPEC = "BUSINESS_SPEC";
         public static final String BUSINESS_TYPE_STAFF = "BUSINESS_TYPE_STAFF";
     }
 
-    public static final class STATUS {
+    public static final class Status {
         public static final String ACTIVE = "1";
     }
 
-    public static final class CHANNEL_TYPE {
+    public static final class ChannelType {
         public static final String IS_NOT_VT_UNIT = "2"; // Khong thuoc Viettel
         public static final String OBJECT_TYPE_STAFF = "2"; // Chi nhanh
         public static final String OBJECT_TYPE_SHOP = "1"; // Cửa hàng

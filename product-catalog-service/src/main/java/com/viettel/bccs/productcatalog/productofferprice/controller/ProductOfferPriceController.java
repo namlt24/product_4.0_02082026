@@ -1,5 +1,13 @@
 package com.viettel.bccs.productcatalog.productofferprice.controller;
 
+import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.viettel.bccs.common.api.response.StandardResponse;
 import com.viettel.bccs.common.api.response.StandardResponses;
 import com.viettel.bccs.productcatalog.productofferprice.dto.response.PledgePriceResponse;
@@ -9,14 +17,12 @@ import com.viettel.bccs.productcatalog.productofferprice.openapi.ApiGetById;
 import com.viettel.bccs.productcatalog.productofferprice.openapi.ApiGetPledgePriceInfoByOfferId;
 import com.viettel.bccs.productcatalog.productofferprice.openapi.ApiGetPriceByTypePolicy;
 import com.viettel.bccs.productcatalog.productofferprice.openapi.ApiGetPriceInServices;
-import com.viettel.bccs.productcatalog.productofferprice.openapi.ApiGetPriceInServicesForPCCC;
+import com.viettel.bccs.productcatalog.productofferprice.openapi.ApiGetPriceInServicesForPccc;
 import com.viettel.bccs.productcatalog.productofferprice.service.ProductOfferPriceService;
+
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/product-catalog-service/v1/productofferprice")
@@ -44,9 +50,9 @@ public class ProductOfferPriceController {
         return StandardResponses.success(productOfferPriceService.getById(prodOfferPriceId));
     }
 
-    @PostMapping("/getPriceInServicesForPCCC")
-    @ApiGetPriceInServicesForPCCC
-    public StandardResponse<List<ProductOfferPriceDTO>> getPriceInServicesForPCCC(
+    @PostMapping("/getPriceInServicesForPccc")
+    @ApiGetPriceInServicesForPccc
+    public StandardResponse<List<ProductOfferPriceDTO>> getPriceInServicesForPccc(
             @Parameter(description = "ID gói sản phẩm", example = "123")
             @RequestParam(required = false)
             Long productPackageId,
@@ -66,7 +72,7 @@ public class ProductOfferPriceController {
             @Parameter(description = "ID chính sách giá", example = "7")
             @RequestParam(required = false)
             Long pricePolicy) {
-        return StandardResponses.success(productOfferPriceService.getPriceInServicesForPCCC(
+        return StandardResponses.success(productOfferPriceService.getPriceInServicesForPccc(
                 productPackageId, productPackageCode, productOfferType, productOfferId, pricePolicy));
     }
 
@@ -110,7 +116,9 @@ public class ProductOfferPriceController {
             @Parameter(description = "ID chính sách giá", example = "7", required = true)
             @RequestParam(required = false)
             Long pricePolicy) {
-        return StandardResponses.success(productOfferPriceService.getPriceByTypePolicy(productOfferId, priceTypeId, pricePolicy));
+        return 
+                StandardResponses.success(productOfferPriceService.getPriceByTypePolicy(productOfferId, priceTypeId,
+                    pricePolicy));
     }
     //
 }

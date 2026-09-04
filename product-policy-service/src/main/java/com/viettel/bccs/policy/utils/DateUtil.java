@@ -3,7 +3,7 @@ package com.viettel.bccs.policy.utils;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
-public class DateUtil {
+public final class DateUtil {
 
     private DateUtil() {
     }

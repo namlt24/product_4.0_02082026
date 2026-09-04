@@ -1,11 +1,13 @@
 package com.viettel.bccs.organization.staff.mapper;
 
-import com.viettel.bccs.organization.shop.entity.ShopEntity;
+import org.springframework.stereotype.Component;
+
 import com.viettel.bccs.organization.shop.dto.response.ShopResponse;
+import com.viettel.bccs.organization.shop.entity.ShopEntity;
 import com.viettel.bccs.organization.staff.dto.StaffDTO;
 import com.viettel.bccs.organization.staff.dto.response.StaffResponse;
+import com.viettel.bccs.organization.staff.dto.response.StaffSummaryDTO;
 import com.viettel.bccs.organization.staff.entity.StaffEntity;
-import org.springframework.stereotype.Component;
 
 @Component
 public class StaffMapper {
@@ -123,7 +125,9 @@ public class StaffMapper {
     }
 
     public ShopResponse toShopResponse(ShopEntity entity) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         return ShopResponse.builder()
                 .shopId(entity.getShopId())
                 .name(entity.getName())
@@ -142,6 +146,29 @@ public class StaffMapper {
                 .areaCode(entity.getAreaCode())
                 .createDatetime(entity.getCreateDatetime())
                 .groupChannelTypeId(entity.getGroupChannelTypeId())
+                .staffOwnerId(entity.getStaffOwnerId())
+                .build();
+    }
+
+    public StaffSummaryDTO toSummary(StaffEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        return StaffSummaryDTO.builder()
+                .staffCode(entity.getStaffCode())
+                .name(entity.getName())
+                .staffId(entity.getStaffId())
+                .build();
+    }
+
+    public StaffSummaryDTO toSummary(StaffDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        return StaffSummaryDTO.builder()
+                .staffCode(dto.getStaffCode())
+                .name(dto.getName())
+                .staffId(dto.getStaffId())
                 .build();
     }
 }

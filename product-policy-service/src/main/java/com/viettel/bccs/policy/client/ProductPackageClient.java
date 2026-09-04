@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface ProductPackageClient {
 
-    List<String> getPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer pNumber);
+    List<String> getPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer packageNumber);
 }

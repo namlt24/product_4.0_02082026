@@ -1,5 +1,17 @@
 package com.viettel.bccs.productcatalog.productpackage.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.viettel.bccs.common.error.exception.BusinessException;
 import com.viettel.bccs.productcatalog.client.MappingClient;
 import com.viettel.bccs.productcatalog.client.StaffShopClient;
@@ -7,28 +19,26 @@ import com.viettel.bccs.productcatalog.client.dto.ShopDTO;
 import com.viettel.bccs.productcatalog.client.dto.StaffShopResponse;
 import com.viettel.bccs.productcatalog.optionset.dto.response.OptionSetValueResponse;
 import com.viettel.bccs.productcatalog.optionset.service.OptionSetValueService;
-import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOfferTypeDTO;
-import com.viettel.bccs.productcatalog.productoffertype.service.ProductOfferTypeService;
-import com.viettel.bccs.productcatalog.productpackage.dto.response.*;
-import com.viettel.bccs.productcatalog.productpackage.mapper.ProductPackageMapper;
-import com.viettel.bccs.productcatalog.productpackage.repository.ProductPackageRepository;
 import com.viettel.bccs.productcatalog.packageoffer.service.PackageOfferService;
-import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeDTO;
-import com.viettel.bccs.productcatalog.productpackagefee.service.ProductPackageFeeService;
 import com.viettel.bccs.productcatalog.prodpackproductoffertype.dto.response.ProdPackProductOfferTypeDTO;
 import com.viettel.bccs.productcatalog.prodpackproductoffertype.service.ProdPackProductOfferTypeService;
 import com.viettel.bccs.productcatalog.prodpackshop.service.ProdPackShopService;
+import com.viettel.bccs.productcatalog.productoffertype.dto.response.ProductOfferTypeDTO;
+import com.viettel.bccs.productcatalog.productoffertype.service.ProductOfferTypeService;
+import com.viettel.bccs.productcatalog.productpackage.dto.response.PackageOfferDTO;
+import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackageDTO;
+import com.viettel.bccs.productcatalog.productpackage.dto.response.ProductPackageResponse;
+import com.viettel.bccs.productcatalog.productpackage.dto.response.SaleServiceAdvanceDTO;
+import com.viettel.bccs.productcatalog.productpackage.dto.response.SaleServiceModelAdvanceDTO;
+import com.viettel.bccs.productcatalog.productpackage.mapper.ProductPackageMapper;
+import com.viettel.bccs.productcatalog.productpackage.repository.ProductPackageRepository;
+import com.viettel.bccs.productcatalog.productpackagefee.dto.response.ProductPackageFeeDTO;
+import com.viettel.bccs.productcatalog.productpackagefee.service.ProductPackageFeeService;
 import com.viettel.bccs.productcatalog.utils.Const;
 import com.viettel.bccs.productcatalog.utils.DataUtil;
 import com.viettel.bccs.productcatalog.utils.RequestValidator;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -52,7 +62,8 @@ public class ProductPackageService {
                                   ProductPackageFeeService productPackageFeeService,
                                   ProdPackProductOfferTypeService prodPackProductOfferTypeService,
                                   ProdPackShopService prodPackShopService, StaffShopClient staffShopClient,
-                                  ProductOfferTypeService productOfferTypeService, PackageOfferService packageOfferService,
+                                  ProductOfferTypeService productOfferTypeService,
+                                  PackageOfferService packageOfferService,
                                   OptionSetValueService optionSetValueService, MappingClient mappingClient,
                                   @Lazy ProductPackageService self) {
         this.repository = repository;
@@ -69,17 +80,18 @@ public class ProductPackageService {
     }
 
 
-    public List<String> findPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer pNumber) {
+    public List<String> findPackageCodesByProductOfferTypeCount(String excludeProdOfferType, Integer packageNumber) {
         RequestValidator.requireNotBlank(excludeProdOfferType, "excludeProdOfferType", "BCCS-PRODUCT-VALIDATE-0000");
-        if (pNumber == null) {
+        if (packageNumber == null) {
             return findPackageCodesWithoutCount();
         }
-        return findPackageCodesByProductOfferTypeCountCached(excludeProdOfferType, pNumber);
+        return findPackageCodesByProductOfferTypeCountCached(excludeProdOfferType, packageNumber);
     }
 
-    @Cacheable(value = "productPackageCache", key = "'PKG_COUNT:' + #excludeProdOfferType + ':' + #pNumber")
-    public List<String> findPackageCodesByProductOfferTypeCountCached(String excludeProdOfferType, Integer pNumber) {
-        return repository.findPackageCodesByProductOfferTypeCount(excludeProdOfferType, pNumber);
+    @Cacheable(value = "productPackageCache", key = "'PKG_COUNT:' + #excludeProdOfferType + ':' + #packageNumber")
+    public List<String> findPackageCodesByProductOfferTypeCountCached(String excludeProdOfferType,
+        Integer packageNumber) {
+        return repository.findPackageCodesByProductOfferTypeCount(excludeProdOfferType, packageNumber);
     }
 
     @Cacheable(value = "productPackageCache", key = "'PKG_COUNT:ALL'")
@@ -88,9 +100,9 @@ public class ProductPackageService {
     }
 
     @Cacheable(value = "productPackageCache", key = "'SALE_SVC:' + #saleServiceCode")
-    public SaleServiceAdvanceDTO getSaleServicesAdvBOBySSCode(String saleServiceCode) {
+    public SaleServiceAdvanceDTO getSaleServicesAdvBoBySsCode(String saleServiceCode) {
         RequestValidator.requireNotBlank(saleServiceCode, "saleServiceCode", "BCCS-PRODUCT-VALIDATE-0000");
-        return getSaleServicesAdvBOBySSCodeCheckStatus(saleServiceCode, true);
+        return getSaleServicesAdvBoBySsCodeCheckStatus(saleServiceCode, true);
     }
 
     public ProductPackageResponse findById(Long id) {
@@ -159,16 +171,19 @@ public class ProductPackageService {
                 .findFirst()
                 .orElse(null);
         if (DataUtil.isNullOrEmpty(firstValidCode)) {
-            throw new BusinessException("BCCS-CATALOG-PACKAGE-0001", "Sale service mapping not found for reason id: " + reasonId);
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0001",
+                    "Sale service mapping not found for reason id: " + reasonId);
         }
         return getSaleServiceInfo(firstValidCode, staffCode);
     }
 
     public ProductPackageDTO getSaleServiceInfo(String saleServiceCode, String staffCode) {
 
-        List<ProductPackageDTO> productPackageDTOs = repository.getProductPackageExtra(saleServiceCode, Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE, false, true, true);
-        if (DataUtil.isNullOrEmpty(productPackageDTOs)) {
-            throw new BusinessException("BCCS-CATALOG-PACKAGE-0002", "Product package not found for sale service code: " + saleServiceCode);
+        List<ProductPackageDTO> productPackageList = repository.getProductPackageExtra(saleServiceCode,
+            Const.ProductPackageType.SALE_SERVICE, false, true, true);
+        if (DataUtil.isNullOrEmpty(productPackageList)) {
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0002",
+                "Product package not found for sale service code: " + saleServiceCode);
         }
 
         List<Long> offerTypeIds = optionSetValueService.findByOptionSetCode("MAT_HANG_SO").stream()
@@ -181,15 +196,18 @@ public class ProductPackageService {
 
         List<ProdPackProductOfferTypeDTO> prodPackTypeList =
                 prodPackProductOfferTypeService.getListByProductPackageIdAndOfferTypeIds(
-                        productPackageDTOs.get(0).getProductPackageId(), offerTypeIds);
+                        productPackageList.get(0).getProductPackageId(), offerTypeIds);
 
         if (DataUtil.isNullOrEmpty(prodPackTypeList)) {
-            return productPackageDTOs.get(0);
+            return productPackageList.get(0);
         }
 
 
-        List<Long> prodPackTypeIds = prodPackTypeList.stream().map(ProdPackProductOfferTypeDTO::getProdPackTypeId).collect(Collectors.toUnmodifiableList());
-        Map<Long, List<Long>> prodPackTypeIdToShopIds = prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
+        List<Long> prodPackTypeIds = prodPackTypeList.stream()
+                .map(ProdPackProductOfferTypeDTO::getProdPackTypeId)
+                .collect(Collectors.toUnmodifiableList());
+        Map<Long, List<Long>> prodPackTypeIdToShopIds =
+                prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
 
         log.debug("Found {} prodPackTypeIds mapping to shops", prodPackTypeIdToShopIds.size());
 
@@ -217,10 +235,11 @@ public class ProductPackageService {
         Map<Long, ProductOfferTypeDTO> productOfferTypeMap = productOfferTypeService.findByIds(productOfferTypeIds);
 
         // Batch-select PackageOffer
-        Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer = packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
-
+        Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer =
+                packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
         for (ProdPackProductOfferTypeDTO offerTypeDTO : prodPackTypeList) {
-            offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject.getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
+            offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject
+                    .getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
 
             ProductOfferTypeDTO productOfferTypeDTO = productOfferTypeMap.get(offerTypeDTO.getProductOfferTypeId());
             if (!DataUtil.isNullObject(productOfferTypeDTO)) {
@@ -228,9 +247,10 @@ public class ProductPackageService {
             }
 
             // Set package offers from batch lookup
-            List<PackageOfferDTO> packageOfferDTOList = prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
+            List<PackageOfferDTO> packageOfferDTOList =
+                    prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
             if (!DataUtil.isNullOrEmpty(packageOfferDTOList)) {
-                offerTypeDTO.setPackageOfferDTOs(packageOfferDTOList);
+                offerTypeDTO.setPackageOfferList(packageOfferDTOList);
             }
 
             if (!DataUtil.isNullOrEmpty(staffCode) && DataUtil.safeEqual(offerTypeDTO.getCheckShopStock(), "1")) {
@@ -243,40 +263,47 @@ public class ProductPackageService {
             }
         }
 
-        productPackageDTOs.get(0).setListProdPackType(prodPackTypeList);
+        productPackageList.get(0).setListProdPackType(prodPackTypeList);
 
-        return productPackageDTOs.get(0);
+        return productPackageList.get(0);
     }
 
-    public SaleServiceAdvanceDTO getSaleServicesAdvBOBySSCodeCheckStatus(String saleServiceCode, boolean checkStatus) {
+    public SaleServiceAdvanceDTO getSaleServicesAdvBoBySsCodeCheckStatus(String saleServiceCode, boolean checkStatus) {
         if (DataUtil.isNullOrEmpty(saleServiceCode)) {
             throw new BusinessException("BCCS-CATALOG-PACKAGE-0004", "saleServiceCode is required");
         }
 
-        List<ProductPackageDTO> productPackageDTOs = repository.getProductPackageExtra(
-                saleServiceCode, Const.PRODUCT_PACKAGE_TYPE.SALE_SERVICE, true, false, checkStatus);
+        List<ProductPackageDTO> productPackageList = repository.getProductPackageExtra(
+                saleServiceCode, Const.ProductPackageType.SALE_SERVICE, true, false, checkStatus);
 
-        if (productPackageDTOs == null || productPackageDTOs.isEmpty()) {
-            throw new BusinessException("BCCS-CATALOG-PACKAGE-0005", "Sale service not found for code: " + saleServiceCode);
+        if (productPackageList == null || productPackageList.isEmpty()) {
+            throw new BusinessException("BCCS-CATALOG-PACKAGE-0005",
+                    "Sale service not found for code: " + saleServiceCode);
         }
 
         SaleServiceAdvanceDTO saleServiceAdvanceDTO = new SaleServiceAdvanceDTO();
         saleServiceAdvanceDTO.setSuccess(true);
-        saleServiceAdvanceDTO.setSaleService(productPackageDTOs.get(0));
-        saleServiceAdvanceDTO.setTLV(false);
+        saleServiceAdvanceDTO.setSaleService(productPackageList.get(0));
+        saleServiceAdvanceDTO.setTlv(false);
         saleServiceAdvanceDTO.setBonus(true);
 
         //Lay danh sach phi cua DVBH
-        List<ProductPackageFeeDTO> productPackageFeeDTOList = productPackageFeeService.findByProductPackageIdForPackage(productPackageDTOs.get(0).getProductPackageId());
+        List<ProductPackageFeeDTO> productPackageFeeDTOList =
+                productPackageFeeService.findByProductPackageIdForPackage(productPackageList.get(0)
+                        .getProductPackageId());
         saleServiceAdvanceDTO.setListSaleServicePrice(new java.util.ArrayList<>(productPackageFeeDTOList));
 
         //Lay danh sach loai mat hang thuoc DVBH
-        List<ProdPackProductOfferTypeDTO> productOfferTypeDTOList = prodPackProductOfferTypeService.getByProductPackageIdAndStatus(
-                productPackageDTOs.get(0).getProductPackageId(), Const.STATUS.ACTIVE);
+        List<ProdPackProductOfferTypeDTO> productOfferTypeDTOList =
+                prodPackProductOfferTypeService.getByProductPackageIdAndStatus(
+                        productPackageList.get(0).getProductPackageId(), Const.Status.ACTIVE);
         saleServiceAdvanceDTO.setListProductOfferType(productOfferTypeDTOList);
 
-        List<Long> prodPackTypeIds = productOfferTypeDTOList.stream().map(x -> x.getProdPackTypeId()).collect(Collectors.toUnmodifiableList());
-        Map<Long, List<Long>> prodPackTypeIdToShopIds = prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
+        List<Long> prodPackTypeIds = productOfferTypeDTOList.stream()
+                .map(x -> x.getProdPackTypeId())
+                .collect(Collectors.toUnmodifiableList());
+        Map<Long, List<Long>> prodPackTypeIdToShopIds =
+                prodPackShopService.findShopIdsByProdPackTypeIds(prodPackTypeIds);
 
         log.debug("Found {} prodPackTypeIds mapping to shops", prodPackTypeIdToShopIds.size());
 
@@ -304,12 +331,14 @@ public class ProductPackageService {
             Map<Long, ProductOfferTypeDTO> productOfferTypeMap = productOfferTypeService.findByIds(productOfferTypeIds);
 
             // Batch-select PackageOffer
-            Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer = packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
+            Map<Long, List<PackageOfferDTO>> prodPackTypeIdToPackageOffer =
+                    packageOfferService.getPackageOfferByListProdPackTypeIds(prodPackTypeIds);
 
             List<SaleServiceModelAdvanceDTO> listSaleServiceModel = new ArrayList<>();
 
             for (ProdPackProductOfferTypeDTO offerTypeDTO : productOfferTypeDTOList) {
-                offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject.getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
+                offerTypeDTO.setSpecShopList(prodPackTypeIdToShopObject
+                        .getOrDefault(offerTypeDTO.getProdPackTypeId(), List.of()));
 
                 // Set productOfferTypeName from batch lookup
                 ProductOfferTypeDTO productOfferTypeDTO = productOfferTypeMap.get(offerTypeDTO.getProductOfferTypeId());
@@ -321,7 +350,8 @@ public class ProductPackageService {
                 }
 
                 // Set package offers from batch lookup
-                List<PackageOfferDTO> packageOfferDTOList = prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
+                List<PackageOfferDTO> packageOfferDTOList = 
+                        prodPackTypeIdToPackageOffer.get(offerTypeDTO.getProdPackTypeId());
                 if (!DataUtil.isNullOrEmpty(packageOfferDTOList)) {
                     SaleServiceModelAdvanceDTO saleServiceModelAdvanceDTO = new SaleServiceModelAdvanceDTO();
                     saleServiceModelAdvanceDTO.setSaleServiceModel(offerTypeDTO);

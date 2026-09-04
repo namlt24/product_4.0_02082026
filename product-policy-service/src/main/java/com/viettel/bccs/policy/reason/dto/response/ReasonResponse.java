@@ -1,12 +1,12 @@
 package com.viettel.bccs.policy.reason.dto.response;
 
+import java.util.Date;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-
-import java.util.Date;
 
 public record ReasonResponse(
 
@@ -35,7 +35,8 @@ public record ReasonResponse(
         @Pattern(regexp = "^[12]$", message = "payType chỉ nhận giá trị 1 hoặc 2")
         String payType,
 
-        @Schema(description = "Danh sách dịch vụ viễn thông áp dụng (danh sách ID phân tách bởi dấu phẩy)", example = "1,2,3")
+        @Schema(description = "Danh sách dịch vụ viễn thông áp dụng (danh sách ID phân tách bởi dấu phẩy)",
+                example = "1,2,3")
         @Size(max = 1000, message = "telService tối đa 1000 ký tự")
         @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "telService không được chứa ký tự điều khiển")
         String telService,
@@ -96,4 +97,5 @@ public record ReasonResponse(
         @Size(max = 1000, message = "note tối đa 1000 ký tự")
         @Pattern(regexp = "^[^\\x00-\\x1F\\x7F]{0,1000}$", message = "note không được chứa ký tự điều khiển")
         String note
-) {}
+) {
+}

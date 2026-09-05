@@ -35,6 +35,14 @@
 -- Hibernate ddl-auto=update TU Y NOI LAI VE 255 o lan restart backend ke tiep (khop
 -- theo dung entity). Da sua: ghi ro length=4000 tren entity + ALTER lai 4000 tren
 -- DB dev - VARCHAR2(4000 CHAR) duoi day moi la gia tri DUNG/on dinh lau dai.
+-- Cap nhat 2026-09-05 (lan 10): CHUYEN SANG FLYWAY cho instance MOI tu day -
+-- backend/src/main/resources/db/migration/V1__baseline.sql (CHI 8 bang, KHONG
+-- INSERT du lieu demo) la nguon chinh thuc cho 1 doi tu trien khai rieng tu bay
+-- gio, KHONG con dung file nay chay tay nua (giu lam tai lieu lich su/tham khao).
+-- Instance da co san du lieu (nhu duoi day) chuyen Flyway qua baseline-on-migrate,
+-- khong anh huong gi. Da sua 2 cot bi Hibernate ddl-auto=update TU Y sinh sai
+-- kieu BOOLEAN (chi Oracle 23c+, vo hieu tren 19c) thanh dung NUMBER(1,0):
+-- BACKEND_STEP.CACHE_ENABLED, ENDPOINT_CONFIG.RESPONSE_CACHE_ENABLED.
 -- Cap nhat 2026-09-03 (lan 9): them cot ENDPOINT_CONFIG.RESPONSE_CACHE_ENABLED +
 -- RESPONSE_CACHE_TTL_SECONDS (dong bo voi ddl-gateway-manager.sql, mac dinh 0/300) -
 -- cache TOAN BO response cho MOI client goi cung tham so, CHAN CUNG boi validate chi

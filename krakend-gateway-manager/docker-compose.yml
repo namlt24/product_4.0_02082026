@@ -11,12 +11,18 @@
 #                                                              |
 #                                                          (JDBC)
 #                                                              v
-#                                          Oracle CHUNG voi cac service BCCS
-#                                          (chay rieng qua db-local/docker-compose.yml,
-#                                          khong phai container trong file nay - goi qua
-#                                          host.docker.internal:1521, schema BCCS_PRODUCT)
+#                                          Oracle (KHONG phai container trong file
+#                                          nay) - mac dinh dev/demo tro Oracle CHUNG
+#                                          voi cac service BCCS qua db-local, nhung
+#                                          DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD
+#                                          deu doc duoc tu .env - moi doi tu trien
+#                                          khai co the tro toi Oracle 19c RIENG cua
+#                                          minh ma KHONG can sua file nay (xem
+#                                          DEPLOYMENT_GUIDE.md va .env.example)
 #
-# Chay: docker compose up -d (yeu cau db-local da chay truoc - xem ../db-local/README.md)
+# Chay dev/demo (dung chung ha tang BCCS): docker compose up -d (yeu cau db-local
+# da chay truoc - xem ../db-local/README.md). Trien khai rieng cho 1 doi: xem
+# DEPLOYMENT_GUIDE.md.
 # UI:            http://localhost:4200
 # Gateway thuc thi (data plane, App/Client goi vao):  http://localhost:8080
 # ===========================================================================
@@ -51,11 +57,17 @@ services:
       redis:
         condition: service_healthy
     environment:
-      # Oracle CHUNG voi BCCS - chay qua db-local (container bccs-oracle, port
-      # 1521 publish ra host), backend goi ngUOc ra host qua host.docker.internal.
-      # Dung CHUNG schema BCCS_PRODUCT (khong tao user/schema rieng).
-      DB_HOST: host.docker.internal
-      DB_PORT: 1521
+      # Ma dinh danh doi (dung de phan biet instance cua doi nao neu nhieu doi
+      # cung feed 1 he thong observability chung - xem SPRING_APPLICATION_NAME/
+      # ELASTIC_APM_SERVICE_NAME duoi day). Doi tu chay rieng KHONG bat buoc dat -
+      # mac dinh "default" van chay dung, chi kem theo ten instance chung chung.
+      TEAM_CODE: ${TEAM_CODE:-default}
+      # Mac dinh tro toi Oracle CHUNG voi BCCS qua db-local (container bccs-oracle,
+      # port 1521 publish ra host qua host.docker.internal) - DUNG cho dev/demo
+      # tren may nay. Moi doi tu trien khai instance RIENG: dat DB_HOST/DB_PORT
+      # trong .env tro toi Oracle 19c cua chinh doi (xem DEPLOYMENT_GUIDE.md).
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-1521}
       DB_NAME: ${DB_NAME:-FREEPDB1}
       DB_USER: ${DB_USER:-BCCS_PRODUCT}
       DB_PASSWORD: ${DB_PASSWORD:-BCCS_PRODUCT123}
@@ -70,17 +82,26 @@ services:
       GATEWAY_RATE_LIMIT_ENABLED: ${GATEWAY_RATE_LIMIT_ENABLED:-true}
       GATEWAY_RATE_LIMIT_WINDOW_SECONDS: ${GATEWAY_RATE_LIMIT_WINDOW_SECONDS:-60}
       GATEWAY_RATE_LIMIT_MAX_REQUESTS: ${GATEWAY_RATE_LIMIT_MAX_REQUESTS:-300}
-      # Audit log (request/hop) day vao Elasticsearch CHUNG cua BCCS (db-local,
-      # port 9200 publish ra host) - dung y het cach Oracle da lam, khong join
-      # chung network voi db-local. Xem AuditLogService/LogSearchService.
+      # Mac dinh tro toi Elasticsearch CHUNG cua BCCS (db-local, port 9200 publish
+      # ra host). Moi doi tu trien khai: dat GATEWAY_AUDIT_ES_HOST trong .env tro
+      # toi Elasticsearch RIENG cua doi (hoac GATEWAY_AUDIT_ENABLED=false neu
+      # doi chua co ES - tinh nang audit fail-open, tat khong anh huong traffic
+      # that). Xem AuditLogService/LogSearchService.
       GATEWAY_AUDIT_ENABLED: ${GATEWAY_AUDIT_ENABLED:-true}
-      GATEWAY_AUDIT_ES_HOST: host.docker.internal
+      GATEWAY_AUDIT_ES_HOST: ${GATEWAY_AUDIT_ES_HOST:-host.docker.internal}
       GATEWAY_AUDIT_ES_PORT: ${ES_PORT:-9200}
-      # Elastic APM Java agent (gan qua -javaagent, xem Dockerfile) - APM Server
-      # cung o db-local (port 8200 publish ra host).
-      ELASTIC_APM_SERVICE_NAME: krakend-gateway-manager
-      ELASTIC_APM_SERVER_URL: http://host.docker.internal:${APM_SERVER_PORT:-8200}
-      ELASTIC_APM_ENVIRONMENT: local
+      # Dinh danh instance nay trong log/APM chung (Spring Boot tu doc bien moi
+      # truong SPRING_APPLICATION_NAME, uu tien hon literal trong application.yml) -
+      # kem TEAM_CODE de phan biet duoc doi nao dang goi khi nhieu doi feed chung
+      # 1 he thong log/APM (neu co).
+      SPRING_APPLICATION_NAME: krakend-gateway-manager-${TEAM_CODE:-default}
+      # Elastic APM Java agent (gan qua -javaagent, xem Dockerfile). Mac dinh tro
+      # APM Server CHUNG cua BCCS (db-local, port 8200 publish ra host) - moi doi
+      # tu trien khai dat APM_SERVER_HOST/APM_SERVER_PORT trong .env tro APM rieng
+      # (hoac bo qua, agent khong ket noi duoc se tu tat, khong chan traffic that).
+      ELASTIC_APM_SERVICE_NAME: krakend-gateway-manager-${TEAM_CODE:-default}
+      ELASTIC_APM_SERVER_URL: http://${APM_SERVER_HOST:-host.docker.internal}:${APM_SERVER_PORT:-8200}
+      ELASTIC_APM_ENVIRONMENT: ${APM_ENVIRONMENT:-local}
       ELASTIC_APM_APPLICATION_PACKAGES: com.bccs.gatewaymanager
     ports:
       - "8080:8080"     # ca control plane (/api/**) lan data plane (traffic that) tren cung port

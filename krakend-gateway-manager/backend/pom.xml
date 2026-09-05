@@ -88,6 +88,22 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway - thay Hibernate ddl-auto=update (xem application.yml). Bat buoc de dong
+             goi thanh framework cho nhieu doi tu trien khai (Oracle 19c rieng) - ddl-auto=update
+             chua tung duoc xac nhan dung tren Oracle 19c that (chi test tren 23c), va co loi da
+             biet: khong tu noi CHECK constraint khi them gia tri enum moi vao bang da co (tung
+             dinh ORA-02290 that). Version quan ly boi spring-boot-starter-parent, khong ghi ro
+             o day. flyway-database-oracle la module RIENG (tu Flyway 10) - thieu se loi
+             "Unsupported Database: Oracle" luc khoi dong. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-oracle</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

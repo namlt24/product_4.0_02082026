@@ -12,6 +12,15 @@
 -- rieng cua krakend-gateway-manager, khong dung cham cac bang cua service khac
 -- (SHOP, STAFF, PRODUCT_OFFERING...) dang nam chung 1 schema.
 --
+-- Cap nhat 2026-09-05 (lan 15): CHUYEN SANG FLYWAY - tu ngay nay, schema quan ly
+-- boi Flyway (backend/src/main/resources/db/migration/V1__baseline.sql +
+-- V2__...sql ve sau), KHONG con dung ddl-auto=update nua (doi sang "validate" -
+-- xem application.yml). File nay + gateway-manager-production-setup.sql GIU LAI
+-- lam tai lieu lich su/tham khao, KHONG con la nguon "chay tay" chinh cho instance
+-- moi. Nhan tien sua 2 cot bi Hibernate ddl-auto=update TU Y sinh sai kieu BOOLEAN
+-- (chi co tu Oracle 23c, vo hieu tren 19c) thanh dung NUMBER(1,0) nhu thiet ke ban
+-- dau: BACKEND_STEP.CACHE_ENABLED, ENDPOINT_CONFIG.RESPONSE_CACHE_ENABLED - da
+-- ALTER lai that tren Oracle dev (du lieu chi toan gia tri 0/FALSE, khong mat gi).
 -- Cap nhat 2026-09-03 (lan 14): them cot ENDPOINT_CONFIG.RESPONSE_CACHE_ENABLED +
 -- RESPONSE_CACHE_TTL_SECONDS (NUMBER(1,0)/NUMBER(10,0) NOT NULL, mac dinh 0/300) -
 -- cache TOAN BO response cho MOI client goi cung tham so (khac Idempotency-Key -

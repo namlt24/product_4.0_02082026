@@ -23,8 +23,14 @@ spring:
     # Khong can khai database-platform ro rang - Hibernate 6 tu nhan dien OracleDialect
     # tu chinh driver JDBC (khai them se bi WARN deprecation).
     hibernate:
-      # dev/demo: tu dong tao/cap nhat schema. Production nen chuyen sang Flyway/Liquibase.
-      ddl-auto: update
+      # validate (KHONG con update) - Flyway (spring.flyway duoi day) chiu trach nhiem
+      # tao/sua schema, Hibernate chi doi chieu entity <-> schema that va bao loi ro
+      # rang neu lech, KHONG tu sua gi ca. Doi tu update vi ddl-auto=update chua tung
+      # duoc xac nhan dung tren Oracle 19c that (chi test tren 23c) va co loi da biet:
+      # khong tu noi CHECK constraint khi them gia tri enum moi vao bang da co (tung
+      # dinh ORA-02290 that voi FieldMappingSourceType.QUERY_PARAM) - anh huong MOI
+      # doi tu trien khai ve sau neu khong xu ly goc.
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
@@ -38,6 +44,37 @@ spring:
         # va mappings deu la @OneToMany tren cung EndpointConfig - JOIN FETCH ca 2 trong
         # 1 query se dinh MultipleBagFetchException cua Hibernate.
         default_batch_fetch_size: 50
+        # Buoc BAT BUOC de ddl-auto=validate pass: Hibernate 7 + Oracle 23c+ tu nhan dien
+        # dialect ho tro BOOLEAN native, nen MAC DINH mong doi MOI field Java `boolean`
+        # anh xa toi cot kieu BOOLEAN - trong khi TOAN BO schema hien tai (V1__baseline.sql
+        # + DB dev that) dung NUMBER(1,0)+CHECK (quy uoc truoc 23c, giu de tuong thich
+        # Oracle 19c) - khong ep property nay thi validate bao loi tren HAU HET cot boolean
+        # (da xac nhan that qua loi "wrong column type... expecting [boolean]" tren
+        # backend_step.forward_original_body luc thu that). PHAI nam duoi
+        # spring.jpa.properties.hibernate.* (raw Hibernate property, spring.jpa.hibernate.*
+        # chi nhan 1 tap con co dinh Spring Boot biet, dat sai cho se bi lang le bo qua).
+        #
+        # Dung INTEGER (KHONG phai NUMERIC) - da thu ca 2 gia tri that:
+        #   - NUMERIC: validate PASS (chap nhan NUMBER(1,0)) nhung GHI DU LIEU LOI that
+        #     ("Could not convert java.lang.Boolean to java.math.BigDecimal ... BooleanJavaType
+        #     to unwrap") - la bug/gioi han that cua to hop Hibernate 7.2.24 + OracleDialect,
+        #     khong phai loi cau hinh.
+        #   - INTEGER: da xac nhan CA validate LAN ghi/doc that deu dung (test tren 1 Oracle
+        #     23c-free HOAN TOAN trong/moi, DataSeeder ghi thanh cong 1 step cacheEnabled=true,
+        #     API tra ve dung gia tri qua lai).
+        type:
+          preferred_boolean_jdbc_type: INTEGER
+  flyway:
+    enabled: true
+    # instance MOI (schema Oracle trong) chay thang V1__baseline.sql (xem
+    # db/migration/) - khong can cau hinh gi them.
+    # instance DA CO san du lieu tu truoc khi doi Flyway (vd db-local dev hien tai,
+    # schema da khop dung noi dung V1__baseline.sql) - 2 dong duoi day de Flyway TU
+    # dong baseline (danh dau "da o V1", KHONG chay lai file) thay vi bao loi
+    # "Found non-empty schema without schema history table", khong dung toi du
+    # lieu/schema san co.
+    baseline-on-migrate: true
+    baseline-version: 1
   jackson:
     default-property-inclusion: non_null
   data:

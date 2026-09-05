@@ -10,6 +10,17 @@
     </div>
   }
 
+  @if (queryParamRows.length > 0) {
+    <div class="field-row">
+      @for (row of queryParamRows; track row.key) {
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Query param: {{ row.key }}</mat-label>
+          <input matInput [(ngModel)]="row.value" [placeholder]="'giá trị cho ?' + row.key + '='" />
+        </mat-form-field>
+      }
+    </div>
+  }
+
   <mat-form-field appearance="outline" class="full-width">
     <mat-label>Body (JSON, tuỳ chọn)</mat-label>
     <textarea matInput rows="5" [(ngModel)]="body" placeholder='{"staffId": 102137}'></textarea>

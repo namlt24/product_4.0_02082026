@@ -686,6 +686,7 @@
     <div class="side-panel-body">
       <app-try-panel
         [pathTemplate]="header.path"
+        [queryParamNames]="tryQueryParamNames()"
         [running]="tryRunning()"
         [outcome]="tryOutcome()"
         (run)="runAdhocTry($event)"

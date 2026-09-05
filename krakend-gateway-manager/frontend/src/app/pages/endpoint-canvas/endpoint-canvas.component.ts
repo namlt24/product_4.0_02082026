@@ -29,6 +29,7 @@ import {
   MAPPING_TARGET_TYPES,
   TryResult,
   UpstreamService,
+  extractQueryParamNames,
 } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
 import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try-panel.component';
@@ -909,6 +910,11 @@ export class EndpointCanvasComponent implements OnInit {
     this.tryPanelOpen = true;
   }
 
+  /** O nhap Query param cua panel "Thu nhanh" tu sinh theo mapping HIEN TAI dang cau hinh tren canvas (co the doi lien tuc khi anh sua mapping). */
+  tryQueryParamNames(): string[] {
+    return extractQueryParamNames(this.mappings());
+  }
+
   /**
    * Goi thang API "Thu nhanh" (khong luu DB) voi dung toPayload() hien tai -
    * tai dung 100% logic build payload da co, khong viet lai. Loi o day chi con
@@ -920,7 +926,7 @@ export class EndpointCanvasComponent implements OnInit {
     this.tryOutcome.set(null);
     const payload = this.toPayload();
     this.api
-      .tryAdhoc({ endpoint: payload, pathVariables: req.pathVariables, queryParams: {}, body: req.body })
+      .tryAdhoc({ endpoint: payload, pathVariables: req.pathVariables, queryParams: req.queryParams, body: req.body })
       .subscribe({
         next: (result) => {
           this.tryRunning.set(false);

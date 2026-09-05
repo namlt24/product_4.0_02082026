@@ -16,6 +16,7 @@ interface KeyValueRow {
 
 export interface TryRunRequest {
   pathVariables: Record<string, string>;
+  queryParams: Record<string, string>;
   body: string | null;
 }
 
@@ -46,16 +47,22 @@ export interface TryRunRequest {
 })
 export class TryPanelComponent implements OnChanges {
   @Input({ required: true }) pathTemplate = '';
+  /** Ten cac query param client can truyen - xem extractQueryParamNames() trong endpoint.model.ts. */
+  @Input() queryParamNames: string[] = [];
   @Input() running = false;
   @Input() outcome: TryResult | null = null;
   @Output() run = new EventEmitter<TryRunRequest>();
 
   pathParamRows: KeyValueRow[] = [];
+  queryParamRows: KeyValueRow[] = [];
   body = '';
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['pathTemplate']) {
       this.pathParamRows = this.extractPathTokens(this.pathTemplate).map((key) => ({ key, value: '' }));
+    }
+    if (changes['queryParamNames']) {
+      this.queryParamRows = this.queryParamNames.map((key) => ({ key, value: '' }));
     }
   }
 
@@ -70,7 +77,11 @@ export class TryPanelComponent implements OnChanges {
     for (const row of this.pathParamRows) {
       pathVariables[row.key] = row.value;
     }
-    this.run.emit({ pathVariables, body: this.body.trim() || null });
+    const queryParams: Record<string, string> = {};
+    for (const row of this.queryParamRows) {
+      queryParams[row.key] = row.value;
+    }
+    this.run.emit({ pathVariables, queryParams, body: this.body.trim() || null });
   }
 
   json(value: unknown): string {

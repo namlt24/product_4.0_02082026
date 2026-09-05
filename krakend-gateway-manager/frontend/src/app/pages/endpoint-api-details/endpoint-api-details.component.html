@@ -30,6 +30,7 @@
     <mat-card-content>
       <app-try-panel
         [pathTemplate]="endpoint()?.path ?? ''"
+        [queryParamNames]="queryParamNames()"
         [running]="trying()"
         [outcome]="outcome()"
         (run)="onRun($event)"

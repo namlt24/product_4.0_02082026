@@ -158,6 +158,23 @@ export interface FieldMapping {
   targetContext?: MappingTargetContext | null;
 }
 
+/**
+ * Tim TEN cac query param client can truyen khi goi endpoint nay - dua tren cac
+ * FieldMapping sourceType=QUERY_PARAM (sourceField = dung ten query param, xem
+ * CompositeOrchestratorEngine.firstQueryParamValue() ben backend). Dung de tu sinh
+ * o nhap query param cho "Thu ngay"/"Thu nhanh" (xem TryPanelComponent) - truoc day
+ * UI bo qua hoan toan phan nay vi tuong nham engine chua ho tro QUERY_PARAM.
+ */
+export function extractQueryParamNames(mappings: FieldMapping[]): string[] {
+  const names = new Set<string>();
+  for (const m of mappings) {
+    if (m.sourceType === 'QUERY_PARAM' && m.sourceField) {
+      names.add(m.sourceField);
+    }
+  }
+  return [...names];
+}
+
 export interface EndpointConfig {
   id?: string;
   name: string;

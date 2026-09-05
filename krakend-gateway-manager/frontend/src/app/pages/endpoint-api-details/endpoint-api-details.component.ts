@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EndpointConfig, TryResult } from '../../models/endpoint.model';
+import { EndpointConfig, extractQueryParamNames, TryResult } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
 import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try-panel.component';
 
@@ -15,11 +15,11 @@ import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try
  * qua Control Plane (POST /api/endpoints/{id}/try) - dung CHINH composite
  * engine ma Data Plane that dung, khong phai gia lap rieng.
  *
- * KHONG co o form nhap "Query params": engine hien CHUA doc query param cua
- * chinh client lam nguon FieldMapping nao ca (xem ExecutionContext o backend -
- * field queryParams khong co getter, hoan toan khong duoc dung) - dua vao UI
- * 1 truong luon vo tac dung se gay hieu nham, nen bo hoan toan thay vi hien
- * "cho co".
+ * O nhap Query param duoc TryPanelComponent tu sinh dua tren
+ * extractQueryParamNames(endpoint.mappings) - dung cho step nao co FieldMapping
+ * sourceType=QUERY_PARAM (engine CO doc, xem CompositeOrchestratorEngine -
+ * truoc day component nay tung ghi nham la engine khong ho tro nen bo hoan
+ * toan o nhap, da sua).
  */
 @Component({
   selector: 'app-endpoint-api-details',
@@ -93,6 +93,10 @@ export class EndpointApiDetailsComponent implements OnInit {
     });
   }
 
+  queryParamNames(): string[] {
+    return extractQueryParamNames(this.endpoint()?.mappings ?? []);
+  }
+
   /**
    * Backend gio LUON tra HTTP 200 (envelope TryResultDto - xem EndpointTryService)
    * ke ca khi orchestration that bai, nen nhanh `error:` o day chi con fire khi
@@ -101,7 +105,7 @@ export class EndpointApiDetailsComponent implements OnInit {
   onRun(req: TryRunRequest): void {
     this.trying.set(true);
     this.outcome.set(null);
-    this.api.tryEndpoint(this.endpointId, { pathVariables: req.pathVariables, queryParams: {}, body: req.body }).subscribe({
+    this.api.tryEndpoint(this.endpointId, { pathVariables: req.pathVariables, queryParams: req.queryParams, body: req.body }).subscribe({
       next: (result) => {
         this.trying.set(false);
         this.outcome.set(result);

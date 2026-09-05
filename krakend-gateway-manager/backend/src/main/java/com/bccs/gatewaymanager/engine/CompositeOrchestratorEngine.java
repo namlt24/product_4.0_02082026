@@ -3,6 +3,7 @@ package com.bccs.gatewaymanager.engine;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.dto.StepTraceDto;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
@@ -246,14 +247,25 @@ public class CompositeOrchestratorEngine {
      * (request thread) 1 LAN truoc khi submit, roi set lai dung ban chup do TRONG
      * MOI task truoc khi chay + phuc hoi MDC cu cua worker thread trong finally (tranh
      * ro ri context sang task KHAC tai su dung CUNG thread cua pool sau nay).
+     *
+     * TraceCollector ("Thu nhanh" - xem EndpointTryService) can y HET fix tren:
+     * cung la ThreadLocal, cung KHONG tu dong lan sang worker thread. Khac MDC
+     * (moi thread giu 1 ban String rieng), o day TAT CA worker thread duoc gan
+     * CHUNG 1 list (khong copy) de cac step song song cung ghi duoc vao 1 ket
+     * qua duy nhat cho 1 lan "Thu nhanh".
      */
     private void executeStepsInParallel(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
         Map<String, String> callerMdcContext = MDC.getCopyOfContextMap();
+        List<StepTraceDto> callerTrace = TraceCollector.current();
         List<Future<?>> futures = orderedSteps.stream()
                 .<Future<?>>map(step -> parallelStepExecutor.submit(() -> {
                     Map<String, String> workerMdcContext = MDC.getCopyOfContextMap();
+                    List<StepTraceDto> workerTrace = TraceCollector.current();
                     if (callerMdcContext != null) {
                         MDC.setContextMap(callerMdcContext);
+                    }
+                    if (callerTrace != null) {
+                        TraceCollector.attach(callerTrace);
                     }
                     try {
                         JsonNode transformed = executeStep(config, step, ctx);
@@ -264,6 +276,7 @@ public class CompositeOrchestratorEngine {
                         } else {
                             MDC.clear();
                         }
+                        TraceCollector.attach(workerTrace);
                     }
                 }))
                 .toList();

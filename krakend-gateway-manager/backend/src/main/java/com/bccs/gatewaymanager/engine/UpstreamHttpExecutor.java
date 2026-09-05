@@ -4,6 +4,7 @@ import com.bccs.gatewaymanager.audit.AuditLogService;
 import com.bccs.gatewaymanager.audit.BodyTruncator;
 import com.bccs.gatewaymanager.audit.HopAuditEvent;
 import com.bccs.gatewaymanager.cache.GatewayCacheService;
+import com.bccs.gatewaymanager.dto.StepTraceDto;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.SystemException;
 import tools.jackson.databind.JsonNode;
@@ -172,6 +173,15 @@ public class UpstreamHttpExecutor {
                     responseBodyResult.body(), responseBodyResult.truncated(),
                     durationMs, cacheHit, success, errorMessage, Instant.now());
             auditLogService.recordHop(event);
+
+            // "Thu nhanh" (xem TraceCollector) - no-op ngoai che do do (Data Plane
+            // that khong bao gio goi TraceCollector.start()), tai su dung dung cac
+            // gia tri vua tinh o tren cho HopAuditEvent, khong tinh toan them.
+            TraceCollector.record(new StepTraceDto(stepOrder, stepName, upstream.getName(), method.name(), resolvedUrl,
+                    requestBodyResult.body(), requestBodyResult.truncated(),
+                    responseStatus,
+                    responseBodyResult.body(), responseBodyResult.truncated(),
+                    durationMs, cacheHit, success, errorMessage));
         }
     }
 

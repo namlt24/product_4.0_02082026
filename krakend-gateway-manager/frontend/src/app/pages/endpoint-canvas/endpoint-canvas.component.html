@@ -110,6 +110,9 @@
     <button mat-stroked-button type="button" (click)="openNewMappingPanel()">
       <mat-icon>add_link</mat-icon> Thêm Field Mapping
     </button>
+    <button mat-stroked-button type="button" (click)="openTryPanel()">
+      <mat-icon>play_circle</mat-icon> Thử nhanh
+    </button>
     <span class="canvas-hint">
       <mat-icon inline="true">info</mat-icon>
       Kéo node để sắp xếp · Bấm node/đường nối để sửa · Vị trí được lưu cùng endpoint
@@ -270,7 +273,7 @@
 }
 
 <!-- ============================== Panel truot ben phai ============================== -->
-<aside #panelRef class="side-panel" [class.side-panel--open]="panelOpen()">
+<aside #panelRef class="side-panel" [class.side-panel--open]="panelOpen()" [class.side-panel--wide]="tryPanelOpen">
   @if (editingStep; as edit) {
     <div class="side-panel-header">
       <h2>Sửa Step {{ (editingStepIndex ?? 0) + 1 }}</h2>
@@ -672,6 +675,21 @@
       <span class="spacer"></span>
       <button mat-button type="button" (click)="closePanel()">Đóng</button>
       <button mat-flat-button color="primary" type="button" (click)="applyMappingPanel()">Áp dụng</button>
+    </div>
+  }
+
+  @if (tryPanelOpen) {
+    <div class="side-panel-header">
+      <h2>Thử nhanh (chưa cần lưu)</h2>
+      <button mat-icon-button type="button" (click)="closePanel()"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="side-panel-body">
+      <app-try-panel
+        [pathTemplate]="header.path"
+        [running]="tryRunning()"
+        [outcome]="tryOutcome()"
+        (run)="runAdhocTry($event)"
+      />
     </div>
   }
 </aside>

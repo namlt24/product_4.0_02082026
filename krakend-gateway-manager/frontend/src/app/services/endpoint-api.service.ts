@@ -6,10 +6,12 @@ import {
   ConfigImportResult,
   DependencyGraph,
   DeployResult,
+  EndpointAdhocTryRequest,
   EndpointConfig,
   EndpointTryRequest,
   EndpointVersionSummary,
   GatewayInfo,
+  TryResult,
   UpstreamHealth,
   UpstreamService,
 } from '../models/endpoint.model';
@@ -88,9 +90,21 @@ export class EndpointApiService {
 
   // ---- P1: Thu ngay / OpenAPI / Suc khoe Upstream / Export-Import ----
 
-  /** Goi that qua Control Plane, dung dung composite engine - xem EndpointTryService o backend. */
-  tryEndpoint(endpointId: string, req: EndpointTryRequest): Observable<unknown> {
-    return this.http.post(`${this.endpointsUrl}/${endpointId}/try`, req);
+  /**
+   * Goi that qua Control Plane, dung dung composite engine - xem EndpointTryService o backend.
+   * Tra ve TryResult (envelope, LUON HTTP 200 ke ca that bai - xem TryResultDto o backend)
+   * gom ca waterfall tung step, khong chi response cuoi cung gop.
+   */
+  tryEndpoint(endpointId: string, req: EndpointTryRequest): Observable<TryResult> {
+    return this.http.post<TryResult>(`${this.endpointsUrl}/${endpointId}/try`, req);
+  }
+
+  /**
+   * "Thu nhanh" 1 draft CHUA LUU (dung khi khai bao qua Canvas) - khong ghi gi vao DB.
+   * Xem EndpointTryService.tryAdhoc() o backend.
+   */
+  tryAdhoc(req: EndpointAdhocTryRequest): Observable<TryResult> {
+    return this.http.post<TryResult>(`${this.endpointsUrl}/try-adhoc`, req);
   }
 
   getOpenApiSpec(endpointId: string): Observable<Record<string, unknown>> {

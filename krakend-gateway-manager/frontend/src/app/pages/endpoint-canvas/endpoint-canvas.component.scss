@@ -410,6 +410,12 @@
   &--open {
     transform: translateX(0);
   }
+
+  // "Thu nhanh" can nhieu chieu ngang hon panel sua step/mapping (waterfall
+  // tung step + request/response body 2 cot - xem try-panel.component.scss).
+  &--wide {
+    width: 640px;
+  }
 }
 
 .side-panel-header {

@@ -5,10 +5,6 @@
       Endpoints
     </a>
     <h1 class="page-title">Upstream Services</h1>
-    <p class="page-subtitle">
-      Đăng ký backend thật 1 lần (host, timeout, circuit breaker) - các Backend Step tham chiếu tới đây thay vì
-      gõ tay host riêng lẻ. Cache Redis khai báo riêng theo từng Backend Step (không phải ở đây).
-    </p>
   </div>
 
   <div class="header-actions">
@@ -75,12 +71,10 @@
           <mat-form-field appearance="outline">
             <mat-label>Bulkhead - số lệnh gọi đồng thời tối đa</mat-label>
             <input matInput type="number" formControlName="maxConcurrentCalls" />
-            <mat-hint>Giới hạn số lệnh gọi cùng lúc tới Upstream này, để 1 Upstream chậm/quá tải không kéo theo cạn kiệt thread của cả gateway</mat-hint>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Bulkhead - thời gian chờ tối đa (ms)</mat-label>
             <input matInput type="number" formControlName="maxWaitDurationMs" />
-            <mat-hint>Lệnh gọi vượt quá giới hạn trên sẽ chờ tối đa bằng này trước khi bị từ chối</mat-hint>
           </mat-form-field>
         </div>
       </form>

@@ -27,9 +27,11 @@ import {
   HTTP_METHODS,
   MAPPING_TARGET_CONTEXTS,
   MAPPING_TARGET_TYPES,
+  TryResult,
   UpstreamService,
 } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
+import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try-panel.component';
 
 const NODE_W = 220;
 const NODE_H = 96;
@@ -179,6 +181,7 @@ interface PositionedCompensation {
     MatTooltipModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    TryPanelComponent,
   ],
   templateUrl: './endpoint-canvas.component.html',
   styleUrl: './endpoint-canvas.component.scss',
@@ -220,6 +223,13 @@ export class EndpointCanvasComponent implements OnInit {
   editingStepIndex: number | null = null;
   editingMapping: FieldMapping | null = null;
   editingMappingIndex: number | null = null;
+
+  // "Thu nhanh" (xem toolbar) - dung CHUNG panel truot ben phai voi editingStep/
+  // editingMapping (loai trừ lan nhau, xem panelOpen()/closePanel()) - khong tach
+  // panel rieng, dung quyet dinh da chot voi nguoi dung.
+  tryPanelOpen = false;
+  readonly tryRunning = signal(false);
+  readonly tryOutcome = signal<TryResult | null>(null);
 
   /** Tham chieu DOM cua panel - dung de phat hien click RA NGOAI panel (dong panel). */
   @ViewChild('panelRef') private panelRef?: ElementRef<HTMLElement>;
@@ -435,7 +445,7 @@ export class EndpointCanvasComponent implements OnInit {
    * khong dung OnPush) tu goi lai moi lan CD chay, luon tra ve gia tri dung hien tai.
    */
   panelOpen(): boolean {
-    return this.editingStep !== null || this.editingMapping !== null;
+    return this.editingStep !== null || this.editingMapping !== null || this.tryPanelOpen;
   }
 
   /**
@@ -890,6 +900,43 @@ export class EndpointCanvasComponent implements OnInit {
     this.editingStepIndex = null;
     this.editingMapping = null;
     this.editingMappingIndex = null;
+    this.tryPanelOpen = false;
+  }
+
+  /** "Thu nhanh" - xem toPayload()/runAdhocTry(). Dung chung side-panel, dong panel sua step/mapping khac neu dang mo. */
+  openTryPanel(): void {
+    this.closePanel();
+    this.tryPanelOpen = true;
+  }
+
+  /**
+   * Goi thang API "Thu nhanh" (khong luu DB) voi dung toPayload() hien tai -
+   * tai dung 100% logic build payload da co, khong viet lai. Loi o day chi con
+   * la loi GOI SAI API that su (mat mang...) vi backend gio LUON tra HTTP 200
+   * (envelope TryResultDto) ke ca khi draft khong hop le/engine loi.
+   */
+  runAdhocTry(req: TryRunRequest): void {
+    this.tryRunning.set(true);
+    this.tryOutcome.set(null);
+    const payload = this.toPayload();
+    this.api
+      .tryAdhoc({ endpoint: payload, pathVariables: req.pathVariables, queryParams: {}, body: req.body })
+      .subscribe({
+        next: (result) => {
+          this.tryRunning.set(false);
+          this.tryOutcome.set(result);
+        },
+        error: (err) => {
+          this.tryRunning.set(false);
+          this.tryOutcome.set({
+            success: false,
+            result: null,
+            errorCode: err?.status ? `HTTP_${err.status}` : null,
+            errorMessage: err?.error?.message ?? 'Không gọi được thử nhanh.',
+            hops: [],
+          });
+        },
+      });
   }
 
   // ------------------------------------------------------------------ //

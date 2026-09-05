@@ -280,6 +280,41 @@ export interface EndpointTryRequest {
   body: string | null;
 }
 
+/** Payload "Thu nhanh" cho 1 draft CHUA LUU - xem EndpointAdhocTryRequestDto o backend. */
+export interface EndpointAdhocTryRequest {
+  endpoint: EndpointConfig;
+  pathVariables: Record<string, string>;
+  queryParams: Record<string, string>;
+  body: string | null;
+}
+
+/** 1 dong trong waterfall tung step - xem StepTraceDto o backend. */
+export interface StepTraceDto {
+  stepOrder: number;
+  stepName: string;
+  upstreamName: string;
+  method: string;
+  resolvedUrl: string;
+  requestBody: string | null;
+  requestBodyTruncated: boolean;
+  responseStatus: number | null;
+  responseBody: string | null;
+  responseBodyTruncated: boolean;
+  durationMs: number;
+  cacheHit: boolean;
+  success: boolean;
+  errorMessage: string | null;
+}
+
+/** Ket qua 1 lan "Thu ngay"/"Thu nhanh" - xem TryResultDto o backend. LUON tra ve (HTTP 200) ke ca that bai. */
+export interface TryResult {
+  success: boolean;
+  result: unknown | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  hops: StepTraceDto[];
+}
+
 /** Bundle Export/Import cau hinh - xem ConfigExportDto o backend. */
 export interface ConfigExportBundle {
   schemaVersion: string;

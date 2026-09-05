@@ -73,74 +73,14 @@
   }
 }
 
-.full-width {
-  width: 100%;
-}
-
-.btn-spinner {
-  display: inline-block;
-  margin-right: 6px;
-}
-
 .empty-hint {
   color: var(--gwm-text-muted);
   font-size: 13px;
 }
 
-// ---------------------------------------------------------------------------
-// Ket qua "Thu ngay"
-// ---------------------------------------------------------------------------
-.result-block {
-  margin-top: 14px;
-  border-radius: var(--gwm-radius-md);
-  border: 1px solid;
-  overflow: hidden;
-
-  &--success {
-    border-color: var(--gwm-success-border);
-    background: var(--gwm-success-bg);
-  }
-
-  &--error {
-    border-color: var(--gwm-danger-border);
-    background: var(--gwm-danger-bg);
-  }
-
-  pre {
-    margin: 0;
-    padding: 12px 14px;
-    background: var(--gwm-surface);
-    font-size: 12px;
-    font-family: var(--gwm-font-mono, monospace);
-    overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 400px;
-    overflow-y: auto;
-  }
-}
-
-.result-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  font-weight: 700;
-
-  .result-block--success & {
-    color: var(--gwm-success);
-  }
-  .result-block--error & {
-    color: var(--gwm-danger);
-  }
-
-  mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-  }
-}
+// field-row/full-width/btn-spinner/result-block/result-header/hop-* da chuyen
+// sang try-panel.component.scss (dung chung voi endpoint-canvas) - khong con
+// dung o day (khoi "Thu ngay" da thay bang <app-try-panel>).
 
 // ---------------------------------------------------------------------------
 // OpenAPI spec viewer

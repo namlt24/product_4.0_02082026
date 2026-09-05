@@ -1,0 +1,100 @@
+<div class="try-panel">
+  @if (pathParamRows.length > 0) {
+    <div class="field-row">
+      @for (row of pathParamRows; track row.key) {
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Path param: {{ row.key }}</mat-label>
+          <input matInput [(ngModel)]="row.value" [placeholder]="'giá trị cho {' + row.key + '}'" />
+        </mat-form-field>
+      }
+    </div>
+  }
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Body (JSON, tuỳ chọn)</mat-label>
+    <textarea matInput rows="5" [(ngModel)]="body" placeholder='{"staffId": 102137}'></textarea>
+  </mat-form-field>
+
+  <button mat-flat-button color="primary" type="button" [disabled]="running" (click)="submit()">
+    @if (running) {
+      <mat-spinner diameter="18" class="btn-spinner" />
+    } @else {
+      <mat-icon>send</mat-icon>
+    }
+    Gửi yêu cầu
+  </button>
+
+  @if (outcome; as o) {
+    @if (o.success) {
+      <div class="result-block result-block--success">
+        <div class="result-header">
+          <mat-icon inline="true">check_circle</mat-icon>
+          <span>Thành công</span>
+        </div>
+        <pre>{{ json(o.result) }}</pre>
+      </div>
+    } @else {
+      <div class="result-block result-block--error">
+        <div class="result-header">
+          <mat-icon inline="true">error</mat-icon>
+          <span>Lỗi @if (o.errorCode) { ({{ o.errorCode }}) }</span>
+        </div>
+        <pre>{{ o.errorMessage }}</pre>
+      </div>
+    }
+
+    @if (o.hops.length > 0) {
+      <div class="hop-waterfall">
+        @for (hop of o.hops; track hop.stepOrder) {
+          <div class="hop-item" [class.hop-item--error]="!hop.success">
+            <div class="hop-header">
+              <span class="hop-order">#{{ hop.stepOrder }}</span>
+              <span class="hop-name">{{ hop.stepName }}</span>
+              <span class="method-chip" [attr.data-method]="hop.method">{{ hop.method }}</span>
+              @if (hop.cacheHit) {
+                <span class="cache-hit-chip" matTooltip="Trả từ cache Redis - không gọi Upstream thật lần này">
+                  <mat-icon inline="true">bolt</mat-icon>cache hit
+                </span>
+              }
+              <span class="spacer"></span>
+              @if (hop.responseStatus) {
+                <span class="http-status" [class.http-status--error]="!hop.success">HTTP {{ hop.responseStatus }}</span>
+              }
+              <span class="hop-duration">{{ hop.durationMs }} ms</span>
+            </div>
+            <code class="resolved-url">{{ hop.resolvedUrl }}</code>
+            @if (hop.errorMessage) {
+              <div class="hop-error">{{ hop.errorMessage }}</div>
+            }
+            <div class="hop-bodies">
+              @if (hop.requestBody) {
+                <div class="detail-block">
+                  <div class="detail-block-title">
+                    Request → Upstream
+                    @if (hop.requestBodyTruncated) {
+                      <span class="truncated-hint">(đã cắt bớt)</span>
+                    }
+                  </div>
+                  <pre class="detail-pre">{{ hop.requestBody }}</pre>
+                </div>
+              }
+              @if (hop.responseBody) {
+                <div class="detail-block">
+                  <div class="detail-block-title">
+                    Response ← Upstream
+                    @if (hop.responseBodyTruncated) {
+                      <span class="truncated-hint">(đã cắt bớt)</span>
+                    }
+                  </div>
+                  <pre class="detail-pre">{{ hop.responseBody }}</pre>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (!o.success) {
+      <p class="empty-hint">Chưa có step nào chạy trước khi lỗi xảy ra (lỗi cấu hình/validate).</p>
+    }
+  }
+</div>

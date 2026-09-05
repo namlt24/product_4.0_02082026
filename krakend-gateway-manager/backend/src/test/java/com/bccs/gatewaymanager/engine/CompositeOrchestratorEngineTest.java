@@ -3,6 +3,7 @@ package com.bccs.gatewaymanager.engine;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.dto.StepTraceDto;
 import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
@@ -281,6 +282,36 @@ class CompositeOrchestratorEngineTest {
             assertThat(capturedRequestIds).containsExactlyInAnyOrder("req-mdc-test", "req-mdc-test");
         } finally {
             MDC.remove("requestId");
+        }
+    }
+
+    @Test
+    void parallel_TraceCollectorLanSangThreadPool_gomDuHopCuaTatCaStepSongSong() {
+        // Mirror dung test MDC o tren - TraceCollector ("Thu nhanh") cung la ThreadLocal,
+        // cung can lan truyen tay sang worker thread cua parallelStepExecutor, nhung khac
+        // MDC (moi thread giu 1 ban String rieng): TAT CA worker thread duoc gan CHUNG 1
+        // list de 2 step song song cung ghi duoc vao 1 ket qua duy nhat.
+        List<StepTraceDto> hops = TraceCollector.start();
+        try {
+            when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                    .thenAnswer(inv -> {
+                        TraceCollector.record(new StepTraceDto(1, "s1", "u1", "GET", "http://u1", null, false,
+                                200, "{}", false, 5L, false, true, null));
+                        return json("{\"a\":1}");
+                    });
+            when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+                    .thenAnswer(inv -> {
+                        TraceCollector.record(new StepTraceDto(2, "s2", "u2", "GET", "http://u2", null, false,
+                                200, "{}", false, 5L, false, true, null));
+                        return json("{\"b\":2}");
+                    });
+            EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"));
+
+            engine.handle(config, Map.of(), Map.of(), null);
+
+            assertThat(hops).extracting(StepTraceDto::stepOrder).containsExactlyInAnyOrder(1, 2);
+        } finally {
+            TraceCollector.stop();
         }
     }
 

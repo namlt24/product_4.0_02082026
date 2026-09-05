@@ -1,0 +1,252 @@
+// Gop tu endpoint-api-details.component.scss (field-row/full-width/btn-spinner/
+// result-block/result-header/empty-hint) + log-search.component.scss (hop-*/
+// method-chip/http-status/detail-*/truncated-hint/cache-hit-chip/spacer/resolved-url) -
+// dung chung 1 markup waterfall cho ca "Thu ngay" (trang rieng) va "Thu nhanh" (Canvas).
+
+.field-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.empty-hint {
+  color: var(--gwm-text-muted);
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
+// ---------------------------------------------------------------------------
+// Ket qua cuoi cung
+// ---------------------------------------------------------------------------
+.result-block {
+  margin-top: 14px;
+  border-radius: var(--gwm-radius-md);
+  border: 1px solid;
+  overflow: hidden;
+
+  &--success {
+    border-color: var(--gwm-success-border);
+    background: var(--gwm-success-bg);
+  }
+
+  &--error {
+    border-color: var(--gwm-danger-border);
+    background: var(--gwm-danger-bg);
+  }
+
+  pre {
+    margin: 0;
+    padding: 12px 14px;
+    background: var(--gwm-surface);
+    font-size: 12px;
+    font-family: var(--gwm-font-mono, monospace);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+
+  .result-block--success & {
+    color: var(--gwm-success);
+  }
+  .result-block--error & {
+    color: var(--gwm-danger);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Waterfall tung step
+// ---------------------------------------------------------------------------
+.method-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: white;
+  background: #64748b;
+
+  &[data-method='GET'] { background: #059669; }
+  &[data-method='POST'] { background: #2563eb; }
+  &[data-method='PUT'] { background: #d97706; }
+  &[data-method='DELETE'] { background: #dc2626; }
+  &[data-method='PATCH'] { background: #7c3aed; }
+}
+
+.http-status {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gwm-text-muted);
+
+  &--error {
+    color: var(--gwm-danger);
+  }
+}
+
+.detail-block {
+  margin-top: 10px;
+}
+
+.detail-block-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gwm-text-muted);
+  margin-bottom: 4px;
+}
+
+.truncated-hint {
+  text-transform: none;
+  font-weight: 500;
+  color: var(--gwm-warning);
+  letter-spacing: 0;
+}
+
+.detail-pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-sm);
+  font-size: 12px;
+  font-family: var(--gwm-font-mono);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+  color: var(--gwm-text);
+}
+
+.hop-waterfall {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-left: 14px;
+  border-left: 2px solid var(--gwm-border);
+}
+
+.hop-item {
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-md);
+  padding: 10px 14px;
+
+  &--error {
+    border-color: var(--gwm-danger-border);
+  }
+}
+
+.hop-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hop-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--gwm-primary-light);
+  color: var(--gwm-primary-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hop-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--gwm-text);
+}
+
+.cache-hit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: var(--gwm-accent-light);
+  color: var(--gwm-accent);
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.hop-duration {
+  font-size: 12px;
+  color: var(--gwm-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.resolved-url {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--gwm-text-secondary);
+  word-break: break-all;
+}
+
+.hop-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--gwm-danger);
+}
+
+.hop-bodies {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}

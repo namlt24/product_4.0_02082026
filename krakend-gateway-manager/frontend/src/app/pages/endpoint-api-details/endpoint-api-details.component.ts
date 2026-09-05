@@ -1,22 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EndpointConfig } from '../../models/endpoint.model';
+import { EndpointConfig, TryResult } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
-
-interface KeyValueRow {
-  key: string;
-  value: string;
-}
+import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try-panel.component';
 
 /**
  * "Thu ngay" + "OpenAPI spec" (P1) - trang RIENG, doc lap voi form/canvas. Goi
@@ -34,16 +26,13 @@ interface KeyValueRow {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     RouterLink,
     MatButtonModule,
     MatCardModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatTooltipModule,
+    TryPanelComponent,
   ],
   templateUrl: './endpoint-api-details.component.html',
   styleUrl: './endpoint-api-details.component.scss',
@@ -52,13 +41,8 @@ export class EndpointApiDetailsComponent implements OnInit {
   readonly loading = signal(true);
   readonly endpoint = signal<EndpointConfig | null>(null);
 
-  readonly pathParamRows = signal<KeyValueRow[]>([]);
-  readonly requestBody = signal('');
-
   readonly trying = signal(false);
-  readonly tryResult = signal<string | null>(null);
-  readonly tryError = signal<string | null>(null);
-  readonly tryStatus = signal<number | null>(null);
+  readonly outcome = signal<TryResult | null>(null);
 
   readonly loadingSpec = signal(true);
   readonly specJson = signal<string | null>(null);
@@ -88,7 +72,6 @@ export class EndpointApiDetailsComponent implements OnInit {
     this.api.get(this.endpointId).subscribe({
       next: (ep) => {
         this.endpoint.set(ep);
-        this.pathParamRows.set(this.extractPathTokens(ep.path).map((key) => ({ key, value: '' })));
         this.loading.set(false);
       },
       error: () => {
@@ -110,41 +93,30 @@ export class EndpointApiDetailsComponent implements OnInit {
     });
   }
 
-  /** Token dang {x} trong path - dung Y HET regex CompositeOrchestratorEngine.resolvePath() ben backend dung de khop that. */
-  private extractPathTokens(path: string): string[] {
-    const matches = path.match(/\{([a-zA-Z0-9_]+)}/g) ?? [];
-    return matches.map((m) => m.slice(1, -1));
-  }
-
-  runTry(): void {
+  /**
+   * Backend gio LUON tra HTTP 200 (envelope TryResultDto - xem EndpointTryService)
+   * ke ca khi orchestration that bai, nen nhanh `error:` o day chi con fire khi
+   * GOI SAI API that su (mat mang, sai API key, endpointId khong ton tai...).
+   */
+  onRun(req: TryRunRequest): void {
     this.trying.set(true);
-    this.tryResult.set(null);
-    this.tryError.set(null);
-    this.tryStatus.set(null);
-
-    const pathVariables: Record<string, string> = {};
-    for (const row of this.pathParamRows()) {
-      pathVariables[row.key] = row.value;
-    }
-
-    this.api
-      .tryEndpoint(this.endpointId, {
-        pathVariables,
-        queryParams: {},
-        body: this.requestBody().trim() || null,
-      })
-      .subscribe({
-        next: (result) => {
-          this.trying.set(false);
-          this.tryStatus.set(200);
-          this.tryResult.set(JSON.stringify(result, null, 2));
-        },
-        error: (err) => {
-          this.trying.set(false);
-          this.tryStatus.set(err?.status ?? null);
-          this.tryError.set(JSON.stringify(err?.error ?? { message: 'Không rõ lỗi.' }, null, 2));
-        },
-      });
+    this.outcome.set(null);
+    this.api.tryEndpoint(this.endpointId, { pathVariables: req.pathVariables, queryParams: {}, body: req.body }).subscribe({
+      next: (result) => {
+        this.trying.set(false);
+        this.outcome.set(result);
+      },
+      error: (err) => {
+        this.trying.set(false);
+        this.outcome.set({
+          success: false,
+          result: null,
+          errorCode: err?.status ? `HTTP_${err.status}` : null,
+          errorMessage: err?.error?.message ?? 'Không gọi được endpoint.',
+          hops: [],
+        });
+      },
+    });
   }
 
   copySpec(): void {

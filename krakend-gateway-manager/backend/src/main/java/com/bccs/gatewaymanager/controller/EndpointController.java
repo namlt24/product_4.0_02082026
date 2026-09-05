@@ -1,10 +1,12 @@
 package com.bccs.gatewaymanager.controller;
 
 import com.bccs.gatewaymanager.dto.DependencyGraphDto;
+import com.bccs.gatewaymanager.dto.EndpointAdhocTryRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.EndpointTryRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointVersionSummaryDto;
+import com.bccs.gatewaymanager.dto.TryResultDto;
 import com.bccs.gatewaymanager.service.DependencyAnalyzer;
 import com.bccs.gatewaymanager.service.EndpointService;
 import com.bccs.gatewaymanager.service.EndpointTryService;
@@ -87,15 +89,26 @@ public class EndpointController {
     }
 
     /**
-     * "Thu ngay" (P1) - goi endpoint composite that qua Control Plane (khong qua
-     * Data Plane nen khong bi RateLimitFilter/CORS), dung dung
-     * CompositeOrchestratorEngine nhu client that se trai qua. Loi (business/upstream/
-     * circuit-breaker...) duoc de GlobalExceptionHandler xu ly binh thuong.
+     * "Thu ngay" (P1, endpoint DA LUU) - goi endpoint composite that qua Control
+     * Plane (khong qua Data Plane nen khong bi RateLimitFilter/CORS), dung dung
+     * CompositeOrchestratorEngine nhu client that se trai qua. Tra ve TryResultDto
+     * (envelope, LUON HTTP 200) gom ca waterfall tung step - xem javadoc
+     * EndpointTryService. Loi GOI SAI API (id khong ton tai) van throw binh
+     * thuong, do GlobalExceptionHandler xu ly nhu truoc.
      */
     @PostMapping("/{id}/try")
-    public ResponseEntity<JsonNode> tryEndpoint(@PathVariable String id, @RequestBody EndpointTryRequestDto req) {
-        JsonNode result = tryService.tryCall(id, req.pathVariables(), req.queryParams(), req.body());
-        return ResponseEntity.ok(result);
+    public ResponseEntity<TryResultDto> tryEndpoint(@PathVariable String id, @RequestBody EndpointTryRequestDto req) {
+        return ResponseEntity.ok(tryService.tryCall(id, req.pathVariables(), req.queryParams(), req.body()));
+    }
+
+    /**
+     * "Thu nhanh" (P2, 1 draft CHUA LUU) - dung khi khai bao endpoint qua Canvas,
+     * xem truoc request/response TRUOC khi bam Luu. Khong ghi gi vao DB, khong
+     * anh huong EndpointRegistryCache. Xem EndpointTryService.tryAdhoc().
+     */
+    @PostMapping("/try-adhoc")
+    public ResponseEntity<TryResultDto> tryAdhoc(@Valid @RequestBody EndpointAdhocTryRequestDto req) {
+        return ResponseEntity.ok(tryService.tryAdhoc(req.endpoint(), req.pathVariables(), req.queryParams(), req.body()));
     }
 
     /** Tu sinh tai lieu OpenAPI 3.0.3 (JSON) cho endpoint nay - xem OpenApiGeneratorService cho gioi han "best-effort". */

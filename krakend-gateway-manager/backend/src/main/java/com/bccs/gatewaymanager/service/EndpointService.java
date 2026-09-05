@@ -42,7 +42,7 @@ public class EndpointService {
     @Transactional
     public EndpointResponseDto create(EndpointRequestDto dto) {
         rejectReservedPath(dto.path());
-        validateStepOrders(dto);
+        validate(dto);
         if (repository.existsByPath(dto.path())) {
             throw new BusinessException("GW-001", "Path '" + dto.path() + "' da ton tai o mot endpoint khac.");
         }
@@ -75,7 +75,7 @@ public class EndpointService {
 
     private EndpointResponseDto update(String id, EndpointRequestDto dto, EndpointChangeType changeType) {
         rejectReservedPath(dto.path());
-        validateStepOrders(dto);
+        validate(dto);
         EndpointConfig entity = findOrThrow(id);
         if (repository.existsByPathAndIdNot(dto.path(), id)) {
             throw new BusinessException("GW-001", "Path '" + dto.path() + "' da ton tai o mot endpoint khac.");
@@ -138,8 +138,17 @@ public class EndpointService {
         }
     }
 
-    /** Kiem tra: stepOrder phai bat dau tu 1, khong trung, va mapping phai tham chieu step co that + hop le. */
-    private void validateStepOrders(EndpointRequestDto dto) {
+    /**
+     * Kiem tra: stepOrder phai bat dau tu 1, khong trung, va mapping phai tham chieu step
+     * co that + hop le (cong ca cac validate con goi tu day - branching/parallel group/
+     * compensation/response-cache).
+     *
+     * Package-private (khong con private) de EndpointTryService.tryAdhoc() ("Thu nhanh"
+     * cho 1 draft CHUA LUU) goi lai DUNG 1 logic voi luc luu that, khong copy/lech hanh
+     * vi - draft chi duoc validate, KHONG di qua rejectReservedPath()/existsByPath() (bat
+     * buoc khi luu that, khong lien quan 1 lan thu tam thoi khong dong bo routing table).
+     */
+    void validate(EndpointRequestDto dto) {
         // parallelExecution (muc 4) chi co y nghia voi step DOC LAP (sequential=false) - xem
         // javadoc CompositeOrchestratorEngine.handle(). Bat ca 2 cung luc la cau hinh mau
         // thuan (sequential=true khong bao gio di qua nhanh code parallel), chan som tai day

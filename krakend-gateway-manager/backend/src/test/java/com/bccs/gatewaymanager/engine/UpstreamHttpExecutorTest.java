@@ -277,6 +277,63 @@ class UpstreamHttpExecutorTest {
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
     }
 
+    // ---- TraceCollector ("Thu nhanh") - call() phai ghi 1 StepTraceDto khop du lieu that,
+    // CHI khi dang o che do do (giua start()/stop()) - Data Plane that khong bao gio goi
+    // start() nen khong bi anh huong (test rieng cho truong hop nay). ----
+
+    @Test
+    void call_khiTraceCollectorDangBat_ghiStepTraceDtoKhopKetQuaThat() throws IOException {
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            byte[] body = "{\"value\":1}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        String url = "http://localhost:" + port + "/x";
+
+        var hops = TraceCollector.start();
+        try {
+            executor.call(upstream("svc-trace", port), HttpMethod.GET, url, new HttpHeaders(), null,
+                    false, 300, 1, "test-step", null, null);
+        } finally {
+            TraceCollector.stop();
+        }
+
+        assertThat(hops).hasSize(1);
+        var hop = hops.get(0);
+        assertThat(hop.stepOrder()).isEqualTo(1);
+        assertThat(hop.stepName()).isEqualTo("test-step");
+        assertThat(hop.upstreamName()).isEqualTo("svc-trace");
+        assertThat(hop.method()).isEqualTo("GET");
+        assertThat(hop.resolvedUrl()).isEqualTo(url);
+        assertThat(hop.responseStatus()).isEqualTo(200);
+        assertThat(hop.responseBody()).contains("\"value\":1");
+        assertThat(hop.success()).isTrue();
+        assertThat(hop.cacheHit()).isFalse();
+    }
+
+    @Test
+    void call_khiTraceCollectorKhongBat_khongGhiGiKhongThrow() throws IOException {
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            byte[] body = "{\"value\":1}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        String url = "http://localhost:" + port + "/x";
+
+        assertThat(TraceCollector.current()).isNull();
+        executor.call(upstream("svc-no-trace", port), HttpMethod.GET, url, new HttpHeaders(), null,
+                false, 300, 1, "test-step", null, null);
+        assertThat(TraceCollector.current()).isNull();
+    }
+
     // ---- Bulkhead cau hinh duoc theo tung Upstream (truoc day fix cung 20/500ms cho MOI Upstream) ----
 
     @Test

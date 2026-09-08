@@ -106,7 +106,14 @@ services:
     ports:
       - "8080:8080"     # ca control plane (/api/**) lan data plane (traffic that) tren cung port
     networks:
-      - gwm-net
+      gwm-net:
+        # Alias TUONG MINH "gwm-backend" - trung ten voi Service backend ben
+        # Kubernetes (xem k8s/40-backend.yaml) de nginx.conf.template cua frontend
+        # (proxy_pass toi "gwm-backend:8080") chay dung KHONG sua gi tren ca 2 kieu
+        # trien khai. (container_name da tu tao alias nay, khai bao lai o day chi
+        # de ro rang, khong phu thuoc hanh vi ngam dinh.)
+        aliases:
+          - gwm-backend
 
   frontend:
     build:

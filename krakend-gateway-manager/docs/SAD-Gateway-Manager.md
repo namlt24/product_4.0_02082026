@@ -21,6 +21,8 @@ title: "System Architecture Document — BCCS Gateway Manager"
 | Phiên bản | Ngày | Người soạn | Mô tả thay đổi |
 |---|---|---|---|
 | 1.0 | 2026-09-06 | Đội phát triển Gateway Manager | Khởi tạo tài liệu |
+| 1.1 | 2026-09-08 | Đội phát triển Gateway Manager | Sửa lại ADR-03: bỏ Flyway/`ddl-auto`, chuyển sang mô hình DBA từng đội tự chạy DDL bàn giao |
+| 1.2 | 2026-09-08 | Đội phát triển Gateway Manager | Cập nhật mục 5 (Deployment View) sang Kubernetes (YAML thuần, NGINX Ingress) làm topology chính thức, giữ Docker Compose làm phương án dev/demo |
 
 ---
 
@@ -163,9 +165,73 @@ flowchart TB
 
 ### 5.1. Đơn vị triển khai của 1 đội
 
+**Topology chính thức: Kubernetes** (YAML thuần trong `k8s/`, `kubectl apply`,
+không Helm — xem `k8s/README.md` và `DEPLOYMENT_GUIDE.md` mục 4a). Docker
+Compose (`docker-compose.yml`) vẫn được giữ song song trong repo cho máy
+dev/demo 1 host (mục 5.1b), nhưng KHÔNG phải hướng production khuyến nghị.
+
 ```mermaid
 flowchart LR
-    subgraph HOST["Host/VM cua 1 doi BCCS"]
+    subgraph NS["Namespace cua 1 doi BCCS (cum Kubernetes)"]
+        ING[Ingress<br/>NGINX Ingress Controller]
+        subgraph SVCFE[" "]
+            SVCF[Service gwm-frontend :80]
+            PODFE[Deployment gwm-frontend<br/>Nginx + Angular build]
+        end
+        subgraph SVCBE[" "]
+            SVCB[Service gwm-backend :8080]
+            PODBE[Deployment gwm-backend<br/>Spring Boot jar]
+        end
+        subgraph SVCRE[" "]
+            SVCR[Service gwm-redis :6379]
+            PODR[Deployment gwm-redis<br/>khong PersistentVolume]
+        end
+        CM[ConfigMap gwm-config]
+        SEC[Secret gwm-secret]
+    end
+    BROWSER[Trinh duyet nguoi dung] -->|host UI| ING
+    CLIENT2[Client goi API that] -->|host Data Plane| ING
+    ING --> SVCF
+    ING --> SVCB
+    SVCF --> PODFE
+    PODFE -->|proxy /api/**, DNS gwm-backend| SVCB
+    SVCB --> PODBE
+    PODBE --> SVCR
+    SVCR --> PODR
+    CM -.->|envFrom| PODBE
+    SEC -.->|envFrom| PODBE
+    PODBE -.->|JDBC, DB_HOST tham so hoa| ORACLE_T[(Oracle 19c+<br/>cua doi, NGOAI cum)]
+    PODBE -.->|HTTP, tuy chon| ES_T[(Elasticsearch<br/>cua doi)]
+    PODBE -.->|HTTP, tuy chon| APM_T[APM Server<br/>cua doi]
+    PODBE -->|HTTP| UPSTREAM_T[Cac Upstream Service<br/>that cua doi]
+```
+
+- **Ingress** (NGINX Ingress Controller, đã cài sẵn trong cụm) định tuyến theo
+  **2 host riêng biệt** (xem `k8s/60-ingress.yaml`): 1 host cho UI quản trị
+  (→ Service `gwm-frontend`) và 1 host cho Data Plane thực thi traffic thật
+  (→ thẳng Service `gwm-backend`, KHÔNG qua frontend).
+- **`gwm-frontend`** (Nginx tĩnh) tự proxy `/api/**` sang Service `gwm-backend`
+  trong cùng namespace (DNS ClusterIP ổn định — không cần cơ chế tự resolve
+  lại định kỳ như dưới Docker, vì ClusterIP không đổi khi Pod backend
+  restart; `frontend/nginx.conf.template` vẫn giữ `resolver` để dùng chung 1
+  ảnh cho cả 2 topology, xem 5.1b).
+- **`gwm-backend`** đọc TOÀN BỘ cấu hình không-mật từ ConfigMap `gwm-config`
+  và mật khẩu/khoá từ Secret `gwm-secret` (`envFrom`) — không hardcode giá trị
+  nào trong manifest.
+- **`gwm-redis`** là 1 Deployment thường (không phải StatefulSet) trong CÙNG
+  namespace, **không có PersistentVolume** — cache-aside + bộ đếm rate-limit
+  đều fail-open (xem ADR-05), mất dữ liệu khi Pod restart chỉ làm nguội cache
+  tạm thời, không gián đoạn traffic thật. Mỗi đội có Redis RIÊNG của chính
+  mình (không dùng chung Redis với đội khác hay với nghiệp vụ khác).
+- **Oracle/Elasticsearch/APM** KHÔNG chạy trong cụm k8s này — kết nối ra ngoài
+  qua ConfigMap/Secret (`DB_HOST`, `GATEWAY_AUDIT_ES_HOST`, `APM_SERVER_HOST`...),
+  cho phép trỏ tới hạ tầng riêng của từng đội mà không cần sửa image hay code.
+
+### 5.1b. Thay thế cho dev/demo 1 host: Docker Compose
+
+```mermaid
+flowchart LR
+    subgraph HOST["Host/VM cua 1 doi BCCS (dev/demo)"]
         subgraph COMPOSE["docker-compose.yml"]
             FEC[gwm-frontend<br/>Nginx + Angular build]
             BEC[gwm-backend<br/>Spring Boot jar]
@@ -183,10 +249,12 @@ flowchart LR
 ```
 
 - **`gwm-frontend`** và **`gwm-backend`** là 2 container sibling trong CÙNG 1
-  `docker-compose.yml` — Nginx proxy `/api/**` sang backend qua tên service
-  Docker (DNS nội bộ, tự resolve lại định kỳ để chịu được backend restart).
+  `docker-compose.yml` — Nginx proxy `/api/**` sang backend qua alias
+  `gwm-backend` (DNS nội bộ Docker, tự resolve lại định kỳ để chịu được
+  backend restart — khác Kubernetes, IP container trong Docker đổi mỗi lần
+  restart nên vẫn cần cơ chế này).
 - **`gwm-redis`** đi kèm trong CÙNG file compose — mỗi đội có Redis RIÊNG của
-  chính mình (không dùng chung Redis với đội khác hay với nghiệp vụ khác).
+  chính mình.
 - **Oracle/Elasticsearch/APM** KHÔNG phải container trong compose này — kết
   nối ra ngoài qua tham số môi trường (`DB_HOST`, `GATEWAY_AUDIT_ES_HOST`,
   `APM_SERVER_HOST`...), cho phép trỏ tới hạ tầng riêng của từng đội mà không
@@ -217,6 +285,10 @@ flowchart TB
     SRC -.->|build image versioned| GWM_B
 ```
 
+Mỗi "Instance Gateway Manager" trong sơ đồ trên tương ứng đúng 1 namespace
+Kubernetes của đội đó (xem mục 5.1) — image cùng version, chỉ khác ConfigMap/
+Secret trỏ hạ tầng riêng.
+
 **Nguyên tắc quan trọng**: đây là kiến trúc "mỗi đội 1 instance độc lập hoàn
 toàn" (multi-instance), KHÔNG PHẢI kiến trúc multi-tenant kiểu 1 instance
 dùng chung phục vụ nhiều đội qua tenant-id. Lý do lựa chọn (xem ADR-04, mục
@@ -238,8 +310,8 @@ Việc tạo schema (bước 0 dưới đây) diễn ra **1 lần, TRƯỚC** v�
 sequenceDiagram
     participant DBA as DBA cua doi (1 lan, ngoai vong doi app)
     participant O as Oracle
-    participant D as Docker Compose
-    participant B as Backend JVM
+    participant K as Kubernetes (kubelet)
+    participant B as Backend JVM (Pod gwm-backend)
     participant H as Hibernate
     participant R as EndpointRegistryCache
 
@@ -247,12 +319,12 @@ sequenceDiagram
     DBA->>O: Tu chay db/team-schema/V1__baseline.sql<br/>(sau khi doi chieu khong trung ten bang)
     DBA->>O: Cap user RUNTIME chi quyen DML tren 8 bang
 
-    D->>B: Khoi dong container (moi lan chay/restart)
+    K->>B: Khoi dong Pod (moi lan schedule/restart/rolling-update),<br/>tiem bien tu ConfigMap gwm-config + Secret gwm-secret
     B->>H: Tao EntityManagerFactory (ddl-auto=validate)
     H->>O: Doi chieu entity <-> schema that (bang user RUNTIME, chi DML)
-    H-->>B: Validate OK (hoac throw neu thieu bang/sai kieu - dung khoi dong)
+    H-->>B: Validate OK (hoac throw neu thieu bang/sai kieu - dung khoi dong,<br/>Pod vao CrashLoopBackOff thay vi nhan traffic sai)
     B->>R: @PostConstruct nap toan bo cau hinh vao bo nho
-    B-->>D: San sang nhan traffic
+    B-->>K: readinessProbe /actuator/health tra 200 - Pod duoc<br/>them vao Endpoints cua Service gwm-backend, bat dau nhan traffic
 ```
 
 ---
@@ -338,7 +410,7 @@ phụ trợ đó.
 | Data Plane (client gọi Endpoint) | KHÔNG có cơ chế xác thực tại tầng gateway | Việc xác thực (nếu cần) là trách nhiệm của Endpoint tự chuyển tiếp header xác thực gốc của client sang Upstream Service qua Field Mapping (targetType=HEADER) |
 | Đường dẫn dành riêng | Chặn khai báo Endpoint trùng tiền tố `/api` hoặc `/actuator` | Tránh Endpoint composite vô tình bị `ApiKeyAuthFilter` chặn nhầm (filter khớp theo URL pattern Servlet, không phân biệt route Spring MVC nào xử lý) |
 | Dữ liệu nhạy cảm trong log | Cắt bớt (truncate) nội dung request/response trước khi ghi audit, đánh dấu rõ khi bị cắt | Giới hạn độ dài, không giới hạn theo field nhạy cảm cụ thể (không có data masking theo tên field) |
-| Bí mật cấu hình (mật khẩu DB, khoá API) | Truyền qua biến môi trường (`.env`, không commit vào mã nguồn) | Không có tích hợp vault/secret-manager tập trung ở phiên bản hiện tại |
+| Bí mật cấu hình (mật khẩu DB, khoá API) | Truyền qua biến môi trường — `.env` (Docker Compose) hoặc `Secret` Kubernetes `gwm-secret` (`kubectl create secret generic`, xem `k8s/01-secret.yaml.example`) — không commit giá trị thật vào mã nguồn ở cả 2 trường hợp | Không có tích hợp vault/secret-manager tập trung ở phiên bản hiện tại |
 
 **Giới hạn đã biết**: hệ thống hiện dùng **1 khoá API dùng chung** cho toàn
 bộ Control Plane, không có mô hình người dùng/vai trò/quyền hạn chi tiết
@@ -379,6 +451,13 @@ nhưng cần lưu ý khi mở rộng số người truy cập Control Plane tron
   tương tự trong nền tảng BCCS.
 - **Lý do loại phương án (b)**: copy-fork không có kênh nhận cập nhật/bản vá
   sau này — mã nguồn sẽ phân mảnh dần theo thời gian giữa các đội.
+- **Cập nhật (2026-09-08)**: topology chạy ảnh Docker này ở từng đội được
+  chốt cụ thể là **Kubernetes** (YAML thuần, `kubectl apply`, không Helm — xem
+  mục 5.1, `k8s/README.md`), không chỉ dừng lại quyết định "đóng gói bằng
+  Docker image" — quyết định đóng gói ở ADR này giữ nguyên không đổi, chỉ nơi
+  CHẠY ảnh đó cụ thể hoá thành Kubernetes thay vì để ngỏ. Docker Compose vẫn
+  dùng được cho dev/demo 1 host (mục 5.1b) vì cùng 1 ảnh Docker chạy được
+  trên cả 2 topology.
 
 ### ADR-03: Bỏ `hibernate.ddl-auto=update`; schema do DBA từng đội tự tạo qua DDL bàn giao — KHÔNG để ứng dụng tự động tạo/sửa schema (đã sửa lại 1 lần)
 

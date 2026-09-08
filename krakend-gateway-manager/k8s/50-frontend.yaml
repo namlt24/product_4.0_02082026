@@ -1,0 +1,65 @@
+# ============================================================================
+# Frontend Angular tinh, phuc vu boi Nginx, tu proxy "/api/**" sang Service
+# "gwm-backend" trong CUNG namespace (xem frontend/nginx.conf.template) -
+# khong doc ConfigMap/Secret nao ca, khong co bien moi truong rieng.
+#
+# SUA "image:" ben duoi thanh dung registry/tag noi bo cua doi truoc khi apply.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-frontend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-frontend:v1.0.0
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-frontend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: frontend
+  ports:
+    - port: 80
+      targetPort: 80

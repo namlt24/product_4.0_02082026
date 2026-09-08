@@ -23,13 +23,18 @@ spring:
     # Khong can khai database-platform ro rang - Hibernate 6 tu nhan dien OracleDialect
     # tu chinh driver JDBC (khai them se bi WARN deprecation).
     hibernate:
-      # validate (KHONG con update) - Flyway (spring.flyway duoi day) chiu trach nhiem
-      # tao/sua schema, Hibernate chi doi chieu entity <-> schema that va bao loi ro
-      # rang neu lech, KHONG tu sua gi ca. Doi tu update vi ddl-auto=update chua tung
-      # duoc xac nhan dung tren Oracle 19c that (chi test tren 23c) va co loi da biet:
-      # khong tu noi CHECK constraint khi them gia tri enum moi vao bang da co (tung
-      # dinh ORA-02290 that voi FieldMappingSourceType.QUERY_PARAM) - anh huong MOI
-      # doi tu trien khai ve sau neu khong xu ly goc.
+      # validate (KHONG con update, KHONG dung Flyway/tu dong tao schema nua) -
+      # schema duoc TAO SAN qua ban giao DDL cho DBA tung doi tu chay tay (xem
+      # db/team-schema/V1__baseline.sql + DEPLOYMENT_GUIDE.md) - ung dung CHI doi
+      # chieu entity <-> schema that luc khoi dong, bao loi ro rang neu lech,
+      # KHONG bao gio tu sua/tu tao gi ca. Doi tu update vi (1) ddl-auto=update
+      # chua tung duoc xac nhan dung tren Oracle 19c that (chi test tren 23c) va
+      # co loi da biet: khong tu noi CHECK constraint khi them enum moi vao bang
+      # da co (tung dinh ORA-02290 that); (2) Oracle 19c cua tung doi BCCS thuong
+      # la ha tang CU do DBA quan tri - user chay ung dung THUONG CHI duoc cap
+      # quyen DML, KHONG co quyen DDL, nen ung dung KHONG THE tu tao bang du co
+      # muon (da tung thu Flyway tu dong migrate luc khoi dong - bo lai vi khong
+      # phu hop thuc te nay).
       ddl-auto: validate
     open-in-view: false
     properties:
@@ -64,17 +69,6 @@ spring:
         #     API tra ve dung gia tri qua lai).
         type:
           preferred_boolean_jdbc_type: INTEGER
-  flyway:
-    enabled: true
-    # instance MOI (schema Oracle trong) chay thang V1__baseline.sql (xem
-    # db/migration/) - khong can cau hinh gi them.
-    # instance DA CO san du lieu tu truoc khi doi Flyway (vd db-local dev hien tai,
-    # schema da khop dung noi dung V1__baseline.sql) - 2 dong duoi day de Flyway TU
-    # dong baseline (danh dau "da o V1", KHONG chay lai file) thay vi bao loi
-    # "Found non-empty schema without schema history table", khong dung toi du
-    # lieu/schema san co.
-    baseline-on-migrate: true
-    baseline-version: 1
   jackson:
     default-property-inclusion: non_null
   data:

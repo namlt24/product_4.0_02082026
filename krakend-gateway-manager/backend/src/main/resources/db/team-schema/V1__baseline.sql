@@ -3,16 +3,34 @@
 -- khai rieng) - CHI gom 8 bang + 1 index, KHONG gom du lieu demo/seed (moi doi
 -- tu tao Upstream Service/Endpoint cua rieng minh qua UI sau khi len).
 --
+-- !!! KHONG con duoc app TU DONG chay file nay nua (da bo Flyway/FlywayConfig
+-- khoi ung dung - xem SAD-Gateway-Manager.md, ADR-03 da duoc SUA LAI) !!!
+-- Ly do: Oracle 19c cua tung doi BCCS thuong la HA TANG CU do DBA quan tri -
+-- user chay ung dung THUONG CHI duoc cap quyen DML (SELECT/INSERT/UPDATE/DELETE),
+-- KHONG co quyen DDL (CREATE TABLE) - de app tu chay file nay luc khoi dong se
+-- loi thieu quyen ngay lap tuc trong moi truong nhu vay.
+--
+-- QUY TRINH BAN GIAO CHO 1 DOI MOI:
+--   1. Gui file NAY cho DBA/nguoi quan tri Oracle cua doi do.
+--   2. DBA doi chieu 8 ten bang duoi day (UPSTREAM_SERVICE, ENDPOINT_CONFIG,
+--      BACKEND_STEP, BACKEND_STEP_ALLOW, BACKEND_STEP_DENY, BACKEND_STEP_MAPPING,
+--      FIELD_MAPPING, ENDPOINT_CONFIG_VERSION) voi cac bang DA CO trong schema
+--      dinh dung (neu la schema dung chung voi he thong khac cua doi) - dam bao
+--      KHONG trung ten.
+--   3. DBA tu chay file nay (nguyen ven, theo dung quy trinh change-management
+--      noi bo cua doi) tren schema/user danh cho Gateway Manager.
+--   4. Sau khi 8 bang da co, DBA cap cho user RUNTIME cua ung dung CHI quyen DML
+--      (khong can quyen DDL) tren dung 8 bang nay - ung dung chi doi chieu
+--      (hibernate.ddl-auto=validate), KHONG tu tao/sua schema o buoc nay tro di.
+--   5. Cac ban nang cap sau nay (them cot/bang moi) se di kem 1 file DDL tang
+--      dan tuong tu (vd V2__...sql), cung ban giao qua dung quy trinh tren -
+--      KHONG bao gio ghi de/sua lai noi dung file DA ban giao truoc do.
+--
 -- Nguon: trich nguyen DDL da xac nhan chay that (khong loi cu phap) tu
 -- ddl-gateway-manager.sql/gateway-manager-production-setup.sql (DBMS_METADATA.GET_DDL
 -- tren Oracle dev that + cac ALTER TABLE lich su "lan 1..9", da gop het thanh 1
 -- schema hoan chinh tinh den 2026-09-03). KHONG dung kieu BOOLEAN/JSON (chi co tu
 -- Oracle 23c) - NUMBER(1,0)+CHECK thay the - de tuong thich Oracle 19c.
---
--- Instance DA CO san du lieu (vd db-local dev hien tai, schema da khop dung noi
--- dung file nay): Flyway se tu BASELINE (danh dau "da o V1", KHONG chay lai file
--- nay) nho spring.flyway.baseline-on-migrate=true + baseline-version=1 (xem
--- application.yml) - khong can thao tac tay, khong dung toi du lieu san co.
 -- ============================================================================
 
 CREATE TABLE "UPSTREAM_SERVICE"

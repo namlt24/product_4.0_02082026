@@ -1,11 +1,13 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,22 +42,33 @@ class UpstreamServiceServiceTest {
 
     private UpstreamServiceService service;
 
+    private static final String TEAM = "default";
+
     @BeforeEach
     void setUp() {
         service = new UpstreamServiceService(repository, endpointConfigRepository, registryCache,
                 upstreamRegistryCache, upstreamHttpExecutor);
+        // Moi method cua UpstreamServiceService gio doc CurrentTeamContext.require() -
+        // xem ApiKeyAuthFilter, thiet lap gia tri gia dinh nay o tang test (khong co
+        // request/filter that trong unit test).
+        CurrentTeamContext.set(TEAM);
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentTeamContext.clear();
     }
 
     private UpstreamService entity(String id, String name) {
-        return UpstreamService.builder().id(id).name(name).baseHost("http://x:8080").build();
+        return UpstreamService.builder().id(id).teamCode(TEAM).name(name).baseHost("http://x:8080").build();
     }
 
     // ---- Finding #7: chan xoa Upstream con dang duoc dung ----
 
     @Test
     void delete_rejectsWhenStillReferencedByBackendSteps() {
-        when(repository.findById("up-1")).thenReturn(Optional.of(entity("up-1", "svc")));
-        when(endpointConfigRepository.countStepsByUpstreamId("up-1")).thenReturn(2L);
+        when(repository.findByIdAndTeamCode("up-1", TEAM)).thenReturn(Optional.of(entity("up-1", "svc")));
+        when(endpointConfigRepository.countStepsByUpstreamId("up-1", TEAM)).thenReturn(2L);
 
         assertThatThrownBy(() -> service.delete("up-1"))
                 .isInstanceOf(BusinessException.class)
@@ -68,8 +81,8 @@ class UpstreamServiceServiceTest {
 
     @Test
     void delete_succeedsAndInvalidatesExecutorCacheWhenUnused() {
-        when(repository.findById("up-1")).thenReturn(Optional.of(entity("up-1", "svc")));
-        when(endpointConfigRepository.countStepsByUpstreamId("up-1")).thenReturn(0L);
+        when(repository.findByIdAndTeamCode("up-1", TEAM)).thenReturn(Optional.of(entity("up-1", "svc")));
+        when(endpointConfigRepository.countStepsByUpstreamId("up-1", TEAM)).thenReturn(0L);
 
         service.delete("up-1");
 
@@ -81,8 +94,8 @@ class UpstreamServiceServiceTest {
 
     @Test
     void update_invalidatesExecutorCacheForOldName() {
-        when(repository.findById("up-1")).thenReturn(Optional.of(entity("up-1", "old-name")));
-        lenient().when(repository.existsByNameAndIdNot(any(), any())).thenReturn(false);
+        when(repository.findByIdAndTeamCode("up-1", TEAM)).thenReturn(Optional.of(entity("up-1", "old-name")));
+        lenient().when(repository.existsByTeamCodeAndNameAndIdNot(any(), any(), any())).thenReturn(false);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         UpstreamServiceDto dto = new UpstreamServiceDto(null, "old-name", null, "http://x:8080",
                 5000, 5000, true, 60, true, 20, 500, Instant.now(), Instant.now());
@@ -94,8 +107,8 @@ class UpstreamServiceServiceTest {
 
     @Test
     void update_invalidatesBothOldAndNewNameWhenRenamed() {
-        when(repository.findById("up-1")).thenReturn(Optional.of(entity("up-1", "old-name")));
-        lenient().when(repository.existsByNameAndIdNot(any(), any())).thenReturn(false);
+        when(repository.findByIdAndTeamCode("up-1", TEAM)).thenReturn(Optional.of(entity("up-1", "old-name")));
+        lenient().when(repository.existsByTeamCodeAndNameAndIdNot(any(), any(), any())).thenReturn(false);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         UpstreamServiceDto dto = new UpstreamServiceDto(null, "new-name", null, "http://x:8080",
                 5000, 5000, true, 60, true, 20, 500, Instant.now(), Instant.now());
@@ -126,8 +139,8 @@ class UpstreamServiceServiceTest {
 
     @Test
     void update_wireDungMaxConcurrentCallsVaMaxWaitDurationMsVaoEntity() {
-        when(repository.findById("up-1")).thenReturn(Optional.of(entity("up-1", "svc")));
-        lenient().when(repository.existsByNameAndIdNot(any(), any())).thenReturn(false);
+        when(repository.findByIdAndTeamCode("up-1", TEAM)).thenReturn(Optional.of(entity("up-1", "svc")));
+        lenient().when(repository.existsByTeamCodeAndNameAndIdNot(any(), any(), any())).thenReturn(false);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         UpstreamServiceDto dto = new UpstreamServiceDto(null, "svc", null, "http://x:8080",
                 5000, 5000, true, 60, true, 8, 750, Instant.now(), Instant.now());

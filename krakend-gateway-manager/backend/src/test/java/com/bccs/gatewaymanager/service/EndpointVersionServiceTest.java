@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
@@ -9,7 +10,9 @@ import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.EndpointConfigVersion;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
 import com.bccs.gatewaymanager.exception.BusinessException;
+import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.EndpointConfigVersionRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,8 +35,12 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class EndpointVersionServiceTest {
 
+    private static final String TEAM = "default";
+
     @Mock
     private EndpointConfigVersionRepository repository;
+    @Mock
+    private EndpointConfigRepository endpointConfigRepository;
     @Mock
     private EndpointMapper mapper;
 
@@ -47,7 +54,19 @@ class EndpointVersionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EndpointVersionService(repository, mapper, objectMapper);
+        service = new EndpointVersionService(repository, endpointConfigRepository, mapper, objectMapper);
+        CurrentTeamContext.set(TEAM);
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentTeamContext.clear();
+    }
+
+    /** Cac test goi listVersions()/getVersionDetail() (qua toRequestDtoForRollback()) can stub nay - xac nhan endpointId "ep-1" thuoc TEAM hien tai. */
+    private void stubEndpointOwnedByCurrentTeam(String endpointId) {
+        when(endpointConfigRepository.findByIdAndTeamCode(endpointId, TEAM))
+                .thenReturn(Optional.of(EndpointConfig.builder().id(endpointId).build()));
     }
 
     private EndpointResponseDto responseDto(String id, String name, String path) {
@@ -92,7 +111,7 @@ class EndpointVersionServiceTest {
 
     @Test
     void getVersionDetail_docLaiDungSnapshotDaGhi() {
-        EndpointConfig entity = EndpointConfig.builder().id("ep-1").build();
+        stubEndpointOwnedByCurrentTeam("ep-1");
         EndpointResponseDto original = responseDto("ep-1", "ten goc", "/original-path");
         String json = objectMapper.writeValueAsString(original);
         EndpointConfigVersion stored = EndpointConfigVersion.builder()
@@ -110,6 +129,7 @@ class EndpointVersionServiceTest {
 
     @Test
     void getVersionDetail_versionThuocEndpointKhac_bi404() {
+        stubEndpointOwnedByCurrentTeam("ep-1");
         EndpointConfigVersion stored = EndpointConfigVersion.builder()
                 .id("v-1").endpointId("ep-OTHER").versionNumber(1).changeType(EndpointChangeType.CREATED)
                 .snapshotJson("{}").build();
@@ -123,6 +143,7 @@ class EndpointVersionServiceTest {
 
     @Test
     void getVersionDetail_versionIdKhongTonTai_bi404() {
+        stubEndpointOwnedByCurrentTeam("ep-1");
         when(repository.findById("v-missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getVersionDetail("ep-1", "v-missing"))
@@ -132,7 +153,21 @@ class EndpointVersionServiceTest {
     }
 
     @Test
+    void getVersionDetail_endpointThuocDoiKhac_bi404_khongLoDuLieu() {
+        // endpointId "ep-1" HOP LE nhung KHONG thuoc CurrentTeamContext hien tai -
+        // phai tra ve DUNG 1 loi "khong tim thay" giong het truong hop id sai
+        // hoan toan (chan IDOR moi vua them - xem requireOwnedByCurrentTeam()).
+        when(endpointConfigRepository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getVersionDetail("ep-1", "v-1"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-404");
+    }
+
+    @Test
     void toRequestDtoForRollback_boIdCuaStep_deEndpointMapperTaoStepMoiThayViUpdateNham() {
+        stubEndpointOwnedByCurrentTeam("ep-1");
         EndpointResponseDto original = responseDto("ep-1", "n", "/x");
         // Gia lap step DA co id that (nhu khi doc tu DB that) - id nay phai bi bo
         // khi chuyen ve EndpointRequestDto, xem stripStepId().
@@ -158,6 +193,7 @@ class EndpointVersionServiceTest {
 
     @Test
     void listVersions_sapXepMoiNhatTruoc() {
+        stubEndpointOwnedByCurrentTeam("ep-1");
         when(repository.findByEndpointIdOrderByVersionNumberDesc("ep-1")).thenReturn(List.of(
                 EndpointConfigVersion.builder().id("v-2").endpointId("ep-1").versionNumber(2)
                         .changeType(EndpointChangeType.UPDATED).name("n").path("/x").method(GatewayMethod.GET).build(),

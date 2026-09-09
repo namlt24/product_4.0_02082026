@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
@@ -29,9 +30,10 @@ public class EndpointMapper {
 
     private final UpstreamServiceRepository upstreamServiceRepository;
 
-    /** Dung khi tao moi hoac update - entity chua duoc gan id/timestamp. */
+    /** Dung khi tao moi - entity chua duoc gan id/timestamp. Tu stamp teamCode = doi dang goi request (CurrentTeamContext) - nguoi goi KHONG tu chon duoc doi cua endpoint minh tao. */
     public EndpointConfig toEntity(EndpointRequestDto dto) {
         EndpointConfig entity = EndpointConfig.builder()
+                .teamCode(CurrentTeamContext.require())
                 .name(dto.name())
                 .description(dto.description())
                 .path(dto.path())
@@ -119,10 +121,27 @@ public class EndpointMapper {
         entity.replaceMappings(mappings);
     }
 
+    /**
+     * Tra Upstream theo ID VA xac nhan no thuoc CHINH doi dang goi request
+     * (CurrentTeamContext) - neu khong, tra ve DUNG loi "khong tim thay" giong
+     * het truong hop ID sai hoan toan (KHONG tiet lo cho client biet 1 ID co
+     * ton tai nhung thuoc doi khac - tranh do la 1 kenh do tim ID cua doi
+     * khac). Day la diem chan tham chieu-cheo-doi DUY NHAT can them khi co
+     * team_code (BackendStep.upstreamService la FK that, khong the vi pham
+     * am tham).
+     */
     private UpstreamService findUpstreamOrThrow(String upstreamServiceId) {
-        return upstreamServiceRepository.findById(upstreamServiceId)
-                .orElseThrow(() -> new BusinessException("GW-UP-404",
-                        "Khong tim thay Upstream Service id=" + upstreamServiceId + " - hay dang ky truoc trong trang Upstream Services."));
+        UpstreamService upstream = upstreamServiceRepository.findById(upstreamServiceId)
+                .orElseThrow(() -> notFound(upstreamServiceId));
+        if (!upstream.getTeamCode().equals(CurrentTeamContext.require())) {
+            throw notFound(upstreamServiceId);
+        }
+        return upstream;
+    }
+
+    private BusinessException notFound(String upstreamServiceId) {
+        return new BusinessException("GW-UP-404",
+                "Khong tim thay Upstream Service id=" + upstreamServiceId + " - hay dang ky truoc trong trang Upstream Services.");
     }
 
     public EndpointResponseDto toResponseDto(EndpointConfig entity) {

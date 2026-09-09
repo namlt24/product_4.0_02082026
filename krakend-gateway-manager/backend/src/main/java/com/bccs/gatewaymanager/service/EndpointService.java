@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.entity.EndpointChangeType;
@@ -28,9 +29,10 @@ public class EndpointService {
 
     @Transactional(readOnly = true)
     public List<EndpointResponseDto> list(String search) {
+        String teamCode = CurrentTeamContext.require();
         List<EndpointConfig> found = (search == null || search.isBlank())
-                ? repository.findAllByOrderByUpdatedAtDesc()
-                : repository.search(search.trim());
+                ? repository.findAllByTeamCodeOrderByUpdatedAtDesc(teamCode)
+                : repository.search(teamCode, search.trim());
         return found.stream().map(mapper::toResponseDto).toList();
     }
 
@@ -43,7 +45,7 @@ public class EndpointService {
     public EndpointResponseDto create(EndpointRequestDto dto) {
         rejectReservedPath(dto.path());
         validate(dto);
-        if (repository.existsByPath(dto.path())) {
+        if (repository.existsByTeamCodeAndPath(CurrentTeamContext.require(), dto.path())) {
             throw new BusinessException("GW-001", "Path '" + dto.path() + "' da ton tai o mot endpoint khac.");
         }
         EndpointConfig entity = mapper.toEntity(dto);
@@ -77,7 +79,7 @@ public class EndpointService {
         rejectReservedPath(dto.path());
         validate(dto);
         EndpointConfig entity = findOrThrow(id);
-        if (repository.existsByPathAndIdNot(dto.path(), id)) {
+        if (repository.existsByTeamCodeAndPathAndIdNot(CurrentTeamContext.require(), dto.path(), id)) {
             throw new BusinessException("GW-001", "Path '" + dto.path() + "' da ton tai o mot endpoint khac.");
         }
         mapper.updateEntity(entity, dto);
@@ -117,8 +119,9 @@ public class EndpointService {
         }
     }
 
+    /** Tra theo id VA CurrentTeamContext - 1 doi khong the sua/xoa endpoint cua doi khac du doan dung ID (IDOR). */
     private EndpointConfig findOrThrow(String id) {
-        return repository.findById(id)
+        return repository.findByIdAndTeamCode(id, CurrentTeamContext.require())
                 .orElseThrow(() -> new BusinessException("GW-404", "Khong tim thay endpoint id=" + id));
     }
 

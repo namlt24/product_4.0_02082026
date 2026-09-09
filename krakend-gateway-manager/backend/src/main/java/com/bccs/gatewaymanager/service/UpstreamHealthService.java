@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.UpstreamHealthDto;
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.UpstreamService;
@@ -26,7 +27,7 @@ public class UpstreamHealthService {
 
     @Transactional(readOnly = true)
     public List<UpstreamHealthDto> healthSnapshot() {
-        return repository.findAllByOrderByNameAsc().stream().map(this::toHealth).toList();
+        return repository.findAllByTeamCodeOrderByNameAsc(CurrentTeamContext.require()).stream().map(this::toHealth).toList();
     }
 
     private UpstreamHealthDto toHealth(UpstreamService u) {

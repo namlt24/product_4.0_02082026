@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.DependencyGraphDto;
 import com.bccs.gatewaymanager.dto.GraphEdgeDto;
 import com.bccs.gatewaymanager.dto.GraphNodeDto;
@@ -49,7 +50,13 @@ public class DependencyAnalyzer {
 
     @Transactional(readOnly = true)
     public DependencyGraphDto buildGraph() {
-        List<EndpointConfig> all = repository.findAll();
+        // Scoped theo CurrentTeamContext - KHONG duoc goi repository.findAll() (khong
+        // scope) o day: neu khong, so do phu thuoc tren UI se tron lan endpoint cua
+        // MOI doi dang dung chung Control Plane vao 1 do thi duy nhat (lo lot cau
+        // hinh giua cac doi), va detectCycleWarningsOnly() (goi tu
+        // EndpointService.create()/update()) co the bao vong lap SAI giua 2 endpoint
+        // vo can cua 2 doi khac nhau.
+        List<EndpointConfig> all = repository.findAllByTeamCodeOrderByUpdatedAtDesc(CurrentTeamContext.require());
 
         // Index O(1): "path da chuan hoa" -> endpoint. Chuan hoa bang cach thay
         // {tenParam} bang ky tu "*" o tung segment, de so sanh CAU TRUC (bo qua

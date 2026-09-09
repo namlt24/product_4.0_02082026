@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
@@ -9,6 +10,7 @@ import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.EndpointConfigVersion;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.exception.SystemException;
+import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.EndpointConfigVersionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ import java.util.List;
 public class EndpointVersionService {
 
     private final EndpointConfigVersionRepository repository;
+    private final EndpointConfigRepository endpointConfigRepository;
     private final EndpointMapper mapper;
     private final ObjectMapper objectMapper;
 
@@ -63,6 +66,7 @@ public class EndpointVersionService {
 
     @Transactional(readOnly = true)
     public List<EndpointVersionSummaryDto> listVersions(String endpointId) {
+        requireOwnedByCurrentTeam(endpointId);
         return repository.findByEndpointIdOrderByVersionNumberDesc(endpointId).stream()
                 .map(v -> new EndpointVersionSummaryDto(
                         v.getId(), v.getVersionNumber(), v.getChangeType(), v.getName(), v.getPath(), v.getMethod(), v.getCreatedAt()))
@@ -72,8 +76,20 @@ public class EndpointVersionService {
     /** Xem chi tiet 1 phien ban (khong ap dung gi ca - chi de xem truoc khi quyet dinh Khoi phuc). */
     @Transactional(readOnly = true)
     public EndpointResponseDto getVersionDetail(String endpointId, String versionId) {
+        requireOwnedByCurrentTeam(endpointId);
         EndpointConfigVersion version = getVersionOrThrow(endpointId, versionId);
         return readJson(version.getSnapshotJson());
+    }
+
+    /**
+     * Chan IDOR: endpointId hop le nhung thuoc doi KHAC van phai bi tu choi giong
+     * het endpointId khong ton tai - CAC METHOD nay duoc EndpointController goi
+     * THANG (khong qua EndpointService.findOrThrow() da scoped), nen phai tu
+     * kiem tra rieng o day, khong the dua vao tang tren.
+     */
+    private void requireOwnedByCurrentTeam(String endpointId) {
+        endpointConfigRepository.findByIdAndTeamCode(endpointId, CurrentTeamContext.require())
+                .orElseThrow(() -> new BusinessException("GW-404", "Khong tim thay endpoint id=" + endpointId));
     }
 
     /**

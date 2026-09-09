@@ -40,6 +40,22 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
+        // CommandLineRunner chay LUC KHOI DONG - KHONG co request/ApiKeyAuthFilter nao
+        // di qua nen CurrentTeamContext chua tung duoc set (se throw SystemException
+        // ngay khi endpointService.create()/upstreamServiceService.create() goi
+        // CurrentTeamContext.require() ben trong). Tu gan tam "default" (khop dung
+        // team_code backfill cho du lieu cu trong V2__team_code.sql) chi trong luc
+        // seed, roi clear ngay - dung 1 lan duy nhat luc app khoi dong, khong lien
+        // quan gi toi request that.
+        CurrentTeamContext.set("default");
+        try {
+            seedDemoData();
+        } finally {
+            CurrentTeamContext.clear();
+        }
+    }
+
+    private void seedDemoData() {
         UpstreamServiceDto authUpstream = upstreamServiceService.create(new UpstreamServiceDto(
                 null, "auth-service", "Demo - dich vu xac thuc/user",
                 "http://auth-service:8081", 1000, 3000, true, 50, true, 20, 500, null, null));

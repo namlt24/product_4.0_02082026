@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.UpstreamService;
@@ -27,7 +28,7 @@ public class UpstreamServiceService {
 
     @Transactional(readOnly = true)
     public List<UpstreamServiceDto> list() {
-        return repository.findAllByOrderByNameAsc().stream().map(this::toDto).toList();
+        return repository.findAllByTeamCodeOrderByNameAsc(CurrentTeamContext.require()).stream().map(this::toDto).toList();
     }
 
     @Transactional(readOnly = true)
@@ -37,10 +38,12 @@ public class UpstreamServiceService {
 
     @Transactional
     public UpstreamServiceDto create(UpstreamServiceDto dto) {
-        if (repository.existsByName(dto.name())) {
+        String teamCode = CurrentTeamContext.require();
+        if (repository.existsByTeamCodeAndName(teamCode, dto.name())) {
             throw new BusinessException("GW-UP-001", "Upstream ten '" + dto.name() + "' da ton tai.");
         }
         UpstreamService entity = UpstreamService.builder()
+                .teamCode(teamCode)
                 .name(dto.name())
                 .description(dto.description())
                 .baseHost(stripTrailingSlash(dto.baseHost()))
@@ -61,7 +64,7 @@ public class UpstreamServiceService {
     @Transactional
     public UpstreamServiceDto update(String id, UpstreamServiceDto dto) {
         UpstreamService entity = findOrThrow(id);
-        if (repository.existsByNameAndIdNot(dto.name(), id)) {
+        if (repository.existsByTeamCodeAndNameAndIdNot(CurrentTeamContext.require(), dto.name(), id)) {
             throw new BusinessException("GW-UP-001", "Upstream ten '" + dto.name() + "' da ton tai.");
         }
         String oldName = entity.getName();
@@ -95,7 +98,7 @@ public class UpstreamServiceService {
     @Transactional
     public void delete(String id) {
         UpstreamService entity = findOrThrow(id);
-        long stepCount = endpointConfigRepository.countStepsByUpstreamId(id);
+        long stepCount = endpointConfigRepository.countStepsByUpstreamId(id, CurrentTeamContext.require());
         if (stepCount > 0) {
             throw new BusinessException("GW-UP-INUSE", "Upstream '" + entity.getName()
                     + "' dang duoc dung boi " + stepCount + " backend step(s), khong the xoa.");
@@ -107,8 +110,9 @@ public class UpstreamServiceService {
         log.info("Da xoa Upstream Service: {}", entity.getName());
     }
 
+    /** Tra theo id VA CurrentTeamContext - 1 doi khong the sua/xoa Upstream cua doi khac du doan dung ID (IDOR). */
     private UpstreamService findOrThrow(String id) {
-        return repository.findById(id)
+        return repository.findByIdAndTeamCode(id, CurrentTeamContext.require())
                 .orElseThrow(() -> new BusinessException("GW-UP-404", "Khong tim thay Upstream Service id=" + id));
     }
 

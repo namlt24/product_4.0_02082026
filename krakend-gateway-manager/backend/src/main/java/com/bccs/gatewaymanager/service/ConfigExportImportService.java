@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.ConfigExportDto;
 import com.bccs.gatewaymanager.dto.ConfigImportResultDto;
@@ -45,10 +46,17 @@ public class ConfigExportImportService {
     private final EndpointService endpointService;
     private final EndpointMapper endpointMapper;
 
+    /**
+     * Xuat TOAN BO cau hinh CUA DUNG 1 DOI (CurrentTeamContext) - day CHINH LA
+     * kenh Data Plane cua doi do se dung de tu dong bo (xem plan
+     * RemoteConfigSyncService, chua trien khai o buoc nay): goi API nay bang
+     * chinh api_key cua doi minh, luon chi nhan lai config cua doi minh, khong
+     * can API rieng nao khac.
+     */
     @Transactional(readOnly = true)
     public ConfigExportDto export() {
         List<UpstreamServiceDto> upstreams = upstreamService.list();
-        List<EndpointResponseDto> endpoints = endpointRepository.findAllByOrderByUpdatedAtDesc().stream()
+        List<EndpointResponseDto> endpoints = endpointRepository.findAllByTeamCodeOrderByUpdatedAtDesc(CurrentTeamContext.require()).stream()
                 .map(endpointMapper::toResponseDto)
                 .toList();
         return new ConfigExportDto(SCHEMA_VERSION, Instant.now(), upstreams, endpoints);
@@ -79,7 +87,7 @@ public class ConfigExportImportService {
         int endpointsUpdated = 0;
         for (EndpointResponseDto ep : bundle.endpoints()) {
             EndpointRequestDto request = toRequest(ep, upstreamNameToId, warnings);
-            var existing = endpointRepository.findByPath(ep.path());
+            var existing = endpointRepository.findByTeamCodeAndPath(CurrentTeamContext.require(), ep.path());
             if (existing.isPresent()) {
                 endpointService.update(existing.get().getId(), request);
                 endpointsUpdated++;

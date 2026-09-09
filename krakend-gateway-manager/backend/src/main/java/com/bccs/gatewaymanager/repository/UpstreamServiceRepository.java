@@ -8,11 +8,18 @@ import java.util.Optional;
 
 public interface UpstreamServiceRepository extends JpaRepository<UpstreamService, String> {
 
-    boolean existsByName(String name);
-
-    boolean existsByNameAndIdNot(String name, String id);
-
+    // --- Method CU (khong con team_code) - giu lai cho EndpointMapper.findUpstreamOrThrow()
+    // tra bang ID (ID da la khoa duy nhat toan cuc du sau nay them team_code, chi
+    // CHUA tu no khang dinh Upstream do co thuoc CurrentTeamContext hay khong - xem
+    // EndpointMapper, noi tu kiem tra rieng .getTeamCode() sau khi tra ID). ---
     Optional<UpstreamService> findByName(String name);
 
-    List<UpstreamService> findAllByOrderByNameAsc();
+    // --- Method MOI, scoped theo team_code - dung cho toan bo Control Plane CRUD. ---
+    boolean existsByTeamCodeAndName(String teamCode, String name);
+
+    boolean existsByTeamCodeAndNameAndIdNot(String teamCode, String name, String id);
+
+    Optional<UpstreamService> findByIdAndTeamCode(String id, String teamCode);
+
+    List<UpstreamService> findAllByTeamCodeOrderByNameAsc(String teamCode);
 }

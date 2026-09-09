@@ -19,7 +19,7 @@ import java.util.UUID;
  * BackendStep.cacheEnabled/cacheTtlSeconds).
  */
 @Entity
-@Table(name = "upstream_service", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
+@Table(name = "upstream_service", uniqueConstraints = @UniqueConstraint(columnNames = {"team_code", "name"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,8 +31,17 @@ public class UpstreamService {
     @Builder.Default
     private String id = UUID.randomUUID().toString();
 
-    /** Ten dinh danh duy nhat, dung lam ten instance Resilience4j + namespace cache. */
-    @Column(nullable = false, unique = true)
+    /**
+     * Ma doi so huu Upstream nay - xem javadoc tuong duong tren
+     * EndpointConfig.teamCode (cung 1 co che cach ly, cung ly do doi
+     * UNIQUE(name) toan cuc thanh UNIQUE(team_code, name)).
+     */
+    @Builder.Default
+    @Column(name = "team_code", nullable = false)
+    private String teamCode = "default";
+
+    /** Ten dinh danh duy nhat TRONG 1 doi, dung lam ten instance Resilience4j + namespace cache. */
+    @Column(nullable = false)
     private String name;
 
     private String description;

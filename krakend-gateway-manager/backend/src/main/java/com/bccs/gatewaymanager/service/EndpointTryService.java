@@ -1,5 +1,7 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
+import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.StepTraceDto;
@@ -7,6 +9,7 @@ import com.bccs.gatewaymanager.dto.TryResultDto;
 import com.bccs.gatewaymanager.engine.CompositeOrchestratorEngine;
 import com.bccs.gatewaymanager.engine.TraceCollector;
 import com.bccs.gatewaymanager.exception.BusinessException;
+import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
@@ -41,6 +44,7 @@ public class EndpointTryService {
 
     private final EndpointService endpointService;
     private final CompositeOrchestratorEngine engine;
+    private final UpstreamServiceRepository upstreamServiceRepository;
 
     public TryResultDto tryCall(String endpointId, Map<String, String> pathVariables,
                                  Map<String, String> queryParams, String rawBody) {
@@ -60,8 +64,38 @@ public class EndpointTryService {
     public TryResultDto tryAdhoc(EndpointRequestDto draft, Map<String, String> pathVariables,
                                   Map<String, String> queryParams, String rawBody) {
         EndpointResponseDto config = toAdhocResponseDto(draft);
-        return runWithTrace(() -> endpointService.validate(draft),
+        return runWithTrace(() -> {
+                    endpointService.validate(draft);
+                    validateUpstreamOwnership(draft);
+                },
                 () -> engine.handle(config, pathVariables, toQueryParamsArr(queryParams), rawBody));
+    }
+
+    /**
+     * "Thu nhanh" chua di qua EndpointMapper.applySteps() (noi save that su
+     * kiem tra chu Upstream, xem findUpstreamOrThrow()) - draft la JSON tu
+     * client gui THANG len, upstreamServiceId co the la 1 chuoi bat ky client
+     * tu go/sua tay. Neu khong kiem tra o day, engine se resolve Upstream do
+     * qua UpstreamRegistryCache (hien CHUA scoped theo doi - xem
+     * EndpointRegistryCache/UpstreamRegistryCache, se tach rieng cho Data
+     * Plane o buoc ke tiep) va CO THE goi that ra Upstream cua MOT DOI KHAC -
+     * doi hien tai chi can doan/thu 1 upstreamServiceId hop le la kiem tra
+     * duoc su ton tai/hanh vi cua Upstream do du khong so huu no.
+     */
+    private void validateUpstreamOwnership(EndpointRequestDto draft) {
+        String teamCode = CurrentTeamContext.require();
+        for (BackendStepDto s : draft.steps()) {
+            requireOwnedUpstream(s.upstreamServiceId(), teamCode);
+            if (s.compensationUpstreamServiceId() != null) {
+                requireOwnedUpstream(s.compensationUpstreamServiceId(), teamCode);
+            }
+        }
+    }
+
+    private void requireOwnedUpstream(String upstreamServiceId, String teamCode) {
+        upstreamServiceRepository.findByIdAndTeamCode(upstreamServiceId, teamCode)
+                .orElseThrow(() -> new BusinessException("GW-UP-404",
+                        "Khong tim thay Upstream Service id=" + upstreamServiceId + " - hay dang ky truoc trong trang Upstream Services."));
     }
 
     private TryResultDto runWithTrace(Runnable preValidation, Supplier<JsonNode> executor) {

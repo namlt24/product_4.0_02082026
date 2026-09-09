@@ -20,7 +20,7 @@ import java.util.UUID;
  *   tu response cua step truoc thong qua {@link FieldMapping}.
  */
 @Entity
-@Table(name = "endpoint_config", uniqueConstraints = @UniqueConstraint(columnNames = "path"))
+@Table(name = "endpoint_config", uniqueConstraints = @UniqueConstraint(columnNames = {"team_code", "path"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,6 +32,20 @@ public class EndpointConfig {
     @Id
     @Builder.Default
     private String id = UUID.randomUUID().toString();
+
+    /**
+     * Ma doi so huu endpoint nay (xem entity Team) - moi Control Plane dung chung
+     * nhieu doi, MOI query/ghi deu phai loc/gan theo gia tri nay
+     * (CurrentTeamContext.require()) de 1 doi khong bao gio thay/sua duoc cau hinh
+     * cua doi khac. Truoc day "path" UNIQUE toan cuc - gio doi thanh UNIQUE theo
+     * (team_code, path): 2 doi duoc phep dat trung path, chi trung trong CHINH doi
+     * do moi bi tu choi. @Builder.Default="default" de moi builder() cu (~25 cho
+     * trong test) khong phai sua gi - tuong duong gia tri TEAM_CODE fallback da
+     * dung san trong docker-compose/k8s.
+     */
+    @Builder.Default
+    @Column(name = "team_code", nullable = false)
+    private String teamCode = "default";
 
     /** Ten goi nho de hien thi tren UI, khong anh huong toi krakend.json. */
     @Column(nullable = false)

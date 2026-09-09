@@ -11,8 +11,10 @@ import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
 import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,18 +47,29 @@ class EndpointServiceTest {
     @Mock
     private EndpointVersionService versionService;
 
+    private static final String TEAM = "default";
+
     private EndpointService service;
 
     @BeforeEach
     void setUp() {
         service = new EndpointService(repository, mapper, registryCache, dependencyAnalyzer, versionService);
-        lenient().when(repository.existsByPath(any())).thenReturn(false);
+        // Moi method cua EndpointService gio doc CurrentTeamContext.require() - xem
+        // ApiKeyAuthFilter, thiet lap gia tri gia dinh nay o tang test (khong co
+        // request/filter that trong unit test).
+        CurrentTeamContext.set(TEAM);
+        lenient().when(repository.existsByTeamCodeAndPath(any(), any())).thenReturn(false);
         lenient().when(mapper.toEntity(any())).thenReturn(EndpointConfig.builder().id("ep-1").build());
         lenient().when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(mapper.toResponseDto(any())).thenReturn(
                 new EndpointResponseDto("ep-1", "n", null, "/x", GatewayMethod.GET, true, "json",
                         List.of(), List.of(), null, null, false, 86400, false, false, 300));
         lenient().when(dependencyAnalyzer.detectCycleWarningsOnly()).thenReturn(List.of());
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentTeamContext.clear();
     }
 
     private BackendStepDto step(int order) {
@@ -304,7 +317,7 @@ class EndpointServiceTest {
 
     @Test
     void update_rejectsWhenDependencyAnalyzerReportsCycle() {
-        when(repository.findById("ep-1")).thenReturn(java.util.Optional.of(EndpointConfig.builder().id("ep-1").build()));
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(java.util.Optional.of(EndpointConfig.builder().id("ep-1").build()));
         when(dependencyAnalyzer.detectCycleWarningsOnly()).thenReturn(List.of("vong lap"));
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(step(1)), List.of(), false, null, false, false, 300);
@@ -341,7 +354,7 @@ class EndpointServiceTest {
     @Test
     void update_success_recordsSnapshotAsUpdated() {
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
-        when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(step(1)), List.of(), false, null, false, false, 300);
 
@@ -353,7 +366,7 @@ class EndpointServiceTest {
     @Test
     void rollback_dungLaiUpdate_vaGhiVersionTagRolledBack() {
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
-        when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
         EndpointRequestDto snapshotDto = new EndpointRequestDto("n-cu", null, "/x", GatewayMethod.GET, true, "json",
                 List.of(step(1)), List.of(), false, null, false, false, 300);
         when(versionService.toRequestDtoForRollback("ep-1", "v-1")).thenReturn(snapshotDto);
@@ -372,7 +385,7 @@ class EndpointServiceTest {
         // nay bi cam) - rollback phai chay lai DUNG validate nhu sua tay, khong duoc
         // bo qua chi vi noi dung lay tu 1 phien ban da tung luu thanh cong truoc day.
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
-        lenient().when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        lenient().when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
         EndpointRequestDto badSnapshot = new EndpointRequestDto("n", null, "/api/legacy", GatewayMethod.GET, true, "json",
                 List.of(step(1)), List.of(), false, null, false, false, 300);
         when(versionService.toRequestDtoForRollback("ep-1", "v-1")).thenReturn(badSnapshot);
@@ -388,7 +401,7 @@ class EndpointServiceTest {
     @Test
     void delete_xoaVersionTruocKhiXoaEndpoint() {
         EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
-        when(repository.findById("ep-1")).thenReturn(Optional.of(existing));
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
 
         service.delete("ep-1");
 

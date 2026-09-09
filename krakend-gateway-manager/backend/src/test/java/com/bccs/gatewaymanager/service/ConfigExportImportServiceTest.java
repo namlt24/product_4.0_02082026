@@ -6,10 +6,12 @@ import com.bccs.gatewaymanager.dto.ConfigImportResultDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,11 +45,19 @@ class ConfigExportImportServiceTest {
     @Mock
     private EndpointMapper endpointMapper;
 
+    private static final String TEAM = "default";
+
     private ConfigExportImportService service;
 
     @BeforeEach
     void setUp() {
         service = new ConfigExportImportService(upstreamRepository, upstreamService, endpointRepository, endpointService, endpointMapper);
+        CurrentTeamContext.set(TEAM);
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentTeamContext.clear();
     }
 
     private UpstreamServiceDto upstreamDto(String id, String name) {
@@ -70,7 +80,7 @@ class ConfigExportImportServiceTest {
     void export_gopUpstreamVaEndpointTuMapper() {
         when(upstreamService.list()).thenReturn(List.of(upstreamDto("u-1", "svc")));
         EndpointConfig entity = EndpointConfig.builder().id("ep-1").build();
-        when(endpointRepository.findAllByOrderByUpdatedAtDesc()).thenReturn(List.of(entity));
+        when(endpointRepository.findAllByTeamCodeOrderByUpdatedAtDesc(TEAM)).thenReturn(List.of(entity));
         when(endpointMapper.toResponseDto(entity)).thenReturn(endpointDto("/x", "u-1", "svc"));
 
         ConfigExportDto result = service.export();
@@ -110,7 +120,7 @@ class ConfigExportImportServiceTest {
     @Test
     void import_endpointChuaTonTaiTheoPath_taoMoi() {
         lenient().when(upstreamService.list()).thenReturn(List.of(upstreamDto("u-1", "svc")));
-        when(endpointRepository.findByPath("/v1/new")).thenReturn(Optional.empty());
+        when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/new")).thenReturn(Optional.empty());
         ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(endpointDto("/v1/new", "u-1", "svc")));
 
         ConfigImportResultDto result = service.importConfig(bundle);
@@ -124,7 +134,7 @@ class ConfigExportImportServiceTest {
     void import_endpointDaTonTaiTheoPath_capNhat() {
         lenient().when(upstreamService.list()).thenReturn(List.of(upstreamDto("u-1", "svc")));
         EndpointConfig existing = EndpointConfig.builder().id("ep-existing").build();
-        when(endpointRepository.findByPath("/v1/dup")).thenReturn(Optional.of(existing));
+        when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/dup")).thenReturn(Optional.of(existing));
         ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(endpointDto("/v1/dup", "u-1", "svc")));
 
         ConfigImportResultDto result = service.importConfig(bundle);
@@ -136,7 +146,7 @@ class ConfigExportImportServiceTest {
     @Test
     void import_upstreamThamChieuKhongTonTai_ghiCanhBaoNhungVanTaoEndpoint() {
         lenient().when(upstreamService.list()).thenReturn(List.of()); // khong co upstream "svc-missing" nao ca
-        when(endpointRepository.findByPath("/v1/x")).thenReturn(Optional.empty());
+        when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/x")).thenReturn(Optional.empty());
         ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(),
                 List.of(endpointDto("/v1/x", "u-old-env-id", "svc-missing")));
 

@@ -1,11 +1,14 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.dto.UpstreamHealthDto;
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,13 +34,23 @@ class UpstreamHealthServiceTest {
     @Mock
     private CircuitBreaker.Metrics metrics;
 
+    @BeforeEach
+    void setUp() {
+        CurrentTeamContext.set("default");
+    }
+
+    @AfterEach
+    void tearDown() {
+        CurrentTeamContext.clear();
+    }
+
     private UpstreamService upstream(String name) {
         return UpstreamService.builder().id("u-1").name(name).baseHost("http://x").circuitBreakerEnabled(true).build();
     }
 
     @Test
     void chuaTungGoiLan_nao_traVeTrangThaiRoRang_khongPhaiCLOSED_gia() {
-        when(repository.findAllByOrderByNameAsc()).thenReturn(List.of(upstream("svc")));
+        when(repository.findAllByTeamCodeOrderByNameAsc("default")).thenReturn(List.of(upstream("svc")));
         when(circuitBreakerRegistry.find("svc")).thenReturn(Optional.empty());
 
         UpstreamHealthService svc = new UpstreamHealthService(repository, circuitBreakerRegistry, upstreamHttpExecutor);
@@ -51,7 +64,7 @@ class UpstreamHealthServiceTest {
 
     @Test
     void daCoBreaker_anhXaDungTrangThaiVaFailureRate() {
-        when(repository.findAllByOrderByNameAsc()).thenReturn(List.of(upstream("svc")));
+        when(repository.findAllByTeamCodeOrderByNameAsc("default")).thenReturn(List.of(upstream("svc")));
         when(circuitBreakerRegistry.find("svc")).thenReturn(Optional.of(circuitBreaker));
         when(circuitBreaker.getState()).thenReturn(CircuitBreaker.State.OPEN);
         when(circuitBreaker.getMetrics()).thenReturn(metrics);

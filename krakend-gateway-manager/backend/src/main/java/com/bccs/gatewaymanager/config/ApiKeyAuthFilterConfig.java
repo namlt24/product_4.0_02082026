@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.config;
 
+import com.bccs.gatewaymanager.repository.TeamRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -15,13 +16,14 @@ import tools.jackson.databind.ObjectMapper;
 @Configuration
 public class ApiKeyAuthFilterConfig {
 
+    /** Gio la platform-admin key - CHI dung cho "/api/teams/**" (xem javadoc ApiKeyAuthFilter). */
     @Value("${gatewaymanager.admin-api-key}")
     private String adminApiKey;
 
     @Bean
-    public FilterRegistrationBean<ApiKeyAuthFilter> apiKeyAuthFilterRegistration(ObjectMapper objectMapper) {
+    public FilterRegistrationBean<ApiKeyAuthFilter> apiKeyAuthFilterRegistration(ObjectMapper objectMapper, TeamRepository teamRepository) {
         FilterRegistrationBean<ApiKeyAuthFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new ApiKeyAuthFilter(adminApiKey, objectMapper));
+        registration.setFilter(new ApiKeyAuthFilter(adminApiKey, teamRepository, objectMapper));
         registration.addUrlPatterns(
                 "/api/*",
                 "/actuator/info", "/actuator/info/*",

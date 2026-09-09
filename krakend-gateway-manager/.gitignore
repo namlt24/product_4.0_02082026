@@ -10,8 +10,14 @@ frontend/.angular/
 # Env
 .env
 
-# k8s - ban Secret THAT da dien mat khau (chi commit ban ".example" mau)
-k8s/01-secret.yaml
+# k8s - ban Secret THAT da dien mat khau (chi commit ban ".example" mau) -
+# ca 2 thu muc con (control-plane/, data-plane/) tu khi tach lam 2 bo rieng.
+k8s/*/01-secret.yaml
+
+# Env - .env.control-plane.example/.env.data-plane.example la mau, KHONG
+# phai file that (chi ".env"/".env.dataplane" thuc te chua mat khau moi bi
+# bo qua o day).
+.env.dataplane
 
 # IDE
 .idea/

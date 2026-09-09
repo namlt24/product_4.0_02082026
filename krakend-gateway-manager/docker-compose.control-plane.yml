@@ -1,0 +1,86 @@
+# ===========================================================================
+# Gateway Manager - CONTROL PLANE (dev/demo cuc bo) - 1 BAN DUY NHAT dung
+# chung MOI doi trong trien khai that (xem k8s/control-plane/ cho ban k8s).
+# Khac han docker-compose.data-plane.yml (moi doi tu chay 1 ban rieng).
+#
+# Kien truc: SPRING_PROFILES_ACTIVE=control-plane - CRUD Endpoint/Upstream/
+# Team (/api/**) + UI Angular, doc/ghi TRUC TIEP Oracle. KHONG con thuc thi
+# traffic that (DynamicDispatcherController KHONG dang ky o profile nay) -
+# viec do la cua docker-compose.data-plane.yml (xem SAD-Gateway-Manager.md ADR-07).
+#
+#   Browser --/**--> [frontend :4200] --/api/**--> [backend :8080] --> Oracle
+#                                                        |
+#                                          (RemoteConfigSyncService cua tung
+#                                           doi Data Plane goi VAO day dinh ky
+#                                           qua GET /api/config/export)
+#
+# Chay: docker compose -f docker-compose.control-plane.yml up -d --build
+# (can .env - copy tu .env.control-plane.example). UI: http://localhost:4200
+# ===========================================================================
+
+services:
+
+  # Redis TUY CHON - chi phuc vu cache tam khi dung "Thu ngay"/"Thu nhanh"
+  # tren UI (fail-open hoan toan, khong co van chay binh thuong).
+  redis:
+    image: redis:7-alpine
+    container_name: gwm-cp-redis
+    restart: unless-stopped
+    networks:
+      - gwm-cp-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gwm-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: control-plane
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-1521}
+      DB_NAME: ${DB_NAME:-FREEPDB1}
+      DB_USER: ${DB_USER:-BCCS_PRODUCT}
+      DB_PASSWORD: ${DB_PASSWORD:-BCCS_PRODUCT123}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SERVER_PORT: 8080
+      # platform-admin key - CHI dung cho "/api/teams/**" (man hinh Quan ly
+      # doi) - xem ApiKeyAuthFilter. BAT BUOC dat qua .env khi chay that.
+      GATEWAY_ADMIN_API_KEY: ${GATEWAY_ADMIN_API_KEY:-changeme-local-dev}
+      GATEWAY_AUDIT_ENABLED: ${GATEWAY_AUDIT_ENABLED:-true}
+      GATEWAY_AUDIT_ES_HOST: ${GATEWAY_AUDIT_ES_HOST:-host.docker.internal}
+      GATEWAY_AUDIT_ES_PORT: ${ES_PORT:-9200}
+      GATEWAY_AUDIT_RETENTION_DAYS: ${GATEWAY_AUDIT_RETENTION_DAYS:-3}
+      SPRING_APPLICATION_NAME: krakend-gateway-manager-control-plane
+      ELASTIC_APM_SERVICE_NAME: krakend-gateway-manager-control-plane
+      ELASTIC_APM_SERVER_URL: http://${APM_SERVER_HOST:-host.docker.internal}:${APM_SERVER_PORT:-8200}
+      ELASTIC_APM_ENVIRONMENT: ${APM_ENVIRONMENT:-local}
+      ELASTIC_APM_APPLICATION_PACKAGES: com.bccs.gatewaymanager
+    ports:
+      - "8080:8080"
+    networks:
+      gwm-cp-net:
+        # Alias TUONG MINH "gwm-backend" - trung ten voi Service backend ben
+        # Kubernetes (xem k8s/control-plane/40-backend.yaml) de
+        # nginx.conf.template cua frontend chay dung KHONG sua gi tren ca 2
+        # kieu trien khai.
+        aliases:
+          - gwm-backend
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gwm-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:80"
+    networks:
+      - gwm-cp-net
+
+networks:
+  gwm-cp-net:
+    driver: bridge

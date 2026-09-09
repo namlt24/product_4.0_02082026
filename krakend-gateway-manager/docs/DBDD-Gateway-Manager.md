@@ -23,6 +23,7 @@ title: "Database Design Document — BCCS Gateway Manager"
 |---|---|---|---|
 | 1.0 | 2026-09-06 | Đội phát triển Gateway Manager | Khởi tạo, mô tả đúng schema baseline V1 |
 | 1.1 | 2026-09-08 | Đội phát triển Gateway Manager | Bỏ Flyway — chuyển sang bàn giao DDL cho DBA từng đội tự chạy (xem SAD-GWM-001 ADR-03) |
+| 2.0 | 2026-09-09 | Đội phát triển Gateway Manager | DB chuyển sang dùng CHUNG mọi đội (trước: mỗi đội 1 DB riêng) — thêm cột `TEAM_CODE` + bảng `GWM_TEAM` mới (`V2__team_code.sql`), đổi 2 ràng buộc UNIQUE thành ghép `TEAM_CODE`, cập nhật ERD/mục 5/mục 7 (xem SAD-GWM-001 ADR-07) |
 
 ---
 
@@ -31,10 +32,10 @@ title: "Database Design Document — BCCS Gateway Manager"
 Tài liệu mô tả chi tiết thiết kế cơ sở dữ liệu (CSDL) của hệ thống: sơ đồ
 quan hệ thực thể (ERD), đặc tả từng bảng (cột, kiểu dữ liệu, khoá, ràng
 buộc), chỉ mục (index), và khẳng định rõ về View/Stored Procedure. Nguồn sự
-thật của schema là `V1__baseline.sql` (baseline) + các file `V2__...sql` kế
-tiếp (nếu có) trong `backend/src/main/resources/db/migration/` — **không**
-còn dùng Hibernate `ddl-auto=update` để tự sinh/sửa schema (xem ADR-03,
-SAD-GWM-001).
+thật của schema là `V1__baseline.sql` (baseline) + `V2__team_code.sql` (thêm
+`TEAM_CODE`/`GWM_TEAM`, 2026-09) + các file `V3__...sql` kế tiếp (nếu có),
+đặt trong `backend/src/main/resources/db/team-schema/` — **không** còn dùng
+Hibernate `ddl-auto=update` để tự sinh/sửa schema (xem ADR-03, SAD-GWM-001).
 
 **Quy ước đặt tên**: tên bảng/cột dùng `SNAKE_CASE` viết hoa (chuẩn Oracle
 truyền thống); khoá chính mọi bảng là `VARCHAR2(255)` chứa UUID sinh phía
@@ -44,8 +45,17 @@ truyền thống); khoá chính mọi bảng là `VARCHAR2(255)` chứa UUID sin
 
 ## 3. Sơ đồ quan hệ thực thể (ERD)
 
+**TỪ 2026-09 (xem `SAD-Gateway-Manager.md` ADR-07): DB dùng CHUNG cho MỌI đội**
+(khác trước — mỗi đội 1 DB riêng hoàn toàn). Cách ly dữ liệu giữa các đội qua
+cột `TEAM_CODE` mới trên `UPSTREAM_SERVICE`/`ENDPOINT_CONFIG` + bảng
+`GWM_TEAM` mới (danh sách đội, không có FK — `TEAM_CODE` chỉ là 1 chuỗi khớp
+theo giá trị, KHÔNG ràng buộc khoá ngoại DB, để tránh phải sửa DDL của 6 bảng
+hiện có).
+
 ```mermaid
 erDiagram
+    GWM_TEAM ||--o{ UPSTREAM_SERVICE : "so huu (TEAM_CODE, khop gia tri - KHONG FK)"
+    GWM_TEAM ||--o{ ENDPOINT_CONFIG : "so huu (TEAM_CODE, khop gia tri - KHONG FK)"
     UPSTREAM_SERVICE ||--o{ BACKEND_STEP : "duoc goi boi (UPSTREAM_SERVICE_ID)"
     UPSTREAM_SERVICE ||--o{ BACKEND_STEP : "duoc goi bu tru boi (COMPENSATION_UPSTREAM_SERVICE_ID)"
     ENDPOINT_CONFIG ||--o{ BACKEND_STEP : "gom cac step (ENDPOINT_ID)"
@@ -55,8 +65,16 @@ erDiagram
     BACKEND_STEP ||--o{ BACKEND_STEP_DENY : "danh sach field loai bo"
     BACKEND_STEP ||--o{ BACKEND_STEP_MAPPING : "doi ten field"
 
+    GWM_TEAM {
+        varchar2 TEAM_CODE PK
+        varchar2 TEAM_NAME
+        varchar2 API_KEY UK
+        timestamp CREATED_AT
+    }
+
     UPSTREAM_SERVICE {
         varchar2 ID PK
+        varchar2 TEAM_CODE "moi 2026-09"
         varchar2 NAME
         varchar2 BASE_HOST
         number CONNECT_TIMEOUT_MS
@@ -70,6 +88,7 @@ erDiagram
 
     ENDPOINT_CONFIG {
         varchar2 ID PK
+        varchar2 TEAM_CODE "moi 2026-09"
         varchar2 PATH
         varchar2 METHOD
         varchar2 NAME
@@ -140,12 +159,25 @@ erDiagram
 
 ## 4. Đặc tả chi tiết từng bảng
 
+### 4.0. `GWM_TEAM` (mới, 2026-09)
+
+Danh sách đội BCCS đang dùng chung Control Plane — CRUD qua `TeamController`,
+CHỈ gọi được bằng **platform-admin key** (`GATEWAY_ADMIN_API_KEY`).
+
+| Cột | Kiểu dữ liệu | Null? | Khoá/Ràng buộc | Mô tả |
+|---|---|---|---|---|
+| TEAM_CODE | VARCHAR2(50 CHAR) | NOT NULL | PK (`GWM_TEAM_PK`) | Do đội nền tảng tự đặt lúc tạo (vd `VCOM`) — KHÔNG tự sinh UUID, cần dễ nhớ/tra cứu |
+| TEAM_NAME | VARCHAR2(255 CHAR) | NOT NULL | | Tên hiển thị |
+| API_KEY | VARCHAR2(255 CHAR) | NOT NULL | UNIQUE (`GWM_TEAM_API_KEY_UK`) | Sinh ngẫu nhiên 256-bit lúc tạo đội, dùng cho cả CRUD của đội LẪN đồng bộ Data Plane → Control Plane. Lưu **plaintext** (giới hạn đã biết — xem SAD ADR-07) |
+| CREATED_AT | TIMESTAMP(6) WITH TIME ZONE | NULL | | |
+
 ### 4.1. `UPSTREAM_SERVICE`
 
 | Cột | Kiểu dữ liệu | Null? | Khoá/Ràng buộc | Mô tả |
 |---|---|---|---|---|
 | ID | VARCHAR2(255 CHAR) | NOT NULL | PK (`UPSTREAM_SERVICE_PK`) | UUID |
-| NAME | VARCHAR2(255 CHAR) | NOT NULL | UNIQUE (`UKR9K2UNQ519ISGPHWC5EMCHYUC`) | Tên hiển thị, duy nhất |
+| TEAM_CODE | VARCHAR2(50 CHAR) | NOT NULL | Thêm 2026-09 qua `V2__team_code.sql` | Đội sở hữu — KHÔNG có FK tới `GWM_TEAM` (khớp theo giá trị, xem đầu mục 3) |
+| NAME | VARCHAR2(255 CHAR) | NOT NULL | UNIQUE ghép với TEAM_CODE (`UPSTREAM_SERVICE_TEAM_NAME_UK`, thay thế `UKR9K2UNQ519ISGPHWC5EMCHYUC` cũ) | Tên hiển thị, duy nhất TRONG 1 đội — 2 đội khác nhau ĐƯỢC PHÉP trùng tên (khác hành vi trước 2026-09) |
 | BASE_HOST | VARCHAR2(255 CHAR) | NOT NULL | | vd `http://10.x.x.x:8045` |
 | DESCRIPTION | VARCHAR2(255 CHAR) | NULL | | |
 | CONNECT_TIMEOUT_MS | NUMBER(10,0) | NOT NULL | | |
@@ -163,7 +195,8 @@ erDiagram
 | Cột | Kiểu dữ liệu | Null? | Khoá/Ràng buộc | Mô tả |
 |---|---|---|---|---|
 | ID | VARCHAR2(255 CHAR) | NOT NULL | PK (`ENDPOINT_CONFIG_PK`) | UUID |
-| PATH | VARCHAR2(255 CHAR) | NOT NULL | UNIQUE (`UK5SBR9SP37R2WRGTA6BTBEE3XB`) | vd `/v1/orders/{orderId}` |
+| TEAM_CODE | VARCHAR2(50 CHAR) | NOT NULL | Thêm 2026-09 qua `V2__team_code.sql` | Đội sở hữu — KHÔNG có FK tới `GWM_TEAM` |
+| PATH | VARCHAR2(255 CHAR) | NOT NULL | UNIQUE ghép với TEAM_CODE (`ENDPOINT_CONFIG_TEAM_PATH_UK`, thay thế `UK5SBR9SP37R2WRGTA6BTBEE3XB` cũ) | vd `/v1/orders/{orderId}` — duy nhất TRONG 1 đội, 2 đội được phép trùng path |
 | METHOD | VARCHAR2(255 CHAR) | NOT NULL | CHECK IN (GET,POST,PUT,DELETE,PATCH) | |
 | NAME | VARCHAR2(255 CHAR) | NOT NULL | | |
 | DESCRIPTION | VARCHAR2(255 CHAR) | NULL | | |
@@ -262,6 +295,14 @@ erDiagram
 - **Không dùng `SEQUENCE`/`IDENTITY`** cho khoá chính — toàn bộ ID là UUID
   sinh phía ứng dụng Java trước khi ghi xuống DB, tránh phụ thuộc round-trip
   lấy giá trị sinh tự động của Oracle.
+- **`TEAM_CODE` trên `UPSTREAM_SERVICE`/`ENDPOINT_CONFIG` KHÔNG có ràng buộc
+  FK tới `GWM_TEAM`** (chỉ khớp theo giá trị chuỗi, xác thực ở tầng ứng dụng
+  qua `CurrentTeamContext`) — quyết định có chủ đích: thêm FK thật đòi hỏi
+  sửa DDL của CẢ 6 bảng hiện có cùng lúc thêm cột mới (rủi ro cao hơn khi bàn
+  giao cho DBA chạy 1 lần), trong khi ứng dụng vốn đã validate schema chặt
+  qua `hibernate.ddl-auto=validate` + luôn tự stamp `TEAM_CODE` lúc tạo (không
+  bao giờ để trống/sai) — rủi ro dữ liệu mồ côi coi như bằng 0 trong thực tế
+  vận hành.
 
 ---
 
@@ -269,19 +310,22 @@ erDiagram
 
 | Bảng | Chỉ mục | Loại | Mục đích |
 |---|---|---|---|
-| UPSTREAM_SERVICE | `UKR9K2UNQ519ISGPHWC5EMCHYUC` (NAME) | Unique index (tự động theo UNIQUE constraint) | Tra theo tên khi CRUD |
-| ENDPOINT_CONFIG | `UK5SBR9SP37R2WRGTA6BTBEE3XB` (PATH) | Unique index (tự động) | Đảm bảo không trùng đường dẫn — cũng là chỉ mục tra cứu chính khi Data Plane khớp request (dù việc khớp thật diễn ra ở bộ nhớ trong-process qua `EndpointRegistryCache`, không phải truy vấn DB mỗi request) |
+| GWM_TEAM | `GWM_TEAM_API_KEY_UK` (API_KEY) | Unique index (tự động) | `ApiKeyAuthFilter` tra cứu đội theo key trên MỌI request `/api/**` (trừ `/api/teams/**`) — mục đích chính của chỉ mục này |
+| UPSTREAM_SERVICE | `UPSTREAM_SERVICE_TEAM_NAME_UK` (TEAM_CODE, NAME) | Unique index (tự động, thay thế `UKR9K2UNQ519ISGPHWC5EMCHYUC` cũ) | Tra theo tên khi CRUD, TRONG phạm vi 1 đội |
+| ENDPOINT_CONFIG | `ENDPOINT_CONFIG_TEAM_PATH_UK` (TEAM_CODE, PATH) | Unique index (tự động, thay thế `UK5SBR9SP37R2WRGTA6BTBEE3XB` cũ) | Đảm bảo không trùng đường dẫn TRONG 1 đội — cũng phục vụ mọi câu truy vấn CRUD của Control Plane (luôn lọc theo `TEAM_CODE` trước, xem `CurrentTeamContext`) |
 | ENDPOINT_CONFIG_VERSION | `UK2NPOJ2PDGV4HFROGTJSFCPQXU` (ENDPOINT_ID, VERSION_NUMBER) | Unique index (tự động) | Đảm bảo không trùng số phiên bản trong 1 Endpoint |
 | ENDPOINT_CONFIG_VERSION | `IDX_ECV_ENDPOINT_ID` (ENDPOINT_ID) | Non-unique index (tạo riêng) | Tăng tốc truy vấn "lấy tất cả phiên bản của 1 Endpoint" |
 | BACKEND_STEP | (không có index riêng ngoài PK/FK tự động) | | FK tới ENDPOINT_ID/UPSTREAM_SERVICE_ID được Oracle tự tạo index hỗ trợ ràng buộc |
 | FIELD_MAPPING | (không có index riêng ngoài PK/FK tự động) | | |
 
 **Ghi chú thiết kế**: hệ thống có lưu lượng ĐỌC cấu hình rất thấp so với lưu
-lượng traffic thật (Data Plane đọc từ bộ nhớ đệm `EndpointRegistryCache`,
-không truy vấn DB trực tiếp mỗi request) — vì vậy KHÔNG cần thêm chỉ mục tối
-ưu đọc phức tạp ngoài các chỉ mục tự động theo PK/FK/UNIQUE ở trên. Nếu về
-sau bổ sung tính năng tìm kiếm cấu hình theo nhiều điều kiện phức tạp
-(full-text trên `NAME`/`DESCRIPTION`...), cần đánh giá lại.
+lượng traffic thật (Data Plane từ 2026-09 đọc từ bộ nhớ đệm nạp qua HTTP,
+KHÔNG còn truy vấn DB trực tiếp nữa — xem SAD ADR-07; chỉ Control Plane còn
+đọc DB, cho tần suất CRUD/UI thấp) — vì vậy KHÔNG cần thêm chỉ mục tối ưu đọc
+phức tạp ngoài các chỉ mục tự động theo PK/FK/UNIQUE ở trên (2 UNIQUE index
+ghép `TEAM_CODE` ở trên vừa đảm bảo ràng buộc vừa đủ dùng làm chỉ mục lọc
+theo đội). Nếu về sau bổ sung tính năng tìm kiếm cấu hình theo nhiều điều
+kiện phức tạp (full-text trên `NAME`/`DESCRIPTION`...), cần đánh giá lại.
 
 ---
 
@@ -310,28 +354,29 @@ giao qua đúng quy trình DDL ở mục 7.
 ## 7. Chiến lược quản lý thay đổi Schema (Migration Strategy)
 
 **Không dùng công cụ tự động (Flyway/Liquibase/`ddl-auto`) để tạo/sửa schema.**
-Lý do: Oracle 19c của từng đội BCCS là hạ tầng do DBA quản trị — user chạy
-ứng dụng chỉ được cấp quyền DML, không có quyền DDL (xem SAD-GWM-001 ADR-03).
+Lý do: Oracle 19c trung tâm là hạ tầng do DBA quản trị — user chạy Control
+Plane chỉ được cấp quyền DML, không có quyền DDL (xem SAD-GWM-001 ADR-03).
 Quy trình thay đổi schema:
 
 - Mọi thay đổi cấu trúc bảng (thêm cột, đổi kiểu, thêm ràng buộc) được đóng
   gói thành 1 file DDL thuần mới (`V2__...sql`, `V3__...sql`...), đặt cùng
   `backend/src/main/resources/db/team-schema/` cạnh `V1__baseline.sql`, tên
   file mô tả rõ nội dung, đánh số tăng dần để DBA áp dụng đúng thứ tự.
-- File DDL được **bàn giao cho DBA của từng đội** (không phải ứng dụng tự
-  chạy) — DBA tự chạy trên schema đã có, theo đúng quy trình change-management
-  nội bộ (xem `DEPLOYMENT_GUIDE.md` mục 6).
-- KHÔNG sửa lại nội dung 1 file DDL ĐÃ bàn giao cho bất kỳ đội nào — nếu cần
-  sửa nội dung đã sai, phát hành 1 file mới (`V(n+1)__...sql`) để chỉnh lại,
-  không ghi đè lịch sử.
-- `hibernate.ddl-auto=validate` đóng vai trò lưới an toàn duy nhất ở phía ứng
-  dụng — nếu entity Java và schema thật lệch nhau (ví dụ DBA chưa kịp áp dụng
-  DDL mới nhất), ứng dụng sẽ KHÔNG khởi động được, buộc phát hiện ngay thay
-  vì chạy sai âm thầm.
-- Với mỗi đội tự triển khai 1 instance mới: chỉ cần DBA chạy đúng
-  `V1__baseline.sql` 1 lần trước khi khởi động ứng dụng lần đầu — không cần
-  biết lịch sử các thay đổi trước đó (nội dung V1 đã là schema đầy đủ, mới
-  nhất tính đến thời điểm phát hành).
+- **TỪ 2026-09 (xem SAD ADR-07): file DDL bàn giao cho DBA của ĐỘI NỀN TẢNG**
+  (đội vận hành Control Plane trung tâm) — KHÔNG còn bàn giao cho DBA của
+  từng đội BCCS như trước (khi mỗi đội có DB riêng). `V2__team_code.sql`
+  (thêm cột `TEAM_CODE` + bảng `GWM_TEAM` + đổi 2 ràng buộc UNIQUE, xem mục 3)
+  là ví dụ migration đầu tiên theo mô hình mới này — chạy 1 lần trên Oracle
+  trung tâm, ảnh hưởng CẢ hệ thống (mọi đội), không phải riêng 1 đội.
+- KHÔNG sửa lại nội dung 1 file DDL ĐÃ bàn giao — nếu cần sửa nội dung đã sai,
+  phát hành 1 file mới (`V(n+1)__...sql`) để chỉnh lại, không ghi đè lịch sử.
+- `hibernate.ddl-auto=validate` (CHỈ chạy ở Control Plane — Data Plane không
+  kết nối Oracle từ 2026-09, xem SAD ADR-07) đóng vai trò lưới an toàn duy
+  nhất ở phía ứng dụng — nếu entity Java và schema thật lệch nhau, Control
+  Plane sẽ KHÔNG khởi động được, buộc phát hiện ngay thay vì chạy sai âm thầm.
+- Với instance Control Plane mới (chỉ dựng 1 lần duy nhất, không lặp lại theo
+  đội): DBA đội nền tảng chạy tuần tự `V1__baseline.sql` rồi `V2__team_code.sql`
+  (và mọi `Vn__...sql` tiếp theo) trước khi khởi động lần đầu.
 
 ---
 

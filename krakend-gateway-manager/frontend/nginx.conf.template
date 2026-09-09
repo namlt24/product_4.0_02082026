@@ -6,7 +6,8 @@ server {
 
     # Proxy moi request /api/** sang Control Plane backend (ten Service/container
     # "gwm-backend" - dung chung 1 ten cho ca Docker Compose (alias tu
-    # container_name) LAN Kubernetes (ten Service, xem k8s/40-backend.yaml), de 1
+    # container_name) LAN Kubernetes (ten Service, xem k8s/control-plane/40-backend.yaml -
+    # file nay CHI chay o Control Plane, Data Plane khong co frontend), de 1
     # anh (image) frontend duy nhat chay dung tren ca 2 kieu trien khai.
     #
     # QUAN TRONG: dung "resolver" + bien $backend_upstream (khong ghi thang hostname

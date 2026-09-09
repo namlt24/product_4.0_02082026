@@ -1,196 +1,171 @@
-# Hướng dẫn 1 đội BCCS tự triển khai Gateway Manager riêng
+# Hướng dẫn triển khai Gateway Manager (Control Plane dùng chung / Data Plane từng đội)
 
-Tài liệu này dành cho **1 đội BCCS bất kỳ** muốn tự chạy **1 instance Gateway
-Manager của riêng mình** (backend composite engine + frontend), trên **hạ tầng
-riêng của đội đó** (Oracle 19c riêng, Redis riêng, Elasticsearch riêng - không
-dùng chung với đội khác). Khác với [`LOCAL_SETUP.md`](LOCAL_SETUP.md) (dành cho
-người PHÁT TRIỂN Gateway Manager, dùng chung hạ tầng `db-local`).
+Tài liệu này mô tả quy trình triển khai **2 vai trò riêng biệt** (từ 2026-09,
+xem `docs/SAD-Gateway-Manager.md` ADR-07) — khác hẳn mô hình cũ (mỗi đội tự
+chạy 1 instance đầy đủ, độc lập hoàn toàn). Khác với
+[`LOCAL_SETUP.md`](LOCAL_SETUP.md) (dành cho người PHÁT TRIỂN Gateway
+Manager, dùng chung hạ tầng `db-local`).
 
-## 1. Yêu cầu
+## 0. Mô hình tổng quan — 2 vai trò, cùng 1 image, chọn qua `SPRING_PROFILES_ACTIVE`
 
-**Topology triển khai chính thức: Kubernetes** (YAML thuần, `kubectl apply`,
-không Helm - xem mục 4a). Docker Compose (mục 4b) vẫn được giữ trong repo và
-dùng tốt cho máy dev cá nhân/demo nhanh 1 host, nhưng KHÔNG phải hướng production
-khuyến nghị cho các đội.
-
-| Hạ tầng | Bắt buộc? | Ghi chú |
+| | **Control Plane** | **Data Plane** |
 |---|---|---|
-| Cụm Kubernetes + `kubectl` | Bắt buộc (production) | Đã cài sẵn **NGINX Ingress Controller** trong cụm - xem mục 4a |
-| Docker + Docker Compose | Thay thế cho k8s (dev/demo 1 host) | Xem mục 4b |
-| Oracle 19c (hoặc mới hơn) | Bắt buộc | Schema riêng của đội, KHÔNG dùng chung schema `BCCS_PRODUCT` với đội khác. Chạy NGOÀI cụm k8s/Docker (hạ tầng có sẵn của đội) |
-| Redis | Bắt buộc | Trên k8s: 1 Deployment thường trong cụm, KHÔNG cần PersistentVolume (cache-aside + bộ đếm rate-limit đều fail-open) |
-| Elasticsearch | Tuỳ chọn | Chỉ phục vụ trang "Tra cứu Log" - không có vẫn chạy bình thường (fail-open) |
-| Elastic APM Server | Tuỳ chọn | Theo dõi hiệu năng - không có agent tự tắt, không chặn traffic thật |
+| Ai triển khai | **Đội nền tảng** (chúng ta) — 1 lần duy nhất | **Mỗi đội BCCS** — tự triển khai riêng, N bản độc lập |
+| Gồm | UI Angular + backend (`SPRING_PROFILES_ACTIVE=control-plane`) | Backend (`SPRING_PROFILES_ACTIVE=data-plane`) + Redis riêng |
+| Làm gì | CRUD Endpoint/Upstream/Team (`/api/**`), đọc/ghi **trực tiếp** Oracle trung tâm | Thực thi traffic thật qua `DynamicDispatcherController` |
+| Oracle | Kết nối trực tiếp, **dùng chung** cho mọi đội (cách ly qua cột `team_code`) | **Không kết nối** — tự đồng bộ Endpoint/Upstream của **chính đội mình** qua HTTP định kỳ (`RemoteConfigSyncService`) |
+| Redis | Tuỳ chọn (chỉ phục vụ cache tạm khi dùng "Thử ngay"/"Thử nhanh" trên UI) | Bắt buộc — cache-aside + bộ đếm rate-limit, riêng của từng đội |
 
-## 2. Chuẩn bị Oracle 19c — DBA đội tự chạy DDL, ứng dụng KHÔNG tự tạo bảng
+Chỉ **1 image Docker duy nhất** (đúng ADR-02: 1 nguồn code, build 1 lần) —
+vai trò được chọn lúc khởi động qua biến môi trường `SPRING_PROFILES_ACTIVE`,
+không phải 2 image khác nhau.
 
-**Ứng dụng không có khả năng tự tạo/sửa schema.** Lý do: Oracle 19c của từng
-đội BCCS thường là **hạ tầng đã vận hành từ trước, do DBA quản trị** — user
-cấp cho ứng dụng chạy thường CHỈ có quyền DML (SELECT/INSERT/UPDATE/DELETE),
-KHÔNG có quyền DDL (`CREATE TABLE`). Từng thử để ứng dụng tự động tạo schema
-(qua Flyway) lúc khởi động, nhưng cách đó không phù hợp thực tế này nên đã bỏ
-— xem `docs/SAD-Gateway-Manager.md` (ADR-03, bản sửa lại).
+**Thứ tự bắt buộc**: Control Plane phải lên **trước**, và phải có ít nhất 1
+đội được tạo qua màn hình **"Quản lý đội"** (cần `team_code` + `api_key`)
+trước khi bất kỳ đội nào triển khai được Data Plane của mình.
 
-**Quy trình bắt buộc trước khi chạy ứng dụng lần đầu**:
+## 1. Yêu cầu hạ tầng
 
-1. Gửi file `backend/src/main/resources/db/team-schema/V1__baseline.sql` cho
-   **DBA/người quản trị Oracle của đội**.
-2. DBA đối chiếu 8 tên bảng trong file (`UPSTREAM_SERVICE`, `ENDPOINT_CONFIG`,
-   `BACKEND_STEP`, `BACKEND_STEP_ALLOW`, `BACKEND_STEP_DENY`,
-   `BACKEND_STEP_MAPPING`, `FIELD_MAPPING`, `ENDPOINT_CONFIG_VERSION`) với các
-   bảng ĐÃ CÓ trong schema định dùng — **nếu là schema dùng chung với hệ thống
-   khác của đội, phải đảm bảo không trùng tên** trước khi chạy.
-3. DBA tự chạy file này (nguyên vẹn, theo đúng quy trình change-management nội
-   bộ của đội) trên schema/user dành cho Gateway Manager.
-4. Sau khi 8 bảng đã có, DBA cấp cho user **RUNTIME** của ứng dụng CHỈ quyền
-   DML trên đúng 8 bảng này (không cần quyền DDL) — đây chính là user điền vào
-   `DB_USER`/`DB_PASSWORD` ở mục 3 dưới đây.
-5. Ứng dụng khi khởi động chỉ **đối chiếu** (`hibernate.ddl-auto=validate`)
-   entity Java với schema thật — nếu thiếu bảng/cột hoặc sai kiểu dữ liệu, ứng
-   dụng sẽ **không khởi động được** kèm thông báo lỗi rõ ràng (an toàn — không
-   bao giờ tự ý sửa schema).
+| Hạ tầng | Control Plane | Data Plane |
+|---|---|---|
+| Cụm Kubernetes + `kubectl` + NGINX Ingress Controller | Khuyến nghị production | Khuyến nghị production |
+| Docker + Docker Compose | Thay thế cho k8s (dev/demo 1 host) | Thay thế cho k8s (dev/demo 1 host) |
+| Oracle 19c+ | **Bắt buộc**, 1 bản trung tâm dùng chung mọi đội | Không cần |
+| Redis | Tuỳ chọn | **Bắt buộc**, riêng của từng đội |
+| Elasticsearch | Tuỳ chọn (đọc log do chính CP ghi qua "Thử ngay") | Tuỳ chọn (ghi log traffic thật, fail-open) |
+| Elastic APM Server | Tuỳ chọn | Tuỳ chọn |
 
-> Vì sao trước đây định dùng Flyway/`ddl-auto=update` tự sinh schema nhưng đã
-> bỏ: `ddl-auto=update` chưa từng được xác nhận đúng trên Oracle 19c thật (chỉ
-> test 23c) và có lỗi đã biết (không tự nới `CHECK` constraint khi thêm enum
-> mới). Flyway tự động migrate lúc khởi động thì lại giả định user runtime có
-> quyền DDL — **không đúng với thực tế hạ tầng Oracle 19c của các đội BCCS**
-> (do DBA quản trị, chỉ cấp DML). Giải pháp cuối cùng: tách hẳn việc TẠO SCHEMA
-> (DBA tự làm, 1 lần, ngoài vòng đời ứng dụng) khỏi việc CHẠY ứng dụng.
+## 2. Chuẩn bị Oracle trung tâm (đội nền tảng làm 1 lần) — DBA tự chạy DDL
 
-## 3. Cấu hình các biến môi trường
+**Ứng dụng không có khả năng tự tạo/sửa schema** (`hibernate.ddl-auto=validate`
+tuyệt đối, không Flyway/tự sinh bảng — xem `docs/SAD-Gateway-Manager.md`
+ADR-03). Quy trình bắt buộc trước khi chạy Control Plane lần đầu:
 
-Cùng 1 bộ biến (`TEAM_CODE`, `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/
-`DB_PASSWORD`, `GATEWAY_ADMIN_API_KEY`, `GATEWAY_AUDIT_*`, `APM_*`...) áp dụng
-cho cả 2 topology - chỉ khác **nơi khai báo**: file `.env` (Docker Compose) hay
-ConfigMap/Secret (Kubernetes). Xem giải thích đầy đủ từng biến trong
-`.env.example` (Docker Compose) hoặc comment trong `k8s/00-configmap.yaml`
-(Kubernetes) - nội dung giải thích giống nhau, chỉ định dạng file khác.
+1. Gửi **2 file** `backend/src/main/resources/db/team-schema/V1__baseline.sql`
+   và `V2__team_code.sql` cho DBA/người quản trị Oracle trung tâm.
+2. DBA chạy lần lượt cả 2 file (nguyên vẹn, theo đúng quy trình
+   change-management nội bộ) — `V1` tạo 8 bảng, `V2` thêm cột `team_code` +
+   bảng `gwm_team` + đổi 2 ràng buộc UNIQUE (xem chi tiết trong chính file
+   `V2__team_code.sql` — **cần điền `GATEWAY_ADMIN_API_KEY` thật vào câu
+   `INSERT` tạo đội "default"** trước khi chạy nếu instance này đã có dữ liệu
+   cũ từ trước 2026-09).
+3. DBA cấp cho user **RUNTIME** của Control Plane quyền DML (SELECT/INSERT/
+   UPDATE/DELETE) trên toàn bộ bảng — đây là user điền vào `DB_USER`/
+   `DB_PASSWORD`.
+4. Control Plane khi khởi động chỉ **đối chiếu** schema — thiếu bảng/cột/sai
+   kiểu sẽ **không khởi động được** kèm lỗi rõ ràng.
 
-## 4a. Chạy trên Kubernetes (khuyến nghị cho production)
+**Data Plane của từng đội KHÔNG cần bước này** — không kết nối Oracle.
 
-Toàn bộ manifest nằm trong [`k8s/`](k8s/) (YAML thuần, không Helm) - xem
-[`k8s/README.md`](k8s/README.md) để biết chi tiết từng file. Tóm tắt:
+## 3. Triển khai Control Plane (đội nền tảng, 1 lần)
+
+### 3a. Kubernetes
 
 ```bash
-cd krakend-gateway-manager/k8s
-
-# 1. Sua gia tri trong 00-configmap.yaml cho dung ha tang cua doi (DB_HOST,
-#    REDIS_HOST da dung san "gwm-redis" khop voi 30-redis.yaml, GATEWAY_AUDIT_*,
-#    APM_*...).
-
-# 2. Tao Secret THAT (KHONG dung 01-secret.yaml.example truc tiep - file do
-#    chi la mau tham khao, khong duoc apply):
-kubectl create secret generic gwm-secret -n <namespace-cua-doi> \
-  --from-literal=DB_USER='GATEWAY_MANAGER' \
-  --from-literal=DB_PASSWORD='<mat-khau-that>' \
-  --from-literal=GATEWAY_ADMIN_API_KEY='<tu-sinh-1-key-manh>'
-
-# 3. Sua "image:" trong 40-backend.yaml va 50-frontend.yaml thanh dung
-#    registry/tag noi bo cua doi (build tu backend/Dockerfile va
-#    frontend/Dockerfile, gan version theo git tag).
-
-# 4. Sua 2 "host:" trong 60-ingress.yaml thanh dung domain noi bo cua doi.
-
-# 5. Apply (dam bao da cai san NGINX Ingress Controller trong cum):
-kubectl apply -f 00-configmap.yaml -n <namespace-cua-doi>
-kubectl apply -f 30-redis.yaml     -n <namespace-cua-doi>
-kubectl apply -f 40-backend.yaml   -n <namespace-cua-doi>
-kubectl apply -f 50-frontend.yaml  -n <namespace-cua-doi>
-kubectl apply -f 60-ingress.yaml   -n <namespace-cua-doi>
+cd krakend-gateway-manager/k8s/control-plane
 ```
+1. Sửa giá trị trong `00-configmap.yaml` (Oracle trung tâm, ES/APM nếu có).
+2. Tạo Secret thật (KHÔNG dùng `01-secret.yaml.example` trực tiếp):
+   ```bash
+   kubectl create secret generic gwm-secret -n <namespace-control-plane> \
+     --from-literal=DB_USER='GATEWAY_MANAGER' \
+     --from-literal=DB_PASSWORD='<mat-khau-that>' \
+     --from-literal=GATEWAY_ADMIN_API_KEY='<tu-sinh-1-key-manh>'
+   ```
+3. Sửa `image:` trong `40-backend.yaml`/`50-frontend.yaml`.
+4. Sửa 2 `host:` trong `60-ingress.yaml`.
+5. Apply: `kubectl apply -f . -n <namespace-control-plane>`.
 
-**Điều kiện tiên quyết**: 8 bảng đã được DBA tạo xong theo đúng mục 2 — nếu
-chưa, Pod `gwm-backend` sẽ `CrashLoopBackOff` với log `SchemaManagementException`
-(thiếu bảng/cột) ngay khi khởi động, KHÔNG tự tạo gì cả.
-
-Kiểm tra nhanh:
-```bash
-kubectl get pods -n <namespace-cua-doi>          # ca 3 Pod (redis/backend/frontend) phai Running
-curl http://<host-uu-tra-ingress-backend>/api/endpoints -H "X-Gateway-Admin-Key: <key-ban-vua-dat>"
-```
-
-## 4b. Chạy bằng Docker Compose (dev/demo 1 host, thay thế cho k8s)
+### 3b. Docker Compose (dev/demo)
 
 ```bash
 cd krakend-gateway-manager
-cp .env.example .env
+cp .env.control-plane.example .env
+# Điền DB_HOST/PORT/NAME/USER/PASSWORD + GATEWAY_ADMIN_API_KEY thật
+docker compose -f docker-compose.control-plane.yml up -d --build
 ```
+UI: `http://localhost:4200`.
 
-Mở `.env`, điền theo hạ tầng của đội:
+### 3c. Tạo các đội (bắt buộc trước khi đội nào triển khai Data Plane)
 
-```dotenv
-TEAM_CODE=ten-doi-ban              # vd "vcom", "billing"... - hien trong ten service/APM
-DB_HOST=oracle.noi-bo-doi-ban.local
-DB_PORT=1521
-DB_NAME=ten-service-hoac-pdb-cua-ban
-DB_USER=GATEWAY_MANAGER
-DB_PASSWORD=<mat-khau-that>
-GATEWAY_ADMIN_API_KEY=<tu-sinh-1-key-manh>   # KHONG duoc de mac dinh "changeme-local-dev"
-```
+Đăng nhập UI bằng **platform-admin key** (`GATEWAY_ADMIN_API_KEY` vừa tạo) →
+vào màn hình **"Quản lý đội"** → tạo 1 dòng cho mỗi đội BCCS sẽ dùng Gateway
+Manager. `api_key` sinh ra **hiển thị đúng 1 lần** — lưu lại ngay và gửi cho
+đội tương ứng cùng `team_code`.
 
-Elasticsearch/APM: nếu đội **chưa có**, để nguyên mặc định là đủ (tính năng tự
-tắt an toàn, không chặn traffic thật) - hoặc set `GATEWAY_AUDIT_ENABLED=false`
-để tắt hẳn phần ghi log. Nếu đội **có sẵn** ES/APM riêng, điền
-`GATEWAY_AUDIT_ES_HOST`/`ES_PORT`/`APM_SERVER_HOST`/`APM_SERVER_PORT`.
+## 4. Triển khai Data Plane (từng đội BCCS tự làm)
+
+**Điều kiện tiên quyết**: đã nhận `team_code` + `api_key` từ đội nền tảng
+(mục 3c).
+
+### 4a. Kubernetes
 
 ```bash
-docker compose up -d --build
+cd krakend-gateway-manager/k8s/data-plane
 ```
+1. Sửa `00-configmap.yaml` (đặc biệt `TEAM_CODE`, `CONTROL_PLANE_BASE_URL`).
+2. Tạo Secret thật:
+   ```bash
+   kubectl create secret generic gwm-secret -n <namespace-cua-doi> \
+     --from-literal=CONTROL_PLANE_SYNC_API_KEY='<api_key-doi-nen-tang-da-cap>'
+   ```
+3. Sửa `image:` trong `40-backend.yaml`, `host:` trong `60-ingress.yaml`.
+4. Apply: `kubectl apply -f . -n <namespace-cua-doi>`.
 
-**Điều kiện tiên quyết**: 8 bảng đã được DBA tạo xong theo đúng mục 2 — nếu
-chưa, backend sẽ báo lỗi `SchemaManagementException` (thiếu bảng/cột) ngay khi
-khởi động và dừng lại, KHÔNG tự tạo gì cả.
+### 4b. Docker Compose (dev/demo)
 
-Lần đầu, backend sẽ:
-1. Kết nối Oracle bằng user RUNTIME (chỉ quyền DML), đối chiếu entity với 8
-   bảng đã có sẵn (`hibernate.ddl-auto=validate`).
-2. `DataSeeder` seed **1 endpoint mẫu** (`GET /v1/user-orders/{userId}`) để có
-   ngay 1 ví dụ tham khảo cấu trúc - xoá được qua UI nếu không cần.
-3. Backend + frontend lên, UI ở `http://localhost:4200`.
-
-Kiểm tra nhanh:
 ```bash
-curl http://localhost:4200/api/endpoints -H "X-Gateway-Admin-Key: <key-ban-vua-dat>"
+cd krakend-gateway-manager
+cp .env.data-plane.example .env
+# Điền TEAM_CODE, CONTROL_PLANE_BASE_URL, CONTROL_PLANE_SYNC_API_KEY
+docker compose -f docker-compose.data-plane.yml up -d --build
 ```
 
-## 5. Khai báo nghiệp vụ đầu tiên
+Kiểm tra đồng bộ thành công:
+```bash
+docker compose -f docker-compose.data-plane.yml logs backend | grep "Da dong bo"
+curl http://localhost:8081/actuator/health/readiness   # phải {"status":"UP"} sau khi dong bo lan dau
+# (host port 8081 mac dinh cua docker-compose.data-plane.yml khi chay TREN CUNG
+# may voi Control Plane dev - doi HOST_PORT trong .env neu muon dung 8080)
+```
+
+## 5. Khai báo nghiệp vụ đầu tiên (trên UI Control Plane)
 
 1. Vào **Upstream Services** → đăng ký các backend thật đội cần gọi (host,
-   timeout, circuit breaker...).
+   timeout, circuit breaker...) — mỗi đội chỉ thấy Upstream của chính mình.
 2. Vào **Endpoints** (hoặc trang **Canvas** kéo-thả) → khai báo endpoint
-   composite đầu tiên, tham chiếu tới Upstream Service vừa tạo.
-3. Dùng nút **"Thử nhanh"** (trên Canvas) để xem trước request/response từng
-   step ngay khi đang cấu hình, chưa cần lưu.
+   composite đầu tiên.
+3. Dùng nút **"Thử nhanh"** để xem trước request/response từng step ngay khi
+   đang cấu hình, chưa cần lưu.
+4. Trong vòng tối đa `CONTROL_PLANE_SYNC_INTERVAL_SECONDS` (mặc định 15s),
+   endpoint mới sẽ có hiệu lực trên Data Plane của chính đội đó — **không cần
+   khởi động lại** Data Plane.
 
 ## 6. Nâng cấp lên version mới
 
-**Kubernetes**: đổi tag `image:` trong `k8s/40-backend.yaml`/`50-frontend.yaml`
-sang version mới rồi `kubectl apply -f k8s/40-backend.yaml -f k8s/50-frontend.yaml
--n <namespace-cua-doi>` (k8s tự rolling-update Pod).
+**Control Plane** (Kubernetes): đổi tag `image:` trong `k8s/control-plane/
+40-backend.yaml`/`50-frontend.yaml` rồi `kubectl apply` lại.
 
-**Docker Compose**:
-```bash
-git pull            # hoặc doi tag image neu dung registry rieng
-docker compose up -d --build
-```
+**Data Plane** (mỗi đội, Kubernetes): đổi tag `image:` trong
+`k8s/data-plane/40-backend.yaml` rồi `kubectl apply` lại — **không phụ thuộc
+lịch nâng cấp của các đội khác**.
 
-Cả 2 trường hợp: nếu bản mới có thay đổi cấu trúc dữ liệu, đội phát triển nền
-tảng sẽ ban hành kèm 1 file DDL tăng dần mới (vd `V2__...sql`, đặt cùng thư mục
-`db/team-schema/`) — **lặp lại đúng quy trình mục 2** (gửi cho DBA, DBA tự chạy
-trên schema đã có) **TRƯỚC** khi nâng cấp ứng dụng. KHÔNG tự khởi động lại ứng
-dụng trước khi DBA đã áp dụng DDL mới — `ddl-auto=validate` sẽ chặn khởi động
-và báo lỗi rõ ràng nếu chạy nhầm thứ tự.
+Nếu bản mới thay đổi cấu trúc dữ liệu, đội phát triển nền tảng ban hành kèm 1
+file DDL tăng dần mới (`V3__...sql`...) — DBA trung tâm chạy **trước** khi
+nâng cấp Control Plane (lặp lại quy trình mục 2). Data Plane không bị ảnh
+hưởng bởi thay đổi schema (không kết nối Oracle).
 
 ## 7. Sự cố thường gặp
 
 | Triệu chứng | Nguyên nhân khả dĩ |
 |---|---|
-| Backend không lên, log `SchemaManagementException` (`Schema validation: missing table`/`wrong column type`) | DBA chưa chạy `V1__baseline.sql` (hoặc bản DDL nâng cấp mới nhất), hoặc user RUNTIME trỏ nhầm schema chưa có bảng — quay lại mục 2 |
-| DBA báo lỗi thiếu quyền khi chạy `V1__baseline.sql` | User DBA dùng để chạy DDL cần quyền `CREATE TABLE`/`CREATE INDEX` trên schema đích - khác với user RUNTIME (chỉ cần DML) điền trong `.env`/Secret |
-| `401 Unauthorized` khi gọi `/api/**` | Thiếu/sai header `X-Gateway-Admin-Key` - phải khớp đúng `GATEWAY_ADMIN_API_KEY` đã đặt trong `.env` (Compose) hoặc Secret `gwm-secret` (k8s) |
-| Trang "Tra cứu Log" trống/lỗi | Elasticsearch chưa cấu hình/không kết nối được - không ảnh hưởng chức năng chính, chỉ tính năng xem log bị tắt |
-| Endpoint gọi ra Upstream bị `BulkheadFullException`/timeout | Kiểm tra `maxConcurrentCalls`/`connectTimeoutMs` của Upstream Service tương ứng - có thể cần tăng nếu backend thật của đội chậm/tải cao |
-| (k8s) Pod `gwm-backend`/`gwm-frontend` mãi `0/1 Ready` | Xem `kubectl describe pod`/`kubectl logs` - thường là readiness probe `/actuator/health` fail do Oracle chưa kết nối được (`DB_HOST` sai) hoặc image chưa build đúng version |
-| (k8s) UI trả `502/504` qua Ingress dù Pod đều Running | Kiểm tra Ingress Controller đã trỏ đúng `ingressClassName: nginx`, và `frontend` Pod log có báo lỗi resolve `gwm-backend` không (xem `frontend/nginx.conf.template`) |
-| (k8s) Frontend lên nhưng gọi `/api/**` bị lỗi kết nối | Service `gwm-backend` phải cùng namespace với `gwm-frontend` (DNS ngắn `gwm-backend` chỉ resolve trong cùng namespace) - nếu khác namespace phải sửa thành `gwm-backend.<namespace-backend>.svc.cluster.local` trong `nginx.conf.template` |
+| Control Plane không lên, log `SchemaManagementException` | DBA chưa chạy `V1__baseline.sql`/`V2__team_code.sql`, hoặc user RUNTIME trỏ nhầm schema — quay lại mục 2 |
+| `401 Unauthorized` khi gọi `/api/teams/**` | Phải dùng **platform-admin key** (`GATEWAY_ADMIN_API_KEY`), không phải api_key của 1 đội |
+| `401 Unauthorized` khi gọi `/api/endpoints`, `/api/upstreams`... | Phải dùng api_key **của đúng đội** (bảng `gwm_team`) — platform-admin key KHÔNG dùng được cho các API này |
+| Data Plane khởi động nhưng `/actuator/health/readiness` mãi `DOWN` | Chưa đồng bộ thành công lần nào — kiểm tra log `RemoteConfigSyncService`, xác nhận `CONTROL_PLANE_BASE_URL` mạng tới được và `CONTROL_PLANE_SYNC_API_KEY` đúng |
+| Data Plane đồng bộ báo lỗi 401 | `CONTROL_PLANE_SYNC_API_KEY` sai hoặc đội đã bị xoá khỏi `gwm_team` (xem "Quản lý đội") |
+| Endpoint mới tạo trên Control Plane chưa thấy hiệu lực ở Data Plane | Đợi tối đa 1 chu kỳ `CONTROL_PLANE_SYNC_INTERVAL_SECONDS` (mặc định 15s) — nếu lâu hơn, kiểm tra log đồng bộ có lỗi liên tục không |
+| Trang "Tra cứu Log" trống/lỗi trên UI Control Plane | Elasticsearch của Control Plane không cấu hình/không kết nối được, HOẶC Control Plane và Data Plane trỏ 2 cụm ES khác nhau (mặc định — chỉ đọc được log do chính CP ghi qua "Thử ngay", không tự động thấy log traffic thật của các đội trừ khi cả 2 bên chủ động trỏ chung 1 cụm ES) |
+| Endpoint gọi ra Upstream bị `BulkheadFullException`/timeout | Kiểm tra `maxConcurrentCalls`/`connectTimeoutMs` của Upstream Service tương ứng |
+| (k8s) Pod `gwm-backend` (Data Plane) mãi `0/1 Ready` | Xem `kubectl logs` — thường là chưa đồng bộ được (readiness dùng `/actuator/health/readiness`, gồm cả điều kiện đã sync ít nhất 1 lần) |
+| (k8s) UI trả `502/504` qua Ingress dù Pod đều Running | Kiểm tra `frontend` Pod log có báo lỗi resolve `gwm-backend` không (xem `frontend/nginx.conf.template`) — `gwm-backend` phải cùng namespace với `gwm-frontend` |

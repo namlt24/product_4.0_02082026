@@ -1,0 +1,47 @@
+# ============================================================================
+# ConfigMap cho Control Plane - 1 BAN DUY NHAT dung chung MOI doi (khac han
+# data-plane/00-configmap.yaml, noi moi doi tu chinh 1 ban rieng cua minh).
+# Doi chieu dung TEN bien voi backend/src/main/resources/application-control-plane.yml.
+#
+# DOI NEN TANG (nguoi trien khai Control Plane): sua truc tiep cac gia tri
+# duoi day cho dung ha tang trung tam truoc khi
+# "kubectl apply -f 00-configmap.yaml -n <namespace-control-plane>".
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gwm-config
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+data:
+  # Oracle TRUNG TAM dung chung MOI doi - schema da duoc DBA cua doi NEN TANG
+  # tao san qua ban giao DDL (V1__baseline.sql + V2__team_code.sql, xem
+  # DEPLOYMENT_GUIDE.md muc 2 + backend/src/main/resources/db/team-schema/).
+  DB_HOST: "oracle.trung-tam.local"
+  DB_PORT: "1521"
+  DB_NAME: "ten-pdb-hoac-service-trung-tam"
+
+  # Redis TUY CHON - CHI phuc vu cache tam khi dung "Thu ngay"/"Thu nhanh"
+  # tren UI (CompositeOrchestratorEngine dung chung cho ca Control Plane lan
+  # Data Plane) - fail-open hoan toan, khong co Redis van dung binh thuong,
+  # chi khong duoc cache trong luc thu. KHONG lien quan Redis cua tung doi
+  # (xem data-plane/00-configmap.yaml - REDIS_HOST="gwm-redis" trong namespace
+  # cua doi do).
+  REDIS_HOST: "localhost"
+  REDIS_PORT: "6379"
+
+  # Audit log (Tra cuu Log tren UI) - tuy chon, doc TU 1 Elasticsearch CHI
+  # doc duoc cac index ma chinh Control Plane nay ghi vao (qua "Thu ngay"),
+  # KHONG tu dong thay duoc log traffic that cua tung doi (ho ghi vao ES
+  # RIENG cua ho, xem data-plane/00-configmap.yaml) TRU KHI ca 2 ben cung tro
+  # chung 1 cum ES (tuy chon ha tang, xem SAD-Gateway-Manager.md ADR-07).
+  GATEWAY_AUDIT_ENABLED: "true"
+  GATEWAY_AUDIT_ES_HOST: "elasticsearch.trung-tam.local"
+  ES_PORT: "9200"
+  GATEWAY_AUDIT_RETENTION_DAYS: "3"
+
+  # Elastic APM - tuy chon, agent tu tat neu khong ket noi duoc.
+  APM_SERVER_HOST: "apm.trung-tam.local"
+  APM_SERVER_PORT: "8200"
+  APM_ENVIRONMENT: "production"

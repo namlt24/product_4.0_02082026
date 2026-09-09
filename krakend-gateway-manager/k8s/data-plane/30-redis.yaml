@@ -1,7 +1,7 @@
 # ============================================================================
-# Redis rieng cho instance Gateway Manager cua doi nay - CHI dung cho
-# cache-aside (per-step/response toan bo) + bo dem rate-limit, ca 2 deu
-# fail-open (mat du lieu Redis KHONG lam gian doan traffic that - xem
+# Redis rieng cho instance Data Plane cua doi nay - CHI dung cho cache-aside
+# (per-step/response toan bo) + bo dem rate-limit, ca 2 deu fail-open (mat du
+# lieu Redis KHONG lam gian doan traffic that - xem
 # GatewayCacheService/RateLimitService) - vi vay KHONG can PersistentVolume,
 # 1 Deployment thuong (khong phai StatefulSet) la du.
 # ============================================================================
@@ -11,18 +11,18 @@ metadata:
   name: gwm-redis
   labels:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: redis
+    app.kubernetes.io/component: data-plane-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: gateway-manager
-      app.kubernetes.io/component: redis
+      app.kubernetes.io/component: data-plane-redis
   template:
     metadata:
       labels:
         app.kubernetes.io/name: gateway-manager
-        app.kubernetes.io/component: redis
+        app.kubernetes.io/component: data-plane-redis
     spec:
       containers:
         - name: redis
@@ -54,11 +54,11 @@ metadata:
   name: gwm-redis
   labels:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: redis
+    app.kubernetes.io/component: data-plane-redis
 spec:
   selector:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: redis
+    app.kubernetes.io/component: data-plane-redis
   ports:
     - port: 6379
       targetPort: 6379

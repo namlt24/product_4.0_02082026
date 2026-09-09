@@ -1,9 +1,11 @@
 # ============================================================================
 # Frontend Angular tinh, phuc vu boi Nginx, tu proxy "/api/**" sang Service
 # "gwm-backend" trong CUNG namespace (xem frontend/nginx.conf.template) -
-# khong doc ConfigMap/Secret nao ca, khong co bien moi truong rieng.
+# khong doc ConfigMap/Secret nao ca, khong co bien moi truong rieng. CHI ton
+# tai o Control Plane (1 ban duy nhat) - Data Plane KHONG co frontend, doi
+# nao dung dich vu chi can trien khai backend + Redis (xem ../data-plane/).
 #
-# SUA "image:" ben duoi thanh dung registry/tag noi bo cua doi truoc khi apply.
+# SUA "image:" ben duoi thanh dung registry/tag noi bo truoc khi apply.
 # ============================================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -11,22 +13,22 @@ metadata:
   name: gwm-frontend
   labels:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: control-plane
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: gateway-manager
-      app.kubernetes.io/component: frontend
+      app.kubernetes.io/component: control-plane-ui
   template:
     metadata:
       labels:
         app.kubernetes.io/name: gateway-manager
-        app.kubernetes.io/component: frontend
+        app.kubernetes.io/component: control-plane-ui
     spec:
       containers:
         - name: frontend
-          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-frontend:v1.0.0
+          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-frontend:v2.0.0
           ports:
             - containerPort: 80
           readinessProbe:
@@ -55,11 +57,11 @@ metadata:
   name: gwm-frontend
   labels:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: control-plane-ui
 spec:
   selector:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: control-plane-ui
   ports:
     - port: 80
       targetPort: 80

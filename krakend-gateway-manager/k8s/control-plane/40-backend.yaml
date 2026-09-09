@@ -1,0 +1,99 @@
+# ============================================================================
+# Backend Control Plane - SPRING_PROFILES_ACTIVE=control-plane (xem
+# application-control-plane.yml). 1 BAN DUY NHAT dung chung MOI doi: CRUD
+# Endpoint/Upstream/Team (/api/**), doc/ghi TRUC TIEP Oracle trung tam. KHONG
+# con dispatch traffic that (DynamicDispatcherController KHONG dang ky o day
+# nua tu 2026-09 - xem SAD-Gateway-Manager.md ADR-07) - viec do gio la trach
+# nhiem RIENG cua tung ban Data Plane (xem ../data-plane/).
+#
+# SUA "image:" ben duoi thanh dung registry/tag noi bo truoc khi apply (xem
+# DEPLOYMENT_GUIDE.md). Doc TOAN BO cau hinh khong-mat tu ConfigMap
+# "gwm-config" va mat khau/khoa tu Secret "gwm-secret" (00-configmap.yaml,
+# 01-secret.yaml.example) - KHONG hardcode gia tri nao o day.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: control-plane
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: control-plane
+    spec:
+      containers:
+        - name: backend
+          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-backend:v2.0.0
+          envFrom:
+            - configMapRef:
+                name: gwm-config
+            - secretRef:
+                name: gwm-secret
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "control-plane"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SPRING_APPLICATION_NAME
+              value: "krakend-gateway-manager-control-plane"
+            - name: ELASTIC_APM_SERVICE_NAME
+              value: "krakend-gateway-manager-control-plane"
+            - name: ELASTIC_APM_SERVER_URL
+              value: "http://$(APM_SERVER_HOST):$(APM_SERVER_PORT)"
+            - name: ELASTIC_APM_ENVIRONMENT
+              value: "$(APM_ENVIRONMENT)"
+            - name: ELASTIC_APM_APPLICATION_PACKAGES
+              value: "com.bccs.gatewaymanager"
+            - name: GATEWAY_AUDIT_ES_PORT
+              value: "$(ES_PORT)"
+          # Readiness dung "/actuator/health" (endpoint TONG HOP mac dinh, gom ca
+          # DataSource health indicator cua Oracle) - Oracle la phu thuoc BAT BUOC
+          # cua Control Plane (fail-closed dung cho DB) - Oracle gian doan thi rut
+          # Pod khoi Service (khong nhan CRUD moi) nhung KHONG restart Pod.
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+  ports:
+    - port: 8080
+      targetPort: 8080

@@ -19,6 +19,18 @@ spring:
       - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
       - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
 
+management:
+  endpoint:
+    health:
+      group:
+        # Mac dinh Spring Boot CHI gom san "readinessState" khi phat hien dang
+        # chay trong Kubernetes (qua KUBERNETES_SERVICE_HOST) - PHAI khai bao
+        # ro de gom them "remoteConfigSync" (xem RemoteConfigSyncHealthIndicator),
+        # neu khong readinessProbe cua k8s se KHONG biet duoc Pod da tung dong
+        # bo cau hinh thanh cong hay chua.
+        readiness:
+          include: readinessState,remoteConfigSync
+
 gatewaymanager:
   # Noi lay cau hinh Endpoint/Upstream cua CHINH DOI NAY - xem RemoteConfigSyncService.
   control-plane:

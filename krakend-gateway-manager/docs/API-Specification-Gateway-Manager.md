@@ -8,7 +8,7 @@ title: "API Specification — BCCS Gateway Manager"
 | | |
 |---|---|
 | **Mã tài liệu** | API-GWM-001 |
-| **Phiên bản** | 1.0 |
+| **Phiên bản** | 2.0 — thêm `/api/teams` (Quản lý đội), 2 loại `X-Gateway-Admin-Key` (platform-admin/từng đội), `path`/`name` chỉ duy nhất TRONG 1 đội (2026-09-09) |
 | **Ngày phát hành** | 2026-09-06 |
 | **Trạng thái** | Draft |
 | **Định dạng dữ liệu** | JSON (`application/json`) |
@@ -47,15 +47,23 @@ báo).
 X-Gateway-Admin-Key: <api-key>
 ```
 
-- Bắt buộc cho MỌI request tới `/api/**` — thiếu hoặc sai giá trị → HTTP 401,
-  không thực thi bất kỳ logic nghiệp vụ nào (chặn ở tầng Servlet Filter,
-  trước khi vào Controller).
-- Giá trị cấu hình qua biến môi trường `GATEWAY_ADMIN_API_KEY` (xem
-  `DEPLOYMENT_GUIDE.md`) — PHẢI đổi khỏi giá trị mặc định khi triển khai
-  thật.
-- Data Plane KHÔNG áp dụng cơ chế này — nếu 1 Endpoint composite cần forward
-  xác thực từ client sang Upstream Service, khai báo qua Field Mapping
-  (`targetType=HEADER`, nguồn tuỳ chọn).
+Bắt buộc cho MỌI request tới `/api/**` (Control Plane) — thiếu hoặc sai giá
+trị → HTTP 401, không thực thi bất kỳ logic nghiệp vụ nào (chặn ở tầng
+Servlet Filter, trước khi vào Controller). **2 LOẠI key khác nhau** (từ
+2026-09, xem `SAD-Gateway-Manager.md` ADR-07):
+
+| Loại key | Dùng cho | Cấu hình |
+|---|---|---|
+| **platform-admin key** | CHỈ `/api/teams/**` (mục 3.5) | `GATEWAY_ADMIN_API_KEY` — đội nền tảng giữ |
+| **api_key riêng của từng đội** | MỌI API `/api/**` còn lại (mục 3.1–3.4) — endpoint tự động chỉ trả về/chỉ sửa được dữ liệu của ĐÚNG đội sở hữu key | Sinh tự động trong bảng `gwm_team` khi tạo đội qua mục 3.5, hiển thị **đúng 1 lần** |
+
+Dùng nhầm loại key (vd platform-admin key gọi `/api/endpoints`) → HTTP 401
+giống hệt key sai hoàn toàn — 2 loại key không thể hoán đổi cho nhau.
+
+Data Plane (traffic thật qua Endpoint đã khai báo) KHÔNG áp dụng cơ chế xác
+thực này — nếu 1 Endpoint composite cần forward xác thực từ client sang
+Upstream Service, khai báo qua Field Mapping (`targetType=HEADER`, nguồn tuỳ
+chọn).
 
 ---
 
@@ -76,7 +84,7 @@ X-Gateway-Admin-Key: <api-key>
 | Field | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | id | String | — | Chỉ có ở response |
-| name | String | Có | Duy nhất |
+| name | String | Có | Duy nhất TRONG đội của key gọi (2 đội khác nhau được phép trùng tên, xem mục 2) |
 | description | String | Không | |
 | baseHost | String | Có | vd `http://10.x.x.x:8045` |
 | connectTimeoutMs, readTimeoutMs | int | Có | |
@@ -114,7 +122,7 @@ step nào bật cache).
 |---|---|---|---|
 | name | String | Có | |
 | description | String | Không | |
-| path | String | Có | Phải bắt đầu bằng `/`, duy nhất |
+| path | String | Có | Phải bắt đầu bằng `/`, duy nhất TRONG đội của key gọi |
 | method | enum | Có | GET/POST/PUT/DELETE/PATCH |
 | sequential | boolean | Có | |
 | outputEncoding | String | Không | Mặc định `json` |
@@ -169,9 +177,9 @@ Request body của `/try-adhoc`: `{ "endpoint": <EndpointRequestDto>, "pathVaria
 
 | Method | Path | Mô tả |
 |---|---|---|
-| GET | `/api/config/export` | Xuất toàn bộ cấu hình |
-| POST | `/api/config/import` | Nhập cấu hình |
-| POST | `/api/config/deploy` | Validate vòng lặp phụ thuộc + reload registry cache |
+| GET | `/api/config/export` | Xuất toàn bộ cấu hình **CỦA ĐÚNG ĐỘI SỞ HỮU key gọi** (tự động lọc theo `team_code`) — cũng chính là API mà `RemoteConfigSyncService` của Data Plane từng đội gọi định kỳ để tự đồng bộ, không có API riêng nào khác cho việc đó |
+| POST | `/api/config/import` | Nhập cấu hình (UPSERT, luôn gán vào đội của key gọi) |
+| POST | `/api/config/deploy` | Chỉ còn validate vòng lặp phụ thuộc (từ 2026-09, KHÔNG còn reload registry cache — cache đó đã chuyển hẳn sang Data Plane, xem `SAD-Gateway-Manager.md` ADR-07) |
 | GET | `/api/config/gateway-info` | Thông tin gateway (port, host alias) |
 
 ### 3.4. Tra cứu Log — `/api/logs`
@@ -180,6 +188,20 @@ Request body của `/try-adhoc`: `{ "endpoint": <EndpointRequestDto>, "pathVaria
 |---|---|---|---|
 | GET | `/api/logs/requests` | `from, to` (Instant, ISO-8601), `status`, `endpointPath`, `bodyContains`, `page` (mặc định 0), `size` (mặc định 20) | Tìm kiếm request, có phân trang |
 | GET | `/api/logs/requests/{requestId}/hops` | — | Chi tiết từng hop của 1 request |
+
+### 3.5. Quản lý đội — `/api/teams` (mới, 2026-09 — CHỈ nhận platform-admin key, xem mục 2)
+
+| Method | Path | Mô tả | Response |
+|---|---|---|---|
+| GET | `/api/teams` | Danh sách đội (KHÔNG kèm `apiKey`) | `TeamDto[]` |
+| POST | `/api/teams` | Tạo đội mới, tự sinh `apiKey` ngẫu nhiên 256-bit | `TeamCreatedDto` (kèm `apiKey` plaintext — **CHỈ hiện đúng 1 lần trong response này**) |
+| DELETE | `/api/teams/{teamCode}` | Xoá đội (KHÔNG xoá dữ liệu Endpoint/Upstream đã có của đội đó — chỉ đội đó không còn đăng nhập được nữa) | 204 |
+
+**`TeamCreateRequestDto`** (POST): `teamCode` (String, bắt buộc, chỉ gồm chữ/số/gạch ngang/gạch dưới, 2-50 ký tự, PHẢI chưa tồn tại), `teamName` (String, bắt buộc).
+
+**`TeamDto`** (GET, KHÔNG có `apiKey`): `teamCode, teamName, createdAt`.
+
+**`TeamCreatedDto`** (response CỦA POST, DUY NHẤT có `apiKey`): `teamCode, teamName, apiKey, createdAt`.
 
 `GET /api/logs/requests` trả về:
 ```json
@@ -275,6 +297,9 @@ với path/method client gọi vào, response lỗi có khuôn dạng KHÁC (kh�
 | `GW-UP-001` | 400 | Cấu hình Upstream | Tên Upstream Service đã tồn tại |
 | `GW-UP-404` | 400 | Cấu hình Upstream | Không tìm thấy Upstream Service theo id |
 | `GW-UP-INUSE` | 400 | Cấu hình Upstream | Không xoá được — đang có Step tham chiếu |
+| `GW-UNAUTHORIZED` | 401 | Xác thực | Thiếu hoặc sai `X-Gateway-Admin-Key` (xem mục 2 — cả 2 loại key đều trả mã này khi sai) |
+| `GW-TEAM-001` | 400 | Quản lý đội | `teamCode` đã tồn tại (POST `/api/teams`) |
+| `GW-TEAM-404` | 400 | Quản lý đội | Không tìm thấy đội theo `teamCode` (DELETE `/api/teams/{teamCode}`) |
 
 **Lưu ý cho lập trình viên tích hợp**: mọi lỗi phát sinh từ `BusinessException`
 (phần lớn bảng trên) đều trả **HTTP 400** dù ý nghĩa ngữ nghĩa có thể là

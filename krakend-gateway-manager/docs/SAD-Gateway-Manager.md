@@ -23,6 +23,7 @@ title: "System Architecture Document — BCCS Gateway Manager"
 | 1.0 | 2026-09-06 | Đội phát triển Gateway Manager | Khởi tạo tài liệu |
 | 1.1 | 2026-09-08 | Đội phát triển Gateway Manager | Sửa lại ADR-03: bỏ Flyway/`ddl-auto`, chuyển sang mô hình DBA từng đội tự chạy DDL bàn giao |
 | 1.2 | 2026-09-08 | Đội phát triển Gateway Manager | Cập nhật mục 5 (Deployment View) sang Kubernetes (YAML thuần, NGINX Ingress) làm topology chính thức, giữ Docker Compose làm phương án dev/demo |
+| 2.0 | 2026-09-09 | Đội phát triển Gateway Manager | Tách Control Plane (dùng chung, multi-tenant qua `team_code`)/Data Plane (multi-instance, riêng từng đội) — đảo ngược ADR-01, sửa lại ADR-04, thêm ADR-07; viết lại mục 4 (Logical View) + mục 5 (Deployment View) hoàn toàn |
 
 ---
 
@@ -40,11 +41,11 @@ lai.
 
 ### 2.2. Phạm vi
 
-Bao gồm kiến trúc của **1 instance** Gateway Manager (đơn vị triển khai độc
-lập cho 1 đội BCCS) và mô hình **nhiều instance độc lập** khi nhiều đội cùng
-sử dụng nền tảng. Không bao gồm kiến trúc nội bộ của các Upstream Service
-(backend thật) mà Gateway Manager gọi tới — các hệ thống đó nằm ngoài ranh
-giới kiến trúc của tài liệu này.
+Bao gồm kiến trúc của **Control Plane** (1 bản dùng chung mọi đội) và **Data
+Plane** (mỗi đội 1 bản độc lập) — 2 vai trò tách biệt từ 2026-09 (xem ADR-07,
+mục 9), cùng build từ 1 nguồn mã. Không bao gồm kiến trúc nội bộ của các
+Upstream Service (backend thật) mà Gateway Manager gọi tới — các hệ thống đó
+nằm ngoài ranh giới kiến trúc của tài liệu này.
 
 ### 2.3. Định nghĩa kiến trúc & ký hiệu
 
@@ -60,9 +61,9 @@ tóm tắt lại dưới góc độ quyết định kiến trúc:
 
 | Driver | Yêu cầu gốc | Hệ quả kiến trúc |
 |---|---|---|
-| Thay đổi cấu hình có hiệu lực ngay | BR-EP-08 | Control Plane và Data Plane PHẢI cùng 1 tiến trình, chia sẻ bộ nhớ đệm cấu hình trong-process |
+| Thay đổi cấu hình có hiệu lực nhanh | BR-EP-08 | Tại Control Plane: có hiệu lực ngay lập tức (cùng tiến trình, đọc trực tiếp DB). Tại Data Plane: có hiệu lực trong tối đa 1 chu kỳ đồng bộ (mặc định 15s) — đánh đổi CÓ CHỦ ĐÍCH từ 2026-09 khi 2 tầng tách thành 2 tiến trình ở 2 nơi vật lý khác nhau, xem ADR-07 |
 | Không nghẽn traffic thật khi hạ tầng phụ trợ lỗi | NFR-02 | Mọi tích hợp với Redis/Elasticsearch/APM phải theo nguyên tắc **fail-open** |
-| Mỗi đội tự triển khai độc lập trên hạ tầng riêng | BR-DP-01..03 | Không trạng thái chia sẻ GIỮA các instance; đóng gói dưới dạng ảnh container tự chứa |
+| Mỗi đội tự chịu tải hạ tầng thực thi traffic riêng | BR-DP-01..03 | Data Plane: không trạng thái chia sẻ GIỮA các instance, đóng gói dưới dạng ảnh container tự chứa. Control Plane: dùng chung 1 bản (cách ly dữ liệu qua `team_code`, không phải qua triển khai riêng — xem ADR-07) |
 | Tương thích Oracle phiên bản cũ (19c) | NFR-07 | Không dùng kiểu dữ liệu/tính năng cơ sở dữ liệu chỉ có ở bản mới nhất; quản lý schema qua công cụ migration có kiểm soát phiên bản thay vì để ORM tự suy luận |
 | Chi phí nội bộ không đáng kể so với gọi mạng | NFR-01 | Engine điều phối thiết kế nhẹ (thao tác bộ nhớ thuần Java), không thêm tầng trung gian mạng nào giữa việc nhận request và gọi Upstream |
 | Không lập trình bất đồng bộ | Ràng buộc nền tảng | Toàn bộ ngăn xếp dùng mô hình đồng bộ (blocking I/O), đánh đổi lấy sự đơn giản/dễ debug, giới hạn thông lượng bởi kích thước thread pool |
@@ -73,258 +74,253 @@ tóm tắt lại dưới góc độ quyết định kiến trúc:
 
 ### 4.1. Sơ đồ thành phần
 
+**TỪ 2026-09 (xem ADR-07, mục 9): Control Plane và Data Plane là 2 TIẾN
+TRÌNH RIÊNG BIỆT** — cùng build từ 1 mã nguồn/1 image (`@Profile("control-plane")`
+so với `@Profile("data-plane")`, chọn qua `SPRING_PROFILES_ACTIVE` lúc khởi
+động), nhưng chạy độc lập, nối với nhau qua HTTP (`RemoteConfigSyncService`)
+thay vì chia sẻ bộ nhớ trong-process như thiết kế ban đầu (ADR-01, nay đã bị
+đảo ngược).
+
 ```mermaid
 flowchart TB
-    subgraph EXT["Bên ngoài"]
+    subgraph EXT["Ben ngoai"]
         CLIENT[Client / He thong tieu thu API]
         USER[Nguoi khai bao nghiep vu]
         UP1[Upstream Service A]
         UP2[Upstream Service B]
-        UPn[Upstream Service ...]
     end
 
-    subgraph GWM["Gateway Manager - 1 tien trinh JVM"]
+    subgraph CP["CONTROL PLANE - 1 tien trinh, dung chung MOI doi<br/>SPRING_PROFILES_ACTIVE=control-plane"]
         direction TB
-
-        subgraph WEB["Tang giao dien"]
-            FE[Frontend Angular]
-        end
-
-        subgraph CTRL["Control Plane"]
-            AUTH[ApiKeyAuthFilter]
-            EPCTRL[EndpointController]
-            UPCTRL[UpstreamController]
-            LOGCTRL[LogSearchController]
-            CFGCTRL[ConfigController]
-        end
-
-        subgraph DATA["Data Plane"]
-            DISPATCH[DynamicDispatcherController]
-            RATELIMIT[RateLimitFilter]
-        end
-
-        subgraph CORE["Loi nghiep vu dung chung"]
-            ENGINE[CompositeOrchestratorEngine]
-            EXEC[UpstreamHttpExecutor]
-            REG[EndpointRegistryCache /<br/>UpstreamRegistryCache<br/>- bo nho trong-process]
-            SVC[EndpointService /<br/>UpstreamServiceService /<br/>EndpointVersionService]
-        end
-
-        subgraph CROSS["Cross-cutting"]
-            CACHE[GatewayCacheService]
-            AUDIT[AuditLogService - async]
-            RESIL[Resilience4j Registry<br/>Circuit Breaker / Retry / Bulkhead]
-            TRACE[TraceCollector<br/>- Thu ngay/Thu nhanh]
-        end
+        FE[Frontend Angular]
+        AUTH_CP[ApiKeyAuthFilter<br/>platform-admin key + api_key tung doi]
+        EPCTRL[EndpointController]
+        UPCTRL[UpstreamServiceController]
+        TEAMCTRL[TeamController]
+        LOGCTRL[LogSearchController]
+        CFGCTRL[ConfigController<br/>GET /api/config/export]
+        SVC[EndpointService / UpstreamServiceService /<br/>TeamService / EndpointVersionService]
+        UREG_CP[UpstreamRegistryCache<br/>- TAT CA doi, phuc vu Thu ngay/Thu nhanh]
+        TRY[EndpointTryService<br/>- Thu ngay/Thu nhanh]
+        CTX[CurrentTeamContext<br/>ThreadLocal - cach ly du lieu theo doi]
     end
 
-    subgraph INFRA["Ha tang phu tro (theo tung doi)"]
-        ORACLE[(Oracle)]
-        REDIS[(Redis)]
-        ES[(Elasticsearch)]
-        APM[Elastic APM Server]
+    subgraph DP["DATA PLANE - 1 tien trinh RIENG cho MOI doi<br/>SPRING_PROFILES_ACTIVE=data-plane"]
+        direction TB
+        DISPATCH[DynamicDispatcherController]
+        RATELIMIT[RateLimitFilter]
+        SYNC[RemoteConfigSyncService<br/>- poll dinh ky, fail-open]
+        EREG_DP[EndpointRegistryCache /<br/>UpstreamRegistryCache<br/>- CHI doi nay]
     end
 
-    USER --> FE --> AUTH
-    AUTH --> EPCTRL & UPCTRL & LOGCTRL & CFGCTRL
-    EPCTRL & UPCTRL --> SVC --> ORACLE
-    EPCTRL & UPCTRL --> REG
+    subgraph CORE["Dung chung CA 2 tien trinh (khong @Profile)"]
+        ENGINE[CompositeOrchestratorEngine]
+        EXEC[UpstreamHttpExecutor]
+        CACHE[GatewayCacheService]
+        AUDIT[AuditLogService - async]
+        RESIL[Resilience4j Registry]
+    end
+
+    subgraph INFRA_CP["Ha tang Control Plane (trung tam)"]
+        ORACLE[(Oracle - dung chung,<br/>cach ly qua cot team_code)]
+    end
+    subgraph INFRA_DP["Ha tang Data Plane (rieng tung doi)"]
+        REDIS[(Redis cua doi)]
+        ES[(Elasticsearch cua doi, tuy chon)]
+    end
+
+    USER --> FE --> AUTH_CP
+    AUTH_CP --> EPCTRL & UPCTRL & TEAMCTRL & LOGCTRL & CFGCTRL
+    AUTH_CP -.->|set theo api_key| CTX
+    EPCTRL & UPCTRL & TEAMCTRL --> SVC --> ORACLE
+    SVC -.->|loc theo| CTX
+    UPCTRL --> UREG_CP --> ORACLE
     LOGCTRL --> ES
+    EPCTRL --> TRY --> ENGINE
 
     CLIENT --> RATELIMIT --> DISPATCH
-    DISPATCH --> REG
+    DISPATCH --> EREG_DP
     DISPATCH --> ENGINE
+    SYNC -->|"GET /api/config/export<br/>(api_key cua doi)"| CFGCTRL
+    SYNC --> EREG_DP
     ENGINE --> EXEC
     EXEC --> RESIL
     EXEC --> CACHE --> REDIS
-    EXEC --> UP1 & UP2 & UPn
+    EXEC --> UP1 & UP2
     EXEC --> AUDIT --> ES
-    EXEC --> TRACE
     RATELIMIT --> REDIS
-
-    GWM -.->|APM agent| APM
 ```
 
 ### 4.2. Trách nhiệm từng thành phần
 
-| Thành phần | Trách nhiệm | Ranh giới KHÔNG đảm nhiệm |
-|---|---|---|
-| **Control Plane** (`*Controller` dưới `/api/**`) | CRUD cấu hình, tra cứu log, xuất/nhập cấu hình, xem trước | KHÔNG xử lý traffic nghiệp vụ thật của client |
-| **Data Plane** (`DynamicDispatcherController`) | Nhận request client, khớp Endpoint, uỷ quyền cho engine, ghi audit | KHÔNG chứa logic điều phối chi tiết (uỷ quyền hết cho `CompositeOrchestratorEngine`) |
-| **`CompositeOrchestratorEngine`** | Điều phối thứ tự thực thi step (tuần tự/song song/rẽ nhánh/bù trừ), ánh xạ dữ liệu, gộp response | KHÔNG tự thực hiện lệnh gọi HTTP (uỷ quyền `UpstreamHttpExecutor`) |
-| **`UpstreamHttpExecutor`** | Thực hiện 1 lệnh gọi HTTP cụ thể, bọc cache/circuit-breaker/retry/bulkhead/audit cho ĐÚNG lệnh gọi đó | KHÔNG biết gì về thứ tự/logic tổng thể của cả chuỗi Endpoint |
-| **`EndpointRegistryCache` / `UpstreamRegistryCache`** | Giữ bản sao cấu hình trong bộ nhớ, phục vụ tra cứu O(1)/gần O(1) cho MỌI request | KHÔNG phải nguồn sự thật (source of truth) — Oracle mới là nguồn thật, registry chỉ là cache đọc |
-| **`GatewayCacheService`** | Cache-aside cho kết quả lệnh gọi (theo step hoặc toàn bộ response) | KHÔNG cache cấu hình (đó là việc của Registry Cache) |
-| **`AuditLogService`** | Ghi nhật ký bất đồng bộ, fail-open | KHÔNG phục vụ tra cứu (đó là `LogSearchService`, đọc trực tiếp Elasticsearch) |
-| **`TraceCollector`** | Thu thập chi tiết từng bước CHO 1 lần "Thử ngay/nhanh" cụ thể, hoàn toàn trong bộ nhớ | KHÔNG liên quan/không phụ thuộc pipeline audit Elasticsearch |
-| **Frontend Angular** | Giao diện khai báo (form/canvas), tra cứu, xem trước | KHÔNG chứa logic nghiệp vụ điều phối (chỉ gọi API Control Plane) |
+| Thành phần | Chạy ở | Trách nhiệm | Ranh giới KHÔNG đảm nhiệm |
+|---|---|---|---|
+| **`*Controller` dưới `/api/**`** | Control Plane | CRUD cấu hình, quản lý đội, tra cứu log, xuất/nhập cấu hình, xem trước | KHÔNG xử lý traffic nghiệp vụ thật của client |
+| **`TeamController`/`TeamService`** | Control Plane | CRUD bảng `gwm_team`, sinh `api_key` ngẫu nhiên cho từng đội | KHÔNG nằm dưới `CurrentTeamContext` (không thuộc phạm vi 1 đội cụ thể) |
+| **`CurrentTeamContext`** | Control Plane | ThreadLocal mang `team_code` xuyên suốt 1 request — mọi query/ghi CRUD tự lọc theo giá trị này | KHÔNG tồn tại ở Data Plane (không cần — mỗi tiến trình Data Plane vốn chỉ phục vụ 1 đội) |
+| **`DynamicDispatcherController`** | Data Plane | Nhận request client, khớp Endpoint, uỷ quyền cho engine, ghi audit | KHÔNG chứa logic điều phối chi tiết (uỷ quyền hết cho `CompositeOrchestratorEngine`) |
+| **`RemoteConfigSyncService`** | Data Plane | Poll định kỳ `GET /api/config/export` (bằng `api_key` của chính đội), nạp kết quả vào `EndpointRegistryCache`/`UpstreamRegistryCache`, fail-open khi lỗi | KHÔNG kết nối Oracle, KHÔNG ghi gì lên Control Plane (chỉ đọc) |
+| **`CompositeOrchestratorEngine`** | Cả 2 (không `@Profile`) | Điều phối thứ tự thực thi step, ánh xạ dữ liệu, gộp response — dùng chung cho traffic thật (Data Plane) VÀ "Thử ngay"/"Thử nhanh" (Control Plane) | KHÔNG tự thực hiện lệnh gọi HTTP (uỷ quyền `UpstreamHttpExecutor`) |
+| **`UpstreamHttpExecutor`** | Cả 2 | Thực hiện 1 lệnh gọi HTTP cụ thể, bọc cache/circuit-breaker/retry/bulkhead/audit | KHÔNG biết gì về thứ tự/logic tổng thể của cả chuỗi Endpoint |
+| **`EndpointRegistryCache`** | Data Plane (Control Plane không dùng — không dispatch traffic) | Bộ nhớ đệm thuần (không tự đọc JPA nữa) — nạp bởi `RemoteConfigSyncService` | KHÔNG phải nguồn sự thật — Oracle (qua Control Plane) mới là nguồn thật |
+| **`UpstreamRegistryCache`** | Cả 2, nguồn dữ liệu khác nhau | Control Plane: nạp TOÀN BỘ Upstream mọi đội (phục vụ Try — an toàn vì quyền sở hữu đã kiểm tra trước khi tới đây); Data Plane: CHỈ Upstream của chính đội (qua sync) | KHÔNG phải nguồn sự thật |
+| **`GatewayCacheService`** | Cả 2 | Cache-aside cho kết quả lệnh gọi (theo step hoặc toàn bộ response) | KHÔNG cache cấu hình |
+| **`AuditLogService`** | Cả 2 | Ghi nhật ký bất đồng bộ, fail-open — ghi cả traffic thật (Data Plane) lẫn lệnh gọi từ "Thử ngay" (Control Plane, nếu bật) | KHÔNG phục vụ tra cứu (đó là `LogSearchService`, chỉ chạy ở Control Plane) |
+| **`TraceCollector`** | Control Plane (qua engine dùng chung) | Thu thập chi tiết từng bước CHO 1 lần "Thử ngay/nhanh", hoàn toàn trong bộ nhớ | KHÔNG liên quan pipeline audit Elasticsearch |
+| **Frontend Angular** | Control Plane | Giao diện khai báo (form/canvas), tra cứu, xem trước | KHÔNG chứa logic nghiệp vụ điều phối, KHÔNG triển khai ở Data Plane |
 
 ---
 
 ## 5. Kiến trúc Triển khai (Deployment View)
 
-### 5.1. Đơn vị triển khai của 1 đội
+### 5.1. Control Plane — 1 cụm/namespace DUY NHẤT, đội nền tảng triển khai
 
-**Topology chính thức: Kubernetes** (YAML thuần trong `k8s/`, `kubectl apply`,
-không Helm — xem `k8s/README.md` và `DEPLOYMENT_GUIDE.md` mục 4a). Docker
-Compose (`docker-compose.yml`) vẫn được giữ song song trong repo cho máy
-dev/demo 1 host (mục 5.1b), nhưng KHÔNG phải hướng production khuyến nghị.
+**Topology chính thức: Kubernetes** (YAML thuần trong `k8s/control-plane/`,
+`kubectl apply`, không Helm — xem `k8s/control-plane/README.md` và
+`DEPLOYMENT_GUIDE.md` mục 3). Docker Compose
+(`docker-compose.control-plane.yml`) được giữ song song cho dev/demo 1 host.
 
 ```mermaid
 flowchart LR
-    subgraph NS["Namespace cua 1 doi BCCS (cum Kubernetes)"]
-        ING[Ingress<br/>NGINX Ingress Controller]
+    subgraph NS["Namespace Control Plane (1 lan duy nhat, dung chung MOI doi)"]
+        ING[Ingress<br/>NGINX Ingress Controller<br/>2 host: UI + API]
         subgraph SVCFE[" "]
             SVCF[Service gwm-frontend :80]
-            PODFE[Deployment gwm-frontend<br/>Nginx + Angular build]
+            PODFE[Deployment gwm-frontend]
         end
         subgraph SVCBE[" "]
             SVCB[Service gwm-backend :8080]
-            PODBE[Deployment gwm-backend<br/>Spring Boot jar]
-        end
-        subgraph SVCRE[" "]
-            SVCR[Service gwm-redis :6379]
-            PODR[Deployment gwm-redis<br/>khong PersistentVolume]
+            PODBE["Deployment gwm-backend<br/>SPRING_PROFILES_ACTIVE=control-plane"]
         end
         CM[ConfigMap gwm-config]
         SEC[Secret gwm-secret]
     end
     BROWSER[Trinh duyet nguoi dung] -->|host UI| ING
-    CLIENT2[Client goi API that] -->|host Data Plane| ING
-    ING --> SVCF
-    ING --> SVCB
+    DPSYNC["RemoteConfigSyncService<br/>cua TAT CA Data Plane (moi doi,<br/>co the o cum/mang KHAC)"] -->|host API, dinh ky| ING
+    ING --> SVCF & SVCB
     SVCF --> PODFE
     PODFE -->|proxy /api/**, DNS gwm-backend| SVCB
     SVCB --> PODBE
-    PODBE --> SVCR
-    SVCR --> PODR
     CM -.->|envFrom| PODBE
     SEC -.->|envFrom| PODBE
-    PODBE -.->|JDBC, DB_HOST tham so hoa| ORACLE_T[(Oracle 19c+<br/>cua doi, NGOAI cum)]
-    PODBE -.->|HTTP, tuy chon| ES_T[(Elasticsearch<br/>cua doi)]
-    PODBE -.->|HTTP, tuy chon| APM_T[APM Server<br/>cua doi]
-    PODBE -->|HTTP| UPSTREAM_T[Cac Upstream Service<br/>that cua doi]
+    PODBE -.->|JDBC| ORACLE_T[(Oracle 19c+ TRUNG TAM<br/>dung chung MOI doi)]
+    PODBE -.->|HTTP, tuy chon| ES_T[(Elasticsearch)]
+    PODBE -.->|HTTP, tuy chon| APM_T[APM Server]
 ```
 
-- **Ingress** (NGINX Ingress Controller, đã cài sẵn trong cụm) định tuyến theo
-  **2 host riêng biệt** (xem `k8s/60-ingress.yaml`): 1 host cho UI quản trị
-  (→ Service `gwm-frontend`) và 1 host cho Data Plane thực thi traffic thật
-  (→ thẳng Service `gwm-backend`, KHÔNG qua frontend).
-- **`gwm-frontend`** (Nginx tĩnh) tự proxy `/api/**` sang Service `gwm-backend`
-  trong cùng namespace (DNS ClusterIP ổn định — không cần cơ chế tự resolve
-  lại định kỳ như dưới Docker, vì ClusterIP không đổi khi Pod backend
-  restart; `frontend/nginx.conf.template` vẫn giữ `resolver` để dùng chung 1
-  ảnh cho cả 2 topology, xem 5.1b).
-- **`gwm-backend`** đọc TOÀN BỘ cấu hình không-mật từ ConfigMap `gwm-config`
-  và mật khẩu/khoá từ Secret `gwm-secret` (`envFrom`) — không hardcode giá trị
-  nào trong manifest.
-- **`gwm-redis`** là 1 Deployment thường (không phải StatefulSet) trong CÙNG
-  namespace, **không có PersistentVolume** — cache-aside + bộ đếm rate-limit
-  đều fail-open (xem ADR-05), mất dữ liệu khi Pod restart chỉ làm nguội cache
-  tạm thời, không gián đoạn traffic thật. Mỗi đội có Redis RIÊNG của chính
-  mình (không dùng chung Redis với đội khác hay với nghiệp vụ khác).
-- **Oracle/Elasticsearch/APM** KHÔNG chạy trong cụm k8s này — kết nối ra ngoài
-  qua ConfigMap/Secret (`DB_HOST`, `GATEWAY_AUDIT_ES_HOST`, `APM_SERVER_HOST`...),
-  cho phép trỏ tới hạ tầng riêng của từng đội mà không cần sửa image hay code.
+- **Ingress** định tuyến theo **2 host** (xem `k8s/control-plane/60-ingress.yaml`):
+  1 host cho UI quản trị (→ `gwm-frontend`) và 1 host cho API — dùng bởi cả
+  trình duyệt (gián tiếp, qua proxy của frontend) LẪN **`RemoteConfigSyncService`
+  của MỌI Data Plane** (mọi đội, có thể ở cụm/mạng hoàn toàn khác) gọi về
+  định kỳ để đồng bộ cấu hình — khác bản trước 2026-09 (khi host "API" tồn
+  tại để client thật bỏ qua frontend gọi thẳng traffic nghiệp vụ; giờ traffic
+  nghiệp vụ thật hoàn toàn không đi qua Control Plane nữa).
+- **`gwm-backend`** (Control Plane) đọc cấu hình từ `gwm-config`/`gwm-secret`,
+  kết nối **trực tiếp** Oracle trung tâm — **không có Redis/ES bắt buộc**
+  (Redis chỉ phục vụ cache tạm khi dùng "Thử ngay", tuỳ chọn).
+- Chỉ **1 bản** cho toàn hệ thống — không nhân bản theo đội.
 
-### 5.1b. Thay thế cho dev/demo 1 host: Docker Compose
+### 5.2. Data Plane — MỖI ĐỘI 1 namespace/cụm RIÊNG, đội đó tự triển khai
 
 ```mermaid
 flowchart LR
-    subgraph HOST["Host/VM cua 1 doi BCCS (dev/demo)"]
-        subgraph COMPOSE["docker-compose.yml"]
-            FEC[gwm-frontend<br/>Nginx + Angular build]
-            BEC[gwm-backend<br/>Spring Boot jar]
-            REDISC[gwm-redis]
-        end
+    subgraph NS2["Namespace cua 1 doi BCCS (rieng, co the o cum k8s KHAC)"]
+        ING2[Ingress<br/>NGINX Ingress Controller<br/>1 host]
+        SVCB2[Service gwm-backend :8080]
+        PODBE2["Deployment gwm-backend<br/>SPRING_PROFILES_ACTIVE=data-plane"]
+        SVCR2[Service gwm-redis :6379]
+        PODR2[Deployment gwm-redis<br/>khong PersistentVolume]
+        CM2[ConfigMap gwm-config<br/>TEAM_CODE, CONTROL_PLANE_BASE_URL]
+        SEC2["Secret gwm-secret<br/>CONTROL_PLANE_SYNC_API_KEY"]
     end
-    BROWSER[Trinh duyet nguoi dung] -->|:4200| FEC
-    FEC -->|proxy /api/**| BEC
-    CLIENT2[Client goi API that] -->|:8080| BEC
-    BEC --> REDISC
-    BEC -.->|JDBC, DB_HOST tham so hoa| ORACLE_T[(Oracle 19c+<br/>cua doi)]
-    BEC -.->|HTTP, tuy chon| ES_T[(Elasticsearch<br/>cua doi)]
-    BEC -.->|HTTP, tuy chon| APM_T[APM Server<br/>cua doi]
-    BEC -->|HTTP| UPSTREAM_T[Cac Upstream Service<br/>that cua doi]
+    CLIENT2[Client that cua doi] -->|host rieng doi| ING2
+    ING2 --> SVCB2 --> PODBE2
+    PODBE2 --> SVCR2 --> PODR2
+    CM2 -.->|envFrom| PODBE2
+    SEC2 -.->|envFrom| PODBE2
+    PODBE2 -.->|HTTP dinh ky, KHONG phai JDBC| CPAPI["Control Plane trung tam<br/>(GET /api/config/export)"]
+    PODBE2 -.->|HTTP, tuy chon| ES2[(Elasticsearch cua doi)]
+    PODBE2 -->|HTTP| UPSTREAM2[Cac Upstream Service<br/>that cua doi]
 ```
 
-- **`gwm-frontend`** và **`gwm-backend`** là 2 container sibling trong CÙNG 1
-  `docker-compose.yml` — Nginx proxy `/api/**` sang backend qua alias
-  `gwm-backend` (DNS nội bộ Docker, tự resolve lại định kỳ để chịu được
-  backend restart — khác Kubernetes, IP container trong Docker đổi mỗi lần
-  restart nên vẫn cần cơ chế này).
-- **`gwm-redis`** đi kèm trong CÙNG file compose — mỗi đội có Redis RIÊNG của
-  chính mình.
-- **Oracle/Elasticsearch/APM** KHÔNG phải container trong compose này — kết
-  nối ra ngoài qua tham số môi trường (`DB_HOST`, `GATEWAY_AUDIT_ES_HOST`,
-  `APM_SERVER_HOST`...), cho phép trỏ tới hạ tầng riêng của từng đội mà không
-  cần sửa file cấu hình triển khai.
+- **KHÔNG có frontend, KHÔNG có ConfigMap `DB_*`** (khác hẳn bản trước
+  2026-09) — Data Plane không kết nối Oracle, chỉ cần `TEAM_CODE`+
+  `CONTROL_PLANE_BASE_URL`+`CONTROL_PLANE_SYNC_API_KEY` để tự đồng bộ cấu
+  hình của chính đội mình.
+- **`gwm-redis`** là 1 Deployment thường, **không có PersistentVolume** —
+  cache-aside + bộ đếm rate-limit đều fail-open (ADR-05), mất dữ liệu khi Pod
+  restart chỉ làm nguội cache tạm thời.
+- Mỗi đội tự chịu tải hạ tầng của chính mình — hoàn toàn độc lập, đội này
+  restart/sập không ảnh hưởng đội khác (đúng ADR-04, xem giải thích lại bên
+  dưới).
 
-### 5.2. Mô hình nhiều đội (Multi-tenant về mặt TRIỂN KHAI, không phải Multi-tenant về mặt DỮ LIỆU)
+### 5.3. Thay thế cho dev/demo 1 host: Docker Compose
+
+`docker-compose.control-plane.yml` và `docker-compose.data-plane.yml` (2 file
+RIÊNG, khác hẳn 1 file duy nhất trước 2026-09) mô phỏng đúng 5.1/5.2 trên 1
+máy — mỗi file tự có network/Redis riêng, `frontend/nginx.conf.template`
+dùng chung 1 cơ chế `resolver` động cho cả Docker lẫn Kubernetes (xem
+`docker-entrypoint.sh`).
+
+### 5.4. Nhiều đội — Control Plane dùng chung DỮ LIỆU (cách ly qua `team_code`), Data Plane vẫn multi-instance
 
 ```mermaid
 flowchart TB
-    subgraph TEAM_A["Doi A"]
-        GWM_A[Instance Gateway Manager] --> ORA_A[(Oracle rieng doi A)]
-        GWM_A --> RED_A[(Redis rieng doi A)]
+    subgraph CENTRAL["Control Plane (1 ban, DB trung tam)"]
+        CP[Control Plane] --> ORA[(Oracle - MOI doi<br/>cach ly qua cot team_code)]
     end
-    subgraph TEAM_B["Doi B"]
-        GWM_B[Instance Gateway Manager] --> ORA_B[(Oracle rieng doi B)]
-        GWM_B --> RED_B[(Redis rieng doi B)]
+    subgraph TEAM_A["Data Plane doi A (rieng)"]
+        DPA[Data Plane A] --> RED_A[(Redis rieng doi A)]
     end
-    subgraph SHARED["Ha tang co the dung chung (tuy chon)"]
-        ES_SHARED[(Elasticsearch tap trung)]
-        APM_SHARED[APM Server tap trung]
+    subgraph TEAM_B["Data Plane doi B (rieng)"]
+        DPB[Data Plane B] --> RED_B[(Redis rieng doi B)]
     end
-    GWM_A -.->|TEAM_CODE=doi-a| ES_SHARED
-    GWM_B -.->|TEAM_CODE=doi-b| ES_SHARED
-    GWM_A -.-> APM_SHARED
-    GWM_B -.-> APM_SHARED
-
-    SRC[1 nguon code duy nhat<br/>git repository] -.->|build image versioned| GWM_A
-    SRC -.->|build image versioned| GWM_B
+    DPA -->|"sync, api_key doi A"| CP
+    DPB -->|"sync, api_key doi B"| CP
+    SRC[1 nguon code duy nhat<br/>git repository] -.->|build 1 image duy nhat| CP
+    SRC -.-> DPA
+    SRC -.-> DPB
 ```
 
-Mỗi "Instance Gateway Manager" trong sơ đồ trên tương ứng đúng 1 namespace
-Kubernetes của đội đó (xem mục 5.1) — image cùng version, chỉ khác ConfigMap/
-Secret trỏ hạ tầng riêng.
+**Thay đổi so với trước 2026-09 (xem ADR-04 sửa lại, ADR-07)**: DỮ LIỆU cấu
+hình (Endpoint/Upstream) giờ **dùng chung 1 Oracle trung tâm**, cách ly giữa
+các đội qua cột `team_code` (không còn "mỗi đội 1 Oracle riêng"). NHƯNG tầng
+**thực thi traffic thật (Data Plane) vẫn multi-instance hoàn toàn** — mỗi đội
+1 bản độc lập, tự chịu tải, sập/quá tải không ảnh hưởng đội khác — lý do ban
+đầu của ADR-04 (cách ly tải, cách ly lỗi hạ tầng) vẫn đúng cho phần THỰC THI,
+chỉ không còn đúng cho phần LƯU CẤU HÌNH. Elasticsearch/APM vẫn là hạ tầng
+TUỲ CHỌN dùng chung (nếu muốn) — không đổi.
 
-**Nguyên tắc quan trọng**: đây là kiến trúc "mỗi đội 1 instance độc lập hoàn
-toàn" (multi-instance), KHÔNG PHẢI kiến trúc multi-tenant kiểu 1 instance
-dùng chung phục vụ nhiều đội qua tenant-id. Lý do lựa chọn (xem ADR-04, mục
-9): mỗi đội tự chịu tải hạ tầng của chính mình, không có rủi ro 1 đội gây quá
-tải ảnh hưởng đội khác, và không cần xây dựng cơ chế cách ly dữ liệu theo
-tenant (vốn phức tạp và không cần thiết khi mỗi đội đã có Oracle/Redis
-riêng). Elasticsearch/APM là 2 hạ tầng DUY NHẤT có thể dùng chung giữa các
-đội (tuỳ chọn) vì bản chất chỉ là nơi TIẾP NHẬN dữ liệu quan sát (observability),
-không phải nơi LƯU TRỮ dữ liệu nghiệp vụ — phân biệt bằng `TEAM_CODE` trong
-tên service/APM để tách biệt khi xem.
-
-### 5.3. Vòng đời khởi động 1 instance
+### 5.5. Vòng đời khởi động
 
 Việc tạo schema (bước 0 dưới đây) diễn ra **1 lần, TRƯỚC** và **NGOÀI** vòng
-đời của ứng dụng, do DBA của đội thực hiện thủ công (xem ADR-03, mục 9) —
-ứng dụng không có bất kỳ đường code nào tự tạo/sửa bảng.
+đời Control Plane, do DBA của đội nền tảng thực hiện thủ công (xem ADR-03,
+mục 9).
 
 ```mermaid
 sequenceDiagram
-    participant DBA as DBA cua doi (1 lan, ngoai vong doi app)
-    participant O as Oracle
+    participant DBA as DBA doi nen tang (1 lan)
+    participant O as Oracle trung tam
     participant K as Kubernetes (kubelet)
-    participant B as Backend JVM (Pod gwm-backend)
-    participant H as Hibernate
-    participant R as EndpointRegistryCache
+    participant CP as Control Plane JVM
+    participant DP as Data Plane JVM (1 doi)
 
-    Note over DBA,O: Buoc 0 - CHI 1 LAN, truoc khi chay app lan dau
-    DBA->>O: Tu chay db/team-schema/V1__baseline.sql<br/>(sau khi doi chieu khong trung ten bang)
-    DBA->>O: Cap user RUNTIME chi quyen DML tren 8 bang
+    Note over DBA,O: Buoc 0 - CHI 1 LAN
+    DBA->>O: Chay V1__baseline.sql + V2__team_code.sql
+    DBA->>O: Cap user RUNTIME (Control Plane) quyen DML
 
-    K->>B: Khoi dong Pod (moi lan schedule/restart/rolling-update),<br/>tiem bien tu ConfigMap gwm-config + Secret gwm-secret
-    B->>H: Tao EntityManagerFactory (ddl-auto=validate)
-    H->>O: Doi chieu entity <-> schema that (bang user RUNTIME, chi DML)
-    H-->>B: Validate OK (hoac throw neu thieu bang/sai kieu - dung khoi dong,<br/>Pod vao CrashLoopBackOff thay vi nhan traffic sai)
-    B->>R: @PostConstruct nap toan bo cau hinh vao bo nho
-    B-->>K: readinessProbe /actuator/health tra 200 - Pod duoc<br/>them vao Endpoints cua Service gwm-backend, bat dau nhan traffic
+    K->>CP: Khoi dong Pod (SPRING_PROFILES_ACTIVE=control-plane)
+    CP->>O: Doi chieu entity <-> schema (ddl-auto=validate)
+    O-->>CP: OK (hoac throw, dung khoi dong)
+    CP-->>K: readinessProbe /actuator/health tra 200
+
+    Note over DBA,DP: Doi nen tang tao doi qua "Quan ly doi" - cap team_code+api_key cho tung doi (ngoai pham vi so do nay)
+
+    K->>DP: Khoi dong Pod (SPRING_PROFILES_ACTIVE=data-plane, moi doi tu trien khai)
+    DP->>CP: GET /api/config/export (api_key cua doi) - lan dong bo dau tien
+    CP-->>DP: Endpoint/Upstream cua DUNG doi do
+    DP-->>K: readinessProbe /actuator/health/readiness tra 200<br/>(CHI sau khi dong bo THANH CONG it nhat 1 lan)
+    DP->>DP: Tiep tuc poll dinh ky (mac dinh 15s) trong suot vong doi
 ```
 
 ---
@@ -340,7 +336,8 @@ sequenceDiagram
 | Cache kết quả lệnh gọi (theo step / toàn bộ response) | Redis | Tạm thời, tự hết hạn theo TTL (jitter ±15%) |
 | Bộ đếm rate-limit | Redis | Tạm thời, tự hết hạn theo window |
 | Nhật ký request/hop | Elasticsearch | Bền vững theo chính sách lưu trữ riêng của đội (rolling index theo ngày) |
-| Cấu hình đang hoạt động (routing) | Bộ nhớ JVM (`EndpointRegistryCache`) | Tạm thời, tái tạo từ Oracle mỗi khi khởi động hoặc mỗi khi Control Plane thay đổi |
+| Cấu hình đang hoạt động (routing, tại Data Plane) | Bộ nhớ JVM (`EndpointRegistryCache`/`UpstreamRegistryCache`) | Tạm thời — nạp qua `RemoteConfigSyncService` (poll HTTP tới Control Plane, mặc định 15s/lần), KHÔNG còn đọc Oracle trực tiếp từ 2026-09 (xem ADR-07) |
+| Cấu hình đang hoạt động (routing, tại Control Plane) | Bộ nhớ JVM (chỉ `UpstreamRegistryCache`, phục vụ "Thử ngay/nhanh") | Tạm thời, tái tạo từ Oracle mỗi khi khởi động hoặc mỗi khi CRUD Upstream thay đổi |
 | Chi tiết từng bước của 1 lần "Thử ngay/nhanh" | Bộ nhớ JVM (`ThreadLocal`, `TraceCollector`) | Cực ngắn — chỉ tồn tại trong đúng 1 vòng đời request, không lưu ở đâu khác |
 
 ### 6.2. Dòng chảy dữ liệu chính (khi client gọi 1 Endpoint)
@@ -388,7 +385,8 @@ thật vào Elasticsearch xảy ra SAU, trên 1 thread nền riêng, không nằ
 
 | Tích hợp | Giao thức | Kiểu kết nối | Bắt buộc? | Chiến lược khi lỗi |
 |---|---|---|---|---|
-| Oracle | JDBC (HikariCP pool, tối đa 10 connection) | Đồng bộ | **Bắt buộc** | Hệ thống không khởi động được nếu không kết nối được lúc đầu (Flyway/Hibernate cần schema hợp lệ) |
+| Oracle (CHỈ Control Plane — Data Plane không kết nối) | JDBC (HikariCP pool, tối đa 10 connection) | Đồng bộ | **Bắt buộc cho Control Plane** | Control Plane không khởi động được nếu không kết nối được lúc đầu (Hibernate `ddl-auto=validate` cần schema hợp lệ) |
+| Data Plane → Control Plane (đồng bộ cấu hình) | HTTP REST (`GET /api/config/export`, poll định kỳ) | Đồng bộ, 1 chiều (Data Plane chủ động gọi ra) | Tuỳ chọn về mặt vận hành (fail-open) | Fail-open: giữ nguyên cache cũ trong bộ nhớ, tự thử lại chu kỳ sau (mặc định 15s), KHÔNG chặn traffic thật đang chạy — xem ADR-07 |
 | Redis | Giao thức Redis (`StringRedisTemplate`, kết nối trễ) | Đồng bộ | Tuỳ chọn về mặt vận hành | Fail-open: cache-miss/bỏ qua rate-limit, request thật vẫn xử lý |
 | Elasticsearch | HTTP REST | Đồng bộ (ghi qua hàng đợi + thread nền) | Tuỳ chọn | Fail-open cho GHI (mất log, không chặn); báo lỗi rõ ràng cho ĐỌC (tra cứu) |
 | Elastic APM Server | Giao thức APM riêng (qua Java Agent) | Bất đồng bộ (do agent quản lý) | Tuỳ chọn | Agent tự tắt/backoff khi không kết nối được, không ảnh hưởng ứng dụng |
@@ -406,31 +404,44 @@ phụ trợ đó.
 
 | Lớp | Cơ chế | Ghi chú |
 |---|---|---|
-| Control Plane (`/api/**`) | Header khoá API (`X-Gateway-Admin-Key`), so khớp qua `ApiKeyAuthFilter` (Servlet filter, khớp mọi request bắt đầu `/api`) | Giá trị khoá BẮT BUỘC đổi khỏi mặc định khi triển khai thật (`GATEWAY_ADMIN_API_KEY`) |
+| Quản lý đội (`/api/teams/**`) | Header khoá API (`X-Gateway-Admin-Key`) = **platform-admin key** (`GATEWAY_ADMIN_API_KEY`), so khớp qua `ApiKeyAuthFilter` | Chỉ đội NỀN TẢNG mới có khoá này — thu hẹp phạm vi rủi ro nếu lộ (không dùng được cho `/api/endpoints`/`/api/upstreams` của bất kỳ đội nào) |
+| Control Plane CRUD (`/api/endpoints`, `/api/upstreams`, `/api/config`, `/api/logs`) | Header khoá API = **`api_key` riêng của từng đội** (bảng `gwm_team`, tự sinh 256-bit khi tạo đội), khớp key nào gán `CurrentTeamContext` (ThreadLocal) đúng `team_code` đó | MỌI query/ghi CRUD tự động lọc theo `CurrentTeamContext.require()` — 1 đội không thấy/sửa được cấu hình đội khác dù đoán đúng ID (IDOR đã chặn ở nhiều điểm: `EndpointMapper`, `EndpointVersionService`, `EndpointTryService`) |
+| Đồng bộ Data Plane → Control Plane | Cùng cơ chế `api_key` riêng từng đội ở trên — `RemoteConfigSyncService` dùng CHÍNH `api_key` của đội mình gọi `GET /api/config/export` | Không cần API/loại khoá riêng cho việc đồng bộ |
 | Data Plane (client gọi Endpoint) | KHÔNG có cơ chế xác thực tại tầng gateway | Việc xác thực (nếu cần) là trách nhiệm của Endpoint tự chuyển tiếp header xác thực gốc của client sang Upstream Service qua Field Mapping (targetType=HEADER) |
-| Đường dẫn dành riêng | Chặn khai báo Endpoint trùng tiền tố `/api` hoặc `/actuator` | Tránh Endpoint composite vô tình bị `ApiKeyAuthFilter` chặn nhầm (filter khớp theo URL pattern Servlet, không phân biệt route Spring MVC nào xử lý) |
+| Đường dẫn dành riêng | Chặn khai báo Endpoint trùng tiền tố `/api` hoặc `/actuator` | Tránh Endpoint composite vô tình bị `ApiKeyAuthFilter` chặn nhầm |
 | Dữ liệu nhạy cảm trong log | Cắt bớt (truncate) nội dung request/response trước khi ghi audit, đánh dấu rõ khi bị cắt | Giới hạn độ dài, không giới hạn theo field nhạy cảm cụ thể (không có data masking theo tên field) |
-| Bí mật cấu hình (mật khẩu DB, khoá API) | Truyền qua biến môi trường — `.env` (Docker Compose) hoặc `Secret` Kubernetes `gwm-secret` (`kubectl create secret generic`, xem `k8s/01-secret.yaml.example`) — không commit giá trị thật vào mã nguồn ở cả 2 trường hợp | Không có tích hợp vault/secret-manager tập trung ở phiên bản hiện tại |
+| Bí mật cấu hình (mật khẩu DB, khoá API) | Truyền qua biến môi trường — `.env` hoặc `Secret` Kubernetes `gwm-secret` — không commit giá trị thật vào mã nguồn | Không có tích hợp vault/secret-manager tập trung ở phiên bản hiện tại |
 
-**Giới hạn đã biết**: hệ thống hiện dùng **1 khoá API dùng chung** cho toàn
-bộ Control Plane, không có mô hình người dùng/vai trò/quyền hạn chi tiết
-(RBAC) — mọi người có khoá đều có toàn quyền quản trị cấu hình. Đây là giới
-hạn kiến trúc đã biết, phù hợp quy mô 1 đội tự quản lý instance của mình,
-nhưng cần lưu ý khi mở rộng số người truy cập Control Plane trong 1 đội.
+**Giới hạn đã biết**: `api_key` của từng đội trong bảng `gwm_team` lưu
+**plaintext** (không hash/salt) — nhất quán với cách `GATEWAY_ADMIN_API_KEY`
+đã lưu từ trước (không có hạ tầng hash nào trong toàn bộ ứng dụng), nhưng
+KÉM AN TOÀN HƠN thông lệ tốt (lưu hash, hiện plaintext đúng 1 lần lúc tạo).
+Ghi nhận là giới hạn đã biết ở V1, tương tự PII chưa được redact trước khi
+ghi audit log — không chặn việc dùng, có thể nâng cấp sau nếu cần. Trong 1
+đội vẫn chỉ có **1 khoá dùng chung**, không có RBAC chi tiết (mọi người có
+khoá của đội đều toàn quyền quản trị cấu hình của đội đó).
 
 ---
 
 ## 9. Các Quyết định Kiến trúc Quan trọng (Architecture Decision Records)
 
-### ADR-01: Control Plane và Data Plane chạy chung 1 tiến trình
+### ADR-01: Control Plane và Data Plane chạy chung 1 tiến trình — **ĐÃ BỊ ĐẢO NGƯỢC, xem ADR-07**
 
-- **Bối cảnh**: cần cấu hình có hiệu lực ngay lập tức khi lưu, không delay.
-- **Quyết định**: gộp Control Plane (CRUD API) và Data Plane (thực thi
-  traffic thật) vào CÙNG 1 ứng dụng Spring Boot, chia sẻ bộ nhớ đệm cấu hình
-  trong-process (`EndpointRegistryCache`).
-- **Đánh đổi**: đơn giản hoá triển khai (1 tiến trình duy nhất), nhưng traffic
-  quản trị và traffic nghiệp vụ dùng chung tài nguyên CPU/thread pool của 1
-  JVM — không tách được scale riêng cho từng loại traffic.
+> **ĐÃ ĐẢO NGƯỢC (2026-09)**: quyết định dưới đây đúng khi còn giữ nguyên bối
+> cảnh ban đầu (mỗi đội 1 instance độc lập hoàn toàn), nhưng bài toán đã đổi
+> — Control Plane giờ dùng chung 1 Oracle trung tâm cho MỌI đội, còn Data
+> Plane vẫn triển khai riêng từng đội. 2 tầng này giờ ở 2 nơi vật lý khác
+> nhau, không thể còn là 1 tiến trình. Xem đầy đủ lý do + thiết kế thay thế ở
+> **ADR-07**. Nội dung gốc giữ nguyên bên dưới để lưu lại bối cảnh/lý do của
+> quyết định ban đầu.
+
+- **Bối cảnh (ban đầu)**: cần cấu hình có hiệu lực ngay lập tức khi lưu, không delay.
+- **Quyết định (ban đầu)**: gộp Control Plane (CRUD API) và Data Plane (thực
+  thi traffic thật) vào CÙNG 1 ứng dụng Spring Boot, chia sẻ bộ nhớ đệm cấu
+  hình trong-process (`EndpointRegistryCache`).
+- **Đánh đổi (ban đầu)**: đơn giản hoá triển khai (1 tiến trình duy nhất),
+  nhưng traffic quản trị và traffic nghiệp vụ dùng chung tài nguyên CPU/thread
+  pool của 1 JVM — không tách được scale riêng cho từng loại traffic.
 
 ### ADR-02: Phân phối bằng Docker image versioned, không phải thư viện Maven
 
@@ -496,16 +507,29 @@ nhưng cần lưu ý khi mở rộng số người truy cập Control Plane tron
   trường phát triển nội bộ — cần hỏi rõ mô hình cấp quyền/quản trị hạ tầng
   thật của bên tiếp nhận trước khi chọn cơ chế tự động hoá.
 
-### ADR-04: Mô hình nhiều instance độc lập, không phải multi-tenant dùng chung
+### ADR-04: Mô hình nhiều instance độc lập, không phải multi-tenant dùng chung — **SỬA LẠI MỘT PHẦN (2026-09), xem ADR-07**
 
-- **Bối cảnh**: mỗi đội BCCS có Oracle/Redis/Elasticsearch RIÊNG.
-- **Quyết định**: mỗi đội chạy 1 instance hoàn toàn độc lập (dữ liệu, cache,
-  registry trong bộ nhớ) — không xây dựng cơ chế phân biệt tenant-id trong 1
-  instance dùng chung.
-- **Lý do**: hạ tầng đã sẵn tách biệt theo đội, xây multi-tenancy (cách ly dữ
-  liệu theo tenant trong CÙNG 1 schema/Redis) sẽ là công sức thừa không giải
-  quyết thêm vấn đề gì, đồng thời tăng rủi ro rò rỉ dữ liệu chéo giữa các đội
-  nếu cách ly tenant có sai sót.
+> **SỬA LẠI**: đúng cho tầng **thực thi traffic thật (Data Plane)** — vẫn
+> multi-instance hoàn toàn, không đổi. KHÔNG còn đúng cho tầng **lưu cấu
+> hình (Control Plane/Oracle)** — giờ multi-tenant thật (1 Oracle dùng chung,
+> cách ly qua cột `team_code`), vì bài toán đã đổi từ "mỗi đội hạ tầng riêng
+> hoàn toàn" sang "DB/Web dùng chung, chỉ thực thi traffic mới tách riêng
+> từng đội". Xem ADR-07 cho lý do đầy đủ.
+
+- **Bối cảnh (ban đầu)**: mỗi đội BCCS có Oracle/Redis/Elasticsearch RIÊNG.
+- **Quyết định (ban đầu)**: mỗi đội chạy 1 instance hoàn toàn độc lập (dữ
+  liệu, cache, registry trong bộ nhớ) — không xây dựng cơ chế phân biệt
+  tenant-id trong 1 instance dùng chung.
+- **Lý do (ban đầu)**: hạ tầng đã sẵn tách biệt theo đội, xây multi-tenancy
+  (cách ly dữ liệu theo tenant trong CÙNG 1 schema/Redis) sẽ là công sức thừa
+  không giải quyết thêm vấn đề gì, đồng thời tăng rủi ro rò rỉ dữ liệu chéo
+  giữa các đội nếu cách ly tenant có sai sót.
+- **Vẫn còn đúng cho Data Plane**: Redis vẫn riêng từng đội, Data Plane vẫn
+  multi-instance hoàn toàn (không đổi) — lý do "cách ly tải/lỗi hạ tầng" vẫn
+  áp dụng nguyên vẹn cho tầng thực thi.
+- **Không còn đúng cho Control Plane**: giờ multi-tenant thật (đã xây cơ chế
+  `team_code` + `CurrentTeamContext` — chính điều mà quyết định ban đầu này
+  từng cho là "công sức thừa") — vì bài toán đổi, không phải vì lý do gốc sai.
 
 ### ADR-05: Nguyên tắc "fail-open" cho mọi hạ tầng phụ trợ
 
@@ -530,7 +554,66 @@ nhưng cần lưu ý khi mở rộng số người truy cập Control Plane tron
   hơn hẳn rủi ro của `parallelExecution` (chỉ ảnh hưởng NỘI BỘ 1 giao dịch
   của đúng 1 client đang gọi).
 
----
+### ADR-07: Tách Control Plane (dùng chung, multi-tenant qua `team_code`) / Data Plane (multi-instance, riêng từng đội) — đảo ngược ADR-01, sửa lại ADR-04
+
+- **Bối cảnh**: bài toán triển khai đổi hoàn toàn so với lúc thiết kế ban đầu
+  (ADR-01/ADR-02/ADR-04). Trước: "mỗi đội 1 instance độc lập hoàn toàn" (DB +
+  Web + thực thi cùng 1 nơi). Sau: **"DB và Web (UI quản trị) dùng chung 1
+  bản duy nhất cho mọi đội, chỉ tầng thực thi traffic thật (Data Plane) mới
+  đẩy về triển khai riêng tại hạ tầng từng đội"** — do đội nền tảng chủ động
+  đổi định hướng (không phải phát hiện lỗi trong thiết kế cũ).
+- **Hệ quả trực tiếp lên ADR-01**: tiền đề "1 tiến trình duy nhất để cấu hình
+  có hiệu lực ngay lập tức" không còn đúng — Control Plane (dùng chung) và
+  Data Plane (từng đội) giờ ở **2 nơi vật lý khác nhau** (có thể khác cụm
+  Kubernetes, khác mạng hoàn toàn), không thể tiếp tục chia sẻ bộ nhớ
+  trong-process.
+- **Quyết định**: tách thành **2 Spring Profile** (`control-plane`/
+  `data-plane`), chọn qua `SPRING_PROFILES_ACTIVE` lúc khởi động — **vẫn 1
+  nguồn mã, 1 image Docker duy nhất** (giữ nguyên tinh thần ADR-02, không đảo
+  ngược quyết định đó) — không tách thành 2 dự án/2 repository riêng.
+  - **Control Plane**: 1 bản DUY NHẤT, đội nền tảng triển khai, kết nối
+    **trực tiếp** Oracle trung tâm. Cách ly dữ liệu giữa các đội qua cột
+    `team_code` mới (bảng `upstream_service`/`endpoint_config`) +
+    `CurrentTeamContext` (ThreadLocal, set bởi `ApiKeyAuthFilter` sau khi tra
+    `api_key` trong bảng `gwm_team` mới) — MỌI query/ghi CRUD tự động lọc
+    theo giá trị này.
+  - **Data Plane**: mỗi đội tự triển khai 1 bản riêng — **không còn kết nối
+    Oracle** (loại hẳn `spring.datasource.*`/JPA qua
+    `spring.autoconfigure.exclude`), thay vào đó tự đồng bộ Endpoint/Upstream
+    của CHÍNH đội mình qua `RemoteConfigSyncService`: poll định kỳ (mặc định
+    15s) `GET /api/config/export` bằng chính `api_key` của đội (endpoint này
+    tự lọc theo đội gọi vào — không cần xây API riêng cho việc đồng bộ).
+- **Vì sao poll thay vì push/webhook**: Control Plane và Data Plane giờ có
+  thể ở 2 mạng không thông nhau theo chiều Control Plane → Data Plane (mỗi
+  đội tự quản lý hạ tầng riêng, không đảm bảo mở được cổng vào từ bên ngoài)
+  — poll (chiều Data Plane → Control Plane, đội nào cũng chủ động gọi ra
+  được) đơn giản và chắc chắn hoạt động hơn, đánh đổi lấy độ trễ tối đa 1 chu
+  kỳ poll thay vì tức thời (chấp nhận được — khác hẳn ADR-01 gốc, 2 tầng vốn
+  đã ở 2 nơi vật lý khác nhau nên không còn khả năng "tức thời" bằng bất kỳ
+  cơ chế nào).
+- **Fail-open khi mất kết nối** (nhất quán ADR-05): `RemoteConfigSyncService`
+  lỗi HTTP chỉ log cảnh báo, GIỮ NGUYÊN cấu hình cũ trong bộ nhớ, tự thử lại
+  chu kỳ sau — không bao giờ làm rỗng cache/chặn traffic thật đang chạy chỉ
+  vì 1 lần đồng bộ thất bại.
+- **`UpstreamRegistryCache` là ngoại lệ có chủ đích**: khác `EndpointRegistryCache`
+  (bỏ hoàn toàn khỏi Control Plane — không ai đọc), `UpstreamRegistryCache`
+  VẪN chạy ở cả 2 profile vì `CompositeOrchestratorEngine` dùng chung cho cả
+  Data Plane (traffic thật) LẪN tính năng "Thử ngay"/"Thử nhanh" (Control
+  Plane). Ở Control Plane, cache này nạp TOÀN BỘ Upstream của MỌI đội (không
+  lọc `CurrentTeamContext`) — an toàn vì quyền sở hữu đã được kiểm tra RIÊNG,
+  SỚM HƠN trong luồng xử lý (`EndpointMapper.findUpstreamOrThrow()` lúc lưu
+  thật, `EndpointTryService.validateUpstreamOwnership()` lúc "Thử nhanh") —
+  tới lúc engine gọi `getById()`, quyền đã được xác nhận, tra cứu ở đây chỉ
+  là bước nội bộ, không phải điểm kiểm soát truy cập.
+- **Xác minh bằng cách khởi động thật (không chỉ unit test)**: cả 2 profile
+  đã được khởi động bằng jar thật để xác nhận toàn bộ wiring Spring đúng —
+  quá trình này phát hiện 1 lỗi thật (`TeamController` thiếu `@Profile`, tạo
+  từ trước khi có khái niệm profile) mà bộ unit test (không boot context đầy
+  đủ) không thể bắt được — đã sửa và xác nhận lại.
+- **Không làm trong phạm vi này**: không xây RBAC chi tiết trong 1 đội (vẫn 1
+  `api_key` = toàn quyền CRUD của đội đó); không hash/salt `api_key` trong
+  `gwm_team` ở V1 (ghi nhận là giới hạn đã biết, tương tự PII chưa redact
+  trước khi ghi audit log).
 
 ## 10. Rủi ro kiến trúc & Nợ kỹ thuật (Architecture Risks & Technical Debt)
 

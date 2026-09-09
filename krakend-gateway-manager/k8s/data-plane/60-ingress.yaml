@@ -1,0 +1,33 @@
+# ============================================================================
+# NGINX Ingress Controller - 1 host DUY NHAT, tro THANG toi backend (khong co
+# frontend o Data Plane - traffic o day la App/Client that cua doi goi vao
+# endpoint composite, khong phai nguoi dung xem UI).
+#
+# SUA "host:" ben duoi thanh dung domain noi bo cua doi truoc khi apply - xem
+# DEPLOYMENT_GUIDE.md. Vi du nay dung HTTP thuan; neu doi co TLS noi bo, them
+# "tls:" + Secret chua certificate va annotation tuong ung.
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gwm-ingress
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+  annotations:
+    # Endpoint composite co the tra ve payload gop tu nhieu step backend, doi
+    # gioi han mac dinh 1m cua NGINX Ingress neu can cho response lon.
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: gwm-api.doi-cua-ban.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gwm-backend
+                port:
+                  number: 8080

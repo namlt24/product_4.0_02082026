@@ -1,0 +1,93 @@
+# ===========================================================================
+# Gateway Manager - DATA PLANE (dev/demo cuc bo) - MOI DOI BCCS tu chay 1 ban
+# RIENG cua chinh minh (xem k8s/data-plane/ cho ban k8s). Khac han
+# docker-compose.control-plane.yml (1 doi nen tang chay 1 lan duy nhat).
+#
+# Kien truc: SPRING_PROFILES_ACTIVE=data-plane - thuc thi traffic that qua
+# DynamicDispatcherController. KHONG con ket noi Oracle nao ca - tu dong bo
+# cau hinh CUA CHINH DOI NAY qua HTTP dinh ky (xem RemoteConfigSyncService,
+# goi GET {CONTROL_PLANE_BASE_URL}/api/config/export bang api_key rieng cua
+# doi, xem SAD-Gateway-Manager.md ADR-07).
+#
+#   App/Client -->[backend :8080]--> Upstream that (cua doi)
+#                      |         \
+#                   (Redis)    (HTTP dinh ky toi Control Plane trung tam de
+#                                dong bo Endpoint/Upstream cua chinh doi)
+#
+# Chay: docker compose -f docker-compose.data-plane.yml up -d --build (can
+# .env - copy tu .env.data-plane.example, PHAI co san team_code+api_key do
+# doi nen tang cap qua man hinh "Quan ly doi" tren UI Control Plane truoc).
+# Gateway thuc thi (App/Client goi vao): http://localhost:8081
+#
+# LUU Y: container_name + port host mac dinh (8081, khac 8080 cua
+# docker-compose.control-plane.yml) duoc chon RIENG de 2 file compose nay
+# CHAY DUOC DONG THOI tren CUNG 1 may (kich ban thuong gap nhat khi PHAT
+# TRIEN Gateway Manager - can ca 2 vai tro de test end-to-end, xem
+# LOCAL_SETUP.md) - Docker khong cho phep trung container_name/port host du
+# o 2 file compose khac nhau. Trien khai that (moi ben 1 host/cum rieng) thi
+# xung dot nay khong con y nghia, doi ve 8080 qua HOST_PORT trong .env neu
+# muon.
+# ===========================================================================
+
+services:
+
+  # Redis RIENG cho gateway nay - cache-aside + bo dem rate-limit, ca 2 deu
+  # fail-open (xem GatewayCacheService/RateLimitService).
+  redis:
+    image: redis:7-alpine
+    container_name: gwm-dp-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - dp-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gwm-dp-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gwm-dp-backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: data-plane
+      # Ma dinh danh doi - PHAI trung khop team_code doi nen tang da cap.
+      TEAM_CODE: ${TEAM_CODE:?can dat TEAM_CODE trong .env - xin tu doi nen tang qua man hinh Quan ly doi}
+      # Noi lay cau hinh Endpoint/Upstream CUA CHINH DOI NAY.
+      CONTROL_PLANE_BASE_URL: ${CONTROL_PLANE_BASE_URL:?can dat CONTROL_PLANE_BASE_URL trong .env}
+      CONTROL_PLANE_SYNC_API_KEY: ${CONTROL_PLANE_SYNC_API_KEY:?can dat CONTROL_PLANE_SYNC_API_KEY trong .env - api_key doi nen tang da cap}
+      CONTROL_PLANE_SYNC_INTERVAL_SECONDS: ${CONTROL_PLANE_SYNC_INTERVAL_SECONDS:-15}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SERVER_PORT: 8080
+      GATEWAY_RATE_LIMIT_ENABLED: ${GATEWAY_RATE_LIMIT_ENABLED:-true}
+      GATEWAY_RATE_LIMIT_WINDOW_SECONDS: ${GATEWAY_RATE_LIMIT_WINDOW_SECONDS:-60}
+      GATEWAY_RATE_LIMIT_MAX_REQUESTS: ${GATEWAY_RATE_LIMIT_MAX_REQUESTS:-300}
+      GATEWAY_AUDIT_ENABLED: ${GATEWAY_AUDIT_ENABLED:-true}
+      GATEWAY_AUDIT_ES_HOST: ${GATEWAY_AUDIT_ES_HOST:-host.docker.internal}
+      GATEWAY_AUDIT_ES_PORT: ${ES_PORT:-9200}
+      GATEWAY_AUDIT_RETENTION_DAYS: ${GATEWAY_AUDIT_RETENTION_DAYS:-3}
+      SPRING_APPLICATION_NAME: krakend-gateway-manager-${TEAM_CODE}
+      ELASTIC_APM_SERVICE_NAME: krakend-gateway-manager-${TEAM_CODE}
+      ELASTIC_APM_SERVER_URL: http://${APM_SERVER_HOST:-host.docker.internal}:${APM_SERVER_PORT:-8200}
+      ELASTIC_APM_ENVIRONMENT: ${APM_ENVIRONMENT:-local}
+      ELASTIC_APM_APPLICATION_PACKAGES: com.bccs.gatewaymanager
+    ports:
+      - "${HOST_PORT:-8081}:8080"
+    networks:
+      - gwm-dp-net
+
+networks:
+  gwm-dp-net:
+    driver: bridge
+
+volumes:
+  dp-redisdata:

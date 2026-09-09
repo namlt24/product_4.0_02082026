@@ -1,0 +1,51 @@
+# ============================================================================
+# NGINX Ingress Controller - 2 host RIENG BIET:
+#
+#   1) UI quan tri (nguoi dung vao khai bao Endpoint/Upstream, quan ly doi) ->
+#      tro toi frontend, CHINH frontend se tu proxy "/api/**" sang backend noi
+#      bo (xem frontend/nginx.conf.template) - browser KHONG bao gio goi thang
+#      backend.
+#   2) API - tro THANG toi backend. Khac ban k8s truoc 2026-09 (khi con la
+#      "Data Plane bypass frontend"): gio "/api/**" o day CHU YEU phuc vu
+#      RemoteConfigSyncService cua TUNG BAN DATA PLANE (moi doi, co the o
+#      cum/mang KHAC HOAN TOAN) goi ve dinh ky de dong bo cau hinh cua chinh
+#      doi ho (xem ../data-plane/40-backend.yaml, gatewaymanager.control-plane.base-url) -
+#      PHAI cho phep truy cap tu ben ngoai cum nay, khong the chi la
+#      ClusterIP noi bo.
+#
+# SUA 2 "host:" ben duoi thanh dung domain noi bo truoc khi apply - xem
+# DEPLOYMENT_GUIDE.md. Vi du nay dung HTTP thuan; neu co TLS noi bo, them
+# "tls:" + Secret chua certificate va annotation tuong ung.
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gwm-ingress
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: gwm-ui.trung-tam.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gwm-frontend
+                port:
+                  number: 80
+    - host: gwm-api.trung-tam.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gwm-backend
+                port:
+                  number: 8080

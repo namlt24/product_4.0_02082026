@@ -44,7 +44,8 @@ chọn), không phải bước bắt buộc.
 
 ```
 krakend-gateway-manager/
-├── docker-compose.yml       # redis + backend + frontend (KHONG con postgres/krakend)
+├── docker-compose.control-plane.yml  # redis(tuy chon) + backend(profile=control-plane) + frontend
+├── docker-compose.data-plane.yml     # redis + backend(profile=data-plane) - MOI DOI tu chay rieng
 ├── backend/                 # Control Plane + Gateway thuc thi (Spring Boot)
 │   ├── src/main/resources/db/ddl-gateway-manager.sql  # DDL 8 bang (ban chup, xem muc 8)
 │   └── src/main/java/com/bccs/gatewaymanager/

@@ -1,12 +1,16 @@
 # ============================================================================
-# Backend = Control Plane (/api/**, cau hinh) + Data Plane (traffic that qua
-# CompositeOrchestratorEngine) trong CUNG 1 process, cung 1 port 8080 (xem
-# docker-compose.yml). Doc TOAN BO cau hinh khong-mat tu ConfigMap "gwm-config"
-# va mat khau/khoa tu Secret "gwm-secret" (xem 00-configmap.yaml,
-# 01-secret.yaml.example) - KHONG hardcode gia tri nao o day.
+# Backend Data Plane - SPRING_PROFILES_ACTIVE=data-plane (xem
+# application-data-plane.yml). MOI DOI tu trien khai 1 ban RIENG cua chinh
+# minh (khac han control-plane/40-backend.yaml - ban do 1 doi nen tang trien
+# khai 1 lan duy nhat, dung chung MOI doi). Thuc thi traffic that qua
+# DynamicDispatcherController - KHONG con CRUD Endpoint/Upstream/Team nao ca
+# (nhung API /api/** do gio o Control Plane trung tam), KHONG con ket noi
+# Oracle nao ca - tu dong bo cau hinh CUA CHINH DOI NAY qua HTTP dinh ky (xem
+# RemoteConfigSyncService, gatewaymanager.control-plane.* trong
+# 00-configmap.yaml/01-secret.yaml.example).
 #
-# SUA "image:" ben duoi thanh dung registry/tag noi bo cua doi truoc khi apply
-# (xem DEPLOYMENT_GUIDE.md).
+# SUA "image:" ben duoi thanh dung registry/tag noi bo truoc khi apply (xem
+# DEPLOYMENT_GUIDE.md).
 # ============================================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -14,30 +18,32 @@ metadata:
   name: gwm-backend
   labels:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: backend
+    app.kubernetes.io/component: data-plane
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: gateway-manager
-      app.kubernetes.io/component: backend
+      app.kubernetes.io/component: data-plane
   template:
     metadata:
       labels:
         app.kubernetes.io/name: gateway-manager
-        app.kubernetes.io/component: backend
+        app.kubernetes.io/component: data-plane
     spec:
       containers:
         - name: backend
-          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-backend:v1.0.0
-          ports:
-            - containerPort: 8080
+          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-backend:v2.0.0
           envFrom:
             - configMapRef:
                 name: gwm-config
             - secretRef:
                 name: gwm-secret
+          ports:
+            - containerPort: 8080
           env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "data-plane"
             - name: SERVER_PORT
               value: "8080"
             # Bien hop nhat tu TEAM_CODE (ConfigMap) - Spring Boot khong tu ghep
@@ -55,28 +61,26 @@ spec:
               value: "com.bccs.gatewaymanager"
             - name: GATEWAY_AUDIT_ES_PORT
               value: "$(ES_PORT)"
-          # Readiness dung "/actuator/health" (endpoint TONG HOP mac dinh, gom ca
-          # DataSource health indicator cua Oracle) vi Oracle la phu thuoc BAT
-          # BUOC (fail-closed dung cho DB, khac voi Redis/ES la fail-open) - khi
-          # Oracle gian doan, Pod bi rut khoi Service "gwm-backend" (khong nhan
-          # traffic moi) nhung KHONG bi restart (Spring Boot tu dong bat 2 health
-          # group "liveness"/"readiness" khi phat hien dang chay trong
-          # Kubernetes qua bien KUBERNETES_SERVICE_HOST - xem application.yml).
-          # Liveness dung rieng group "/actuator/health/liveness" (chi phan anh
-          # LivenessState noi bo cua JVM, KHONG gom DB) vi restart Pod khong giai
-          # quyet duoc 1 loi ha tang Oracle o ben ngoai Pod.
+          # Readiness dung group "/actuator/health/readiness" (KHAC Control Plane -
+          # o day KHONG co Oracle nao de kiem tra) - gom 2 dieu kien (xem
+          # application-data-plane.yml + RemoteConfigSyncHealthIndicator):
+          # (1) readinessState noi bo cua Spring Boot, (2) da dong bo cau hinh tu
+          # Control Plane THANH CONG it nhat 1 lan - tranh Pod moi len nhan
+          # traffic khi cache dinh tuyen con rong hoan toan. Sync loi SAU do
+          # (Control Plane tam gian doan) KHONG lam readiness rot lai - fail-open
+          # giu cache cu (xem RemoteConfigSyncService).
           readinessProbe:
             httpGet:
-              path: /actuator/health
+              path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 20
+            initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 40
+            initialDelaySeconds: 20
             periodSeconds: 15
             failureThreshold: 5
           resources:
@@ -93,11 +97,11 @@ metadata:
   name: gwm-backend
   labels:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: backend
+    app.kubernetes.io/component: data-plane
 spec:
   selector:
     app.kubernetes.io/name: gateway-manager
-    app.kubernetes.io/component: backend
+    app.kubernetes.io/component: data-plane
   ports:
     - port: 8080
       targetPort: 8080

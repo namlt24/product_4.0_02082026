@@ -1,8 +1,8 @@
 # ============================================================================
-# ConfigMap - toan bo bien moi truong KHONG bi mat (khong phai mat khau/khoa
-# API) - doi chieu dung TEN bien voi backend/src/main/resources/application.yml
-# va .env.example (dung CHUNG 1 bo ten voi ban Docker Compose, KHONG doi ten
-# nao ca - Spring Boot doc y het qua bien moi truong container).
+# ConfigMap Data Plane - MOI DOI tu trien khai 1 ban RIENG cua chinh minh
+# (khac han control-plane/00-configmap.yaml - ban do CHI 1 doi nen tang trien
+# khai 1 lan duy nhat). Doi chieu dung TEN bien voi
+# backend/src/main/resources/application-data-plane.yml.
 #
 # MOI DOI: sua truc tiep cac gia tri duoi day cho dung ha tang cua minh truoc
 # khi "kubectl apply -f 00-configmap.yaml -n <namespace-cua-doi>".
@@ -13,30 +13,31 @@ metadata:
   name: gwm-config
   labels:
     app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
 data:
-  # Ma dinh danh doi - hien trong SPRING_APPLICATION_NAME/ELASTIC_APM_SERVICE_NAME.
+  # Ma dinh danh doi - PHAI trung KHOP voi team_code doi nen tang da cap cho
+  # ban qua man hinh "Quan ly doi" (xem ../control-plane/README.md) - hien
+  # trong SPRING_APPLICATION_NAME/ELASTIC_APM_SERVICE_NAME, thuan tien phan
+  # biet khi nhieu doi cung feed 1 he thong quan sat chung (neu co).
   TEAM_CODE: "doi-cua-ban"
 
-  # Oracle 19c+ CUA CHINH DOI - schema da duoc DBA tao san qua ban giao DDL
-  # (xem DEPLOYMENT_GUIDE.md muc 2 + backend/src/main/resources/db/team-schema/).
-  # DB_HOST co the la dia chi noi bo (vd oracle.doi-cua-ban.local) hoac 1
-  # ExternalName Service tro toi Oracle ngoai cum k8s - KHONG chay Oracle
-  # trong chinh cum nay (ngoai pham vi bo manifest nay).
-  DB_HOST: "oracle.doi-cua-ban.local"
-  DB_PORT: "1521"
-  DB_NAME: "ten-pdb-hoac-service-cua-ban"
+  # Noi lay cau hinh Endpoint/Upstream CUA CHINH DOI NAY - URL goc cua Control
+  # Plane trung tam (xem ../control-plane/60-ingress.yaml, host "gwm-api...") -
+  # RemoteConfigSyncService tu goi GET {url nay}/api/config/export dinh ky.
+  CONTROL_PLANE_BASE_URL: "http://gwm-api.trung-tam.local"
+  CONTROL_PLANE_SYNC_INTERVAL_SECONDS: "15"
 
   # Redis - Service "gwm-redis" trong CUNG namespace (xem 30-redis.yaml), dung
   # DNS noi bo cua k8s, KHONG can sua neu dung dung ten Service trong bo nay.
   REDIS_HOST: "gwm-redis"
   REDIS_PORT: "6379"
 
-  # Rate limit Data Plane - gia tri mac dinh hop ly cho da so truong hop.
+  # Rate limit traffic that - gia tri mac dinh hop ly cho da so truong hop.
   GATEWAY_RATE_LIMIT_ENABLED: "true"
   GATEWAY_RATE_LIMIT_WINDOW_SECONDS: "60"
   GATEWAY_RATE_LIMIT_MAX_REQUESTS: "300"
 
-  # Audit log (Tra cuu Log) - tuy chon. Neu doi CHUA co Elasticsearch rieng,
+  # Audit log (request/hop) - tuy chon. Neu doi CHUA co Elasticsearch rieng,
   # dat GATEWAY_AUDIT_ENABLED="false" de tat han (khong anh huong traffic that).
   GATEWAY_AUDIT_ENABLED: "true"
   GATEWAY_AUDIT_ES_HOST: "elasticsearch.doi-cua-ban.local"

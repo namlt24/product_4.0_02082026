@@ -12,6 +12,7 @@ import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.Objects;
  * processor - phu hop voi mot service nho, so field it.
  */
 @Component
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class EndpointMapper {
 

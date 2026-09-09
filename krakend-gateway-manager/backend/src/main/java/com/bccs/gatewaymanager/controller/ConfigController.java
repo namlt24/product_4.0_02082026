@@ -7,10 +7,10 @@ import com.bccs.gatewaymanager.dto.GatewayInfoDto;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.service.ConfigExportImportService;
 import com.bccs.gatewaymanager.service.DependencyAnalyzer;
-import com.bccs.gatewaymanager.service.EndpointRegistryCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,21 +22,23 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Validate cau hinh (canh bao vong lap phu thuoc) va nap lai cache dinh tuyen
- * trong-process theo yeu cau. Khac voi truoc day (khi con dung KrakenD/Gravitee
- * lam runtime rieng biet): moi thay doi qua EndpointController/UpstreamServiceController
- * DA TU DONG co hieu luc ngay (xem EndpointRegistryCache/UpstreamRegistryCache) -
- * endpoint "/deploy" o day chi con la buoc validate + nap-lai-thu-cong tuy chon,
- * khong con y nghia "ghi file + restart container" nhu truoc.
+ * Control-Plane-only (@Profile) - validate cau hinh (canh bao vong lap phu
+ * thuoc). TU 2026-09 (tach Control Plane dung chung/Data Plane rieng tung
+ * doi): endpoint "/deploy" KHONG con nap lai cache dinh tuyen nao ca -
+ * EndpointRegistryCache/UpstreamRegistryCache phuc vu traffic that gio thuoc
+ * ve Data Plane RIENG (tu dong bo qua RemoteConfigSyncService, doc dinh ky,
+ * xem SAD ADR-07), Control Plane nay khong con giu cache do nua. "/deploy" o
+ * day gio CHI con y nghia validate (chan luu cau hinh gay vong lap) - khong
+ * con lam gi khac.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/config")
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class ConfigController {
 
     private final DependencyAnalyzer dependencyAnalyzer;
-    private final EndpointRegistryCache registryCache;
     private final ConfigExportImportService exportImportService;
 
     @Value("${server.port}")
@@ -47,10 +49,12 @@ public class ConfigController {
 
     /**
      * Validate toan bo cau hinh dang luu (hien tai chi kiem tra vong lap phu
-     * thuoc giua cac endpoint) roi nap lai cache dinh tuyen trong-process.
-     * VONG LAP phu thuoc (endpoint A goi nguoc endpoint B, B goi lai A...) BI
-     * CHAN HAN, vi day khong phai rui ro-nguoi-dung-tu-quyet-dinh ma la config
-     * chac chan hong (goi vo han lan) khi chay that.
+     * thuoc giua cac endpoint). VONG LAP phu thuoc (endpoint A goi nguoc
+     * endpoint B, B goi lai A...) BI CHAN HAN, vi day khong phai rui
+     * ro-nguoi-dung-tu-quyet-dinh ma la config chac chan hong (goi vo han
+     * lan) khi chay that - dieu nay da duoc chan ngay luc Luu (xem
+     * EndpointService.rejectIfCyclic()), "/deploy" o day chi la 1 cong cu
+     * kiem tra thu cong tuy chon.
      */
     @PostMapping("/deploy")
     public ResponseEntity<DeployResultDto> deploy() {
@@ -59,9 +63,7 @@ public class ConfigController {
             throw new BusinessException("GW-CYCLE",
                     "Phat hien vong lap phu thuoc giua cac endpoint. " + String.join(" | ", cycleWarnings));
         }
-        registryCache.reload();
-        log.info("Da validate + nap lai cache dinh tuyen - {} endpoint dang hoat dong.", registryCache.all().size());
-        return ResponseEntity.ok(new DeployResultDto(true, "Validate thanh cong - cau hinh da co hieu luc.", List.of()));
+        return ResponseEntity.ok(new DeployResultDto(true, "Validate thanh cong - khong phat hien vong lap phu thuoc.", List.of()));
     }
 
     /**

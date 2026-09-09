@@ -6,14 +6,16 @@ import com.bccs.gatewaymanager.service.UpstreamHealthService;
 import com.bccs.gatewaymanager.service.UpstreamServiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** CRUD dang ky Upstream Service (backend that) - dung chung cho nhieu Endpoint/BackendStep. */
+/** Control-Plane-only (@Profile) - CRUD dang ky Upstream Service (backend that), dung chung cho nhieu Endpoint/BackendStep. */
 @RestController
 @RequestMapping("/api/upstreams")
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class UpstreamServiceController {
 

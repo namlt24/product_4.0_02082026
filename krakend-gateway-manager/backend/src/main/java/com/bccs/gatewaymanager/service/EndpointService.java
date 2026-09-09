@@ -9,6 +9,7 @@ import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,14 +17,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Control-Plane-only (@Profile) - CRUD cau hinh, doc/ghi truc tiep DB dung
+ * chung. KHONG con dieu khien EndpointRegistryCache nua (bo tu 2026-09, xem
+ * javadoc class do) - cache dinh tuyen phuc vu traffic that gio la trach
+ * nhiem RIENG cua Data Plane (tu dong bo qua RemoteConfigSyncService, doc
+ * dinh ky qua API export, khong con "co hieu luc ngay lap tuc trong cung 1
+ * tien trinh" nhu truoc - xem SAD ADR-07).
+ */
 @Slf4j
 @Service
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class EndpointService {
 
     private final EndpointConfigRepository repository;
     private final EndpointMapper mapper;
-    private final EndpointRegistryCache registryCache;
     private final DependencyAnalyzer dependencyAnalyzer;
     private final EndpointVersionService versionService;
 
@@ -52,7 +61,6 @@ public class EndpointService {
         EndpointConfig saved = repository.save(entity);
         EndpointResponseDto result = mapper.toResponseDto(saved);
         rejectIfCyclic();
-        registryCache.reload();
         versionService.recordSnapshot(saved, EndpointChangeType.CREATED);
         log.info("Da tao endpoint moi: {} {}", saved.getMethod(), saved.getPath());
         return result;
@@ -86,7 +94,6 @@ public class EndpointService {
         EndpointConfig saved = repository.save(entity);
         EndpointResponseDto result = mapper.toResponseDto(saved);
         rejectIfCyclic();
-        registryCache.reload();
         versionService.recordSnapshot(saved, changeType);
         log.info("Da cap nhat endpoint ({}): {} {}", changeType, saved.getMethod(), saved.getPath());
         return result;
@@ -97,7 +104,6 @@ public class EndpointService {
         EndpointConfig entity = findOrThrow(id);
         versionService.deleteAllForEndpoint(id);
         repository.delete(entity);
-        registryCache.reload();
         log.info("Da xoa endpoint: {} {}", entity.getMethod(), entity.getPath());
     }
 

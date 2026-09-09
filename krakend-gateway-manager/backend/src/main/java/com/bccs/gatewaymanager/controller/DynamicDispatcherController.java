@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,15 +33,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Data Plane: "catch-all" nhan MOI request traffic that (khong phai /api/**,
- * Spring MVC tu uu tien mapping cu the hon truoc mapping "/**" nay), tra cuu
- * trong EndpointRegistryCache theo (method, path), roi giao cho
- * CompositeOrchestratorEngine thuc thi. Day la thay the truc tiep cho viec
- * KrakenD/Gravitee doc krakend.json/policy JSON - o day engine tu route,
- * khong co file config trung gian nao ca.
+ * Data-Plane-only (@Profile) - "catch-all" nhan MOI request traffic that
+ * (khong phai /api/**, Spring MVC tu uu tien mapping cu the hon truoc mapping
+ * "/**" nay), tra cuu trong EndpointRegistryCache theo (method, path), roi
+ * giao cho CompositeOrchestratorEngine thuc thi. Day la thay the truc tiep
+ * cho viec KrakenD/Gravitee doc krakend.json/policy JSON - o day engine tu
+ * route, khong co file config trung gian nao ca.
+ *
+ * EndpointRegistryCache o day duoc nap boi RemoteConfigSyncService (goi HTTP
+ * dinh ky toi Control Plane, CHI lay config cua chinh doi minh) - khong con
+ * doc JPA truc tiep nhu truoc 2026-09 (xem javadoc EndpointRegistryCache).
  */
 @Slf4j
 @RestController
+@Profile("data-plane")
 @RequiredArgsConstructor
 public class DynamicDispatcherController {
 

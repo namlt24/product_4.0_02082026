@@ -41,8 +41,6 @@ class EndpointServiceTest {
     @Mock
     private EndpointMapper mapper;
     @Mock
-    private EndpointRegistryCache registryCache;
-    @Mock
     private DependencyAnalyzer dependencyAnalyzer;
     @Mock
     private EndpointVersionService versionService;
@@ -53,7 +51,7 @@ class EndpointServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EndpointService(repository, mapper, registryCache, dependencyAnalyzer, versionService);
+        service = new EndpointService(repository, mapper, dependencyAnalyzer, versionService);
         // Moi method cua EndpointService gio doc CurrentTeamContext.require() - xem
         // ApiKeyAuthFilter, thiet lap gia tri gia dinh nay o tang test (khong co
         // request/filter that trong unit test).
@@ -207,7 +205,6 @@ class EndpointServiceTest {
                 2, MappingTargetType.QUERY, "a", 0, null);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
-        verify(registryCache).reload();
     }
 
     // ---- QUERY_PARAM (nguon FieldMapping moi - doc query param cua chinh client): giong REQUEST_BODY,
@@ -219,7 +216,6 @@ class EndpointServiceTest {
                 2, MappingTargetType.QUERY, "staffCode", 0, null);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
-        verify(registryCache).reload();
     }
 
     @Test
@@ -241,7 +237,6 @@ class EndpointServiceTest {
                 2, MappingTargetType.QUERY, "priority", 0, null);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
-        verify(registryCache).reload();
     }
 
     @Test
@@ -274,7 +269,6 @@ class EndpointServiceTest {
                 2, MappingTargetType.BODY_FIELD, "$body", 0, null);
         EndpointResponseDto result = service.create(requestWithMapping(mapping));
         assertThat(result).isNotNull();
-        verify(registryCache).reload();
     }
 
     @Test
@@ -311,7 +305,6 @@ class EndpointServiceTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo("GW-CYCLE");
 
-        verify(registryCache, never()).reload();
         verify(versionService, never()).recordSnapshot(any(), any());
     }
 
@@ -327,16 +320,7 @@ class EndpointServiceTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo("GW-CYCLE");
 
-        verify(registryCache, never()).reload();
         verify(versionService, never()).recordSnapshot(any(), any());
-    }
-
-    @Test
-    void create_noCycle_reloadsRegistryCache() {
-        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null, false, false, 300);
-        service.create(dto);
-        verify(registryCache).reload();
     }
 
     // ---- P0-4: versioning + rollback ----
@@ -376,7 +360,6 @@ class EndpointServiceTest {
         assertThat(result).isNotNull();
         verify(versionService).toRequestDtoForRollback("ep-1", "v-1");
         verify(versionService).recordSnapshot(any(EndpointConfig.class), eq(EndpointChangeType.ROLLED_BACK));
-        verify(registryCache).reload();
     }
 
     @Test
@@ -407,7 +390,6 @@ class EndpointServiceTest {
 
         verify(versionService).deleteAllForEndpoint("ep-1");
         verify(repository).delete(existing);
-        verify(registryCache).reload();
     }
 
     // ---- P1-5: validate dieu kien re nhanh luc luu ----

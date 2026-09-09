@@ -12,6 +12,7 @@ import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class ConfigExportImportService {
 

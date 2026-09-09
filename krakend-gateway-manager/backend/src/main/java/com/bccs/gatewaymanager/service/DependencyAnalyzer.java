@@ -9,6 +9,7 @@ import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
  * KHONG phai O(V^2) (tra cuu endpoint dich qua Map, khong quet tuyen tinh).
  */
 @Service
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class DependencyAnalyzer {
 

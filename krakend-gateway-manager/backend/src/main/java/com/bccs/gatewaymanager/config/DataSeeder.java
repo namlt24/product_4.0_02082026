@@ -14,18 +14,21 @@ import com.bccs.gatewaymanager.service.UpstreamServiceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * Seed 2 Upstream Service + 1 endpoint composite mau ("/v1/user-orders") khi DB
- * con trong, de nguoi dung thay ngay vi du thuc te ma khong phai tu tay nhap khi
- * lan dau chay `docker compose up -d`. Chi chay 1 lan - neu da co du lieu thi bo qua.
+ * Control-Plane-only (@Profile) - seed 2 Upstream Service + 1 endpoint
+ * composite mau ("/v1/user-orders") khi DB con trong, de nguoi dung thay
+ * ngay vi du thuc te ma khong phai tu tay nhap khi lan dau chay
+ * `docker compose up -d`. Chi chay 1 lan - neu da co du lieu thi bo qua.
  */
 @Slf4j
 @Component
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
 

@@ -6,17 +6,20 @@ import com.bccs.gatewaymanager.dto.TeamDto;
 import com.bccs.gatewaymanager.service.TeamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
- * "Quan ly doi" - CHI goi duoc bang platform-admin key (xem ApiKeyAuthFilter,
- * so khop rieng cho tien to "/api/teams"), khong nam duoi CurrentTeamContext.
+ * Control-Plane-only (@Profile) - "Quan ly doi", CHI goi duoc bang
+ * platform-admin key (xem ApiKeyAuthFilter, so khop rieng cho tien to
+ * "/api/teams"), khong nam duoi CurrentTeamContext.
  */
 @RestController
 @RequestMapping("/api/teams")
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class TeamController {
 

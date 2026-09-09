@@ -34,8 +34,6 @@ class UpstreamServiceServiceTest {
     @Mock
     private EndpointConfigRepository endpointConfigRepository;
     @Mock
-    private EndpointRegistryCache registryCache;
-    @Mock
     private UpstreamRegistryCache upstreamRegistryCache;
     @Mock
     private UpstreamHttpExecutor upstreamHttpExecutor;
@@ -46,7 +44,7 @@ class UpstreamServiceServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new UpstreamServiceService(repository, endpointConfigRepository, registryCache,
+        service = new UpstreamServiceService(repository, endpointConfigRepository,
                 upstreamRegistryCache, upstreamHttpExecutor);
         // Moi method cua UpstreamServiceService gio doc CurrentTeamContext.require() -
         // xem ApiKeyAuthFilter, thiet lap gia tri gia dinh nay o tang test (khong co
@@ -61,6 +59,34 @@ class UpstreamServiceServiceTest {
 
     private UpstreamService entity(String id, String name) {
         return UpstreamService.builder().id(id).teamCode(TEAM).name(name).baseHost("http://x:8080").build();
+    }
+
+    // ---- Nap UpstreamRegistryCache (dung cho engine, ca Try lan traffic that Data Plane truoc khi tach) ----
+
+    @Test
+    void loadUpstreamRegistryCacheAtStartup_naplaiTATCAUpstream_khongLocTheoDoi() {
+        // TAT CA doi (khong chi doi hien tai) - xem javadoc class: UpstreamRegistryCache
+        // phuc vu "Thu ngay"/"Thu nhanh" cho MOI request dang xu ly, quyen so huu da
+        // duoc kiem tra rieng truoc do (EndpointMapper/EndpointTryService).
+        var all = java.util.List.of(entity("up-1", "svc1"), entity("up-2", "svc2"));
+        when(repository.findAll()).thenReturn(all);
+
+        service.loadUpstreamRegistryCacheAtStartup();
+
+        verify(upstreamRegistryCache).reload(all);
+    }
+
+    @Test
+    void create_naplaiUpstreamRegistryCacheBangKetQuaFindAllMoiNhat() {
+        var freshAll = java.util.List.of(entity("up-1", "svc"));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repository.findAll()).thenReturn(freshAll);
+        UpstreamServiceDto dto = new UpstreamServiceDto(null, "svc", null, "http://x:8080",
+                1000, 3000, true, 50, true, 20, 500, null, null);
+
+        service.create(dto);
+
+        verify(upstreamRegistryCache).reload(freshAll);
     }
 
     // ---- Finding #7: chan xoa Upstream con dang duoc dung ----

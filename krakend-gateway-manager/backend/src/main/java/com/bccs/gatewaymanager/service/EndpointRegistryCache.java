@@ -1,12 +1,8 @@
 package com.bccs.gatewaymanager.service;
 
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
-import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,30 +10,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Cache dinh tuyen trong-process: nap toan bo EndpointConfig tu DB vao bo nho,
- * de DynamicDispatcherController tra cuu (method, path) cho MOI request that -
- * khong query DB tren duong di nong (hot path) cua traffic.
+ * Cache dinh tuyen trong-process: giu toan bo EndpointConfig (da map san
+ * thanh DTO) trong bo nho, de DynamicDispatcherController tra cuu (method,
+ * path) cho MOI request that - khong query DB/goi API tren duong di nong
+ * (hot path) cua traffic.
  *
- * Day chinh la diem khac biet lon nhat so voi KrakenD/Gravitee truoc day: KHONG
- * con buoc "Deploy" (ghi file config + restart container) - chi can goi
- * reload() ngay sau khi Luu/Xoa qua Control Plane, endpoint moi co hieu luc
- * gan nhu tuc thi cho lan request tiep theo.
- *
- * Dung TransactionTemplate (KHONG dung @Transactional annotation) vi reload()
- * duoc goi ca tu @PostConstruct (self-invocation ngay trong class nay - Spring
- * AOP proxy-based KHONG intercept duoc self-invocation nen @Transactional se
- * vo hieu, gay LazyInitializationException khi materialize cac collection LAZY
- * cua entity da co du lieu that trong DB luc khoi dong) lan tu ben ngoai
- * (EndpointService sau create/update/delete). TransactionTemplate boc transaction
- * programmatic, hoat dong dung du goi tu dau.
+ * TU 2026-09 (tach Control Plane dung chung / Data Plane rieng tung doi):
+ * class nay KHONG con tu doc JPA nua - reload(List) nhan du lieu da san
+ * sang tu BEN NGOAI, nguon du lieu khac nhau tuy profile dang chay:
+ * - profile "control-plane": EndpointService goi reload() voi ket qua tu
+ *   EndpointConfigRepository.findAll() (JPA truc tiep, TAT CA doi - an toan
+ *   vi class nay chi phuc vu "Thu ngay"/"Thu nhanh", noi quyen so huu Upstream
+ *   da duoc kiem tra RIENG truoc do, xem EndpointMapper/EndpointTryService).
+ * - profile "data-plane": RemoteConfigSyncService goi reload() voi ket qua
+ *   tu goi HTTP toi Control Plane (GET /api/config/export bang api_key CUA
+ *   CHINH DOI MINH - tu dong chi tra ve config cua doi do, KHONG can loc gi
+ *   them o day).
+ * Nho vay class nay khong con phu thuoc EndpointConfigRepository/EndpointMapper/
+ * TransactionTemplate nua - chi la 1 bo nho dem thuan tuy, dung duoc trong ca
+ * 2 profile ma khong can @Profile rieng.
  */
 @Slf4j
 @Component
 public class EndpointRegistryCache {
-
-    private final EndpointConfigRepository endpointConfigRepository;
-    private final EndpointMapper endpointMapper;
-    private final TransactionTemplate transactionTemplate;
 
     private volatile List<EndpointResponseDto> compiled = List.of();
 
@@ -49,24 +44,8 @@ public class EndpointRegistryCache {
     private volatile Map<String, EndpointResponseDto> exactIndex = Map.of();
     private volatile List<EndpointResponseDto> patternEndpoints = List.of();
 
-    public EndpointRegistryCache(EndpointConfigRepository endpointConfigRepository, EndpointMapper endpointMapper,
-                                  PlatformTransactionManager transactionManager) {
-        this.endpointConfigRepository = endpointConfigRepository;
-        this.endpointMapper = endpointMapper;
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.transactionTemplate.setReadOnly(true);
-    }
-
-    @PostConstruct
-    public void init() {
-        reload();
-    }
-
-    public synchronized void reload() {
-        List<EndpointResponseDto> fresh = transactionTemplate.execute(status ->
-                endpointConfigRepository.findAll().stream()
-                        .map(endpointMapper::toResponseDto)
-                        .toList());
+    /** Thay toan bo noi dung cache bang danh sach da fetch san (khong tu query gi ca) - xem javadoc class ve nguon du lieu tuy profile. */
+    public synchronized void reload(List<EndpointResponseDto> fresh) {
         this.compiled = fresh;
 
         Map<String, EndpointResponseDto> exact = new HashMap<>();

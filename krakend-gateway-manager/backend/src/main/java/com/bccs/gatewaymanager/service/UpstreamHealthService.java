@@ -8,6 +8,7 @@ import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.util.List;
  * "Dashboard suc khoe Upstream" (P1). Chi DOC, khong ghi gi ca.
  */
 @Service
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class UpstreamHealthService {
 

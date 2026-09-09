@@ -11,6 +11,7 @@ import com.bccs.gatewaymanager.engine.TraceCollector;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
  * le) moi throw binh thuong nhu truoc.
  */
 @Service
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class EndpointTryService {
 

@@ -14,6 +14,7 @@ import com.bccs.gatewaymanager.service.EndpointVersionService;
 import com.bccs.gatewaymanager.service.OpenApiGeneratorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.JsonNode;
@@ -21,9 +22,10 @@ import tools.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 
-/** CRUD cho dinh nghia Endpoint Gateway. Luu = co hieu luc ngay (xem EndpointRegistryCache). */
+/** Control-Plane-only (@Profile) - CRUD cho dinh nghia Endpoint Gateway. */
 @RestController
 @RequestMapping("/api/endpoints")
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class EndpointController {
 

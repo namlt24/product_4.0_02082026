@@ -1,0 +1,36 @@
+# Kich hoat qua SPRING_PROFILES_ACTIVE=data-plane - 1 instance RIENG cho MOI
+# doi BCCS (thuc thi traffic that qua DynamicDispatcherController, xem
+# SAD-Gateway-Manager.md ADR-07). Merge THEM vao application.yml (khong ghi
+# de - 2 file cong lai).
+spring:
+  # Data Plane KHONG con ket noi Oracle nao ca (khac han truoc 2026-09) - tu
+  # dong bo Endpoint/Upstream cua CHINH DOI MINH qua HTTP (xem
+  # RemoteConfigSyncService), khong qua JPA/JDBC nua. PHAI loai tru cac
+  # autoconfiguration JPA/DataSource duoi day - neu khong Spring Boot van co
+  # gang tu dong tao 1 HikariDataSource luc khoi dong (Hikari tren classpath
+  # qua spring-boot-starter-data-jpa) va CRASH ngay vi thieu spring.datasource.url
+  # hop le. Ten class xac nhan qua kiem tra thuc te tren
+  # spring-boot-{jdbc,hibernate,data-jpa}-4.0.8.jar (Spring Boot 4 da tach
+  # package rieng cho tung module, khac hoan toan Spring Boot 3.x).
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
+
+gatewaymanager:
+  # Noi lay cau hinh Endpoint/Upstream cua CHINH DOI NAY - xem RemoteConfigSyncService.
+  control-plane:
+    # URL goc cua Control Plane trung tam (KHONG kem "/api/config/export" -
+    # RemoteConfigSyncService tu noi duong dan).
+    base-url: ${CONTROL_PLANE_BASE_URL:http://localhost:8080}
+    # api_key CUA CHINH DOI NAY trong bang gwm_team (xin tu doi nen tang qua
+    # man hinh "Quan ly doi") - GET /api/config/export tu dong loc theo doi
+    # cua key nay, KHONG can khai bao team_code rieng o day.
+    sync-api-key: ${CONTROL_PLANE_SYNC_API_KEY:changeme-local-dev}
+    # Chu ky dong bo (giay) - cau hinh moi tren Control Plane co hieu luc SAU
+    # toi da chung nay o Data Plane (khac han truoc day "ngay lap tuc" khi con
+    # chung 1 tien trinh - danh doi chap nhan duoc vi gio 2 ben o 2 mang khac
+    # nhau, xem SAD ADR-07).
+    sync-interval-seconds: ${CONTROL_PLANE_SYNC_INTERVAL_SECONDS:15}

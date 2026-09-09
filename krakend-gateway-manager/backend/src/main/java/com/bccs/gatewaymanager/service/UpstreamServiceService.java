@@ -7,24 +7,44 @@ import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** CRUD dang ky Upstream Service (backend that) - dung 1 lan, tai su dung o nhieu BackendStep. */
+/**
+ * Control-Plane-only (@Profile) - CRUD dang ky Upstream Service (backend
+ * that), dung 1 lan, tai su dung o nhieu BackendStep.
+ *
+ * Class nay CON giu vai tro nap UpstreamRegistryCache (khac EndpointRegistryCache
+ * - da bo hoan toan khoi Control Plane tu 2026-09, xem javadoc EndpointService)
+ * - ly do: UpstreamRegistryCache duoc CompositeOrchestratorEngine dung ca cho
+ * traffic that (Data Plane) LAN "Thu ngay"/"Thu nhanh" (Control Plane, xem
+ * EndpointTryService) - Control Plane can nap TOAN BO Upstream (moi doi, KHONG
+ * loc theo CurrentTeamContext o day) de "Thu" hoat dong dung cho request dang
+ * xu ly, an toan vi quyen so huu Upstream da duoc kiem tra RIENG truoc khi toi
+ * duoc buoc goi engine (xem EndpointMapper.findUpstreamOrThrow()/
+ * EndpointTryService.validateUpstreamOwnership()).
+ */
 @Slf4j
 @Service
+@Profile("control-plane")
 @RequiredArgsConstructor
 public class UpstreamServiceService {
 
     private final UpstreamServiceRepository repository;
     private final EndpointConfigRepository endpointConfigRepository;
-    private final EndpointRegistryCache registryCache;
     private final UpstreamRegistryCache upstreamRegistryCache;
     private final UpstreamHttpExecutor upstreamHttpExecutor;
+
+    @PostConstruct
+    void loadUpstreamRegistryCacheAtStartup() {
+        upstreamRegistryCache.reload(repository.findAll());
+    }
 
     @Transactional(readOnly = true)
     public List<UpstreamServiceDto> list() {
@@ -56,7 +76,7 @@ public class UpstreamServiceService {
                 .maxWaitDurationMs(dto.maxWaitDurationMs())
                 .build();
         UpstreamService saved = repository.save(entity);
-        upstreamRegistryCache.reload();
+        upstreamRegistryCache.reload(repository.findAll());
         log.info("Da dang ky Upstream Service moi: {} -> {}", saved.getName(), saved.getBaseHost());
         return toDto(saved);
     }
@@ -80,9 +100,9 @@ public class UpstreamServiceService {
         entity.setMaxWaitDurationMs(dto.maxWaitDurationMs());
         UpstreamService saved = repository.save(entity);
         // Upstream doi (timeout/circuit-breaker) anh huong toi moi endpoint dang tham
-        // chieu no - nap lai ca 2 cache trong-process de co hieu luc ngay, khong can restart.
-        registryCache.reload();
-        upstreamRegistryCache.reload();
+        // chieu no - nap lai cache trong-process de co hieu luc ngay cho Control Plane
+        // (Data Plane tu dong bo rieng qua RemoteConfigSyncService, xem javadoc class).
+        upstreamRegistryCache.reload(repository.findAll());
         // reload() o tren chi lam UpstreamService entity moi hon trong cache - RestTemplate/
         // CircuitBreaker/Retry/Bulkhead cua UpstreamHttpExecutor van la instance CU (tao 1 lan
         // duy nhat theo ten, xem UpstreamHttpExecutor.invalidate() javadoc) neu khong xoa o
@@ -104,8 +124,7 @@ public class UpstreamServiceService {
                     + "' dang duoc dung boi " + stepCount + " backend step(s), khong the xoa.");
         }
         repository.delete(entity);
-        registryCache.reload();
-        upstreamRegistryCache.reload();
+        upstreamRegistryCache.reload(repository.findAll());
         upstreamHttpExecutor.invalidate(entity.getName());
         log.info("Da xoa Upstream Service: {}", entity.getName());
     }

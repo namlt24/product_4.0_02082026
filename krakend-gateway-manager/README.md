@@ -213,8 +213,18 @@ mỗi bước, cache hit, lỗi). API: `GET /api/logs/requests`, `GET
 /api/logs/requests/{requestId}/hops` (nằm dưới `/api/**` nên tự động được
 `ApiKeyAuthFilter` bảo vệ như mọi API Control Plane khác).
 
+**Giữ log tối đa N ngày** (`gatewaymanager.audit.retention-days`, mặc định
+`3`, đổi qua `GATEWAY_AUDIT_RETENTION_DAYS`): `AuditLogRetentionService` chạy
+job nền trong CHÍNH backend, mỗi 24h liệt kê các index `gwm-requests-*`/
+`gwm-hops-*` và **xoá cả index** (không phải xoá từng document) nếu ngày
+trong tên index cũ hơn hạn giữ — Elasticsearch không có TTL cho document đơn
+lẻ nên xoá theo index-ngày (đã đặt tên sẵn theo ngày, xem mục 7) là cách rẻ và
+đúng chuẩn. Đặt `retention-days<=0` để tắt hẳn (giữ vĩnh viễn). Fail-open như
+mọi thao tác Elasticsearch khác trong hệ thống này: ES lỗi/gián đoạn chỉ bỏ
+qua lần dọn dẹp đó, tự thử lại 24h sau, không ảnh hưởng traffic thật.
+
 > **Chưa làm (P2, không chặn dùng V1)**: chưa redact PII (idNo, tel, email...)
-> trước khi ghi vào ES, chưa có chính sách ILM tự xoá index cũ.
+> trước khi ghi vào ES.
 
 ## 8. Giới hạn hiện tại
 

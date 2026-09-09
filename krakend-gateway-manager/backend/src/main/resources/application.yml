@@ -113,6 +113,10 @@ gatewaymanager:
     elasticsearch:
       host: ${GATEWAY_AUDIT_ES_HOST:localhost}
       port: ${GATEWAY_AUDIT_ES_PORT:9200}
+    # So ngay giu lai log (gwm-requests-*/gwm-hops-*) - qua han se bi XOA CA
+    # INDEX tu dong (xem AuditLogRetentionService), khong phai xoa tung
+    # document. Dat <=0 de tat han (giu vinh vien, tu quan ly bang tay).
+    retention-days: ${GATEWAY_AUDIT_RETENTION_DAYS:3}
 
 # Resilience4j: dependency moi, dang ky dong theo TEN Upstream Service tai
 # runtime (xem UpstreamHttpExecutor) - cac gia tri default duoi day ap dung

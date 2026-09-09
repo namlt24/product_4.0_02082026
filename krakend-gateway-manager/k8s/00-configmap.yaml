@@ -41,6 +41,9 @@ data:
   GATEWAY_AUDIT_ENABLED: "true"
   GATEWAY_AUDIT_ES_HOST: "elasticsearch.doi-cua-ban.local"
   ES_PORT: "9200"
+  # So ngay giu lai log - qua han bi XOA CA INDEX tu dong moi 24h (xem
+  # AuditLogRetentionService). Dat <=0 de tat han (giu vinh vien).
+  GATEWAY_AUDIT_RETENTION_DAYS: "3"
 
   # Elastic APM - tuy chon, agent tu tat neu khong ket noi duoc.
   APM_SERVER_HOST: "apm.doi-cua-ban.local"

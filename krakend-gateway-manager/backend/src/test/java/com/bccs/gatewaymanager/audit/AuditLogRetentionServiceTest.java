@@ -127,6 +127,69 @@ class AuditLogRetentionServiceTest {
         service.purgeExpiredIndices();
     }
 
+    /**
+     * purgeExpiredIndices() goi indices().get(...) mot lan RIENG cho moi prefix
+     * ("gwm-requests-*" roi "gwm-hops-*") - stub phai phan biet theo pattern duoc
+     * hoi, neu khong 1 ket qua gia se bi tinh trung lap cho ca 2 prefix.
+     */
+    private void stubGetForPrefix(String prefix, Map<String, IndexState> result) throws Exception {
+        when(indicesClient.get(any(GetIndexRequest.class))).thenAnswer(invocation -> {
+            GetIndexRequest req = invocation.getArgument(0);
+            String pattern = req.index().get(0);
+            GetIndexResponse response = org.mockito.Mockito.mock(GetIndexResponse.class);
+            when(response.result()).thenReturn(pattern.equals(prefix + "*") ? result : Map.of());
+            return response;
+        });
+    }
+
+    @Test
+    void bienHanGiuLog_dungRetentionDaysNgay_khongThuaKhongThieu() throws Exception {
+        // retentionDays=3 tinh tu hom nay: phai giu DUNG age 0,1,2 (3 ngay), xoa tu age 3
+        // tro di. Day chinh la bien da tung bi sai (off-by-one: cutoff tinh
+        // "today.minusDays(retentionDays)" roi xoa "truoc cutoff" se giu du 4 ngay
+        // thay vi 3) - test nay phai FAIL neu loi do quay lai.
+        when(client.indices()).thenReturn(indicesClient);
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        String age2 = indexName("gwm-requests-", today.minusDays(2)); // PHAI giu
+        String age3 = indexName("gwm-requests-", today.minusDays(3)); // PHAI xoa
+
+        Map<String, IndexState> result = new LinkedHashMap<>();
+        result.put(age2, indexState);
+        result.put(age3, indexState);
+        stubGetForPrefix("gwm-requests-", result);
+
+        AuditLogRetentionService service = new AuditLogRetentionService(client, true, 3);
+        service.purgeExpiredIndices();
+
+        ArgumentCaptor<DeleteIndexRequest> captor = ArgumentCaptor.forClass(DeleteIndexRequest.class);
+        verify(indicesClient).delete(captor.capture());
+        assertThat(captor.getValue().index().get(0)).isEqualTo(age3);
+    }
+
+    @Test
+    void loiXoa1Index_khongLamBoSotIndexQuaHanKhacTrongCungPrefix() throws Exception {
+        // deleteIndex() tu bat loi rieng cho tung index (khong de 1 lan xoa that bai
+        // lam dut ca vong lap) - xac nhan index thu 2 van duoc thu xoa du index thu
+        // nhat bi loi.
+        when(client.indices()).thenReturn(indicesClient);
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        String oldIndex1 = indexName("gwm-requests-", today.minusDays(5));
+        String oldIndex2 = indexName("gwm-requests-", today.minusDays(6));
+
+        Map<String, IndexState> result = new LinkedHashMap<>();
+        result.put(oldIndex1, indexState);
+        result.put(oldIndex2, indexState);
+        stubGetForPrefix("gwm-requests-", result);
+        when(indicesClient.delete(any(DeleteIndexRequest.class)))
+                .thenThrow(new RuntimeException("ES down luc xoa index 1"))
+                .thenReturn(null);
+
+        AuditLogRetentionService service = new AuditLogRetentionService(client, true, 3);
+        service.purgeExpiredIndices();
+
+        verify(indicesClient, org.mockito.Mockito.times(2)).delete(any(DeleteIndexRequest.class));
+    }
+
     @Test
     void khongCoIndexNaoQuaHan_khongGoiDelete() throws Exception {
         when(client.indices()).thenReturn(indicesClient);

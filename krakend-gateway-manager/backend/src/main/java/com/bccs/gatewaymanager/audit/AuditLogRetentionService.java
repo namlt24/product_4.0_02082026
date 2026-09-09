@@ -96,7 +96,12 @@ public class AuditLogRetentionService {
         if (!enabled || retentionDays <= 0) {
             return;
         }
-        LocalDate cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(retentionDays);
+        // "Giu lai N ngay gan nhat" nghia la giu CA hom nay - vi du retentionDays=3 tai
+        // hom nay (age 0) phai giu ca age 1, age 2, xoa tu age 3 tro di. Neu tinh
+        // cutoff = today.minusDays(retentionDays) roi xoa "truoc cutoff", se giu du
+        // N+1 ngay (age 0..N) thay vi N ngay - da xac nhan qua mo phong thuc te truoc
+        // khi sua. Tru them 1 de cutoff dung dang "ngay CO GIA TRI CU NHAT con duoc giu".
+        LocalDate cutoff = LocalDate.now(ZoneOffset.UTC).minusDays(retentionDays - 1L);
         for (String prefix : INDEX_PREFIXES) {
             purgePrefix(prefix, cutoff);
         }

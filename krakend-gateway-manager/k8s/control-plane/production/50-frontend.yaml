@@ -1,0 +1,79 @@
+# ============================================================================
+# Frontend Angular Control Plane - BẢN PRODUCTION (thêm podAntiAffinity so
+# với bản lab).
+#
+# UI tĩnh do Nginx phục vụ, tự proxy "/api/**" sang Service "gwm-backend"
+# trong CÙNG namespace (frontend/nginx.conf.template) — không đọc
+# ConfigMap/Secret nào. CHỈ tồn tại ở Control Plane — Data Plane không có
+# frontend (đội dùng dịch vụ chỉ cần backend + Redis).
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-frontend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: control-plane-ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: control-plane-ui
+    spec:
+      # >>> SỬA (nếu hạ tầng thay đổi quy ước node): PHẢI cùng bộ node với
+      # 30-redis.yaml/40-backend.yaml.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10029001014
+                      - worker-10029001015
+      containers:
+        - name: frontend
+          image: registry-lab.kcntt.net/bccs/gateway-manager-ui:2.0.0-cp.1
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-frontend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane-ui
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane-ui
+  ports:
+    - port: 80
+      targetPort: 80

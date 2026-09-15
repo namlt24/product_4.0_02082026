@@ -349,6 +349,28 @@
 
       <div class="field-row">
         <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Bulkhead riêng - số lệnh gọi đồng thời tối đa (tuỳ chọn)</mat-label>
+          <input matInput type="number" [(ngModel)]="edit.maxConcurrentCallsOverride" placeholder="để trống = dùng chung Bulkhead của Upstream Service" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 1">
+          <mat-label>Bulkhead riêng - thời gian chờ tối đa (ms, tuỳ chọn)</mat-label>
+          <input matInput type="number" [(ngModel)]="edit.maxWaitDurationMsOverride" placeholder="để trống = dùng theo Upstream Service" />
+        </mat-form-field>
+      </div>
+      @if (edit.maxConcurrentCallsOverride) {
+        <div class="field-note field-note--warning">
+          <mat-icon inline="true">warning</mat-icon>
+          <span>
+            Tạo 1 giới hạn <strong>ĐỘC LẬP</strong> chỉ cho riêng step này - không dùng chung với các step/Endpoint
+            khác đang gọi cùng Upstream. Hệ thống <strong>KHÔNG</strong> tự kiểm tra tổng các override có vượt sức
+            chịu thật của Upstream hay không - tự tính theo công thức
+            <code>P99(giây) × rps thực tế × 1.2</code> trước khi bật.
+          </span>
+        </div>
+      }
+
+      <div class="field-row">
+        <mat-form-field appearance="outline" style="flex: 1">
           <mat-label>Group (tuỳ chọn)</mat-label>
           <input matInput [(ngModel)]="edit.group" placeholder="vd: auth" />
         </mat-form-field>

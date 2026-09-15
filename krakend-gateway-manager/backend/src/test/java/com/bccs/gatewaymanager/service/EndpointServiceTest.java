@@ -1,9 +1,11 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.EndpointChangeType;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
@@ -44,6 +46,10 @@ class EndpointServiceTest {
     private DependencyAnalyzer dependencyAnalyzer;
     @Mock
     private EndpointVersionService versionService;
+    @Mock
+    private GatewayCacheService cacheService;
+    @Mock
+    private UpstreamHttpExecutor upstreamHttpExecutor;
 
     private static final String TEAM = "default";
 
@@ -51,7 +57,7 @@ class EndpointServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EndpointService(repository, mapper, dependencyAnalyzer, versionService);
+        service = new EndpointService(repository, mapper, dependencyAnalyzer, versionService, cacheService, upstreamHttpExecutor);
         // Moi method cua EndpointService gio doc CurrentTeamContext.require() - xem
         // ApiKeyAuthFilter, thiet lap gia tri gia dinh nay o tang test (khong co
         // request/filter that trong unit test).
@@ -74,6 +80,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
@@ -88,6 +95,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
+                null, null,
                 FieldMappingSourceType.STEP_RESPONSE, conditionSourceStepOrder, "field", operator, conditionExpectedValue,
                 nextIfTrue, nextIfFalse, null, null, null, null, null, null);
     }
@@ -96,6 +104,7 @@ class EndpointServiceTest {
     private BackendStepDto stepWithOnError(int order, Integer onErrorStepOrder) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
                 null, null,
                 null, null, null, null, null,
                 null, null, onErrorStepOrder, null, null, null, null, null);
@@ -106,6 +115,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null,
                 null, null, null, parallelGroup, null, null, null, null);
     }
@@ -115,6 +125,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
+                null, null,
                 FieldMappingSourceType.REQUEST_BODY, null, "x", ConditionOperator.EXISTS, null,
                 null, null, null, parallelGroup, null, null, null, null);
     }
@@ -123,6 +134,7 @@ class EndpointServiceTest {
     private BackendStepDto stepWithCompensation(int order, String compUpstreamId, GatewayMethod compMethod, String compUrlPattern) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
                 null, null,
                 null, null, null, null, null,
                 null, null, null, null,
@@ -611,6 +623,7 @@ class EndpointServiceTest {
         BackendStepDto s1 = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null,
                 null, null, 2, 10, null, null, null, null);
         EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
@@ -714,6 +727,7 @@ class EndpointServiceTest {
         return new BackendStepDto(null, order, "step" + order, method, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
@@ -756,5 +770,209 @@ class EndpointServiceTest {
                 List.of(stepWithMethod(1, GatewayMethod.POST), step(2)), List.of(), false, null, false, true, 60);
 
         assertThat(service.create(dto)).isNotNull();
+    }
+
+    // ---- Bug that: bat cache (response loi bi cache) -> tat -> BAT LAI -> entry Redis cu
+    // van con vi key cache khong phu thuoc cacheEnabled. purgeStaleCacheIfChanged() phai
+    // xoa cache Redis (Control Plane) MOI LAN luu co doi field anh huong cache. ----
+
+    private BackendStepDto stepWithCache(int order, boolean cacheEnabled) {
+        return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
+                false, cacheEnabled, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
+                null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    private EndpointResponseDto endpointDtoWithCache(boolean responseCacheEnabled, BackendStepDto... steps) {
+        return new EndpointResponseDto("ep-1", "n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(steps), List.of(), null, null, false, 86400, false, responseCacheEnabled, 300);
+    }
+
+    @Test
+    void update_stepCacheEnabledTatDi_xoaCachePatternCuaUpstreamDo() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        // Lan goi 1 (before, TRUOC khi mutate) tra ve cacheEnabled=true; lan goi 2 (result,
+        // SAU khi save) tra ve cacheEnabled=false - mo phong dung 1 lan tat cache.
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, stepWithCache(1, true)),
+                endpointDtoWithCache(false, stepWithCache(1, false)));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(cacheService).deleteByPattern("gwm:cache:up:GET:*");
+    }
+
+    @Test
+    void update_stepCacheEnabledBatLai_xoaCachePatternCuaUpstreamDo() {
+        // Nhanh "bat lai" - CHINH nhanh nguoi dung bao loi that: tat (da xoa cache o lan
+        // truoc) -> bat lai -> phai xoa THEM 1 lan nua (idempotent, khong sao neu khong
+        // con gi de xoa - dam bao entry nao lot luoi o lan tat cung bi don o lan bat lai).
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, stepWithCache(1, false)),
+                endpointDtoWithCache(false, stepWithCache(1, true)));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(cacheService).deleteByPattern("gwm:cache:up:GET:*");
+    }
+
+    @Test
+    void update_khongDoiGiLienQuanCache_khongGoiXoaCache() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        EndpointResponseDto unchanged = endpointDtoWithCache(false, stepWithCache(1, false));
+        when(mapper.toResponseDto(any())).thenReturn(unchanged, unchanged);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(cacheService, never()).deleteByPattern(any());
+    }
+
+    @Test
+    void update_upstreamCuaStepDoiTen_xoaCaPatternCuLanMoi() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        BackendStepDto oldStep = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up-cu",
+                false, true, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        BackendStepDto newStep = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up-moi",
+                false, true, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, oldStep), endpointDtoWithCache(false, newStep));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(cacheService).deleteByPattern("gwm:cache:up-cu:GET:*");
+        verify(cacheService).deleteByPattern("gwm:cache:up-moi:GET:*");
+    }
+
+    @Test
+    void update_responseCacheEnabledDoi_xoaResponseCachePattern() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(true, stepWithCache(1, false)),
+                endpointDtoWithCache(false, stepWithCache(1, false)));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(cacheService).deleteByPattern("gwm:response-cache:ep-1:*");
+    }
+
+    // ---- Nut "Xoa cache" thu cong (khong doi cau hinh gi) - dung khi cache bi nhiem qua
+    // "Thu nhanh" tren draft chua luu, khong co su kien save nao de tu kich purge o tren. ----
+
+    @Test
+    void clearCache_xoaCaResponseCacheLanStepCacheDangBat() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(true, stepWithCache(1, true), stepWithCache(2, false)));
+
+        service.clearCache("ep-1");
+
+        verify(cacheService).deleteByPattern("gwm:response-cache:ep-1:*");
+        verify(cacheService).deleteByPattern("gwm:cache:up:GET:*");
+        verify(cacheService, org.mockito.Mockito.times(2)).deleteByPattern(any());
+    }
+
+    @Test
+    void clearCache_khongBatCacheGi_khongGoiXoaGi() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, stepWithCache(1, false)));
+
+        service.clearCache("ep-1");
+
+        verify(cacheService, never()).deleteByPattern(any());
+    }
+
+    // ---- Bulkhead RIENG theo step (maxConcurrentCallsOverride) - Resilience4j registry chi tao
+    // instance 1 LAN DAU, doi override xong khong don thi KHONG co hieu luc toi khi restart app
+    // (dung y het ly do purgeStaleCacheIfChanged() o tren ton tai cho cache) ----
+
+    private BackendStepDto stepWithBulkheadOverride(String stepId, String upstreamServiceName, Integer maxConcurrentCallsOverride) {
+        return new BackendStepDto(stepId, 1, "step1", GatewayMethod.GET, "/x", "up-1", upstreamServiceName,
+                false, false, 300, null, null, List.of(), List.of(), java.util.Map.of(), null, null,
+                null, null,
+                maxConcurrentCallsOverride, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    @Test
+    void update_maxConcurrentCallsOverrideDatMoi_goiInvalidateStepBulkhead() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up", null)),
+                endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up", 50)));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(upstreamHttpExecutor).invalidateStepBulkhead("up", "s1");
+    }
+
+    @Test
+    void update_maxConcurrentCallsOverrideDoiGiaTri_goiInvalidateStepBulkhead() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up", 50)),
+                endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up", 100)));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(upstreamHttpExecutor).invalidateStepBulkhead("up", "s1");
+    }
+
+    @Test
+    void update_khongDoiMaxConcurrentCallsOverride_khongGoiInvalidateStepBulkhead() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        EndpointResponseDto unchanged = endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up", 50));
+        when(mapper.toResponseDto(any())).thenReturn(unchanged, unchanged);
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        verify(upstreamHttpExecutor, never()).invalidateStepBulkhead(any(), any());
+    }
+
+    @Test
+    void update_upstreamCuaStepDoiTenTrongKhiConOverride_goiInvalidateStepBulkheadTheoTenUpstreamCu() {
+        EndpointConfig existing = EndpointConfig.builder().id("ep-1").build();
+        when(repository.findByIdAndTeamCode("ep-1", TEAM)).thenReturn(Optional.of(existing));
+        when(mapper.toResponseDto(any())).thenReturn(
+                endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up-cu", 50)),
+                endpointDtoWithCache(false, stepWithBulkheadOverride("s1", "up-moi", 50)));
+        EndpointRequestDto dto = new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(step(1)), List.of(), false, null, false, false, 300);
+
+        service.update("ep-1", dto);
+
+        // Bulkhead rieng cua step khoa CA ten Upstream ("upstreamName#step:stepId") - doi ten
+        // Upstream ma khong don se de lai 1 bulkhead "mo coi" khoa theo ten CU.
+        verify(upstreamHttpExecutor).invalidateStepBulkhead("up-cu", "s1");
     }
 }

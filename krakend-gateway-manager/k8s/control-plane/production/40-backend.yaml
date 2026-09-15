@@ -1,0 +1,182 @@
+# ============================================================================
+# Backend Control Plane - BẢN PRODUCTION (xem README.md trong thư mục này)
+#
+# SPRING_PROFILES_ACTIVE=control-plane (xem application-control-plane.yml).
+# 1 BẢN DUY NHẤT dùng chung MỌI đội: CRUD Endpoint/Upstream/Team (/api/**),
+# đọc/ghi TRỰC TIẾP Oracle trung tâm. KHÔNG dispatch traffic thật (Data Plane
+# riêng từng đội — xem ../data-plane/production/).
+#
+# Khác bản lab (../40-backend.yaml):
+# - 2 replicas (HA) + podAntiAffinity 1 pod/node + PDB minAvailable 1 — CP là
+#   nguồn cấu hình duy nhất của MỌI Data Plane, downtime CP = không đội nào
+#   thêm/sửa được endpoint (DP cũ vẫn chạy nhờ fail-open, nhưng chỉ需 1 đội
+#   cần khai báo mới giữa giờ cao điểm là bế).
+# - Rollout maxUnavailable 1 / maxSurge 0 — BẮT BUỘC với anti-affinity trên
+#   2 node đã đầy 2 pod (surge pod không bao giờ schedule được → rollout treo).
+# - Image 2.0.0-cp.5 (đồng bộ bản Data Plane: ETag/304 sync + HttpClient5).
+#
+# SUA TRƯỚC KHI APPLY: nodeAffinity (2 node theo quy ước hạ tầng) — các giá
+# trị nhạy cảm (DB password, platform key) nằm ở Secret "gwm-secret" tạo bằng
+# kubectl (HƯỚNG_DẪN_PRODUCTION.md bước 3), KHÔNG hardcode ở đây.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  # PRODUCTION: 2 replica trên 2 node khác nhau (quy ước hạ tầng .14/.15).
+  # LƯU Ý LẦN ĐẦU TRIỂN KHAI LÊN DB CÒN TRỐNG: 2 pod cùng chạy Hibernate
+  # ddl-auto=update có thể race tạo schema → deploy lần đầu với replicas 1
+  # (kubectl apply rồi scale --replicas=1), đợi Ready, rồi "kubectl scale
+  # deploy/gwm-backend --replicas=2". Nếu DB đã có sẵn 9 bảng (case chuẩn —
+  # xem checklist mục 0 của hướng dẫn) thì apply thẳng 2 replicas như file.
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    # maxSurge 0: anti-affinity required không cho pod mới đứng chung node với
+    # pod cũ, mà 2 node đã đầy 2 pod → pod surge không bao giờ schedule được
+    # → rollout treo vĩnh viễn. maxUnavailable 1 = cập nhật lần lượt, luôn
+    # còn 1/2 pod phục vụ (CRUD chậm đi 1 lúc rollout là chấp nhận được).
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: control-plane
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: control-plane
+    spec:
+      # >>> SỬA (nếu hạ tầng thay đổi quy ước node): 2 node của Control Plane.
+      # Cả 3 pod gwm-* (redis, backend, frontend) phải cùng bộ node này.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10029001014
+                      - worker-10029001015
+        # 2 replica phải nằm 2 node KHÁC nhau — nếu không, node down = mất cả
+        # 2 pod, HA thành vô nghĩa.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: gateway-manager
+                  app.kubernetes.io/component: control-plane
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: backend
+          # Cụm testlab-c2 chỉ phân giải được tên registry-lab (push tên
+          # reg-hosted-lab — 2 tên CHUNG storage, tag/digest như nhau).
+          image: registry-lab.kcntt.net/bccs/gateway-manager:2.0.0-cp.5
+          envFrom:
+            - configMapRef:
+                name: gwm-config
+            - secretRef:
+                name: gwm-secret
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "control-plane"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SPRING_APPLICATION_NAME
+              value: "krakend-gateway-manager-control-plane"
+            - name: ELASTIC_APM_SERVICE_NAME
+              value: "krakend-gateway-manager-control-plane"
+            - name: ELASTIC_APM_SERVER_URL
+              value: "http://$(APM_SERVER_HOST):$(APM_SERVER_PORT)"
+            - name: ELASTIC_APM_ENVIRONMENT
+              value: "$(APM_ENVIRONMENT)"
+            - name: ELASTIC_APM_APPLICATION_PACKAGES
+              value: "com.bccs.gatewaymanager"
+            - name: GATEWAY_AUDIT_ES_PORT
+              value: "$(ES_PORT)"
+          # startupProbe: BẮT BUỘC khi Oracle trung tâm qua WAN — Hibernate
+          # validate schema (ddl-auto=validate, đọc metadata qua JDBC getColumns)
+          # đã xác nhận thực tế mất ~6.5 phút (Oracle 19c WAN, 2026-09-10), trong
+          # khi liveness chỉ chịu được ~2ph15s → kubelet kill (exit 137
+          # CrashLoopBackOff, KHÔNG phải OOM). 60 x 10s = ~10 phút đủ cho start
+          # chậm nhất. KHÔNG rút ngắn con số này.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 60
+            timeoutSeconds: 2
+          # Readiness dùng "/actuator/health" (endpoint TỔNG HỢP, gồm cả
+          # DataSource health indicator của Oracle) — Oracle là phụ thuộc BẮT
+          # BUỘC của Control Plane (fail-closed đúng cho DB): Oracle gián đoạn
+          # thì rút pod khỏi Service (không nhận CRUD mới) nhưng KHÔNG restart
+          # pod. Về mặt HA: 2 replica đứng 2 node, Oracle chập chờn theo WAN
+          # có thể làm cả 2 rơi readiness cùng lúc — đây là hành vi ĐÚNG
+          # (không đội nào nhận được CRUD trả dữ liệu nửa vời).
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 0   # startupProbe giữ vai trò này từ nay
+            periodSeconds: 15
+            failureThreshold: 5
+          # CP là admin CRUD + phục vụ sync của các DP (mỗi DP ~1 req/15s,
+          # 20 đội = ~1.3 rps nền) — tải nhẹ, không cần sizing như Data Plane.
+          # RSS quan sát thực tế ~280MB; limit 1Gi dư an toàn cho GC + spike
+          # khi import/export cấu hình lớn.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# PRODUCTION: PDB bảo đảm "kubectl drain node" (vật lý node, nâng cấp K8s)
+# không điều cả 2 pod CP cùng lúc — luôn còn ít nhất 1 pod phục vụ CRUD/sync.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: control-plane

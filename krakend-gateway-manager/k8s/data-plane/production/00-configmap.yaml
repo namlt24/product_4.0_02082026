@@ -1,0 +1,90 @@
+# ============================================================================
+# ConfigMap Data Plane - BẢN PRODUCTION (sizing 1000 RPS, xem README.md)
+#
+# Mỗi ĐỘI tự triển khai 1 bản riêng của chính mình. Bảng dưới liệt kê những
+# giá trị PHẢI sửa theo hạ tầng của đội trước khi apply — phần còn lại đã
+# được sizing sẵn cho 1000 RPS, KHÔNG cần đụng vào.
+#
+# ┌──────────────────────────┬──────────────────────────────────────────────┐
+# │ Biến PHẢI sửa            │ Giá trị cần điền                             │
+# ├──────────────────────────┼──────────────────────────────────────────────┤
+# │ TEAM_CODE                │ mã đội trên Control Plane (vd myviettel-prod)│
+# │ CONTROL_PLANE_BASE_URL   │ IP-node:8051 của Control Plane testlab-c2    │
+# │ APM_ENVIRONMENT          │ trùng TEAM_CODE (chỉ dùng cho quan sát)      │
+# └──────────────────────────┴──────────────────────────────────────────────┘
+#
+# Đối chiếu đúng TÊN biến với backend/src/main/resources/application-data-plane.yml.
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gwm-config
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+data:
+  # >>> SỬA: mã đội của bạn (trùng với team đã tạo trên Control Plane). <<<
+  # Biến này KHÔNG dùng để sync — Data Plane được nhận diện qua TEAM KEY trong
+  # Secret gwm-secret (RemoteConfigSync chỉ gửi header X-Gateway-Admin-Key; CP
+  # tra ngược api_key -> teamCode). Sai giá trị này chỉ làm tên service trên
+  # APM/monitoring nhầm đội, sync vẫn chạy.
+  TEAM_CODE: "<<<SUA: ma-doi>>>"
+
+  # >>> SỬA: URL gốc Control Plane trung tâm. <<<
+  # RemoteConfigSyncService gọi GET {url}/api/config/export định kỳ để lấy cấu
+  # hình Endpoint/Upstream CỦA CHÍNH ĐỘI NÀY.
+  # Hiện Control Plane chạy trên cụm testlab-c2, NodePort backend API = 8051,
+  # chưa có DNS chung -> dùng IP node testlab-c2. QUY ĐỊNH HẠ TẦNG: đội chỉ
+  # được dùng node .14/.15 (worker-10029001014 / worker-10029001015) — .14 là
+  # node đã kiểm chứng route 2 chiều myviettel -> testlab-c2 OPEN. Khi có
+  # DNS/Ingress chung thì đổi sang hostname chuẩn.
+  CONTROL_PLANE_BASE_URL: "http://<<<SUA: ip-node-14>>>:8051"
+  CONTROL_PLANE_SYNC_INTERVAL_SECONDS: "15"
+
+  # Redis - Service "gwm-redis" trong CÙNG namespace (30-redis.yaml), DNS nội
+  # bộ k8s. KHÔNG sửa nếu giữ nguyên tên Service trong bộ manifest này.
+  REDIS_HOST: "gwm-redis"
+  REDIS_PORT: "6379"
+
+  # Rate limit traffic thật - đếm theo client IP (X-Forwarded-For nếu có, không
+  # thì getRemoteAddr), chia sẻ GIỮA CÁC POD qua Redis. Giá trị là TỔNG của mỗi
+  # IP trong 1 window trước khi bị 429.
+  #
+  # SIZING 1000 RPS (2026-09-14): 3000/60s = 50 rps/IP — ngưỡng bảo vệ hợp lý
+  # cho 1 IP app-server; 20-30 IP client thì tổng cộng trần 1000 RPS.
+  # - Loadtest từ 1-2 máy: tạm đặt cao hơn (vd 12000 = 200 rps/IP) rồi TRẢ LẠI
+  #   3000 sau test.
+  # - Nếu đội có ít hệ thống gọi to hơn (vd 3 IP x 400 rps): tăng tương ứng.
+  # - GATEWAY_RATE_LIMIT_ENABLED=false chỉ dùng khi đo baseline throughput
+  #   của gateway không có giới hạn.
+  GATEWAY_RATE_LIMIT_ENABLED: "true"
+  GATEWAY_RATE_LIMIT_WINDOW_SECONDS: "60"
+  GATEWAY_RATE_LIMIT_MAX_REQUESTS: "3000"
+
+  # Connection pool HTTP tới Upstream (Apache HttpClient 5 - UpstreamHttpExecutor).
+  # Số kết nối = số request ĐỒNG THỜI (Little's Law: ~500/pod với mean 1.5s),
+  # không phải rps — 600/550 là trần cho 1000 RPS trên 3 pod.
+  #
+  # SCALE LÊN 2000 RPS (mục 8 hướng dẫn): chỉ tăng 2 giá trị này (ví dụ
+  # 1200/1100 với 6 pod) + rollout restart, KHÔNG phải build lại image.
+  GATEWAY_HTTP_POOL_MAX_TOTAL: "600"
+  GATEWAY_HTTP_POOL_MAX_PER_ROUTE: "550"
+
+  # Audit log (request/hoạt động) - tuỳ chọn. Đội CHƯA có Elasticsearch riêng
+  # thì đặt GATEWAY_AUDIT_ENABLED="false" (không ảnh hưởng traffic thật).
+  # >>> SỬA nếu đội dùng ES khác: GATEWAY_AUDIT_ES_HOST / ES_PORT. <<<
+  GATEWAY_AUDIT_ENABLED: "true"
+  GATEWAY_AUDIT_ES_HOST: "elasticsearch"
+  ES_PORT: "9200"
+  # Số ngày giữ log - quá hạn bị XÓA CẢ INDEX tự động mỗi 24h
+  # (AuditLogRetentionService). Đặt <=0 để tắt hẹn (giữ vĩnh viễn).
+  # Production đề xuất 30 nếu ES đủ dung lượng; 3 nếu ES dùng chung ít ổ.
+  GATEWAY_AUDIT_RETENTION_DAYS: "3"
+
+  # Elastic APM - tuỳ chọn, agent tự tắt nếu không kết nối được.
+  # LƯU Ý: nếu cụm của đội cần token cho apm-server (401) thì image không gắn
+  # agent — các biến chỉ là đọc thừa, vô hại.
+  APM_SERVER_HOST: "apm-server-8"
+  APM_SERVER_PORT: "8200"
+  # >>> SỬA: trùng TEAM_CODE (chỉ dùng cho quan sát, không ảnh hưởng sync). <<<
+  APM_ENVIRONMENT: "<<<SUA: ma-doi>>>"

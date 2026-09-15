@@ -26,6 +26,44 @@
   }
 }
 
+// Ghi chu pham vi so lieu (CHI phan anh Thu ngay/Thu nhanh cua Control Plane, KHONG phai
+// traffic that tren Data Plane) - dung y het mau .field-note (dang) o endpoint-form/endpoint-canvas
+// component nhung khai bao lai o day vi Angular scope style theo tung component.
+.scope-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: var(--gwm-accent-light);
+  border: 1px solid #a5f3fc;
+  border-radius: var(--gwm-radius-md);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--gwm-text-secondary);
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    color: var(--gwm-accent);
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  code {
+    background: rgba(8, 145, 178, 0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--gwm-accent);
+    font-size: 12px;
+  }
+
+  strong {
+    color: var(--gwm-text);
+  }
+}
+
 .center-state {
   display: flex;
   align-items: center;
@@ -71,12 +109,29 @@
 }
 
 .upstream-name {
+  flex: 1;
+  min-width: 0;
   font-size: 14.5px;
   font-weight: 700;
   color: var(--gwm-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Gom cac chip (canh bao Bulkhead mac dinh + trang thai circuit breaker) lai voi nhau
+// o ben phai - de .upstream-name (flex:1, co the bi truncate) dung chiem het khoang trong.
+.chip-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .state-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10.5px;
   font-weight: 700;
   padding: 3px 9px;
@@ -84,6 +139,12 @@
   white-space: nowrap;
   background: var(--gwm-bg);
   color: var(--gwm-text-secondary);
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+  }
 
   &[data-state='CLOSED'] {
     background: var(--gwm-success-bg);
@@ -95,6 +156,13 @@
     color: var(--gwm-danger);
   }
   &[data-state='HALF_OPEN'] {
+    background: var(--gwm-warning-bg);
+    color: var(--gwm-warning);
+  }
+
+  // Bien the "canh bao cau hinh" (khac han cac data-state o tren, von phan anh trang thai
+  // CHAY THAT cua circuit breaker) - dung cho nhac nho tinh, khong doi mau theo trang thai runtime.
+  &--warning {
     background: var(--gwm-warning-bg);
     color: var(--gwm-warning);
   }
@@ -142,4 +210,10 @@
   font-weight: 700;
   color: var(--gwm-text);
   font-variant-numeric: tabular-nums;
+
+  // So lan Bulkhead tu choi > 0 - lam noi bat, day la dau hieu that su co request bi anh
+  // huong (khac han "chua tung dung toi", khong can canh bao).
+  &--danger {
+    color: var(--gwm-danger);
+  }
 }

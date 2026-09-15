@@ -71,6 +71,20 @@ public class EndpointController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Xoa NGAY cache Redis cua Control Plane (phuc vu "Thu ngay"/"Thu nhanh")
+     * cho endpoint nay - dung khi can don cache bay gio ma KHONG doi cau hinh
+     * gi (xem EndpointService.clearCache() - vi du cache bi nhiem response loi
+     * do test qua "Thu nhanh" nhieu lan). CHI xoa duoc Redis cua Control Plane
+     * nay - KHONG xoa duoc cache tren Data Plane that cua doi (khac Redis/khac
+     * mang) - FE PHAI hien ro gioi han nay.
+     */
+    @PostMapping("/{id}/clear-cache")
+    public ResponseEntity<Void> clearCache(@PathVariable String id) {
+        endpointService.clearCache(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ---- Lich su phien ban (xem EndpointVersionService) ----
 
     @GetMapping("/{id}/versions")

@@ -428,7 +428,8 @@ public class CompositeOrchestratorEngine {
         HttpMethod httpMethod = HttpMethod.valueOf(step.method().name());
         JsonNode rawResponse = upstreamHttpExecutor.call(upstream, httpMethod, resolvedUrl, headers, body,
                 step.cacheEnabled(), step.cacheTtlSeconds(), step.stepOrder(), step.name(),
-                step.connectTimeoutMs(), step.readTimeoutMs());
+                step.connectTimeoutMs(), step.readTimeoutMs(),
+                step.id(), step.maxConcurrentCallsOverride(), step.maxWaitDurationMsOverride());
 
         JsonNode unwrapped = (step.target() == null || step.target().isBlank())
                 ? rawResponse
@@ -603,8 +604,11 @@ public class CompositeOrchestratorEngine {
         JsonNode body = buildCompensationBody(compensationMappings, ctx);
 
         HttpMethod httpMethod = HttpMethod.valueOf(step.compensationMethod().name());
+        // Bu tru KHONG dung Bulkhead rieng cua step chinh (khong co field cau hinh rieng cho
+        // nhanh bu tru) - luon dung chung Bulkhead cua Upstream, xem UpstreamHttpExecutor.bulkheadFor().
         upstreamHttpExecutor.call(upstream, httpMethod, resolvedUrl, headers, body,
-                false, 0, step.stepOrder(), "[BU TRU] " + step.name(), null, null);
+                false, 0, step.stepOrder(), "[BU TRU] " + step.name(), null, null,
+                null, null, null);
     }
 
     /**

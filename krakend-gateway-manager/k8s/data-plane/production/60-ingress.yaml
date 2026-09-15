@@ -1,0 +1,34 @@
+# ============================================================================
+# Service NodePort cho traffic thật vào Data Plane — App/Client của đội gọi
+# vào endpoint composite qua "<IP node>:<nodePort>". NodePort thay Ingress vì
+# các cụm nội bộ chưa có Ingress Controller chuẩn hoá (các service nhà đều
+# dùng NodePort).
+#
+# >>> SỬA TRƯỚC KHI APPLY: 2 giá trị nodePort phải là port CÒN TRỐNG trên
+# TOÀN cụm (kiểm tra: kubectl get svc -A | grep <port>). Ghi lại IP node sẽ
+# exposed cho App/Client vào comment dưới.
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-backend-nodeport
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: <<<SUA: port-http-con-trong>>>
+    # TLS termination client -> gateway (cert self-signed từ Secret gwm-tls,
+    # xem 40-backend.yaml). App/Client cần tin cậy: import tls.crt vào
+    # truststore của App (chỉ phân phát tls.crt, KHÔNG phân phát tls.key).
+    - name: https
+      port: 8443
+      targetPort: 8443
+      nodePort: <<<SUA: port-https-con-trong>>>

@@ -1,8 +1,11 @@
 package com.bccs.gatewaymanager.service;
 
+import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.config.CurrentTeamContext;
+import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
+import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.EndpointChangeType;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.exception.BusinessException;
@@ -14,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +39,8 @@ public class EndpointService {
     private final EndpointMapper mapper;
     private final DependencyAnalyzer dependencyAnalyzer;
     private final EndpointVersionService versionService;
+    private final GatewayCacheService cacheService;
+    private final UpstreamHttpExecutor upstreamHttpExecutor;
 
     @Transactional(readOnly = true)
     public List<EndpointResponseDto> list(String search) {
@@ -90,13 +96,125 @@ public class EndpointService {
         if (repository.existsByTeamCodeAndPathAndIdNot(CurrentTeamContext.require(), dto.path(), id)) {
             throw new BusinessException("GW-001", "Path '" + dto.path() + "' da ton tai o mot endpoint khac.");
         }
+        // Chup lai TRUOC khi mapper.updateEntity() sua entity tai cho - can ban
+        // "truoc" de so sanh voi ket qua sau save, phat hien cau hinh anh huong
+        // cache co doi khong (xem purgeStaleCacheIfChanged()).
+        EndpointResponseDto before = mapper.toResponseDto(entity);
         mapper.updateEntity(entity, dto);
         EndpointConfig saved = repository.save(entity);
         EndpointResponseDto result = mapper.toResponseDto(saved);
         rejectIfCyclic();
         versionService.recordSnapshot(saved, changeType);
+        purgeStaleCacheIfChanged(before, result);
+        invalidateChangedStepBulkheads(before, result);
         log.info("Da cap nhat endpoint ({}): {} {}", changeType, saved.getMethod(), saved.getPath());
         return result;
+    }
+
+    /**
+     * Xoa cache Redis CU (Control Plane, phuc vu "Thu ngay"/"Thu nhanh") cho
+     * MOI phan cau hinh anh huong toi key cache thuc su doi giua "before"/"result" -
+     * xem bug that: bat cache (response loi bi cache) -> tat cache (het loi, bo
+     * qua cache) -> BAT LAI cache -> loi tai xuat hien vi key cache KHONG doi
+     * khi cacheEnabled doi, entry Redis cu (mang response loi) van con nguyen
+     * toi khi het TTL. Goi o day dam bao MOI lan luu co doi field anh huong
+     * cache deu don sach entry cu truoc, khong can doi TTL tu het.
+     *
+     * Chi xoa duoc cache CUA CHINH CONTROL PLANE nay (Redis rieng, phuc vu Thu
+     * ngay/Thu nhanh) - cache tren (cac) Data Plane that (Redis rieng tung doi,
+     * khac mang/khac tien trinh) duoc don o RemoteConfigSyncService.
+     * invalidateChangedEndpointCaches() theo dung mirror pattern nay, cho
+     * doi toi chu ky sync ke tiep (toi da sync-interval-seconds giay).
+     */
+    private void purgeStaleCacheIfChanged(EndpointResponseDto before, EndpointResponseDto result) {
+        boolean responseCacheKeyMayChange = !before.path().equals(result.path()) || before.method() != result.method();
+        if (before.responseCacheEnabled() != result.responseCacheEnabled()
+                || ((before.responseCacheEnabled() || result.responseCacheEnabled()) && responseCacheKeyMayChange)) {
+            cacheService.deleteByPattern("gwm:response-cache:" + result.id() + ":*");
+        }
+
+        Map<Integer, BackendStepDto> beforeByOrder = new HashMap<>();
+        for (BackendStepDto s : before.steps()) {
+            beforeByOrder.put(s.stepOrder(), s);
+        }
+        for (BackendStepDto after : result.steps()) {
+            BackendStepDto old = beforeByOrder.get(after.stepOrder());
+            if (old == null) {
+                continue; // Step moi them - chua co gi duoc cache duoi stepOrder nay.
+            }
+            boolean cacheKeyMayChange = !old.upstreamServiceName().equals(after.upstreamServiceName())
+                    || old.method() != after.method() || !old.urlPattern().equals(after.urlPattern());
+            if (old.cacheEnabled() != after.cacheEnabled()
+                    || ((old.cacheEnabled() || after.cacheEnabled()) && cacheKeyMayChange)) {
+                cacheService.deleteByPattern("gwm:cache:" + old.upstreamServiceName() + ":" + old.method() + ":*");
+                if (!old.upstreamServiceName().equals(after.upstreamServiceName()) || old.method() != after.method()) {
+                    cacheService.deleteByPattern("gwm:cache:" + after.upstreamServiceName() + ":" + after.method() + ":*");
+                }
+            }
+        }
+    }
+
+    /**
+     * Don Bulkhead RIENG theo step (xem BackendStep.maxConcurrentCallsOverride,
+     * UpstreamHttpExecutor.bulkheadFor()) khi CHINH override cua step do doi - Resilience4j
+     * registry chi tao instance 1 LAN DAU (dung y het ly do UpstreamHttpExecutor.invalidate()
+     * ton tai cho Upstream) nen doi xong khong don thi KHONG co hieu luc toi khi restart app.
+     * Mirror dung cau truc voi purgeStaleCacheIfChanged() o tren (so sanh theo stepOrder,
+     * step moi them/step da xoa thi bo qua - khong co gi de don/chua co gi de don).
+     *
+     * Chi don Bulkhead cua CHINH Control Plane nay (dung cho "Thu ngay"/"Thu nhanh") - Data
+     * Plane that don Bulkhead rieng cua no o RemoteConfigSyncService.invalidateChangedStepBulkheads(),
+     * cho toi chu ky sync ke tiep (toi da sync-interval-seconds giay).
+     */
+    private void invalidateChangedStepBulkheads(EndpointResponseDto before, EndpointResponseDto result) {
+        Map<Integer, BackendStepDto> beforeByOrder = new HashMap<>();
+        for (BackendStepDto s : before.steps()) {
+            beforeByOrder.put(s.stepOrder(), s);
+        }
+        for (BackendStepDto after : result.steps()) {
+            BackendStepDto old = beforeByOrder.get(after.stepOrder());
+            if (old == null) {
+                continue; // Step moi them - chua tung co Bulkhead rieng nao de don.
+            }
+            boolean overrideChanged = !java.util.Objects.equals(old.maxConcurrentCallsOverride(), after.maxConcurrentCallsOverride())
+                    || !java.util.Objects.equals(old.maxWaitDurationMsOverride(), after.maxWaitDurationMsOverride());
+            // Doi Upstream cua step (upstreamServiceName) MA truoc do dang co override rieng
+            // cung phai don - khoa Bulkhead gom ca ten Upstream ("upstreamName#step:stepId"),
+            // doi Upstream ma khong don se de lai 1 Bulkhead "mo coi" khoa theo ten Upstream CU.
+            boolean upstreamChangedWithOldOverride = old.maxConcurrentCallsOverride() != null
+                    && !old.upstreamServiceName().equals(after.upstreamServiceName());
+            if (overrideChanged || upstreamChangedWithOldOverride) {
+                upstreamHttpExecutor.invalidateStepBulkhead(old.upstreamServiceName(), old.id());
+            }
+        }
+    }
+
+    /**
+     * Xoa NGAY cache Redis cua Control Plane (dung khi "Thu ngay"/"Thu nhanh")
+     * cho 1 endpoint - dung khi nguoi dung muon don cache bay gio, KHONG doi
+     * cau hinh gi (vi du cache bi nhiem response loi do test draft qua "Thu
+     * nhanh" nhieu lan - EndpointTryService.tryAdhoc() dung CHUNG keyspace
+     * cache voi step da luu neu trung (upstreamName, method), purgeStaleCacheIfChanged()
+     * o tren khong bat duoc truong hop nay vi khong co gi "doi" giua 2 lan luu).
+     *
+     * CHI xoa duoc Redis cua CHINH Control Plane nay - KHONG xoa duoc cache
+     * tren Data Plane that cua doi (khac Redis/khac mang, xem javadoc
+     * purgeStaleCacheIfChanged()) - FE PHAI hien ro gioi han nay cho nguoi dung,
+     * khong duoc ngu y da xoa toan bo.
+     */
+    @Transactional(readOnly = true)
+    public void clearCache(String id) {
+        EndpointConfig entity = findOrThrow(id);
+        EndpointResponseDto dto = mapper.toResponseDto(entity);
+        if (dto.responseCacheEnabled()) {
+            cacheService.deleteByPattern("gwm:response-cache:" + dto.id() + ":*");
+        }
+        for (BackendStepDto step : dto.steps()) {
+            if (step.cacheEnabled()) {
+                cacheService.deleteByPattern("gwm:cache:" + step.upstreamServiceName() + ":" + step.method() + ":*");
+            }
+        }
+        log.info("Da xoa cache (Control Plane) theo yeu cau thu cong cho endpoint: {} {}", dto.method(), dto.path());
     }
 
     @Transactional

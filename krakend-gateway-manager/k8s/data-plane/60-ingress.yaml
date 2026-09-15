@@ -1,33 +1,33 @@
 # ============================================================================
-# NGINX Ingress Controller - 1 host DUY NHAT, tro THANG toi backend (khong co
-# frontend o Data Plane - traffic o day la App/Client that cua doi goi vao
-# endpoint composite, khong phai nguoi dung xem UI).
+# Service NodePort cho traffic that vao Data Plane - App/Client cua doi goi
+# vao endpoint composite qua "<IP node>:<nodePort>" (thay the Ingress NGINX
+# vi cum myviettel khong xac minh duoc Ingress Controller, cac service nha
+# deu dung NodePort).
 #
-# SUA "host:" ben duoi thanh dung domain noi bo cua doi truoc khi apply - xem
-# DEPLOYMENT_GUIDE.md. Vi du nay dung HTTP thuan; neu doi co TLS noi bo, them
-# "tls:" + Secret chua certificate va annotation tuong ung.
+# TRIEN KHAI THAT 2026-09-10 (cum myviettel): nodePort 8052 - con trong
+# (8050/8051 da bi chiem boi payment-service/gateway-manager-backend 1.1.0
+# cu, 8837 la UI gateway cu). Node IP: 10.207.252.17 (worker-10207252017).
 # ============================================================================
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: v1
+kind: Service
 metadata:
-  name: gwm-ingress
+  name: gwm-backend-nodeport
   labels:
     app.kubernetes.io/name: gateway-manager
     app.kubernetes.io/component: data-plane
-  annotations:
-    # Endpoint composite co the tra ve payload gop tu nhieu step backend, doi
-    # gioi han mac dinh 1m cua NGINX Ingress neu can cho response lon.
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
 spec:
-  ingressClassName: nginx
-  rules:
-    - host: gwm-api.doi-cua-ban.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: gwm-backend
-                port:
-                  number: 8080
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 8052
+    # TLS chang client -> gateway (cert self-signed SAN 10.207.252.17, Secret
+    # gwm-tls). App/Client can tin cay thi import tls.crt vao truststore.
+    - name: https
+      port: 8443
+      targetPort: 8443
+      nodePort: 8053

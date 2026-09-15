@@ -86,6 +86,7 @@ export class EndpointFormComponent implements OnInit {
 
   readonly saving = signal(false);
   readonly isEditMode = signal(false);
+  readonly clearingCache = signal(false);
 
   readonly upstreams = signal<UpstreamService[]>([]);
   /** Danh sach endpoint KHAC (khong tinh chinh no) - dung cho Endpoint Picker khi cau hinh "goi lai gateway nay". */
@@ -120,6 +121,33 @@ export class EndpointFormComponent implements OnInit {
         error: () => this.snackBar.open('Khong tai duoc endpoint.', 'Dong', { duration: 3000 }),
       });
     }
+  }
+
+  /**
+   * Xoa NGAY cache Redis cua Control Plane (dung khi "Thu ngay"/"Thu nhanh" bi
+   * nhiem response loi do test nhieu lan - xem EndpointApiService.clearCache()).
+   * CHI xoa duoc cache Control Plane - toast phai nhac ro gioi han nay, khong
+   * duoc ngu y da xoa het cache tren Data Plane that.
+   */
+  clearCache(): void {
+    if (!this.endpointId) {
+      return;
+    }
+    this.clearingCache.set(true);
+    this.api.clearCache(this.endpointId).subscribe({
+      next: () => {
+        this.clearingCache.set(false);
+        this.snackBar.open(
+          'Đã xoá cache trên Control Plane. Cache trên Data Plane thật (nếu có) sẽ tự hết hạn theo TTL đã đặt.',
+          'Đóng',
+          { duration: 4000 },
+        );
+      },
+      error: (err) => {
+        this.clearingCache.set(false);
+        this.snackBar.open(err?.error?.message ?? 'Xoá cache thất bại.', 'Đóng', { duration: 4000 });
+      },
+    });
   }
 
   // ------------------------------------------------------------------ //
@@ -159,6 +187,9 @@ export class EndpointFormComponent implements OnInit {
       // Override timeout rieng cho step nay - de trong (null) = dung mac dinh cua Upstream Service.
       connectTimeoutMs: [step.connectTimeoutMs ?? null, [Validators.min(100), Validators.max(60000)]],
       readTimeoutMs: [step.readTimeoutMs ?? null, [Validators.min(100), Validators.max(60000)]],
+      // Override Bulkhead rieng cho step nay - de trong (null) = dung CHUNG Bulkhead cua Upstream.
+      maxConcurrentCallsOverride: [step.maxConcurrentCallsOverride ?? null, [Validators.min(1), Validators.max(1000)]],
+      maxWaitDurationMsOverride: [step.maxWaitDurationMsOverride ?? null, [Validators.min(0), Validators.max(60000)]],
       group: [step.group ?? ''],
       target: [step.target ?? ''],
       allowFieldsText: [step.allowFields.join(', ')],
@@ -538,6 +569,8 @@ export class EndpointFormComponent implements OnInit {
       cacheTtlSeconds: s.cacheTtlSeconds,
       connectTimeoutMs: s.connectTimeoutMs || null,
       readTimeoutMs: s.readTimeoutMs || null,
+      maxConcurrentCallsOverride: s.maxConcurrentCallsOverride || null,
+      maxWaitDurationMsOverride: s.maxWaitDurationMsOverride || null,
       group: s.group || null,
       target: s.target || null,
       allowFields: splitCsv(s.allowFieldsText),

@@ -167,6 +167,34 @@ public class BackendStep {
     private Integer readTimeoutMs;
 
     /**
+     * Override Bulkhead (Resilience4j) RIENG cho step nay - null = dung chung
+     * Bulkhead cua UpstreamService (hanh vi cu, khong doi - moi step/Endpoint
+     * cung goi 1 Upstream van CHIA SE chung 1 gioi han so luong lenh goi dong
+     * thoi). Dat gia tri khac null de tach ra 1 Bulkhead RIENG, doc lap, chi
+     * ap dung cho step nay - dung khi 1 Endpoint/step cu the co nguy co "chiem
+     * het cho" cua cac Endpoint khac dang goi chung Upstream (noisy neighbor),
+     * mirror dung pattern DestinationRule subset override cua Istio/priority
+     * bucket cua Envoy: mac dinh dung chung ngan sach theo backend, chi tach
+     * rieng khi biet ro co rui ro - KHONG tu dong kiem tra tong cac override
+     * cong voi phan dung chung co vuot qua suc chiu that cua Upstream hay
+     * khong, nguoi cau hinh tu tinh theo cong thuc trong runbook (P99 giay x
+     * rps thuc te x 1.2). Xem UpstreamHttpExecutor.bulkheadFor().
+     * Nullable, KHONG can @ColumnDefault (giong canvasX/canvasY o tren).
+     */
+    @Column(name = "max_concurrent_calls_override")
+    private Integer maxConcurrentCallsOverride;
+
+    /**
+     * Thoi gian cho toi da (ms) khi Bulkhead RIENG cua step nay (xem
+     * maxConcurrentCallsOverride) dang day cho - null = dung
+     * UpstreamService.maxWaitDurationMs. CHI co y nghia khi
+     * maxConcurrentCallsOverride khac null (Bulkhead dung chung cua Upstream
+     * luon dung dung UpstreamService.maxWaitDurationMs, khong doc field nay).
+     */
+    @Column(name = "max_wait_duration_ms_override")
+    private Integer maxWaitDurationMsOverride;
+
+    /**
      * Re nhanh (P1-5): sau khi step nay chay xong, dua vao 1 dieu kien (so sanh
      * 1 field lay tu response step truoc/body client) de quyet dinh step TIEP
      * THEO SE GOI la step nao - KHAC voi hanh vi mac dinh (luon di theo stepOrder

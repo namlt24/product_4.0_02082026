@@ -1,5 +1,6 @@
 package com.bccs.gatewaymanager.dto;
 
+import com.bccs.gatewaymanager.entity.UpstreamService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -42,6 +43,6 @@ public record UpstreamServiceDto(
         if (connectTimeoutMs <= 0) connectTimeoutMs = 1000;
         if (readTimeoutMs <= 0) readTimeoutMs = 3000;
         if (failureRateThreshold <= 0) failureRateThreshold = 50;
-        if (maxConcurrentCalls <= 0) maxConcurrentCalls = 20;
+        if (maxConcurrentCalls <= 0) maxConcurrentCalls = UpstreamService.DEFAULT_MAX_CONCURRENT_CALLS;
     }
 }

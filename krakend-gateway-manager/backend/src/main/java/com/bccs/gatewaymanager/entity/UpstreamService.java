@@ -27,6 +27,15 @@ import java.util.UUID;
 @Builder
 public class UpstreamService {
 
+    /**
+     * Gia tri mac dinh cua maxConcurrentCalls (Bulkhead) khi tao 1 Upstream moi - dung
+     * chung 1 hang so o day, UpstreamServiceDto (compact constructor) VA
+     * UpstreamHealthDto/UpstreamHealthService (usingDefaultBulkheadSizing) de tranh
+     * hardcode lap lai so "20" o nhieu noi khac nhau (rui ro that: sua 1 cho quen sua
+     * cho con lai, "usingDefaultBulkheadSizing" tren Dashboard bao sai).
+     */
+    public static final int DEFAULT_MAX_CONCURRENT_CALLS = 20;
+
     @Id
     @Builder.Default
     private String id = UUID.randomUUID().toString();
@@ -85,7 +94,7 @@ public class UpstreamService {
     @Builder.Default
     @org.hibernate.annotations.ColumnDefault("20")
     @Column(name = "max_concurrent_calls", nullable = false)
-    private int maxConcurrentCalls = 20;
+    private int maxConcurrentCalls = DEFAULT_MAX_CONCURRENT_CALLS;
 
     /**
      * Thoi gian toi da (ms) 1 lenh goi cho co "cho" trong Bulkhead truoc khi bi tu

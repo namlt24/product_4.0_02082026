@@ -5,6 +5,8 @@ import com.bccs.gatewaymanager.dto.UpstreamHealthDto;
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class UpstreamHealthService {
 
     private final UpstreamServiceRepository repository;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
+    private final BulkheadRegistry bulkheadRegistry;
     private final UpstreamHttpExecutor upstreamHttpExecutor;
 
     @Transactional(readOnly = true)
@@ -46,7 +49,19 @@ public class UpstreamHealthService {
         long total = hits + misses;
         double hitRate = total == 0 ? -1d : (double) hits / total;
 
+        // find() (KHONG phai bulkhead(name, supplier)) - dung y het ly do lam voi CircuitBreaker
+        // o tren: tra ve Optional rong neu Upstream nay CHUA TUNG co lenh goi nao, khong tu tao
+        // 1 bulkhead moi chi vi dang XEM man hinh health.
+        Bulkhead bulkhead = bulkheadRegistry.find(u.getName()).orElse(null);
+        // Chua tung goi lan nao = toan bo permit con nguyen, KHAC voi failureRate/bufferedCalls
+        // o tren (khong co sentinel -1 can thiet o day, "chua dung toi" co 1 gia tri DUNG ro rang).
+        int availableConcurrentCalls = bulkhead == null
+                ? u.getMaxConcurrentCalls() : bulkhead.getMetrics().getAvailableConcurrentCalls();
+        long bulkheadRejectedCount = upstreamHttpExecutor.bulkheadRejectionCount(u.getName());
+        boolean usingDefaultBulkheadSizing = u.getMaxConcurrentCalls() == UpstreamService.DEFAULT_MAX_CONCURRENT_CALLS;
+
         return new UpstreamHealthDto(u.getId(), u.getName(), u.getBaseHost(), u.isCircuitBreakerEnabled(),
-                state, failureRate, bufferedCalls, hits, misses, hitRate);
+                state, failureRate, bufferedCalls, hits, misses, hitRate,
+                u.getMaxConcurrentCalls(), availableConcurrentCalls, bulkheadRejectedCount, usingDefaultBulkheadSizing);
     }
 }

@@ -55,6 +55,17 @@ export class EndpointApiService {
   }
 
   /**
+   * Xoa NGAY cache Redis cua Control Plane (phuc vu "Thu ngay"/"Thu nhanh") cho
+   * endpoint nay - dung khi can don cache bay gio ma KHONG doi cau hinh gi (vi
+   * du cache bi nhiem response loi do test nhieu lan). CHI xoa duoc cache cua
+   * Control Plane - KHONG xoa duoc cache tren Data Plane that cua doi (khac
+   * Redis/khac mang - xem EndpointService.clearCache() o backend).
+   */
+  clearCache(id: string): Observable<void> {
+    return this.http.post<void>(`${this.endpointsUrl}/${id}/clear-cache`, {});
+  }
+
+  /**
    * Validate (canh bao vong lap phu thuoc) + nap lai cache dinh tuyen trong-process.
    * Luu y: khac voi truoc day, MOI thay doi qua create/update/delete DA co hieu
    * luc ngay tuc thi - goi endpoint nay chi de validate roi truoc mot loat thay

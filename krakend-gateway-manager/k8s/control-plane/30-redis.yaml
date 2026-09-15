@@ -1,0 +1,74 @@
+# ============================================================================
+# Redis nho cho Control Plane (cum testlab-c2 khong co Redis dung chung, ma
+# Spring Boot health indicator gom Redis -> /actuator/health bao DOWN khi
+# khong ket noi duoc -> readiness probe fail). Doc/ghi chi phuc vu cache tam
+# khi dung "Thu ngay" tren UI - mat data cache khong anh huong cau hinh.
+# emptyDir (khong PVC - cung ly do voi Oracle: khong co StorageClass default).
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-redis
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-redis
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane-redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: control-plane-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: control-plane-redis
+    spec:
+      # Quy dinh ha tang 2026-09-13: doi chi duoc dung 2 node worker-10029001014
+      # (10.29.1.14) + worker-10029001015 (10.29.1.15). Scheduler khong biet quy
+      # uoc "doi nao dung node nao" -> phai khai bao roi - khong pin thi pod bi
+      # rai ca cum (gap that: pod do cu tren .17/.21/.23/.25...).
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10029001014
+                      - worker-10029001015
+      containers:
+        - name: redis
+          image: registry-lab.kcntt.net/bccs/redis:7-alpine
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

@@ -92,6 +92,19 @@ export interface BackendStep {
   readTimeoutMs?: number | null;
 
   /**
+   * Override Bulkhead (Resilience4j) RIÊNG cho step này - null/để trống = dùng CHUNG
+   * Bulkhead của Upstream Service (mặc định, mọi step/Endpoint khác gọi cùng Upstream
+   * vẫn CHIA SẺ chung 1 giới hạn số lệnh gọi đồng thời). Đặt giá trị khác null để tách
+   * ra 1 Bulkhead riêng, độc lập, chỉ áp dụng cho step này - dùng khi 1 Endpoint/step cụ
+   * thể có nguy cơ "chiếm hết chỗ" của các Endpoint khác đang gọi chung Upstream (noisy
+   * neighbor). Hệ thống KHÔNG tự kiểm tra tổng các override có vượt sức chịu thật của
+   * Upstream hay không - tự tính theo công thức P99(giây) × rps thực tế × 1.2.
+   */
+  maxConcurrentCallsOverride?: number | null;
+  /** Chỉ có ý nghĩa khi maxConcurrentCallsOverride khác null - null = dùng Upstream Service.maxWaitDurationMs. */
+  maxWaitDurationMsOverride?: number | null;
+
+  /**
    * Rẽ nhánh (P1-5) - tất cả optional, không khai báo (conditionOperator=null/undefined)
    * = step chạy bình thường theo đúng stepOrder kế tiếp, không đổi hành vi cũ.
    * Chỉ dùng STEP_RESPONSE/REQUEST_BODY (không dùng STEP_RESPONSE_ARRAY_AGGREGATE).
@@ -288,6 +301,14 @@ export interface UpstreamHealth {
   cacheMisses: number;
   /** -1 = chua co du lieu (chua tung goi qua step cacheEnabled nao), khac 0% that su. */
   cacheHitRate: number;
+  /** Giới hạn số lệnh gọi đồng thời (Bulkhead dùng chung theo Upstream). */
+  maxConcurrentCalls: number;
+  /** Số "chỗ" Bulkhead còn trống tại thời điểm xem màn hình - = maxConcurrentCalls nếu chưa từng có lệnh gọi nào. */
+  availableConcurrentCalls: number;
+  /** Đếm dồn từ lúc app khởi động - số lần Bulkhead từ chối 1 lệnh gọi. */
+  bulkheadRejectedCount: number;
+  /** true = maxConcurrentCalls vẫn đang ở giá trị mặc định lúc tạo - nên kiểm tra lại trước khi nhận tải thật. */
+  usingDefaultBulkheadSizing: boolean;
 }
 
 /** Payload "Thu ngay" - xem EndpointTryRequestDto o backend. */
@@ -398,6 +419,8 @@ export function emptyStep(stepOrder: number): BackendStep {
     fieldRenameMapping: {},
     canvasX: null,
     canvasY: null,
+    maxConcurrentCallsOverride: null,
+    maxWaitDurationMsOverride: null,
     connectTimeoutMs: null,
     readTimeoutMs: null,
     conditionSourceType: null,

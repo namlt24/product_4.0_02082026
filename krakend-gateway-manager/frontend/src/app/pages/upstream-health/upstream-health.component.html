@@ -15,6 +15,16 @@
   </button>
 </div>
 
+<div class="scope-note">
+  <mat-icon inline="true">info</mat-icon>
+  <span>
+    Toàn bộ số liệu trên trang này (cache, Bulkhead...) chỉ phản ánh hoạt động <strong>Thử ngay/Thử nhanh</strong>
+    của CHÍNH Control Plane - <strong>KHÔNG phải traffic thật</strong> trên (các) Data Plane của đội (khác JVM/khác
+    Redis, xem SAD ADR-07). Muốn xem áp lực Bulkhead thật lúc tải cao, tra log <code>[Bulkhead:...] tu choi</code>
+    trên pod Data Plane tương ứng.
+  </span>
+</div>
+
 @if (loading()) {
   <div class="center-state">
     <mat-spinner diameter="26" />
@@ -31,7 +41,18 @@
       <mat-card class="health-card">
         <div class="health-card-header">
           <span class="upstream-name">{{ h.name }}</span>
-          <span class="state-chip" [attr.data-state]="h.circuitState">{{ stateLabel(h.circuitState) }}</span>
+          <div class="chip-group">
+            @if (h.usingDefaultBulkheadSizing) {
+              <span
+                class="state-chip state-chip--warning"
+                matTooltip="maxConcurrentCalls vẫn đang ở giá trị mặc định (20) - kiểm tra lại theo công thức P99(giây) × rps thực tế × 1.2 (xem HƯỚNG_DẪN_PRODUCTION.md mục 8) trước khi nhận tải thật, 20 thường quá thấp cho 1 Upstream đang phục vụ traffic sản xuất."
+              >
+                <mat-icon inline="true">warning</mat-icon>
+                Bulkhead mặc định
+              </span>
+            }
+            <span class="state-chip" [attr.data-state]="h.circuitState">{{ stateLabel(h.circuitState) }}</span>
+          </div>
         </div>
         <code class="base-host">{{ h.baseHost }}</code>
 
@@ -62,6 +83,21 @@
           <div class="metric">
             <span class="metric-label">Tỉ lệ hit</span>
             <span class="metric-value">{{ cacheHitRateLabel(h) }}</span>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric">
+            <span class="metric-label">Bulkhead tối đa</span>
+            <span class="metric-value">{{ h.maxConcurrentCalls }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Đang dùng</span>
+            <span class="metric-value">{{ h.maxConcurrentCalls - h.availableConcurrentCalls }}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Bị từ chối</span>
+            <span class="metric-value" [class.metric-value--danger]="h.bulkheadRejectedCount > 0">{{ h.bulkheadRejectedCount }}</span>
           </div>
         </div>
       </mat-card>

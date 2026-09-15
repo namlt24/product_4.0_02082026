@@ -1,0 +1,87 @@
+# ============================================================================
+# Redis Control Plane - BẢN PRODUCTION (giống bản lab, chỉ thêm pin node
+# comment + Recreate strategy giữ nguyên).
+#
+# Chỉ phục vụ cache tạm khi dùng "Thử ngay"/"Thử nhanh" trên UI — mất data
+# cache không ảnh hưởng cấu hình. NHƯNG Spring Boot health indicator gồm Redis
+# (fail-closed) → /actuator/health báo DOWN nếu không kết nối được → pod
+# không bao giờ Ready → BẮT BUỘC chạy file này cùng bộ.
+#
+# emptyDir (không PVC — cụm không có StorageClass default; data cache chấp
+# nhận mất khi pod restart).
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-redis
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-redis
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane-redis
+spec:
+  replicas: 1
+  # Recreate (không RollingUpdate): 1 pod duy nhất, cập nhật = dừng cũ rồi
+  # lên mới — tránh 2 Redis tranh nhau (không có PVC nên cũng chẳng có data
+  # gì để giữ, nhưng Recreate đúng nghĩa hơn cho singleton).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: control-plane-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: control-plane-redis
+    spec:
+      # >>> SỬA (nếu hạ tầng thay đổi quy ước node): PHẢI cùng bộ node với
+      # 40-backend.yaml/50-frontend.yaml.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10029001014
+                      - worker-10029001015
+      containers:
+        - name: redis
+          # Cụm chỉ phân giải được registry-lab (mirror nội bộ — KHÔNG dùng
+          # redis:7-alpine từ Docker Hub: DNS bị chặn → ErrImagePull).
+          image: registry-lab.kcntt.net/bccs/redis:7-alpine
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

@@ -89,6 +89,8 @@ public class EndpointMapper {
                 .canvasY(s.canvasY())
                 .connectTimeoutMs(s.connectTimeoutMs())
                 .readTimeoutMs(s.readTimeoutMs())
+                .maxConcurrentCallsOverride(s.maxConcurrentCallsOverride())
+                .maxWaitDurationMsOverride(s.maxWaitDurationMsOverride())
                 .conditionSourceType(s.conditionSourceType())
                 .conditionSourceStepOrder(s.conditionSourceStepOrder())
                 .conditionSourceField(s.conditionSourceField())
@@ -163,6 +165,7 @@ public class EndpointMapper {
                         new HashMap<>(s.getFieldRenameMapping()),
                         s.getCanvasX(), s.getCanvasY(),
                         s.getConnectTimeoutMs(), s.getReadTimeoutMs(),
+                        s.getMaxConcurrentCallsOverride(), s.getMaxWaitDurationMsOverride(),
                         s.getConditionSourceType(), s.getConditionSourceStepOrder(), s.getConditionSourceField(),
                         s.getConditionOperator(), s.getConditionExpectedValue(),
                         s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse(), s.getOnErrorStepOrder(),

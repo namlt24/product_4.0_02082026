@@ -1,14 +1,12 @@
-# File nay CHI gom cau hinh DUNG CHUNG ca 2 profile. TU 2026-09 (tach Control
-# Plane dung chung/Data Plane rieng tung doi, xem SAD ADR-07): PHAI chon 1
-# trong 2 profile khi chay that qua SPRING_PROFILES_ACTIVE=control-plane|
-# data-plane (xem application-control-plane.yml/application-data-plane.yml
-# cho cau hinh RIENG tung profile - vi du Oracle CHI o control-plane, Redis
-# van dung chung ca 2 vi CommonProfile-agnostic).
 server:
-  # Ca 2 profile deu lang nghe port 8080 - Control Plane phuc vu /api/**+UI,
-  # Data Plane phuc vu traffic that qua DynamicDispatcherController - khong
-  # con chung 1 tien trinh nua nen khong con dung "chung 1 port" theo nghia cu,
-  # chi la MOI profile deu mac dinh dung port nay khi trien khai rieng.
+  # File nay CHI gom cau hinh DUNG CHUNG ca 2 profile (control-plane/data-plane,
+  # xem SAD-Gateway-Manager.md ADR-07) - PHAI chon 1 trong 2 qua
+  # SPRING_PROFILES_ACTIVE khi chay that (xem application-control-plane.yml/
+  # application-data-plane.yml cho cau hinh RIENG tung ben, vi du Oracle/JPA
+  # CHI o control-plane). KHONG duoc dat spring.datasource/spring.jpa o day -
+  # se ap dung ca cho Data Plane neu ai do quen set profile, pha ho ddl-auto=
+  # validate bat buoc cua Control Plane (xem git history 2026-09-14: da tung
+  # bi hoi nham ve dang truoc-ADR-07 + ddl-auto=update, sua lai o day).
   port: ${SERVER_PORT:8080}
 
 spring:
@@ -58,6 +56,20 @@ gatewaymanager:
     # INDEX tu dong (xem AuditLogRetentionService), khong phai xoa tung
     # document. Dat <=0 de tat han (giu vinh vien, tu quan ly bang tay).
     retention-days: ${GATEWAY_AUDIT_RETENTION_DAYS:3}
+  # Connection pool HTTP toi Upstream (Apache HttpClient 5, xem
+  # UpstreamHttpExecutor.restTemplateFor()) - thay SimpleClientHttpRequestFactory
+  # mac dinh (moi request 1 ket noi moi, can port ephemeral o tai cao). So ket
+  # noi thuc te = so request DONG THOI (Little's Law), KHONG phai rps - nen chi
+  # thay doi khi scale so request dong thoi (vi du 2000 RPS voi mean 1.5s =
+  # 3000 in-flight tong cong -> tang max-total/max-per-route len theo).
+  upstream-http:
+    pool-max-total: ${GATEWAY_HTTP_POOL_MAX_TOTAL:600}
+    pool-max-per-route: ${GATEWAY_HTTP_POOL_MAX_PER_ROUTE:550}
+    # So phut 1 to hop (upstream, connectMs, readMs) khong duoc dung toi truoc khi
+    # tu dong dong pool+thread cua no (xem UpstreamHttpExecutor.sweepIdleClients()) -
+    # CHAN ro ri thread khi "Thu nhanh" thu nhieu gia tri timeout khac nhau ma
+    # khong bao gio invalidate() (chi doi ten/xoa Upstream moi goi ham do).
+    idle-eviction-minutes: ${GATEWAY_HTTP_POOL_IDLE_EVICTION_MINUTES:15}
 
 # Resilience4j: dependency moi, dang ky dong theo TEN Upstream Service tai
 # runtime (xem UpstreamHttpExecutor) - cac gia tri default duoi day ap dung

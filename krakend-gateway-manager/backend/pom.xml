@@ -46,6 +46,19 @@
             <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
 
+        <!-- Apache HttpClient 5 cho connection pool cua cac lan goi Upstream (xem
+             UpstreamHttpExecutor.httpRequestFactory()): mac dinh RestTemplate dung
+             SimpleClientHttpRequestFactory (JDK HttpURLConnection) - MOI request mo
+             ket noi TCP moi va dong ngay, khong co keep-alive pool. O 1000 RPS dieu
+             nay lam can port ephemeral (TIME_WAIT 60s x 1000 conn/s > 28k port, can
+             port sau khoang 30 giay). HttpClient5 pooling giu ket noi san sang, do
+             luong ket noi thuc te di thang xuong bang so luong ket noi Dong THOI
+             (khong phai so request/giay). Version duoc quan ly boi Spring Boot BOM. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
+
         <!-- Persistence: luu cau hinh Endpoint / BackendStep / FieldMapping / UpstreamService -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -146,6 +159,25 @@
             <version>1.56.0</version>
         </dependency>
 
+        <!-- Java agent THAT (khac apm-agent-api o tren - day la 1 file .jar rieng gan
+             luc chay qua -javaagent, KHONG nam tren classpath runtime cua app). Scope
+             "provided" de spring-boot-maven-plugin KHONG dong vao fat jar (repackage
+             mac dinh chi gom compile+runtime) - chi de maven-dependency-plugin:copy
+             (xem <build> ben duoi) lay ra thanh target/elastic-apm-agent.jar canh
+             gateway-manager.jar, Dockerfile COPY rieng ca 2 vao image. Sua 2026-09-14:
+             file nay tung duoc Dockerfile tu ADD truc tiep tu repo1.maven.org, nhung
+             bi rot mat khi doi Dockerfile sang "COPY jar build san tu host" (nhan tien
+             ne luon PKIX certificate_unknown do firewall cong ty chan Maven-trong-container -
+             ADD tu Docker build se dinh y het loi do vi cung 1 mang) - gio tai qua CHINH
+             Maven host (repo/mirror da cau hinh san, dang hoat dong binh thuong) thay vi
+             tai lai trong luc docker build. PHAI khop version voi apm-agent-api o tren. -->
+        <dependency>
+            <groupId>co.elastic.apm</groupId>
+            <artifactId>elastic-apm-agent</artifactId>
+            <version>1.56.0</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -189,6 +221,34 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <!-- Xuat agent APM (xem dependency "elastic-apm-agent" scope=provided o tren)
+                 ra target/elastic-apm-agent.jar CANH gateway-manager.jar sau khi package -
+                 Dockerfile COPY ca 2 file nay tu host vao image (xem Dockerfile), khong con
+                 tai gi tu trong luc docker build nua. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-apm-agent</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>co.elastic.apm</groupId>
+                                    <artifactId>elastic-apm-agent</artifactId>
+                                    <version>1.56.0</version>
+                                    <destFileName>elastic-apm-agent.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

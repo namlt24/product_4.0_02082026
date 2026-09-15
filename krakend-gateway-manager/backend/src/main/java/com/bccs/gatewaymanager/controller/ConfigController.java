@@ -11,10 +11,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -78,10 +80,17 @@ public class ConfigController {
         return ResponseEntity.ok(new GatewayInfoDto(gatewayPort, selfBaseUrl, aliases));
     }
 
-    /** Xuat toan bo cau hinh (Upstream + Endpoint) - dung backup hoac review qua Pull Request. */
+    /**
+     * Xuat toan bo cau hinh (Upstream + Endpoint) - dung backup, review qua Pull
+     * Request, VA la kenh sync chinh cua Data Plane (RemoteConfigSyncService goi
+     * dinh ky bang team key). Ho tro ETag/304 (xem ConfigExportImportService.export):
+     * client mang lai ETag lan truoc trong header If-None-Match - khong doi thi
+     * nhan 304 Not Modified voi body rong, doi thi nhan 200 + ETag moi.
+     */
     @GetMapping("/export")
-    public ResponseEntity<ConfigExportDto> export() {
-        return ResponseEntity.ok(exportImportService.export());
+    public ResponseEntity<ConfigExportDto> export(
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        return exportImportService.export(ifNoneMatch);
     }
 
     /** Nap lai 1 bundle da xuat - UPSERT (khop Upstream theo ten, Endpoint theo path), khong bao gio xoa gi. */

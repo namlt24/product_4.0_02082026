@@ -3,8 +3,13 @@
 Do **doi nen tang** (chung ta) trien khai va van hanh - KHONG phai tung doi
 BCCS tu trien khai (xem `../data-plane/README.md` cho phan cua tung doi).
 Gom: UI Angular + backend `SPRING_PROFILES_ACTIVE=control-plane` (CRUD
-Endpoint/Upstream/Team, doc/ghi truc tiep Oracle trung tam). Xem huong dan
-day du tai `../../DEPLOYMENT_GUIDE.md`.
+Endpoint/Upstream/Team, doc/ghi truc tiep Oracle trung tam).
+
+> **Huong dan deploy CANH TAY chi viec cho ha tang product that** (nguoi dung
+> that, request that - khac `../../DEPLOYMENT_GUIDE.md` la guide cum test cu):
+> doc `PRODUCTION_RUNBOOK.md` cung thu muc - gom checklist dau vao, trinh tu
+> build/apply, verify checklist, va SO TAY 10 bay da gap that 2026-09-10
+> (startupProbe cho Hibernate validate qua WAN, 2 lop key, registry, NodePort...).
 
 ## Thu tu apply
 

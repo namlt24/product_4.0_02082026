@@ -59,6 +59,17 @@ public record BackendStepDto(
         @Min(100) @Max(60000) Integer readTimeoutMs,
 
         /**
+         * Override Bulkhead RIENG cho step nay - null = dung chung Bulkhead cua
+         * UpstreamService (hanh vi cu, khong doi). Xem BackendStep.maxConcurrentCallsOverride
+         * ve y nghia/danh doi day du - khong tu dong kiem tra tong override co vuot suc
+         * chiu that cua Upstream hay khong.
+         */
+        @Min(1) @Max(1000) Integer maxConcurrentCallsOverride,
+
+        /** Chi co y nghia khi maxConcurrentCallsOverride khac null - null = dung UpstreamService.maxWaitDurationMs. */
+        @Min(0) @Max(60000) Integer maxWaitDurationMsOverride,
+
+        /**
          * Re nhanh (P1-5) - tat ca nullable, khong khai bao (conditionOperator=null)
          * = step chay binh thuong theo dung stepOrder ke tiep, khong doi hanh vi cu.
          * Chi dung STEP_RESPONSE/REQUEST_BODY (khong dung STEP_RESPONSE_ARRAY_AGGREGATE -

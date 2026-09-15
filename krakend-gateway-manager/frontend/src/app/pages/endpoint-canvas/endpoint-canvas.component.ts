@@ -53,6 +53,9 @@ interface StepEditModel {
   /** Override timeout rieng cho step nay - null = dung mac dinh cua Upstream Service. */
   connectTimeoutMs: number | null;
   readTimeoutMs: number | null;
+  /** Override Bulkhead rieng cho step nay - null = dung CHUNG Bulkhead cua Upstream Service. */
+  maxConcurrentCallsOverride: number | null;
+  maxWaitDurationMsOverride: number | null;
   group: string;
   target: string;
   allowFieldsText: string;
@@ -573,6 +576,8 @@ export class EndpointCanvasComponent implements OnInit {
       cacheTtlSeconds: s.cacheTtlSeconds ?? 300,
       connectTimeoutMs: s.connectTimeoutMs ?? null,
       readTimeoutMs: s.readTimeoutMs ?? null,
+      maxConcurrentCallsOverride: s.maxConcurrentCallsOverride ?? null,
+      maxWaitDurationMsOverride: s.maxWaitDurationMsOverride ?? null,
       group: s.group ?? '',
       target: s.target ?? '',
       allowFieldsText: s.allowFields.join(', '),
@@ -735,6 +740,8 @@ export class EndpointCanvasComponent implements OnInit {
       cacheTtlSeconds: edit.cacheTtlSeconds,
       connectTimeoutMs: edit.connectTimeoutMs || null,
       readTimeoutMs: edit.readTimeoutMs || null,
+      maxConcurrentCallsOverride: edit.maxConcurrentCallsOverride || null,
+      maxWaitDurationMsOverride: edit.maxWaitDurationMsOverride || null,
       group: edit.group || null,
       target: edit.target || null,
       allowFields: splitCsv(edit.allowFieldsText),

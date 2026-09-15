@@ -56,6 +56,7 @@ class EndpointMapperTest {
     private BackendStepDto step(String upstreamId, String compensationUpstreamId) {
         return new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", upstreamId, "up",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null, null, null,
+                null, null,
                 null, null, null, null, null, null, null, null, null,
                 compensationUpstreamId, compensationUpstreamId == null ? null : "comp-up", null, null);
     }

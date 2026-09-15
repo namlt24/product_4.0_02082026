@@ -20,7 +20,22 @@ metadata:
     app.kubernetes.io/name: gateway-manager
     app.kubernetes.io/component: data-plane
 spec:
-  replicas: 1
+  # SIZING 1000 RPS (2026-09-14): 3 replica — la TRAN cua cum nay vi nodeAffinity
+  # chi pin 3 node (.16/.17/.83) + podAntiAffinity required 1 pod/node. Moi pod
+  # chiu ~333 RPS thuong xuyen, ~500 RPS khi mat 1 node (dung luong N+1). Rate
+  # limit va cache deu dem qua Redis dung chung nen nhieu pod khong pha hanh vi
+  # nghiep vu (rate limit tinh theo client IP toan cuc, khong theo pod).
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    # maxSurge PHAI bang 0: anti-affinity required khong cho pod moi dung chung
+    # node voi pod cu, ma 3 node da day 3 pod cu -> pod surge khong bao gio
+    # schedule duoc -> rollout treo vinh vien (loi kinh dien anti-affinity +
+    # maxUnavailable 0). maxUnavailable 1 = cap nhat lan luot 1 pod, luc rollout
+    # van con 2/3 pod phuc vu — phu hop voi dung luong N+1 o tren.
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: gateway-manager
@@ -31,9 +46,34 @@ spec:
         app.kubernetes.io/name: gateway-manager
         app.kubernetes.io/component: data-plane
     spec:
+      # TRIEN KHAI THAT 2026-09-10 (cum myviettel): route lien cum myviettel ->
+      # testlab-c2 (10.29.1.21) CHI mo o mot so node (xac nhan 200/200/200/200/200
+      # tu worker-10207252016/.17/.83; worker-10207252080/.91 bi chan - timeout
+      # connect). Pin ve cac node da xac nhan THONG de sync khong bi dieu.
+      # Neu ha tang mo route cho moi node thi XOA Affinity nay di.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10207252016
+                      - worker-10207252017
+                      - worker-10207252083
+        # 2 replica phai nam 2 node KHAC nhau - nguoc lai node do down = mat
+        # ca 2 pod cung luc, replicas=2 tro nen vo nghia.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: gateway-manager
+                  app.kubernetes.io/component: data-plane
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: backend
-          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-backend:v2.0.0
+          image: reg-hosted-lab.kcntt.net/bccs/gateway-manager:2.0.0-cp.5
           envFrom:
             - configMapRef:
                 name: gwm-config
@@ -46,6 +86,24 @@ spec:
               value: "data-plane"
             - name: SERVER_PORT
               value: "8080"
+            # SIZING 1000 RPS (he thong cua vua, chua test tai — cau hinh de xuat,
+            # hieu chinh sau khi co so lieu that): JVM mac dinh (Temurin +
+            # UseContainerSupport) chi danh 25% memory limit cho heap — qua nho
+            # o 333 RPS/pod. Dat 55% cua 2.5Gi = ~1.4GB heap; phan con du lai
+            # cho thread stack + metaspace + native (xu ly JSON tao ra rat nhieu
+            # object thong qua ngan - heap nho = GC gat lien tuc). 55% chu khong
+            # 70% vi 500 thread x ~1MB stack = ~500MB non-heap phai nam ngoai heap.
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=55.0"
+            # Moi request Data Plane GIU 1 Tomcat thread suot qua tung step (goi
+            # upstream la blocking). Sizing theo Little's Law: 333 RPS/pod x
+            # mean 1.5s (p99 3s, mean ~ nua p99) = ~500 request dong thoi/pod
+            # khi full load — 200 thread mac dinh se tran, request xep hang.
+            # 500 thread du cho ca truong hop xau (mat 1 node, pod con lai don
+            # ~500 RPS). Bulkhead cua Resilience4j o upstream moi la lop chan
+            # that su; Tomcat chi can khong nghen truoc no.
+            - name: SERVER_TOMCAT_THREADS_MAX
+              value: "500"
             # Bien hop nhat tu TEAM_CODE (ConfigMap) - Spring Boot khong tu ghep
             # chuoi tu 2 nguon nen phai khai bao rieng o day, dung cu phap
             # $(VAR) de k8s noi TEAM_CODE da co san tu envFrom o tren.
@@ -69,6 +127,17 @@ spec:
           # traffic khi cache dinh tuyen con rong hoan toan. Sync loi SAU do
           # (Control Plane tam gian doan) KHONG lam readiness rot lai - fail-open
           # giu cache cu (xem RemoteConfigSyncService).
+          #
+          # SIZING 1000 RPS: them startupProbe de ngan liveness ("initialDelay 20s
+          # + 5 lan x 15s" = khoang 95s) giet pod khi JVM/GC khoi dong cham tren
+          # node qua tai — moi 1 lan restart mat traffic la rat ton. Startup cham
+          # nhat la lan dau (dong bo config lan dau tu CP qua WAN).
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 36   # 36 x 5s = 3 phut du cho Spring Boot khoi dong
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -80,16 +149,95 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 20
+            initialDelaySeconds: 0   # startupProbe giu vai tro nay tu nay
             periodSeconds: 15
             failureThreshold: 5
+          # SIZING 1000 RPS (he thong cua vua, de xuat truoc khi test tai):
+          # moi pod chiu ~333 RPS thuong xuyen (~500 khi mat 1 node). Little's
+          # Law voi mean 1.5s: ~500 request dong thoi/pod. Memory limit 2.5Gi =
+          # heap 1.4Gi (55%) + 500MB stack (500 thread) + metaspace/native ~0.5Gi
+          # — chua tron khi full load, khong OOMKill. CPU 2 core theo CONG VIEC
+          # (parse/serialize ~1.5ms/request), khong nhan theo latency — request
+          # cho upstream 3s khong dot CPU.
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
-            limits:
               cpu: "1"
               memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2500Mi
+        # TLS termination chang client -> gateway: nginx sidecar nghe HTTPS 8443
+        # (cert tu Secret "gwm-tls", SAN: IP node + DNS) va proxy ve localhost:8080
+        # (backend HTTP noi bo). Chon sidecar thay vi SSL bundle Spring vi:
+        # (1) khong phai build lai image; (2) nghe song song HTTPS 8443 + HTTP
+        # 8080 - NodePort HTTP 8052 giu lai de App/Client migrate dan; (3) probe
+        # k8s van HTTP 8080 khong doi. Client can tin cay: import tls.crt vao
+        # truststore cua App.
+        - name: tls-proxy
+          image: reg-hosted-lab.kcntt.net/nginx:1.29-alpine
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - name: gwm-tls
+              mountPath: /etc/nginx/certs
+              readOnly: true
+            - name: gwm-tls-nginx-conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          # SIZING 1000 RPS: TLS handshake (TLSv1.3) ton CPU dang ke khi client
+          # dong/mo ket noi nhieu (mobile/app). 250m limit la du cho 100-200 RPS;
+          # tang len 500m de sidecar khong tro thanh diem nghen tren cung pod
+          # voi backend khi 1 pod phai don ~500 RPS. Khong thay doi hanh vi.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+      volumes:
+        # Secret "gwm-tls" kieu kubernetes.io/tls (tls.crt/tls.key) - tao bang
+        # "kubectl create secret tls". SAN: IP 10.207.252.17 + DNS
+        # gwm-dataplane.myviettel.local, self-signed, han 1 nam (hết
+        # 2027-09-11) - den han phai thay: tao Secret moi + restart deployment.
+        - name: gwm-tls
+          secret:
+            secretName: gwm-tls
+        - name: gwm-tls-nginx-conf
+          configMap:
+            name: gwm-tls-nginx-conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gwm-tls-nginx-conf
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+data:
+  default.conf: |
+    # Endpoint composite co the tra payload gop tu nhieu step backend - gioi
+    # han body hop ly nhu Ingress template cu (10m).
+    client_max_body_size 10m;
+
+    server {
+        listen 8443 ssl;
+        http2 on;
+        server_name gwm-dataplane.myviettel.local;
+
+        ssl_certificate     /etc/nginx/certs/tls.crt;
+        ssl_certificate_key /etc/nginx/certs/tls.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_read_timeout 65s;
+        }
+    }
 ---
 apiVersion: v1
 kind: Service
@@ -103,5 +251,28 @@ spec:
     app.kubernetes.io/name: gateway-manager
     app.kubernetes.io/component: data-plane
   ports:
-    - port: 8080
+    - name: http
+      port: 8080
       targetPort: 8080
+    - name: https
+      port: 8443
+      targetPort: 8443
+---
+# SIZING 1000 RPS / HA: khong co PDB thi "kubectl drain node" (vat ly node,
+# nang cap K8s) co the dieu 2/3 pod Data Plane cung luc -> mat dung luong hoac
+# mat traffic trong ca rollout. minAvailable: 2 bao dam luon giu it nhat 2 pod
+# phuc vu (50% dung luong) trong moi tac dong do — ket hop voi maxUnavailable: 1
+# o strategy o tren de an toan 2 chieu (drain + rolling update).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: data-plane

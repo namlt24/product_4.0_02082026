@@ -42,7 +42,8 @@ class UpstreamHttpExecutorTest {
     private final BulkheadRegistry bulkheadRegistry = BulkheadRegistry.ofDefaults();
     private final UpstreamHttpExecutor executor = new UpstreamHttpExecutor(
             circuitBreakerRegistry, retryRegistry, bulkheadRegistry,
-            Mockito.mock(GatewayCacheService.class), new JsonMapper(), Mockito.mock(AuditLogService.class));
+            Mockito.mock(GatewayCacheService.class), new JsonMapper(), Mockito.mock(AuditLogService.class),
+            600, 550, 15);
 
     private HttpServer server;
 
@@ -110,7 +111,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc", port), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class)
                 .satisfies(e -> {
                     UpstreamHttpExecutor.UpstreamHttpErrorException ex = (UpstreamHttpExecutor.UpstreamHttpErrorException) e;
@@ -138,7 +139,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-4xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         assertThat(hitCount.get()).isEqualTo(1);
@@ -159,7 +160,7 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
 
         assertThatThrownBy(() -> executor.call(upstream("svc-5xx", port, true), HttpMethod.GET,
-                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
 
         // maxAttempts(3) trong retryFor() - 5xx co the la loi tam thoi nen VAN duoc retry.
@@ -174,7 +175,7 @@ class UpstreamHttpExecutorTest {
         } // socket dong ngay sau khi lay port trong - dam bao khong co gi lang nghe tai day
 
         assertThatThrownBy(() -> executor.call(upstream("svc", closedPort), HttpMethod.GET,
-                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null))
+                "http://localhost:" + closedPort + "/x", new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
     }
 
@@ -209,13 +210,13 @@ class UpstreamHttpExecutorTest {
         }).when(cacheService).put(Mockito.anyString(), Mockito.anyString(), Mockito.anyInt());
         UpstreamHttpExecutor cachingExecutor = new UpstreamHttpExecutor(
                 circuitBreakerRegistry, retryRegistry, bulkheadRegistry, cacheService, new JsonMapper(),
-                Mockito.mock(AuditLogService.class));
+                Mockito.mock(AuditLogService.class), 600, 550, 15);
 
         UpstreamService up = upstream("svc-cache", port);
         String url = "http://localhost:" + port + "/x";
 
-        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step", null, null);
-        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step", null, null);
+        JsonNode first = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step", null, null, null, null, null);
+        JsonNode second = cachingExecutor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, true, 60, 1, "test-step", null, null, null, null, null);
 
         assertThat(first.get("value").asLong()).isEqualTo(1L);
         assertThat(second.get("value").asLong()).isEqualTo(1L);
@@ -237,8 +238,8 @@ class UpstreamHttpExecutorTest {
         int port = server.getAddress().getPort();
         String url = "http://localhost:" + port + "/x";
 
-        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null);
-        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null);
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null);
+        executor.call(upstream("svc-no-cache", port), HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null);
 
         assertThat(hitCount.get()).isEqualTo(2); // cacheEnabled=false - khong lan nao duoc cache
     }
@@ -269,11 +270,11 @@ class UpstreamHttpExecutorTest {
         String url = "http://localhost:" + port + "/slow";
 
         // Khong override (null, null) - dung readTimeoutMs=3000 cua Upstream, 400ms cham cua server VAN thanh cong.
-        JsonNode result = executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null);
+        JsonNode result = executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "test-step", null, null, null, null, null);
         assertThat(result.get("ok").asBoolean()).isTrue();
 
         // Override readTimeoutMs=100ms (ngan hon 400ms server can) - PHAI timeout, du CUNG 1 Upstream/URL o tren van thanh cong.
-        assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "test-step-2", null, 100))
+        assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "test-step-2", null, 100, null, null, null))
                 .isInstanceOf(UpstreamHttpExecutor.UpstreamTimeoutException.class);
     }
 
@@ -297,7 +298,7 @@ class UpstreamHttpExecutorTest {
         var hops = TraceCollector.start();
         try {
             executor.call(upstream("svc-trace", port), HttpMethod.GET, url, new HttpHeaders(), null,
-                    false, 300, 1, "test-step", null, null);
+                    false, 300, 1, "test-step", null, null, null, null, null);
         } finally {
             TraceCollector.stop();
         }
@@ -330,7 +331,7 @@ class UpstreamHttpExecutorTest {
 
         assertThat(TraceCollector.current()).isNull();
         executor.call(upstream("svc-no-trace", port), HttpMethod.GET, url, new HttpHeaders(), null,
-                false, 300, 1, "test-step", null, null);
+                false, 300, 1, "test-step", null, null, null, null, null);
         assertThat(TraceCollector.current()).isNull();
     }
 
@@ -367,16 +368,186 @@ class UpstreamHttpExecutorTest {
         try {
             pool.submit(() -> {
                 firstCallStarted.countDown();
-                executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "step-1", null, null);
+                executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "step-1", null, null, null, null, null);
             });
             assertThat(firstCallStarted.await(2, TimeUnit.SECONDS)).isTrue();
             Thread.sleep(30); // dam bao lenh goi 1 da thuc su chiem duoc slot bulkhead truoc khi lenh goi 2 toi
 
-            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "step-2", null, null))
+            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "step-2", null, null, null, null, null))
                     .isInstanceOf(BulkheadFullException.class);
         } finally {
             pool.shutdown();
             pool.awaitTermination(2, TimeUnit.SECONDS);
         }
+    }
+
+    /**
+     * BulkheadFullException KHONG duoc retry (khac han 5xx/timeout) - retry ngay sau backoff
+     * khong lam tinh trang "het cho" bien mat, chi la 1 lan xin permit MOI vo ich (xem
+     * isRetryable()). Khac voi test call_upstream5xxWithRetryEnabled_isRetriedUpToMaxAttempts()
+     * (hitCount=3, retry That su cham server) - o day lenh goi thu 2 KHONG duoc cham toi
+     * HttpServer THEM LAN NAO ca, du retryEnabled=true, vi bi Bulkhead chan truoc khi kip
+     * goi HTTP.
+     */
+    @Test
+    void call_bulkheadFull_khongDuocRetry_khongGoiThemLanNaoToiHttpServer() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/slow", exchange -> {
+            hitCount.incrementAndGet();
+            try {
+                Thread.sleep(300); // du lau de lenh goi thu 2 chac chan con dang giu bulkhead luc lenh goi 1 goi toi
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            byte[] body = "{\"ok\":true}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        UpstreamService up = UpstreamService.builder()
+                .name("svc-bulkhead-no-retry").baseHost("http://localhost:" + port)
+                .connectTimeoutMs(500).readTimeoutMs(2000)
+                .circuitBreakerEnabled(false).retryEnabled(true) // retryEnabled=true - diem khac biet voi test tren
+                .maxConcurrentCalls(1).maxWaitDurationMs(50)
+                .build();
+        String url = "http://localhost:" + port + "/slow";
+
+        CountDownLatch firstCallStarted = new CountDownLatch(1);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            pool.submit(() -> {
+                firstCallStarted.countDown();
+                executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "step-1", null, null, null, null, null);
+            });
+            assertThat(firstCallStarted.await(2, TimeUnit.SECONDS)).isTrue();
+            Thread.sleep(30); // dam bao lenh goi 1 da thuc su chiem duoc slot bulkhead truoc khi lenh goi 2 toi
+
+            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "step-2", null, null, null, null, null))
+                    .isInstanceOf(BulkheadFullException.class);
+        } finally {
+            pool.shutdown();
+            pool.awaitTermination(2, TimeUnit.SECONDS);
+        }
+
+        // Chi 1 lenh goi (lenh goi 1, dang cham) thuc su cham toi HttpServer - lenh goi 2 bi
+        // Bulkhead chan truoc khi kip goi HTTP, va KHONG duoc Retry thu lai nen khong tao them
+        // request nao ca (khac han 5xx - se thay hitCount=3 vi retry that su goi lai HTTP).
+        assertThat(hitCount.get()).isEqualTo(1);
+    }
+
+    // ---- Bulkhead RIENG theo step (maxConcurrentCallsOverride, xem BackendStep.maxConcurrentCallsOverride) -
+    // mirror pattern Istio DestinationRule subset override/Envoy priority bucket: mac dinh dung CHUNG
+    // Bulkhead cua Upstream, tach RIENG DOC LAP khi 1 step khai bao override khac null - KHONG anh
+    // huong step khac cung Upstream khong khai bao override. ----
+
+    @Test
+    void call_stepCoMaxConcurrentCallsOverride_taoBulkheadDocLap_khongAnhHuongStepKhacCungUpstream() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/slow", exchange -> {
+            try {
+                Thread.sleep(300); // du lau de lenh goi thu 2 CUNG step chac chan con dang giu bulkhead rieng
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            byte[] body = "{\"ok\":true}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        // Bulkhead DUNG CHUNG cua Upstream con rong (maxConcurrentCalls=5) - KHONG phai lop chan
+        // trong test nay, chi bulkhead RIENG cua step-a (override=1) moi day.
+        UpstreamService up = UpstreamService.builder()
+                .name("svc-shared").baseHost("http://localhost:" + port)
+                .connectTimeoutMs(500).readTimeoutMs(2000)
+                .circuitBreakerEnabled(false).retryEnabled(false)
+                .maxConcurrentCalls(5).maxWaitDurationMs(50)
+                .build();
+        String url = "http://localhost:" + port + "/slow";
+
+        CountDownLatch stepACallStarted = new CountDownLatch(1);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            // step-a co maxConcurrentCallsOverride=1 - lenh goi nay chiem HET slot bulkhead RIENG cua no.
+            pool.submit(() -> {
+                stepACallStarted.countDown();
+                executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 1, "step-a",
+                        null, null, "step-a-id", 1, 50);
+            });
+            assertThat(stepACallStarted.await(2, TimeUnit.SECONDS)).isTrue();
+            Thread.sleep(30); // dam bao lenh goi step-a da thuc su chiem duoc slot bulkhead rieng cua no
+
+            // Goi lai CUNG step-a (cung stepId, cung override) - PHAI bi tu choi (bulkhead RIENG day).
+            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 2, "step-a",
+                    null, null, "step-a-id", 1, 50))
+                    .isInstanceOf(BulkheadFullException.class);
+
+            // Step KHAC ("step-b", khong khai bao override) cung Upstream - PHAI thanh cong binh
+            // thuong, KHONG bi anh huong boi bulkhead rieng cua step-a da day (2 bulkhead DOC LAP).
+            JsonNode result = executor.call(up, HttpMethod.GET, url, new HttpHeaders(), null, false, 300, 3, "step-b",
+                    null, null, "step-b-id", null, null);
+            assertThat(result.get("ok").asBoolean()).isTrue();
+        } finally {
+            pool.shutdown();
+            pool.awaitTermination(3, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void invalidateStepBulkhead_removesOnlyThatStepEntry_khongDungBulkheadChungCuaUpstreamHayStepKhac() {
+        String upstreamName = "svc-x";
+        String stepIdA = "step-a-id";
+        String stepIdB = "step-b-id";
+        // Mo phong dung nhung gi bulkheadFor(upstream, stepId, override, waitOverride) lam noi bo
+        // khi override khac null - khoa "upstreamName#step:stepId" (STEP_BULKHEAD_KEY_INFIX).
+        bulkheadRegistry.bulkhead(upstreamName); // bulkhead DUNG CHUNG cua Upstream
+        bulkheadRegistry.bulkhead(upstreamName + "#step:" + stepIdA);
+        bulkheadRegistry.bulkhead(upstreamName + "#step:" + stepIdB);
+        assertThat(bulkheadRegistry.find(upstreamName)).isPresent();
+        assertThat(bulkheadRegistry.find(upstreamName + "#step:" + stepIdA)).isPresent();
+        assertThat(bulkheadRegistry.find(upstreamName + "#step:" + stepIdB)).isPresent();
+
+        executor.invalidateStepBulkhead(upstreamName, stepIdA);
+
+        assertThat(bulkheadRegistry.find(upstreamName + "#step:" + stepIdA)).isEmpty();
+        assertThat(bulkheadRegistry.find(upstreamName)).isPresent(); // bulkhead CHUNG cua Upstream KHONG bi dong
+        assertThat(bulkheadRegistry.find(upstreamName + "#step:" + stepIdB)).isPresent(); // step KHAC khong bi anh huong
+    }
+
+    @Test
+    void invalidate_upstream_alsoRemovesAllStepOverrideBulkheadsCuaUpstreamDo() {
+        String upstreamName = "svc-y";
+        String stepId = "step-y-id";
+        bulkheadRegistry.bulkhead(upstreamName);
+        bulkheadRegistry.bulkhead(upstreamName + "#step:" + stepId);
+        assertThat(bulkheadRegistry.find(upstreamName + "#step:" + stepId)).isPresent();
+
+        executor.invalidate(upstreamName); // doi ten/xoa Upstream - phai don CA bulkhead rieng theo step cua no.
+
+        assertThat(bulkheadRegistry.find(upstreamName)).isEmpty();
+        assertThat(bulkheadRegistry.find(upstreamName + "#step:" + stepId)).isEmpty();
+    }
+
+    // ---- Dem so lan Bulkhead tu choi (xem docs/IMPROVEMENT-Bulkhead-Visibility-Gateway-Manager.md) -
+    // dung cho "Dashboard suc khoe Upstream", ghi tu ResilienceConfig (xem ResilienceConfigTest). ----
+
+    @Test
+    void bulkheadRejectionCount_chuaTungGhiNhanLanNao_traVe0() {
+        assertThat(executor.bulkheadRejectionCount("chua-tung-ghi-nhan")).isZero();
+    }
+
+    @Test
+    void recordBulkheadRejection_demDongDungTenBulkhead_khongAnhHuongTenKhac() {
+        executor.recordBulkheadRejection("svc-a");
+        executor.recordBulkheadRejection("svc-a");
+        executor.recordBulkheadRejection("svc-a#step:step-1"); // bulkhead rieng theo step - khoa ten KHAC hoan toan.
+
+        assertThat(executor.bulkheadRejectionCount("svc-a")).isEqualTo(2);
+        assertThat(executor.bulkheadRejectionCount("svc-a#step:step-1")).isEqualTo(1);
+        assertThat(executor.bulkheadRejectionCount("svc-b")).isZero();
     }
 }

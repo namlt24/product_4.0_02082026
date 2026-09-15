@@ -10,6 +10,7 @@ import com.bccs.gatewaymanager.config.CurrentTeamContext;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
+import com.bccs.gatewaymanager.repository.EndpointConfigVersionRepository;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
 import java.util.List;
@@ -44,6 +46,8 @@ class ConfigExportImportServiceTest {
     private EndpointService endpointService;
     @Mock
     private EndpointMapper endpointMapper;
+    @Mock
+    private EndpointConfigVersionRepository versionRepository;
 
     private static final String TEAM = "default";
 
@@ -51,8 +55,14 @@ class ConfigExportImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ConfigExportImportService(upstreamRepository, upstreamService, endpointRepository, endpointService, endpointMapper);
+        service = new ConfigExportImportService(upstreamRepository, upstreamService, endpointRepository, endpointService, endpointMapper, versionRepository);
         CurrentTeamContext.set(TEAM);
+        // fingerprint cho ETag/304 (xem ConfigExportImportService.computeConfigHash()) - moi
+        // query aggregate LUON tra dung 1 row, dung lenient() vi khong phai test nao cung
+        // thuc su goi export() (vi du cac test chi test importConfig()).
+        lenient().when(upstreamRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
+        lenient().when(endpointRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
+        lenient().when(versionRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
     }
 
     @AfterEach
@@ -67,6 +77,7 @@ class ConfigExportImportServiceTest {
     private BackendStepDto step(String upstreamId, String upstreamName) {
         return new BackendStepDto(null, 1, "s1", GatewayMethod.GET, "/x", upstreamId, upstreamName,
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
                 null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
@@ -83,7 +94,8 @@ class ConfigExportImportServiceTest {
         when(endpointRepository.findAllByTeamCodeOrderByUpdatedAtDesc(TEAM)).thenReturn(List.of(entity));
         when(endpointMapper.toResponseDto(entity)).thenReturn(endpointDto("/x", "u-1", "svc"));
 
-        ConfigExportDto result = service.export();
+        ResponseEntity<ConfigExportDto> response = service.export(null);
+        ConfigExportDto result = response.getBody();
 
         assertThat(result.schemaVersion()).isEqualTo("1.0");
         assertThat(result.upstreams()).hasSize(1);

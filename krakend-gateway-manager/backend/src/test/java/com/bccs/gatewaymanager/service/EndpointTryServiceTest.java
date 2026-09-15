@@ -57,7 +57,8 @@ class EndpointTryServiceTest {
     private BackendStepDto step(int order) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EndpointRequestDto draft() {

@@ -3,7 +3,20 @@
     <mat-icon inline="true">arrow_back</mat-icon>
     Endpoints
   </a>
-  <h1 class="page-title">{{ isEditMode() ? 'Sửa Endpoint' : 'Endpoint mới' }}</h1>
+  <div class="page-title-row">
+    <h1 class="page-title">{{ isEditMode() ? 'Sửa Endpoint' : 'Endpoint mới' }}</h1>
+    <button
+      *ngIf="isEditMode()"
+      mat-stroked-button
+      type="button"
+      [disabled]="clearingCache()"
+      (click)="clearCache()"
+      matTooltip="Chỉ xoá cache trên Control Plane (dùng khi Thử ngay/Thử nhanh) - cache trên Data Plane thật sẽ tự hết hạn theo TTL đã đặt."
+    >
+      <mat-icon inline="true">delete_sweep</mat-icon>
+      Xoá cache
+    </button>
+  </div>
   <p class="page-subtitle">
     Khai báo endpoint gateway, các backend step gọi tuần tự và cách chain dữ liệu giữa chúng.
   </p>
@@ -206,6 +219,28 @@
                   <input matInput type="number" formControlName="readTimeoutMs" placeholder="để trống = dùng theo Upstream Service" />
                 </mat-form-field>
               </div>
+
+              <div class="field-row">
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Bulkhead riêng - số lệnh gọi đồng thời tối đa (tuỳ chọn)</mat-label>
+                  <input matInput type="number" formControlName="maxConcurrentCallsOverride" placeholder="để trống = dùng chung Bulkhead của Upstream Service" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Bulkhead riêng - thời gian chờ tối đa (ms, tuỳ chọn)</mat-label>
+                  <input matInput type="number" formControlName="maxWaitDurationMsOverride" placeholder="để trống = dùng theo Upstream Service" />
+                </mat-form-field>
+              </div>
+              @if (stepsArray.at(i).get('maxConcurrentCallsOverride')?.value) {
+                <div class="field-note field-note--warning">
+                  <mat-icon inline="true">warning</mat-icon>
+                  <span>
+                    Tạo 1 giới hạn <strong>ĐỘC LẬP</strong> chỉ cho riêng step này - không dùng chung với các
+                    step/Endpoint khác đang gọi cùng Upstream. Hệ thống <strong>KHÔNG</strong> tự kiểm tra tổng các
+                    override có vượt sức chịu thật của Upstream hay không - tự tính theo công thức
+                    <code>P99(giây) × rps thực tế × 1.2</code> trước khi bật.
+                  </span>
+                </div>
+              }
 
               <div class="field-row">
                 <mat-form-field appearance="outline" style="flex: 1">

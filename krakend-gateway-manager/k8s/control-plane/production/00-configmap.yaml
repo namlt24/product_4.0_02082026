@@ -1,0 +1,46 @@
+# ============================================================================
+# ConfigMap Control Plane - BẢN PRODUCTION (xem README.md trong thư mục này)
+#
+# 1 BẢN DUY NHẤT cho toàn nền tảng — đội nền tảng triển khai, các đội KHÔNG
+# đụng vào. Sau khi sửa/patch ConfigMap/Secret: BẮT BUỘC "kubectl rollout
+# restart deploy/gwm-backend" — env trong pod KHÔNG tự reload.
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gwm-config
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: control-plane
+data:
+  # Oracle trung tâm (mặc định vĩnh viễn: DB170 — Oracle 19c, schema
+  # BCCS_PRODUCT chứa 9 bảng Gateway Manager + dữ liệu của mọi đội).
+  # >>> SỬA nếu nền tảng chuyển DB: DB_HOST/DB_PORT/DB_NAME. <<<
+  # Verify route từ trong cụm tới DB TRƯỚC khi apply (checklist mục 0 của
+  # hướng dẫn). Bẫy đã biết: Hibernate validate schema qua WAN mất ~6.5 phút
+  # → 40-backend.yaml phải giữ startupProbe 60x10s.
+  DB_HOST: "10.207.222.170"
+  DB_PORT: "1521"
+  DB_NAME: "DB170"
+
+  # Redis trong cụm (Service "gwm-redis", 30-redis.yaml) — chỉ phục vụ cache
+  # tạm khi dùng "Thử ngay"/"Thử nhanh" trên UI. LƯU Ý: Spring Boot health
+  # indicator gồm Redis (fail-closed) → không có Redis thì pod không bao giờ
+  # Ready → BẮT BUỘC chạy 30-redis.yaml cùng bộ.
+  REDIS_HOST: "gwm-redis"
+  REDIS_PORT: "6379"
+
+  # Audit log (hoạt động CRUD trên CP) - tuỳ chọn. Bật khi namespace có
+  # Elasticsearch; không có thì giữ "false" (không ảnh hưởng chức năng).
+  GATEWAY_AUDIT_ENABLED: "false"
+  GATEWAY_AUDIT_ES_HOST: "localhost"
+  ES_PORT: "9200"
+  # Số ngày giữ log - quá hạn bị XÓA CẢ INDEX tự động (AuditLogRetentionService).
+  # Đặt <=0 để tắt hẹn (giữ vĩnh viễn) — audit CRUD của CP nên giữ dài hơn DP:
+  # đề xuất 90 ngày nếu bật ES production.
+  GATEWAY_AUDIT_RETENTION_DAYS: "3"
+
+  # Elastic APM - tuỳ chọn, agent tự tắt nếu không kết nối được.
+  APM_SERVER_HOST: "localhost"
+  APM_SERVER_PORT: "8200"
+  APM_ENVIRONMENT: "product-prod"

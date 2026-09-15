@@ -26,9 +26,21 @@ spec:
         app.kubernetes.io/name: gateway-manager
         app.kubernetes.io/component: control-plane-ui
     spec:
+      # Quy dinh ha tang 2026-09-13: doi chi duoc dung 2 node worker-10029001014
+      # (10.29.1.14) + worker-10029001015 (10.29.1.15) - giong 30-redis/40-backend.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10029001014
+                      - worker-10029001015
       containers:
         - name: frontend
-          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-frontend:v2.0.0
+          image: registry-lab.kcntt.net/bccs/gateway-manager-ui:2.0.0-cp.1
           ports:
             - containerPort: 80
           readinessProbe:

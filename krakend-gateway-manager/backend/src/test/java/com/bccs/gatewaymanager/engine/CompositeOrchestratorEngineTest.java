@@ -90,6 +90,7 @@ class CompositeOrchestratorEngineTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
+                null, null,
                 conditionSourceType, conditionSourceStepOrder, conditionSourceField, operator, conditionExpectedValue,
                 nextIfTrue, nextIfFalse, null, null, null, null, null, null);
     }
@@ -116,12 +117,12 @@ class CompositeOrchestratorEngineTest {
     }
 
     private void stubCall(UpstreamService upstream, JsonNode response) {
-        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(response);
     }
 
     private void stubCallThrows(UpstreamService upstream, RuntimeException ex) {
-        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(upstream), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(ex);
     }
 
@@ -129,6 +130,7 @@ class CompositeOrchestratorEngineTest {
     private BackendStepDto stepWithOnError(int order, String upstreamId, Integer onErrorStepOrder) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
                 null, null,
                 null, null, null, null, null,
                 null, null, onErrorStepOrder, null, null, null, null, null);
@@ -139,6 +141,7 @@ class CompositeOrchestratorEngineTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null,
                 null, null, null, parallelGroup, null, null, null, null);
     }
@@ -147,6 +150,7 @@ class CompositeOrchestratorEngineTest {
     private BackendStepDto stepWithCompensation(int order, String upstreamId, String compUpstreamId, String compUrlPattern) {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
                 null, null,
                 null, null, null, null, null,
                 null, null, null, null,
@@ -210,11 +214,11 @@ class CompositeOrchestratorEngineTest {
         // tuan tu: >= 600ms. Neu chay dong thoi: ~200ms (+overhead). Nguong 450ms du xa
         // 2 phia de khong flaky tren may cham, nhung van chan chac chan hon tuan tu.
         int delayMs = 200;
-        when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"a\":1}"); });
-        when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"b\":2}"); });
-        when(upstreamHttpExecutor.call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"c\":3}"); });
         EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"), plainStep(3, "u3"));
 
@@ -242,7 +246,7 @@ class CompositeOrchestratorEngineTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("upstream 1 loi");
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.times(1))
-                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -271,9 +275,9 @@ class CompositeOrchestratorEngineTest {
         MDC.put("requestId", "req-mdc-test");
         try {
             List<String> capturedRequestIds = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
-            when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+            when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                     .thenAnswer(inv -> { capturedRequestIds.add(MDC.get("requestId")); return json("{\"a\":1}"); });
-            when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+            when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                     .thenAnswer(inv -> { capturedRequestIds.add(MDC.get("requestId")); return json("{\"b\":2}"); });
             EndpointResponseDto config = endpointParallel(plainStep(1, "u1"), plainStep(2, "u2"));
 
@@ -293,13 +297,13 @@ class CompositeOrchestratorEngineTest {
         // list de 2 step song song cung ghi duoc vao 1 ket qua duy nhat.
         List<StepTraceDto> hops = TraceCollector.start();
         try {
-            when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+            when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                     .thenAnswer(inv -> {
                         TraceCollector.record(new StepTraceDto(1, "s1", "u1", "GET", "http://u1", null, false,
                                 200, "{}", false, 5L, false, true, null));
                         return json("{\"a\":1}");
                     });
-            when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+            when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                     .thenAnswer(inv -> {
                         TraceCollector.record(new StepTraceDto(2, "s2", "u2", "GET", "http://u2", null, false,
                                 200, "{}", false, 5L, false, true, null));
@@ -342,7 +346,7 @@ class CompositeOrchestratorEngineTest {
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(up3), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up3), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(urlCaptor.getValue()).contains("fromStep1=1").contains("fromStep2=2");
     }
 
@@ -352,9 +356,9 @@ class CompositeOrchestratorEngineTest {
         // chung minh wave TRONG 1 chuoi sequential cung chay THAT dong thoi, khong phai
         // tuan tu doi lot.
         int delayMs = 200;
-        when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"a\":1}"); });
-        when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any()))
+        when(upstreamHttpExecutor.call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> { Thread.sleep(delayMs); return json("{\"b\":2}"); });
         EndpointResponseDto config = endpoint(true, stepWithGroup(1, "u1", 1), stepWithGroup(2, "u2", 1));
 
@@ -377,7 +381,7 @@ class CompositeOrchestratorEngineTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("upstream 1 loi");
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.times(1))
-                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -405,6 +409,7 @@ class CompositeOrchestratorEngineTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", upstreamId, "up" + order,
                 false, false, 300, null, target, List.of(), List.of(), Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null,
                 null, null, null, null, null, null, null, null);
     }
@@ -426,7 +431,7 @@ class CompositeOrchestratorEngineTest {
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(urlCaptor.getValue()).contains("itemName=Beta");
     }
 
@@ -462,7 +467,7 @@ class CompositeOrchestratorEngineTest {
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up2), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(urlCaptor.getValue()).doesNotContain("itemName=");
     }
 
@@ -482,7 +487,7 @@ class CompositeOrchestratorEngineTest {
                 .hasMessageContaining("upstream 2 loi");
 
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(upComp1), eq(HttpMethod.DELETE), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), eq(HttpMethod.DELETE), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -502,7 +507,7 @@ class CompositeOrchestratorEngineTest {
 
         assertThat(result.get("fallback").asBoolean()).isTrue();
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
-                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -521,8 +526,8 @@ class CompositeOrchestratorEngineTest {
 
         // Undo cai GAN NHAT (step2) TRUOC, roi moi toi step1 - thu tu NGUOC voi thu tu hoan thanh.
         InOrder inOrder = org.mockito.Mockito.inOrder(upstreamHttpExecutor);
-        inOrder.verify(upstreamHttpExecutor).call(eq(upComp2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
-        inOrder.verify(upstreamHttpExecutor).call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+        inOrder.verify(upstreamHttpExecutor).call(eq(upComp2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
+        inOrder.verify(upstreamHttpExecutor).call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -544,7 +549,7 @@ class CompositeOrchestratorEngineTest {
 
         // Bu tru step1 VAN duoc goi du bu tru step2 (chay TRUOC, vi thu tu nguoc) that bai.
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -558,7 +563,7 @@ class CompositeOrchestratorEngineTest {
         assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null)).isInstanceOf(BusinessException.class);
 
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
-                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -573,6 +578,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s1 = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null,
                 null, null, null, null,
                 "uc1", "upComp", null, "/orders/cancel");
@@ -585,7 +591,7 @@ class CompositeOrchestratorEngineTest {
                 .hasMessageContaining("upstream 2 loi");
 
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
-                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -601,11 +607,13 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto s1 = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
+                null, null,
                 null, null, null, null, null,
                 null, null, null, 1,
                 "uc1", "upComp1", GatewayMethod.DELETE, "/undo1");
         BackendStepDto s2 = new BackendStepDto(null, 2, "step2", GatewayMethod.GET, "/x", "u2", "up2",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
+                null, null,
                 null, null,
                 null, null, null, null, null,
                 null, null, null, 1,
@@ -616,9 +624,9 @@ class CompositeOrchestratorEngineTest {
         assertThatThrownBy(() -> engine.handle(config, Map.of(), Map.of(), null)).isInstanceOf(BusinessException.class);
 
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(upComp2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -638,7 +646,7 @@ class CompositeOrchestratorEngineTest {
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor)
-                .call(eq(upComp1), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(upComp1), any(), urlCaptor.capture(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(urlCaptor.getValue()).contains("/orders/O123");
     }
 
@@ -676,7 +684,7 @@ class CompositeOrchestratorEngineTest {
         assertThat(result.get("branch").asText()).isEqualTo("true-path");
         // Nhanh FALSE (up3) KHONG duoc goi - chi 1 trong 2 nhanh loai tru lan nhau duoc chay.
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
-                .call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -865,6 +873,7 @@ class CompositeOrchestratorEngineTest {
         BackendStepDto stepWithOverride = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "u1", "up1",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 750, 5000, // connectTimeoutMs/readTimeoutMs override rieng cho step nay
+                null, null, // maxConcurrentCallsOverride/maxWaitDurationMsOverride: khong tach Bulkhead rieng
                 null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         engine.handle(endpoint(true, stepWithOverride), Map.of(), Map.of(), null);
@@ -872,7 +881,7 @@ class CompositeOrchestratorEngineTest {
         org.mockito.ArgumentCaptor<Integer> connectCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
         org.mockito.ArgumentCaptor<Integer> readCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(),
-                any(), connectCaptor.capture(), readCaptor.capture());
+                any(), connectCaptor.capture(), readCaptor.capture(), any(), any(), any());
         assertThat(connectCaptor.getValue()).isEqualTo(750);
         assertThat(readCaptor.getValue()).isEqualTo(5000);
     }
@@ -886,7 +895,7 @@ class CompositeOrchestratorEngineTest {
         org.mockito.ArgumentCaptor<Integer> connectCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
         org.mockito.ArgumentCaptor<Integer> readCaptor = org.mockito.ArgumentCaptor.forClass(Integer.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(),
-                any(), connectCaptor.capture(), readCaptor.capture());
+                any(), connectCaptor.capture(), readCaptor.capture(), any(), any(), any());
         assertThat(connectCaptor.getValue()).isNull();
         assertThat(readCaptor.getValue()).isNull();
     }
@@ -905,7 +914,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<String> urlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), urlCaptor.capture(), any(), any(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(urlCaptor.getValue()).contains("staffCode=QUITT");
     }
 
@@ -921,7 +930,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(bodyCaptor.getValue().get("staffCode").asText()).isEqualTo("QUITT");
     }
 
@@ -938,7 +947,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(bodyCaptor.getValue().get("staffCode").isNull()).isTrue();
     }
 
@@ -957,7 +966,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<String> urlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), urlCaptor.capture(), any(), any(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(urlCaptor.getValue()).contains("priority=low");
     }
 
@@ -973,7 +982,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         // "3" parse duoc nhu JSON -> so JSON THAT (isNumber), khong phai chuoi "3".
         assertThat(bodyCaptor.getValue().get("priority").isNumber()).isTrue();
         assertThat(bodyCaptor.getValue().get("priority").asInt()).isEqualTo(3);
@@ -991,7 +1000,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up1), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         // "low" khong phai JSON hop le -> fallback giu nguyen chuoi text.
         assertThat(bodyCaptor.getValue().get("priority").isTextual()).isTrue();
         assertThat(bodyCaptor.getValue().get("priority").asText()).isEqualTo("low");
@@ -1014,7 +1023,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         JsonNode body = bodyCaptor.getValue();
         assertThat(body.get("500173047").asText()).isEqualTo("1");
         assertThat(body.get("400017940").asText()).isEqualTo("1");
@@ -1035,7 +1044,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(bodyCaptor.getValue().get("a").asText()).isEqualTo("2");
     }
 
@@ -1052,7 +1061,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(bodyCaptor.getValue().get("a").asText()).isEqualTo("1");
         assertThat(bodyCaptor.getValue().size()).isEqualTo(1);
     }
@@ -1070,7 +1079,7 @@ class CompositeOrchestratorEngineTest {
 
         org.mockito.ArgumentCaptor<JsonNode> bodyCaptor = org.mockito.ArgumentCaptor.forClass(JsonNode.class);
         org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
-                anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
         assertThat(bodyCaptor.getValue().size()).isEqualTo(0);
     }
 
@@ -1101,7 +1110,7 @@ class CompositeOrchestratorEngineTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo("GW-UPSTREAM-TIMEOUT");
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
-                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up2), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -1130,6 +1139,6 @@ class CompositeOrchestratorEngineTest {
 
         assertThat(result.get("v").asInt()).isEqualTo(2);
         org.mockito.Mockito.verify(upstreamHttpExecutor, org.mockito.Mockito.never())
-                .call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any());
+                .call(eq(up3), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
     }
 }

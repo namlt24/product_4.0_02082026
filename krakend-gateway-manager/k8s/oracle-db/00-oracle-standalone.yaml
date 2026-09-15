@@ -1,0 +1,139 @@
+# ============================================================================
+# Oracle Database 23ai Free (gvenzl/oracle-free) chay TRONG cum k8s - giai phap
+# TAM THOI cho Control Plane khi ha tầng chua thông kết nối tới Oracle trung
+# tâm (DB170). Khi đã thống kết nối, chỉ cần:
+#   1. Sửa ConfigMap "gwm-db-config" (DB_HOST/DB_PORT/DB_NAME) trỏ về DB170,
+#      giữ nguyên Secret "gwm-secret" (hoặc tạo mới nếu user/password đổi).
+#   2. kubectl rollout restart deploy/gwm-backend -n product
+#   3. Scale về 0 / xóa hẳn bộ manifest này:
+#      kubectl scale deploy/gwm-oracle -n product --replicas=0
+# KHÔNG cần build lại image hay sửa bất kỳ manifest nào của Control Plane.
+#
+# Lưu ý hạ tầng:
+# - DÙNG emptyDir (KHÔNG phải PVC) vì cụm testlab-c2 KHÔNG có StorageClass
+#   default (PVC gwm-oracle-data thử trước đó đã Pending vĩnh viễn với
+#   "no persistent volumes available"). Hệ quả: datafiles Oracle MẤT khi pod
+#   restart - chấp nhận được cho môi trường test (Control Plane chỉ chứa cấu
+#   hình, đội tự khai lại qua UI; schema V1+V2 được init lại tự động qua
+#   ConfigMap init-sql). Khi switch sang DB170 thật, bộ manifest này bỏ hẳn.
+# - Image 23.9-slim (KHÔNG dùng tag :23-slim mơi hơn = 23.26/26ai): ver 23.26
+#   c entrypoint B PHIEN khi PDB FREEPDB1 tn ti sn trong image (ORA-65012
+#   "Pluggable database FREEPDB1 already exists" li c exit=57 ORA-01081
+#   "cannot start already-running ORACLE" cc ln restart sau) - khe nhin
+#   c xc nhn thc t 2026-09-10. 23.9-slim init sch, to PDB + APP_USER t
+#   ng pha i.
+# - Image pull t registry ni b reg-hosted-lab.kcntt.net/bccs/oracle-free
+#   (retag + push t gvenzl/oracle-free:23.9-slim); CUM PULL qua tnn
+#   registry-lab.kcntt.net (2 registry chung storage, digest khng khau).
+# - Oracle Free khi to mt ~2-4 pht (to PDB FREEPDB1 + seed). Healthcheck
+#   qua script /opt/oracle/healthcheck.sh ca chnh image (KHONG phi
+#   /healthcheck - c gii thch vi li "stat /healthcheck: no such file").
+# - /dev/shm: node default chi cap 64MB - Oracle ORA-01081 crash tuc thi
+#   (SGA AMM khng allocate duoc). Mount emptyDir medium=Memory 2Gi vo
+#   /dev/shm (tuong duong docker --shm-size=2g).
+# - t password SYSTEM + user APP qua Secret "gwm-oracle-secret" (to bng
+#   kubectl create secret, KHNG commit gi tr tht). Chu: bin l
+#   ORACLE_PASSWORD (KHONG phi ORACLE_PWD).
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-oracle
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: oracle-db
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: oracle-db
+  ports:
+    - name: listener
+      port: 1521
+      targetPort: 1521
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-oracle
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: oracle-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: oracle-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: oracle-db
+    spec:
+      containers:
+        - name: oracle
+          image: registry-lab.kcntt.net/bccs/oracle-free:23.9-slim
+          env:
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gwm-oracle-secret
+                  key: ORACLE_PASSWORD
+            # KHONG dat ORACLE_DATABASE: image 23.9 khi co bien nay SE THU
+            # tao PDB moi cung ten FREEPDB1 -> ORA-65012 (da ton tai) roi
+            # crash exit 57. Mac dinh (khong dat) van to PDB FREEPDB1 san
+            # sang + to APP_USER trong do - da kiem chung that 2026-09-10.
+            - name: APP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: gwm-oracle-secret
+                  key: APP_USER
+            - name: APP_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gwm-oracle-secret
+                  key: APP_USER_PASSWORD
+            # gvenzl image tu dong tao APP_USER + GRANT trong FREEPDB1 luc init,
+            # va chay moi file *.sql trong /container-entrypoint-initdb.d/ SAU
+            # khi DB san sang (theo thu tu ten file) - dung cho V1+V2 DDL.
+          ports:
+            - containerPort: 1521
+          volumeMounts:
+            - name: data
+              mountPath: /opt/oracle/oradata
+            - name: shm
+              mountPath: /dev/shm
+            - name: init-sql
+              mountPath: /container-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["/opt/oracle/healthcheck.sh"]
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command: ["/opt/oracle/healthcheck.sh"]
+            initialDelaySeconds: 240
+            periodSeconds: 30
+            failureThreshold: 10
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 8Gi
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+        - name: init-sql
+          configMap:
+            name: gwm-oracle-init-sql

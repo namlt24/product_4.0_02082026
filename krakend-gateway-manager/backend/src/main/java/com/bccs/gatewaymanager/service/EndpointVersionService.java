@@ -124,6 +124,7 @@ public class EndpointVersionService {
                 s.cacheEnabled(), s.cacheTtlSeconds(), s.group(), s.target(),
                 s.allowFields(), s.denyFields(), s.fieldRenameMapping(), s.canvasX(), s.canvasY(),
                 s.connectTimeoutMs(), s.readTimeoutMs(),
+                s.maxConcurrentCallsOverride(), s.maxWaitDurationMsOverride(),
                 s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
                 s.conditionOperator(), s.conditionExpectedValue(),
                 s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup(),

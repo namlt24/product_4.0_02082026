@@ -1,27 +1,24 @@
-# ---- Stage 1: build jar bang Maven ----
-# JDK 25: Spring Boot 4.0.8 ho tro repackage bytecode JDK 25 dung (khac voi
-# Spring Boot 3.3.4 truoc day - loi "Unsupported class file major version 69").
-FROM maven:3.9-eclipse-temurin-25 AS build
-WORKDIR /app
-COPY pom.xml .
-# Cache dependency truoc de build lai nhanh khi chi sua source
-RUN mvn -B dependency:go-offline
-COPY src ./src
-RUN mvn -B clean package -DskipTests
-
-# ---- Stage 2: runtime nho gon ----
-# Khong con can quyen truy cap /var/run/docker.sock nua: truoc day
-# DockerReloadService goi Docker Engine API de restart container KrakenD rieng
-# moi khi Deploy, gio backend TU LA gateway thuc thi (CompositeOrchestratorEngine),
-# khong con container gateway nao khac can restart.
+# ---- Runtime don gian: COPY jar + APM agent da build san ben ngoai ----
+#
+# DOI 2026-09-14: bo multi-stage "mvn package trong container" - Maven trong
+# container KHONG vao duoc repo.maven.apache.org tren mang cong ty (PKIX
+# certificate_unknown: firewall giai mao TLS), trong khi Maven ben host dung
+# repo/cache cua minh binh thuong. Nen build ben host truoc:
+#   ./mvnw.cmd clean package -DskipTests
+# lenh nay sinh CA 2 file target/gateway-manager.jar VA
+# target/elastic-apm-agent.jar (xem pom.xml - dependency "elastic-apm-agent"
+# scope=provided + maven-dependency-plugin execution "copy-apm-agent") - roi
+# docker build COPY ca 2 vao image, khong tai gi qua mang trong luc build
+# Docker nua (agent tung duoc ADD truc tiep tu repo1.maven.org o day, nhung bi
+# rot mat khi doi sang mo hinh nay - sua 2026-09-14: khoi phuc lai qua duong
+# host-Maven thay vi ADD, vi ADD se dinh dung PKIX certificate_unknown y het
+# ly do da bo multi-stage build).
+#
+# (cp.2/cp.3/cp.4 deu duoc build dung cach nay - history image cho thay
+# "COPY gateway-manager.jar /app/app.jar".)
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/gateway-manager.jar app.jar
-# Elastic APM Java agent - tu dong instrument RestTemplate (UpstreamHttpExecutor)
-# + HTTP server transaction (DynamicDispatcherController), KHONG can sua code app
-# them gi ca. Tai truc tiep qua ADD (Docker tu download qua HTTPS - image alpine
-# nay khong co san curl/wget) - dung KHOP version voi co.elastic.apm:apm-agent-api
-# trong pom.xml (agent + API cung 1 phien ban, tranh lech).
-ADD https://repo1.maven.org/maven2/co/elastic/apm/elastic-apm-agent/1.56.0/elastic-apm-agent-1.56.0.jar /app/elastic-apm-agent.jar
+COPY gateway-manager.jar app.jar
+COPY elastic-apm-agent.jar elastic-apm-agent.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-javaagent:/app/elastic-apm-agent.jar", "-XX:+UseContainerSupport", "-jar", "app.jar"]

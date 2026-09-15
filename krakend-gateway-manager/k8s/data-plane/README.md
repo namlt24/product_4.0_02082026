@@ -4,6 +4,14 @@ Khac han `../control-plane/` (do doi nen tang trien khai 1 lan duy nhat, dung
 chung MOI doi) - thu muc nay la **TEMPLATE**, moi doi copy/apply RIENG vao
 namespace cua chinh minh. Xem huong dan day du tai `../../DEPLOYMENT_GUIDE.md`.
 
+> **Huong dan deploy CANH TAY chi viec cho ha tang product that** (nguoi dung
+> that, request that - khac `../../DEPLOYMENT_GUIDE.md` la guide cum test cu):
+> doc `PRODUCTION_RUNBOOK.md` cung thu muc - gom checklist dau vao (2 gia tri
+> team_code/api_key + test route sang Control Plane TRUOC khi apply), trinh tu
+> apply/verify, khai bao Upstream/Endpoint bang team key, va SO TAY 7 bay da
+> gap that 2026-09-10 tren cum myviettel (route lien cum chan KHONG dong nhat
+> theo node, Docker Hub bi chan, port Service backend = 8001 khong phai 8080...).
+
 ## Dieu kien tien quyet
 
 Da co `team_code` + `api_key` do **doi nen tang** cap qua man hinh "Quan ly

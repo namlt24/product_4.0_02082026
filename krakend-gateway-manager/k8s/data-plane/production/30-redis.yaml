@@ -1,0 +1,75 @@
+# ============================================================================
+# Redis rieng cho instance Data Plane cua doi nay - CHI dung cho cache-aside
+# (per-step/response toan bo) + bo dem rate-limit, ca 2 deu fail-open (mat du
+# lieu Redis KHONG lam gian doan traffic that - xem
+# GatewayCacheService/RateLimitService) - vi vay KHONG can PersistentVolume,
+# 1 Deployment thuong (khong phai StatefulSet) la du.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-redis
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: data-plane-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: data-plane-redis
+    spec:
+      containers:
+        - name: redis
+          # Registry noi bo (Docker Hub bi chan DNS tren cum myviettel - xem
+          # ErrImagePull "lookup registry-1.docker.io ... i/o timeout").
+          image: reg-hosted-lab.kcntt.net/bccs/redis:7-alpine
+          args: ["redis-server", "--appendonly", "no"]
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          # SIZING 1000 RPS (2026-09-14): moi request Data Plane tu giao dich it
+          # nhat 2 lenh Redis (rate-limit INCR + expire, va cache GET/SET neu
+          # step bat cacheEnabled) -> 1000 RPS = >= 2000 ops/s tap trung vao 1
+          # pod Redis duy nhat. Redis 1 thread de: 250m CPU chi tra loi duoc
+          # khoang 15-25k ops/s tren CPU cham; request that chi chiu 1-2 ms
+          # bo sung moi op, nen 250m la diem nghen dau tien cua ca he thong.
+          # 1 CPU limit cho phep ~60-100k ops/s — du cho 1000 RPS du phong.
+          # Van la 1 ban sao (SPOF chap nhan duoc: ca 2 consumers deu fail-open
+          # khi Redis chet, chi mat cache + rate limit tam thoi).
+          resources:
+            requests:
+              cpu: 250m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-redis
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane-redis
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane-redis
+  ports:
+    - port: 6379
+      targetPort: 6379

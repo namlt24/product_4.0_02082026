@@ -83,6 +83,7 @@ public class DataSeeder implements CommandLineRunner {
                 Map.of("id", "user_id"),       // rename "id" -> "user_id" cho ro nghia truoc khi chain
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
+                null, null,                    // maxConcurrentCallsOverride/maxWaitDurationMsOverride: khong tach Bulkhead rieng
                 null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
                 null, null, null, null // bu tru/rollback: khong dung trong endpoint demo nay
         );
@@ -101,6 +102,7 @@ public class DataSeeder implements CommandLineRunner {
                 Map.of(),
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
+                null, null,                    // maxConcurrentCallsOverride/maxWaitDurationMsOverride: khong tach Bulkhead rieng
                 null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
                 null, null, null, null // bu tru/rollback: khong dung trong endpoint demo nay
         );

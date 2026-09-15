@@ -1,0 +1,292 @@
+# ============================================================================
+# Backend Data Plane - BẢN PRODUCTION (sizing 1000 RPS, xem README.md)
+#
+# SPRING_PROFILES_ACTIVE=data-plane (xem application-data-plane.yml). Mỗi ĐỘI
+# tự triển khai 1 bản riêng của chính mình (khác Control Plane — bản đó 1 đội
+# nền tảng triển khai 1 lần duy nhất, dùng chung MỌI đội). Thực thi traffic
+# thật qua DynamicDispatcherController — KHÔNG có CRUD Endpoint/Upstream/Team,
+# KHÔNG kết nối Oracle — tự đồng bộ cấu hình CỦA CHÍNH ĐỘI NÀY qua HTTP định
+# kỳ (RemoteConfigSyncService, gatewaymanager.control-plane.* trong
+# 00-configmap.yaml).
+#
+# 4 đối tượng trong file: Deployment (backend + nginx TLS sidecar) +
+# ConfigMap nginx conf + Service + PodDisruptionBudget.
+#
+# >>> SỬA TRƯỚC KHI APPLY (3 chỗ, đánh dấu SỬA trong file) <<<
+# 1. nodeAffinity: thay 3 node bằng 3 worker node của cụm đội bạn — và chỉ
+#    chọn node đã kiểm chứng route liên cụm tới Control Plane mở (nếu hạ tầng
+#    cụm bạn chưa chặn route liên cụm theo node thì XÓA hẳn khối affinity).
+# 2. server_name trong nginx conf: hostname dữ liệu của đội.
+# 3. Comment Secret gwm-tls: ghi SAN/IP đúng của đội.
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+spec:
+  # SIZING 1000 RPS (2026-09-14): 3 replica — là TRẦN của cụm này nếu nodeAffinity
+  # pin 3 node + podAntiAffinity required 1 pod/node. Mỗi pod chịu ~333 RPS
+  # thường xuyên, ~500 RPS khi mất 1 node (dung lượng N+1). Rate limit và cache
+  # đều đếm qua Redis dùng chung nên nhiều pod không phá hành vi nghiệp vụ
+  # (rate limit tính theo client IP toàn cục, không theo pod).
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    # maxSurge PHẢI bằng 0 khi có podAntiAffinity required: pod mới không được
+    # đứng chung node với pod cũ, mà các node đã đầy 1 pod -> pod surge không
+    # bao giờ schedule được -> rollout treo vĩnh viễn (lỗi kinh điển
+    # anti-affinity + maxSurge > 0). maxUnavailable 1 = cập nhật lần lượt 1
+    # pod, lúc rollout vẫn còn 2/3 pod phục vụ — phù hợp dung lượng N+1 trên.
+    # Nếu đội XÓA affinity (hạ tầng cho mọi node) thì có thể trả về
+    # maxSurge 1 / maxUnavailable 0 để rollout zero-downtime đúng nghĩa.
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: data-plane
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway-manager
+        app.kubernetes.io/component: data-plane
+    spec:
+      # >>> SỬA (1): 3 node của đội bạn. Chỉ pin node khi hạ tầng CÓ chặn route
+      # liên cụm theo node (kiểm chứng bằng curl từ từng node về Control Plane
+      # trước). Nếu mọi node đều thông -> xoá cả khối affinity bên dưới.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - <<<SUA: worker-node-1>>>
+                      - <<<SUA: worker-node-2>>>
+                      - <<<SUA: worker-node-3>>>
+        # Các replica phải nằm node KHÁC nhau - ngược lại 1 node down = mất
+        # nhiều pod cùng lúc, replicas=3 trở nên vô nghĩa.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: gateway-manager
+                  app.kubernetes.io/component: data-plane
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: backend
+          # Image chuẩn production đã build + push (UpstreamHttpExecutor dùng
+          # HttpClient5 connection pool). Nếu đội build image riêng: xem
+          # backend/Dockerfile (COPY jar đã build ngoài host — Maven trong
+          # container không vào được repo.maven trên mạng công ty).
+          image: reg-hosted-lab.kcntt.net/bccs/gateway-manager:2.0.0-cp.5
+          envFrom:
+            - configMapRef:
+                name: gwm-config
+            - secretRef:
+                name: gwm-secret
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "data-plane"
+            - name: SERVER_PORT
+              value: "8080"
+            # SIZING 1000 RPS (hệ thống mới, chưa test tải — cấu hình đề xuất,
+            # hiệu chỉnh sau khi có số liệu thật): JVM mặc định (Temurin +
+            # UseContainerSupport) chỉ dành 25% memory limit cho heap — quá nhỏ
+            # ở 333 RPS/pod. Đặt 55% của 2.5Gi = ~1.4GB heap; phần còn lại cho
+            # thread stack + metaspace + native (xử lý JSON tạo ra rất nhiều
+            # object ngắn — heap nhỏ = GC gắt liên tục). 55% chứ không 70% vì
+            # 500 thread x ~1MB stack = ~500MB non-heap phải nằm ngoài heap.
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=55.0"
+            # Mỗi request Data Plane GIỮ 1 Tomcat thread suốt qua từng step (gọi
+            # upstream là blocking). Sizing theo Little's Law: 333 RPS/pod x
+            # mean 1.5s (p99 3s, mean ~ nửa p99) = ~500 request đồng thời/pod
+            # khi full load — 200 thread mặc định sẽ tràn, request xếp hàng.
+            # 500 thread đủ cho cả trường hợp xấu (mất 1 node, pod còn lại đón
+            # ~500 RPS). Bulkhead của Resilience4j ở upstream mới là lớp chắn
+            # thật sự; Tomcat chỉ cần không nghẽn trước nó.
+            - name: SERVER_TOMCAT_THREADS_MAX
+              value: "500"
+            # Biến hợp nhất từ TEAM_CODE (ConfigMap) - Spring Boot không tự ghép
+            # chuỗi từ 2 nguồn nên phải khai báo riêng ở đây, dùng cú pháp
+            # $(VAR) để k8s nối TEAM_CODE đã có sẵn từ envFrom ở trên.
+            - name: SPRING_APPLICATION_NAME
+              value: "krakend-gateway-manager-$(TEAM_CODE)"
+            - name: ELASTIC_APM_SERVICE_NAME
+              value: "krakend-gateway-manager-$(TEAM_CODE)"
+            - name: ELASTIC_APM_SERVER_URL
+              value: "http://$(APM_SERVER_HOST):$(APM_SERVER_PORT)"
+            - name: ELASTIC_APM_ENVIRONMENT
+              value: "$(APM_ENVIRONMENT)"
+            - name: ELASTIC_APM_APPLICATION_PACKAGES
+              value: "com.bccs.gatewaymanager"
+            - name: GATEWAY_AUDIT_ES_PORT
+              value: "$(ES_PORT)"
+          # Readiness gồm 2 điều kiện (xem application-data-plane.yml +
+          # RemoteConfigSyncHealthIndicator): (1) readinessState nội bộ của
+          # Spring Boot, (2) đã đồng bộ cấu hình từ Control Plane THÀNH CÔNG ít
+          # nhất 1 lần — tránh Pod mới lên nhận traffic khi cache định tuyến
+          # còn rỗng hoàn toàn. Sync lỗi SAU đó (Control Plane tạm gián đoạn)
+          # KHÔNG làm readiness rơi lại — fail-open giữ cache cũ
+          # (RemoteConfigSyncService).
+          #
+          # SIZING 1000 RPS: thêm startupProbe để ngăn liveness găm pod khi
+          # JVM/GC khởi động chậm trên node quá tải — mỗi lần restart mất
+          # traffic là rất tốn. Khởi động chậm nhất là lần đầu (đồng bộ config
+          # lần đầu từ CP qua WAN).
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 36   # 36 x 5s = 3 phút đủ cho Spring Boot khởi động
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 0   # startupProbe giữ vai trò này từ nay
+            periodSeconds: 15
+            failureThreshold: 5
+          # SIZING 1000 RPS (hệ thống mới, đề xuất trước khi test tải):
+          # mỗi pod chịu ~333 RPS thường xuyên (~500 khi mất 1 node). Little's
+          # Law với mean 1.5s: ~500 request đồng thời/pod. Memory limit 2.5Gi =
+          # heap 1.4Gi (55%) + 500MB stack (500 thread) + metaspace/native
+          # ~0.5Gi — chưa tràn khi full load, không OOMKill. CPU 2 core theo
+          # CÔNG VIỆC (parse/serialize ~1.5ms/request), không nhân theo
+          # latency — request chờ upstream 3s không đốt CPU.
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2500Mi
+        # TLS termination client -> gateway: nginx sidecar nghe HTTPS 8443
+        # (cert từ Secret "gwm-tls") và proxy về localhost:8080 (backend HTTP
+        # nội bộ). Chọn sidecar thay vì SSL bundle Spring vì: (1) không phải
+        # build lại image; (2) nghe song song HTTPS 8443 + HTTP 8080 — NodePort
+        # HTTP giữ lại để App/Client migrate dần; (3) probe k8s vẫn HTTP 8080
+        # không đổi. Client cần tin cậy: import tls.crt vào truststore của App.
+        - name: tls-proxy
+          image: reg-hosted-lab.kcntt.net/nginx:1.29-alpine
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - name: gwm-tls
+              mountPath: /etc/nginx/certs
+              readOnly: true
+            - name: gwm-tls-nginx-conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          # SIZING 1000 RPS: TLS handshake (TLSv1.3) tốn CPU đáng kể khi client
+          # đóng/mở kết nối nhiều (mobile/app). 250m limit chỉ đủ cho 100-200
+          # RPS; tăng lên 500m để sidecar không trở thành điểm nghẽn trên cùng
+          # pod với backend khi 1 pod phải đón ~500 RPS. Không thay đổi hành vi.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+      volumes:
+        # Secret "gwm-tls" kiểu kubernetes.io/tls (tls.crt/tls.key) - tạo bằng
+        # "kubectl create secret tls" (HƯỚNG_DẪN_PRODUCTION.md bước 4).
+        # >>> SỬA (3): ghi đúng SAN/IP + ngày hết hạn của đội vào comment này.
+        # Đề xuất: self-signed, SAN = IP node + hostname dữ liệu, hạn 1 năm —
+        # đến hạn phải thay: tạo Secret mới + restart deployment.
+        - name: gwm-tls
+          secret:
+            secretName: gwm-tls
+        - name: gwm-tls-nginx-conf
+          configMap:
+            name: gwm-tls-nginx-conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gwm-tls-nginx-conf
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+data:
+  default.conf: |
+    # Endpoint composite có thể trả payload gộp từ nhiều step backend - giới
+    # hạn body hợp lý (10m).
+    client_max_body_size 10m;
+
+    server {
+        listen 8443 ssl;
+        http2 on;
+        # >>> SỬA (2): hostname dữ liệu của đội bạn (phải nằm trong SAN của cert).
+        server_name <<<SUA: gwm-dataplane.doi-ban.local>>>;
+
+        ssl_certificate     /etc/nginx/certs/tls.crt;
+        ssl_certificate_key /etc/nginx/certs/tls.key;
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            # p99 3s + margin: proxy_read_timeout phải LỚN HƠN p99 của toàn
+            # tuyến, nếu không nginx cắt connection 504 trong khi backend vẫn
+            # đang chạy step cuối.
+            proxy_read_timeout 65s;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+spec:
+  selector:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: https
+      port: 8443
+      targetPort: 8443
+---
+# SIZING 1000 RPS / HA: không có PDB thì "kubectl drain node" (vật lý node,
+# nâng cấp K8s) có thể điều 2/3 pod Data Plane cùng lúc -> mất dung lượng hoặc
+# mất traffic trong cả rollout. minAvailable: 2 bảo đảm luôn giữ ít nhất 2 pod
+# phục vụ (50% dung lượng) trong mỗi tác động đó — kết hợp với maxUnavailable: 1
+# ở strategy trên để an toàn 2 chiều (drain + rolling update).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gwm-backend
+  labels:
+    app.kubernetes.io/name: gateway-manager
+    app.kubernetes.io/component: data-plane
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-manager
+      app.kubernetes.io/component: data-plane

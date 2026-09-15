@@ -2,6 +2,8 @@ package com.bccs.gatewaymanager.repository;
 
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,4 +24,8 @@ public interface UpstreamServiceRepository extends JpaRepository<UpstreamService
     Optional<UpstreamService> findByIdAndTeamCode(String id, String teamCode);
 
     List<UpstreamService> findAllByTeamCodeOrderByNameAsc(String teamCode);
+
+    /** Dau van tay config cua 1 doi cho ETag/304 sync - doc 2 gia tri tong hop, re (xem EndpointConfigRepository.fingerprintByTeamCode). LUON tra 1 row. */
+    @Query("select count(u), max(u.updatedAt) from UpstreamService u where u.teamCode = :teamCode")
+    List<Object[]> fingerprintByTeamCode(@Param("teamCode") String teamCode);
 }

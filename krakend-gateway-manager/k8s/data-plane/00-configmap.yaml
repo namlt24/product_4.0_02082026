@@ -15,16 +15,33 @@ metadata:
     app.kubernetes.io/name: gateway-manager
     app.kubernetes.io/component: data-plane
 data:
-  # Ma dinh danh doi - PHAI trung KHOP voi team_code doi nen tang da cap cho
-  # ban qua man hinh "Quan ly doi" (xem ../control-plane/README.md) - hien
-  # trong SPRING_APPLICATION_NAME/ELASTIC_APM_SERVICE_NAME, thuan tien phan
-  # biet khi nhieu doi cung feed 1 he thong quan sat chung (neu co).
-  TEAM_CODE: "doi-cua-ban"
+  # Ma dinh danh doi - chi hien trong SPRING_APPLICATION_NAME/
+  # ELASTIC_APM_SERVICE_NAME (ghép qua $(TEAM_CODE) trong 40-backend.yaml),
+  # thuan tien phan biet khi nhieu doi cung feed 1 he thong quan sat chung.
+  #
+  # LUU Y (kiem chung code 2026-09-13): bien nay KHONG dung de sync — Data
+  # Plane nhan dien doi bang TEAM KEY trong Secret gwm-secret (RemoteConfigSync
+  # chi gui header X-Gateway-Admin-Key; CP tra nguoc api_key -> teamCode trong
+  # GWM_TEAM, khong co header team code nao). Sai bien nay chi lam ten service
+  # tren APM/monitoring nham doi, sync van chay.
+  #
+  # TRIEN KHAI THAT 2026-09-13: doi "myviettel-prod" (deploy lai theo kich ban
+  # production-clean — team moi tao qua POST /api/teams bang platform key).
+  TEAM_CODE: "myviettel-prod"
 
   # Noi lay cau hinh Endpoint/Upstream CUA CHINH DOI NAY - URL goc cua Control
-  # Plane trung tam (xem ../control-plane/60-ingress.yaml, host "gwm-api...") -
-  # RemoteConfigSyncService tu goi GET {url nay}/api/config/export dinh ky.
-  CONTROL_PLANE_BASE_URL: "http://gwm-api.trung-tam.local"
+  # Plane trung tam - RemoteConfigSyncService tu goi
+  # GET {url nay}/api/config/export dinh ky.
+  #
+  # TRIEN KHAI THAT 2026-09-13: Control Plane chay tren cum testlab-c2 (mang
+  # khac cum myviettel), khong co DNS chung -> dung IP node testlab-c2 +
+  # NodePort backend API (port 8051 la Service gwm-backend-nodeport). IP
+  # 10.29.1.14 = node worker-10029001014 — node duy nhat da kiem chung route
+  # 2 chieu myviettel -> testlab-c2 OPEN (200x5 tu pod myviettel, D0). Khong
+  # dung 10.29.1.21 cu: vi pham quy dinh ha tang (doi chi duoc dung node
+  # .14/.15 — xem PRACTICE_DEPLOY_GUIDE.md H4). Neu sau nay co DNS/Ingress
+  # chung, doi gia tri nay sang hostname chuan.
+  CONTROL_PLANE_BASE_URL: "http://10.29.1.14:8051"
   CONTROL_PLANE_SYNC_INTERVAL_SECONDS: "15"
 
   # Redis - Service "gwm-redis" trong CUNG namespace (xem 30-redis.yaml), dung
@@ -32,21 +49,46 @@ data:
   REDIS_HOST: "gwm-redis"
   REDIS_PORT: "6379"
 
-  # Rate limit traffic that - gia tri mac dinh hop ly cho da so truong hop.
+  # Rate limit traffic that - dem theo client IP (X-Forwarded-For neu co, khong
+  # thi getRemoteAddr), chia se GIUA CAC POD qua Redis. Gia tri la TONG cua moi
+  # IP trong 1 window truoc khi bi 429.
+  #
+  # SIZING 1000 RPS (2026-09-14): 300 req/60s = 5 rps/IP se chan NGAY loadtest
+  # 1000 RPS neu ban tu it IP (JMeter/k6 tu 1-2 may = bi 429 o giay thu 3).
+  # Production that voi it he thong goi lon: tang len 3000/60s (50 rps/IP —
+  # nguong bao ve hop ly cho 1 IP app-server; voi 20-30 IP client thi tong cong
+  # tran 1000 RPS). Neu loadtest tu 1 IP duy nhat thi tam dat cao hon (vi du
+  # 12000 = 200 rps/IP) va TRA LAI 3000 sau test. Disabling (false) la cuoi cung
+  # - chi khi can do baseline throughput that cua gateway khong co gioi han.
   GATEWAY_RATE_LIMIT_ENABLED: "true"
   GATEWAY_RATE_LIMIT_WINDOW_SECONDS: "60"
-  GATEWAY_RATE_LIMIT_MAX_REQUESTS: "300"
+  GATEWAY_RATE_LIMIT_MAX_REQUESTS: "3000"
+
+  # Connection pool HTTP toi Upstream (Apache HttpClient 5 - xem
+  # UpstreamHttpExecutor). So ket noi = so request DONG THOI (Little's Law:
+  # 500/pod voi mean 1.5s), khong phai rps — 600/550 la tran cho 1000 RPS/3 pod.
+  # SCALE LEN 2000 RPS: chi tang 2 gia tri nay (vi du 1200/1100 voi 6 pod x
+  # 333 rps hoac 600/550 giu nguyen neu tang so pod thay vi tang rps/pod) +
+  # rollout restart, KHONG phai build lai image.
+  GATEWAY_HTTP_POOL_MAX_TOTAL: "600"
+  GATEWAY_HTTP_POOL_MAX_PER_ROUTE: "550"
 
   # Audit log (request/hop) - tuy chon. Neu doi CHUA co Elasticsearch rieng,
   # dat GATEWAY_AUDIT_ENABLED="false" de tat han (khong anh huong traffic that).
+  #
+  # TRIEN KHAI THAT 2026-09-10: cum myviettel CO Elasticsearch dung chung
+  # (Service "elasticsearch", 9200, khong auth) - dung chinh no cho audit.
   GATEWAY_AUDIT_ENABLED: "true"
-  GATEWAY_AUDIT_ES_HOST: "elasticsearch.doi-cua-ban.local"
+  GATEWAY_AUDIT_ES_HOST: "elasticsearch"
   ES_PORT: "9200"
   # So ngay giu lai log - qua han bi XOA CA INDEX tu dong moi 24h (xem
   # AuditLogRetentionService). Dat <=0 de tat han (giu vinh vien).
   GATEWAY_AUDIT_RETENTION_DAYS: "3"
 
   # Elastic APM - tuy chon, agent tu tat neu khong ket noi duoc.
-  APM_SERVER_HOST: "apm.doi-cua-ban.local"
+  # TRIEN KHAI THAT: cum myviettel co apm-server-8:8200 (nhung can token 401
+  # truoc day nen image khong attach agent - agent khong chay, bien chi doc).
+  APM_SERVER_HOST: "apm-server-8"
   APM_SERVER_PORT: "8200"
-  APM_ENVIRONMENT: "production"
+  # Khop TEAM_CODE (cung chi dung cho quan sat, khong anh huong sync).
+  APM_ENVIRONMENT: "myviettel-prod"

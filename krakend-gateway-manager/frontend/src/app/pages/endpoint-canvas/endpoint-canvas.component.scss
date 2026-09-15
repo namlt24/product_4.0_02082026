@@ -510,6 +510,14 @@
     flex-shrink: 0;
   }
 
+  code {
+    background: rgba(8, 145, 178, 0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--gwm-accent);
+    font-size: 12px;
+  }
+
   // Bien the "canh bao" cho muc 4 (parallelExecution) - dung y het endpoint-form.component.scss.
   &--warning {
     background: var(--gwm-warning-bg);

@@ -30,9 +30,23 @@ spec:
         app.kubernetes.io/name: gateway-manager
         app.kubernetes.io/component: control-plane
     spec:
+      # Quy dinh ha tang 2026-09-13: doi chi duoc dung 2 node worker-10029001014
+      # (10.29.1.14) + worker-10029001015 (10.29.1.15) - khong pin thi pod bi rai
+      # ca cum (gap that: backend do cu tren .23). Neu ha tang mo rong dai -> them
+      # ten node vao list. Cac pod gwm-* (redis, frontend) cung pin giong vay.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-10029001014
+                      - worker-10029001015
       containers:
         - name: backend
-          image: registry.noi-bo-cua-doi.local/krakend-gateway-manager-backend:v2.0.0
+          image: registry-lab.kcntt.net/bccs/gateway-manager:2.0.0-cp.1
           envFrom:
             - configMapRef:
                 name: gwm-config
@@ -57,6 +71,20 @@ spec:
               value: "com.bccs.gatewaymanager"
             - name: GATEWAY_AUDIT_ES_PORT
               value: "$(ES_PORT)"
+          # startupProbe: BAT BUOC khi Oracle trung tam qua WAN - Hibernate
+          # validate schema (ddl-auto=validate, doc metadata qua JDBC getColumns)
+          # da xac nhan that te mat ~6.5 phut (Oracle 19c WAN, 2026-09-10), trong
+          # khi liveness probe chi chiu duoc ~2ph15s -> kubelet kill (exit 137
+          # CrashLoopBackOff, KHONG phai OOM). startupProbe thay the liveness/
+          # readiness cho den khi pass, cho phep start cham toi ~10 phut.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 60
+            timeoutSeconds: 2
           # Readiness dung "/actuator/health" (endpoint TONG HOP mac dinh, gom ca
           # DataSource health indicator cua Oracle) - Oracle la phu thuoc BAT BUOC
           # cua Control Plane (fail-closed dung cho DB) - Oracle gian doan thi rut

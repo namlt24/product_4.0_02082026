@@ -1,11 +1,11 @@
 # ============================================================================
-# ConfigMap cho Control Plane - 1 BAN DUY NHAT dung chung MOI doi (khac han
-# data-plane/00-configmap.yaml, noi moi doi tu chinh 1 ban rieng cua minh).
-# Doi chieu dung TEN bien voi backend/src/main/resources/application-control-plane.yml.
-#
-# DOI NEN TANG (nguoi trien khai Control Plane): sua truc tiep cac gia tri
-# duoi day cho dung ha tang trung tam truoc khi
-# "kubectl apply -f 00-configmap.yaml -n <namespace-control-plane>".
+# ConfigMap cho Control Plane - gia tri DUNG cho cum testlab-c2 (namespace
+# product), cap nhat 2026-09-12: MAC DINH vinh vien la Oracle trung tam DB170
+# (bo phai ban dap Oracle in-cluster gwm-oracle - neu can dung lai, patch
+# DB_HOST=gwm-oracle / DB_PORT=1521 / DB_NAME=FREEPDB1 + Secret gwm-secret
+# GWM_RUNTIME roi rollout restart deploy/gwm-backend).
+# Sau khi sua/patch ConfigMap/Secret: bat buoc "kubectl rollout restart
+# deploy/gwm-backend" - env trong pod KHONG tu reload.
 # ============================================================================
 apiVersion: v1
 kind: ConfigMap
@@ -15,33 +15,33 @@ metadata:
     app.kubernetes.io/name: gateway-manager
     app.kubernetes.io/component: control-plane
 data:
-  # Oracle TRUNG TAM dung chung MOI doi - schema da duoc DBA cua doi NEN TANG
-  # tao san qua ban giao DDL (V1__baseline.sql + V2__team_code.sql, xem
-  # DEPLOYMENT_GUIDE.md muc 2 + backend/src/main/resources/db/team-schema/).
-  DB_HOST: "oracle.trung-tam.local"
+  # Oracle trung tam DB170 (10.207.222.170:1521/DB170, Oracle 19c, schema
+  # BCCS_PRODUCT chua 9 bang Gateway Manager + data myviettel that).
+  # Can VPN cua user de cụm route toi duoc - verify truoc khi apply:
+  #   kubectl run t --rm -i --restart=Never --image=registry-lab.kcntt.net/bccs/redis:7-alpine --command -- \
+  #     sh -c "nc -z -w5 10.207.222.170 1521; echo rc=$?"
+  # Luu y bẫy #B5: Hibernate validate schema qua WAN mat ~6.5 phut ->
+  # backend phai co startupProbe (da co trong 40-backend.yaml).
+  DB_HOST: "10.207.222.170"
   DB_PORT: "1521"
-  DB_NAME: "ten-pdb-hoac-service-trung-tam"
+  DB_NAME: "DB170"
 
-  # Redis TUY CHON - CHI phuc vu cache tam khi dung "Thu ngay"/"Thu nhanh"
-  # tren UI (CompositeOrchestratorEngine dung chung cho ca Control Plane lan
-  # Data Plane) - fail-open hoan toan, khong co Redis van dung binh thuong,
-  # chi khong duoc cache trong luc thu. KHONG lien quan Redis cua tung doi
-  # (xem data-plane/00-configmap.yaml - REDIS_HOST="gwm-redis" trong namespace
-  # cua doi do).
-  REDIS_HOST: "localhost"
+  # Redis trong cum (gwm-redis Service, xem 30-redis.yaml) - chi phuc vu cache
+  # tam khi dung "Thu ngay"/"Thu nhanh" tren UI. LUU Y: Spring Boot health
+  # indicator gom Redis (fail-closed) -> /actuator/health bao DOWN neu khong
+  # ket noi duoc -> readiness probe fail. Khong co Redis trong namespace thi
+  # pod khong bao gio Ready, nen bat buoc chay 30-redis.yaml cung bo.
+  REDIS_HOST: "gwm-redis"
   REDIS_PORT: "6379"
 
-  # Audit log (Tra cuu Log tren UI) - tuy chon, doc TU 1 Elasticsearch CHI
-  # doc duoc cac index ma chinh Control Plane nay ghi vao (qua "Thu ngay"),
-  # KHONG tu dong thay duoc log traffic that cua tung doi (ho ghi vao ES
-  # RIENG cua ho, xem data-plane/00-configmap.yaml) TRU KHI ca 2 ben cung tro
-  # chung 1 cum ES (tuy chon ha tang, xem SAD-Gateway-Manager.md ADR-07).
-  GATEWAY_AUDIT_ENABLED: "true"
-  GATEWAY_AUDIT_ES_HOST: "elasticsearch.trung-tam.local"
+  # Audit log - TAT cho lan deploy dau (chua co Elasticsearch trong namespace
+  # product; bat len khi da co ES + thay GATEWAY_AUDIT_ES_HOST).
+  GATEWAY_AUDIT_ENABLED: "false"
+  GATEWAY_AUDIT_ES_HOST: "localhost"
   ES_PORT: "9200"
   GATEWAY_AUDIT_RETENTION_DAYS: "3"
 
   # Elastic APM - tuy chon, agent tu tat neu khong ket noi duoc.
-  APM_SERVER_HOST: "apm.trung-tam.local"
+  APM_SERVER_HOST: "localhost"
   APM_SERVER_PORT: "8200"
-  APM_ENVIRONMENT: "production"
+  APM_ENVIRONMENT: "product-dev"

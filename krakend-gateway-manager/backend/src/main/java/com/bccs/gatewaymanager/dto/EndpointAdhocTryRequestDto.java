@@ -18,10 +18,13 @@ public record EndpointAdhocTryRequestDto(
         @NotNull @Valid EndpointRequestDto endpoint,
         Map<String, String> pathVariables,
         Map<String, String> queryParams,
-        String body
+        String body,
+        /** V5 - gia tri cờ ghe de cho lan chay thu nay (mirror EndpointTryRequestDto.flagOverrides). */
+        Map<String, Boolean> flagOverrides
 ) {
     public EndpointAdhocTryRequestDto {
         if (pathVariables == null) pathVariables = Map.of();
         if (queryParams == null) queryParams = Map.of();
+        if (flagOverrides == null) flagOverrides = Map.of();
     }
 }

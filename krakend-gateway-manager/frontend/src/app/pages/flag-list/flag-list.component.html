@@ -1,0 +1,185 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Cờ nghiệp vụ</h1>
+    <p class="page-subtitle">
+      Cờ boolean khai báo tập trung của đội - endpoint tham chiếu qua Rule ("khớp tổ hợp cờ → bắt đầu từ step / chặn").
+      Toggle BẬT/TẮT có hiệu lực trên Data Plane trong chu kỳ sync 15s.
+    </p>
+  </div>
+  <button mat-flat-button color="primary" type="button" (click)="openCreateDialog()">
+    <mat-icon>add</mat-icon>
+    Tạo cờ mới
+  </button>
+</div>
+
+<div class="table-card">
+  @if (loading()) {
+    <div class="loading-row">
+      <mat-spinner diameter="22" />
+      <span>Đang tải...</span>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">flag</mat-icon>
+      <h3>Chưa có cờ nào</h3>
+      <p>Tạo cờ đầu tiên để gắn vào Rule của endpoint (ví dụ: VIP, KYC_DONE, MAINTENANCE).</p>
+    </div>
+  } @else {
+    <table mat-table [dataSource]="items()" multiTemplateDataRows class="full-width gwm-table">
+      <ng-container matColumnDef="flagCode">
+        <th mat-header-cell *matHeaderCellDef>Mã cờ</th>
+        <td mat-cell *matCellDef="let row">
+          <span class="flag-chip">{{ row.flagCode }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="displayName">
+        <th mat-header-cell *matHeaderCellDef>Tên hiển thị</th>
+        <td mat-cell *matCellDef="let row">
+          <div class="flag-name">{{ row.displayName }}</div>
+          @if (row.description) {
+            <div class="flag-description">{{ row.description }}</div>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="enabled">
+        <th mat-header-cell *matHeaderCellDef>Giá trị hiện tại</th>
+        <td mat-cell *matCellDef="let row">
+          <button
+            class="flag-toggle"
+            type="button"
+            [class.flag-toggle--on]="row.enabled"
+            [matTooltip]="row.enabled ? 'Đang BẬT - bấm để TẮT' : 'Đang TẮT - bấm để BẬT'"
+            (click)="toggle(row); $event.stopPropagation()">
+            <span class="flag-toggle-thumb"></span>
+            <span class="flag-toggle-label">{{ row.enabled ? 'BẬT' : 'TẮT' }}</span>
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="updatedAt">
+        <th mat-header-cell *matHeaderCellDef>Cập nhật lúc</th>
+        <td mat-cell *matCellDef="let row">{{ formatTimestamp(row.updatedAt) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-icon-button matTooltip="Sửa tên/mô tả" (click)="openEditDialog(row); $event.stopPropagation()">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Xóa cờ" (click)="delete(row); $event.stopPropagation()">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="expandedId() === row.id ? 'Thu gọn lịch sử' : 'Xem lịch sử đổi giá trị'" (click)="toggleExpand(row)">
+            <mat-icon>{{ expandedId() === row.id ? 'expand_less' : 'history' }}</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="detail">
+        <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length">
+          @if (expandedId() === row.id) {
+            <div class="detail-panel">
+              <div class="detail-block-title">
+                <mat-icon inline="true">history</mat-icon>
+                Lịch sử đổi giá trị (mới nhất trước)
+              </div>
+              @if (historyOf(row).length === 0) {
+                <div class="history-empty">Chưa có lần đổi nào được ghi nhận.</div>
+              } @else {
+                <table class="history-table">
+                  <thead>
+                    <tr>
+                      <th>Giá trị cũ</th>
+                      <th>Giá trị mới</th>
+                      <th>Nguồn</th>
+                      <th>Thời điểm</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (h of historyOf(row); track h.id) {
+                      <tr>
+                        <td>
+                          @if (h.oldValue === null) {
+                            <span class="history-null">—</span>
+                          } @else {
+                            <span [class.history-on]="h.oldValue" [class.history-off]="!h.oldValue">{{ h.oldValue ? 'BẬT' : 'TẮT' }}</span>
+                          }
+                        </td>
+                        <td><span [class.history-on]="h.newValue" [class.history-off]="!h.newValue">{{ h.newValue ? 'BẬT' : 'TẮT' }}</span></td>
+                        <td>{{ h.source }}</td>
+                        <td>{{ formatTimestamp(h.changedAt) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" class="data-row" (click)="toggleExpand(row)"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['detail']" class="detail-row" [class.detail-row--open]="expandedId() === row.id"></tr>
+    </table>
+  }
+</div>
+
+<!-- Dialog tao/sua cờ -->
+@if (dialogOpen()) {
+  <div class="dialog-backdrop" (click)="closeDialog()">
+    <div class="dialog-card" (click)="$event.stopPropagation()">
+      <h2 class="dialog-title">{{ editingId() ? 'Sửa cờ' : 'Tạo cờ mới' }}</h2>
+
+      <mat-form-field appearance="outline" class="dialog-field">
+        <mat-label>Mã cờ</mat-label>
+        <input
+          matInput
+          [value]="formFlagCode()"
+          (input)="formFlagCode.set($any($event.target).value.toUpperCase())"
+          [readonly]="!!editingId()"
+          placeholder="vd: VIP" />
+        <mat-hint>Mã hoa, không dấu, không khoảng trắng - endpoint tham chiếu qua mã này. {{ editingId() ? 'Không đổi được sau khi tạo.' : '' }}</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="dialog-field">
+        <mat-label>Tên hiển thị</mat-label>
+        <input matInput [(ngModel)]="formDisplayName" placeholder="vd: Khách hàng VIP" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="dialog-field">
+        <mat-label>Mô tả</mat-label>
+        <textarea matInput [(ngModel)]="formDescription" rows="2" placeholder="Ý nghĩa nghiệp vụ của cờ"></textarea>
+      </mat-form-field>
+
+      @if (!editingId()) {
+        <div class="dialog-enabled-row">
+          <span>Giá trị ban đầu</span>
+          <button
+            class="flag-toggle"
+            type="button"
+            [class.flag-toggle--on]="formEnabled()"
+            (click)="formEnabled.set(!formEnabled())">
+            <span class="flag-toggle-thumb"></span>
+            <span class="flag-toggle-label">{{ formEnabled() ? 'BẬT' : 'TẮT' }}</span>
+          </button>
+        </div>
+      }
+
+      <div class="dialog-actions">
+        <button mat-stroked-button type="button" (click)="closeDialog()">Hủy</button>
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          [disabled]="saving() || !formFlagCode().trim() || !formDisplayName().trim()"
+          (click)="save()">
+          {{ saving() ? 'Đang lưu...' : 'Lưu' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

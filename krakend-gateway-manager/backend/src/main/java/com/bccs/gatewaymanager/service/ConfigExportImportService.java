@@ -7,9 +7,12 @@ import com.bccs.gatewaymanager.dto.ConfigImportResultDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.dto.FlagDto;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
+import com.bccs.gatewaymanager.entity.GwmFlag;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
 import com.bccs.gatewaymanager.repository.EndpointConfigVersionRepository;
+import com.bccs.gatewaymanager.repository.GwmFlagRepository;
 import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +54,7 @@ public class ConfigExportImportService {
     private final EndpointService endpointService;
     private final EndpointMapper endpointMapper;
     private final EndpointConfigVersionRepository versionRepository;
+    private final GwmFlagRepository flagRepository;
 
     /**
      * Dau van tay config CUA DUNG 1 DOI (CurrentTeamContext) cho co che ETag/304
@@ -63,8 +67,11 @@ public class ConfigExportImportService {
      *    EndpointConfigVersion cung transaction (EndpointVersionService.recordSnapshot)
      *    nen cap nay bat duoc ca sua chi dong den step/mapping con - truong hop
      *    updated_at row endpoint cha khong chac nhay (replaceSteps clear+add lai toan bo con).
-     * Moi duong ghi config deu qua EndpointService/UpstreamServiceService (UI CRUD
-     * + /api/config/import) nen 3 cap nay khong the khong nhay khi co thay doi.
+     *  - flag (V5) : COUNT + MAX(updated_at) GWM_FLAG - bat create/update/toggle
+     *    (toggle chi doi enabled nhung @UpdateTimestamp van nhay) - DP biet luong
+     *    theo cờ da doi <= 1 chu ky sync.
+     * Moi duong ghi config deu qua EndpointService/UpstreamServiceService/FlagService
+     * (UI CRUD + /api/config/import) nen 4 cap nay khong the khong nhay khi co thay doi.
      * Gia tri hash thay doi = config doi da doi -> DP can export lai (200);
      * giong lan truoc -> CP tra 304 (khong SELECT du lieu that, khong serialize).
      */
@@ -78,7 +85,9 @@ public class ConfigExportImportService {
         Object[] upFp = upstreamRepository.fingerprintByTeamCode(teamCode).get(0);
         Object[] epFp = endpointRepository.fingerprintByTeamCode(teamCode).get(0);
         Object[] verFp = versionRepository.fingerprintByTeamCode(teamCode).get(0);
-        String fingerprint = upFp[0] + "|" + upFp[1] + "|" + epFp[0] + "|" + epFp[1] + "|" + verFp[0] + "|" + verFp[1];
+        Object[] flagFp = flagRepository.fingerprintByTeamCode(teamCode).get(0);
+        String fingerprint = upFp[0] + "|" + upFp[1] + "|" + epFp[0] + "|" + epFp[1] + "|" + verFp[0] + "|" + verFp[1]
+                + "|" + flagFp[0] + "|" + flagFp[1];
         return '"' + Integer.toHexString(fingerprint.hashCode()) + '"';
     }
 
@@ -104,7 +113,10 @@ public class ConfigExportImportService {
         List<EndpointResponseDto> endpoints = endpointRepository.findAllByTeamCodeOrderByUpdatedAtDesc(CurrentTeamContext.require()).stream()
                 .map(endpointMapper::toResponseDto)
                 .toList();
-        return ResponseEntity.ok().eTag(etag).body(new ConfigExportDto(SCHEMA_VERSION, Instant.now(), upstreams, endpoints));
+        List<FlagDto> flags = flagRepository.findByTeamCode(CurrentTeamContext.require()).stream()
+                .map(this::toFlagDto)
+                .toList();
+        return ResponseEntity.ok().eTag(etag).body(new ConfigExportDto(SCHEMA_VERSION, Instant.now(), upstreams, endpoints, flags));
     }
 
     @Transactional
@@ -127,6 +139,34 @@ public class ConfigExportImportService {
             }
         }
 
+        // Import cờ TRUOC endpoint (endpoint tham chieu flagCode trong flag_rules -
+        // EndpointService.validateFlagRules() se bao GW-FLAG-404 neu cờ chua ton tai).
+        // Upsert khop (teamCode hien tai, flagCode); enabled/ten/mo ta lay theo bundle.
+        int flagsCreated = 0;
+        int flagsUpdated = 0;
+        if (bundle.flags() != null) {
+            for (FlagDto f : bundle.flags()) {
+                var existing = flagRepository.findByTeamCodeAndFlagCodeIgnoreCase(CurrentTeamContext.require(), f.flagCode());
+                if (existing.isPresent()) {
+                    GwmFlag flag = existing.get();
+                    flag.setDisplayName(f.displayName());
+                    flag.setDescription(f.description());
+                    flag.setEnabled(f.enabled());
+                    flagRepository.save(flag);
+                    flagsUpdated++;
+                } else {
+                    flagRepository.save(GwmFlag.builder()
+                            .teamCode(CurrentTeamContext.require())
+                            .flagCode(f.flagCode())
+                            .displayName(f.displayName())
+                            .description(f.description())
+                            .enabled(f.enabled())
+                            .build());
+                    flagsCreated++;
+                }
+            }
+        }
+
         List<String> warnings = new ArrayList<>();
         int endpointsCreated = 0;
         int endpointsUpdated = 0;
@@ -142,9 +182,14 @@ public class ConfigExportImportService {
             }
         }
 
-        log.info("Import cau hinh xong: {} upstream moi, {} upstream cap nhat, {} endpoint moi, {} endpoint cap nhat, {} canh bao.",
-                upstreamsCreated, upstreamsUpdated, endpointsCreated, endpointsUpdated, warnings.size());
+        log.info("Import cau hinh xong: {} upstream moi, {} upstream cap nhat, {} endpoint moi, {} endpoint cap nhat, {} cờ moi, {} cờ cap nhat, {} canh bao.",
+                upstreamsCreated, upstreamsUpdated, endpointsCreated, endpointsUpdated, flagsCreated, flagsUpdated, warnings.size());
         return new ConfigImportResultDto(upstreamsCreated, upstreamsUpdated, endpointsCreated, endpointsUpdated, warnings);
+    }
+
+    private FlagDto toFlagDto(GwmFlag f) {
+        return new FlagDto(f.getId(), f.getTeamCode(), f.getFlagCode(), f.getDisplayName(),
+                f.getDescription(), f.isEnabled(), f.getCreatedAt(), f.getUpdatedAt());
     }
 
     /** Chuyen 1 snapshot EndpointResponseDto (tu bundle) thanh EndpointRequestDto de goi lai create()/update() - dung LAI toan bo validate/cycle-check co san. */
@@ -179,10 +224,11 @@ public class ConfigExportImportService {
                             // thuan tuy (tham chieu stepOrder trong CUNG endpoint), khong gan voi
                             // moi truong nguon nhu upstreamServiceId nen khong can resolve lai gi.
                             s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
-                            s.conditionOperator(), s.conditionExpectedValue(),
+                            s.conditionOperator(), s.conditionExpectedValue(), s.conditionFlagGroups(), s.conditionGroups(),
                             s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup(),
                             resolvedCompensationUpstreamId, s.compensationUpstreamServiceName(),
-                            s.compensationMethod(), s.compensationUrlPattern());
+                            s.compensationMethod(), s.compensationUrlPattern(), s.switchBranches(),
+                            s.falseErrorCode(), s.falseErrorMessage());
                 })
                 .toList();
 
@@ -195,6 +241,7 @@ public class ConfigExportImportService {
         return new EndpointRequestDto(ep.name(), ep.description(), ep.path(), ep.method(),
                 ep.sequential(), ep.outputEncoding(), steps, mappings,
                 ep.idempotencyEnabled(), ep.idempotencyTtlSeconds(), ep.parallelExecution(),
-                ep.responseCacheEnabled(), ep.responseCacheTtlSeconds());
+                ep.responseCacheEnabled(), ep.responseCacheTtlSeconds(), ep.flagRules(),
+                ep.responseMapping());
     }
 }

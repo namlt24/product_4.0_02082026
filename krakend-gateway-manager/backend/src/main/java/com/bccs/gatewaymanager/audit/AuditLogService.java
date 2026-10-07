@@ -63,6 +63,7 @@ public class AuditLogService {
             return;
         }
         scheduler.scheduleWithFixedDelay(this::flush, 1, 1, TimeUnit.SECONDS);
+        ensureTraceIdMappingTemplate();
         log.info("Audit log toi Elasticsearch da BAT - flush moi 1 giay, hang doi toi da {} phan tu.", MAX_QUEUE_SIZE);
     }
 
@@ -119,6 +120,43 @@ public class AuditLogService {
 
     private String indexSuffix(Instant timestamp) {
         return INDEX_DATE_SUFFIX.format(timestamp != null ? timestamp : Instant.now());
+    }
+
+    /**
+     * Mapping cho "traceId" phai la text+keyword: dynamic mapping cua ES DAT LOI
+     * neu document DAU TIEN co traceId chi toan chu so (Gravitee/trace-id ben
+     * client khong dam bao co chu cai) - khi do traceId bi do la "long", moi
+     * traceId co chu cai ghi sau do bi LOI bulk va trang "Tra cuu Log theo
+     * traceId" tro nen vo dung. Co dinh mapping qua index template (match
+     * "gwm-requests-*" va "gwm-hops-*") ngay khi khoi dong - fail-open nhu toan bo
+     * module audit (template da co san/khong set duoc thi chi log canh bao).
+     */
+    private void ensureTraceIdMappingTemplate() {
+        try {
+            // JSON nay ap TRUC TIEP vao IndexTemplateMapping (withJson) - phai la
+            // {"mappings": ...} KHONG boc them lop "template" ben ngoai (lop do
+            // la shape cua body API _index_template, khong phai cua builder;
+            // boc sai -> JsonpMappingException "Unknown field 'template'" - bug
+            // that thay trong log DP build #21 2026-09-29).
+            String mapping = """
+                    {
+                      "mappings": {
+                        "properties": {
+                          "traceId": {
+                            "type": "text",
+                            "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+                          }
+                        }
+                      }
+                    }""";
+            client.indices().putIndexTemplate(r -> r
+                    .name("gwm-audit-traceid")
+                    .indexPatterns("gwm-requests-*", "gwm-hops-*")
+                    .template(t -> t.withJson(new java.io.StringReader(mapping))));
+        } catch (Exception e) {
+            log.warn("Khong tao duoc index template giam mapping traceId (tra cuu theo traceId co the khong dung voi traceId chi toan chu so): {}: {}",
+                    e.getClass().getSimpleName(), e.getMessage());
+        }
     }
 
     private record QueuedDoc(String index, Object doc) {

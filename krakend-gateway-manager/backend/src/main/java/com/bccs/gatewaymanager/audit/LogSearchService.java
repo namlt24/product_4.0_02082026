@@ -2,7 +2,6 @@ package com.bccs.gatewaymanager.audit;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -11,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,45 +30,24 @@ public class LogSearchService {
 
     private final ElasticsearchClient client;
 
-    public LogSearchResultDto searchRequests(Instant from, Instant to, String status, String endpointPath,
-                                              String bodyContains, int page, int size) {
+    /**
+     * Tra cuu DUY NHAT theo traceId (bat buoc, do UI chi con truyen tieu chi nay):
+     * DUNG-NGUYEN-CHUOI tren .keyword (khong tokenize) de 1 traceId chi khop dung
+     * request cua no. Khong loc them khoang thoi gian - 1 traceId la duy nhat,
+     * chi qua it request thi truy van full-range van re (term query O(1)-ish).
+     */
+    public LogSearchResultDto searchRequests(String traceId, int page, int size) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 200);
 
-        List<Query> filters = new ArrayList<>();
-        if (from != null || to != null) {
-            filters.add(Query.of(q -> q.range(r -> r.date(d -> {
-                d.field("timestamp");
-                if (from != null) d.gte(from.toString());
-                if (to != null) d.lte(to.toString());
-                return d;
-            }))));
+        if (traceId == null || traceId.isBlank()) {
+            return new LogSearchResultDto(List.of(), 0, safePage, safeSize);
         }
-        if (status != null && !status.isBlank()) {
-            filters.add(Query.of(q -> q.term(t -> t.field("status.keyword").value(status))));
-        }
-        if (endpointPath != null && !endpointPath.isBlank()) {
-            // "match" (full-text, tokenized) tren "clientPath" tung gay sai: 2 path khac
-            // han nhau nhung chung 1 tu (vi du ca "/v1/branch-demo/..." lan "/v1/canvas-demo/
-            // staff-full-info" cung co token "demo"/"staff") van bi coi la khop - da xac nhan
-            // qua test that. Dung wildcard "chua chuoi con" tren "clientPath.keyword" (khong
-            // phan tich/tokenize) de dung y nghia nguoi dung mong doi: loc theo DUNG path/doan
-            // path go vao, khong phai "co tu nao do trung".
-            String escaped = endpointPath.replace("\\", "\\\\").replace("*", "\\*").replace("?", "\\?");
-            filters.add(Query.of(q -> q.wildcard(w -> w.field("clientPath.keyword").value("*" + escaped + "*"))));
-        }
-        if (bodyContains != null && !bodyContains.isBlank()) {
-            filters.add(Query.of(q -> q.match(m -> m.field("requestBody").query(bodyContains))));
-        }
-
-        Query finalQuery = filters.isEmpty()
-                ? Query.of(q -> q.matchAll(m -> m))
-                : Query.of(q -> q.bool(BoolQuery.of(b -> b.filter(filters))));
 
         try {
             SearchResponse<RequestAuditEvent> response = client.search(s -> s
                             .index(REQUESTS_INDEX)
-                            .query(finalQuery)
+                            .query(Query.of(q -> q.term(t -> t.field("traceId.keyword").value(traceId.trim()))))
                             .sort(so -> so.field(f -> f.field("timestamp").order(SortOrder.Desc)))
                             .from(safePage * safeSize)
                             .size(safeSize)

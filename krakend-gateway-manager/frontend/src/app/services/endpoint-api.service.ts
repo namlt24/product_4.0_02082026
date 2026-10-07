@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   ConfigExportBundle,
   ConfigImportResult,
+  CurrentTeam,
   DependencyGraph,
   DeployResult,
   EndpointAdhocTryRequest,
@@ -29,6 +30,11 @@ export class EndpointApiService {
   private readonly configUrl = '/api/config';
 
   constructor(private readonly http: HttpClient) {}
+
+  /** Doi tuong ung voi API key hien tai - dung hien badge "Team: xxx" tren toolbar. */
+  me(): Observable<CurrentTeam> {
+    return this.http.get<CurrentTeam>('/api/me');
+  }
 
   list(search?: string): Observable<EndpointConfig[]> {
     let params = new HttpParams();

@@ -10,6 +10,7 @@ import com.bccs.gatewaymanager.entity.EndpointChangeType;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.repository.EndpointConfigRepository;
+import com.bccs.gatewaymanager.repository.GwmFlagRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -41,6 +42,7 @@ public class EndpointService {
     private final EndpointVersionService versionService;
     private final GatewayCacheService cacheService;
     private final UpstreamHttpExecutor upstreamHttpExecutor;
+    private final GwmFlagRepository flagRepository;
 
     @Transactional(readOnly = true)
     public List<EndpointResponseDto> list(String search) {
@@ -128,8 +130,11 @@ public class EndpointService {
      */
     private void purgeStaleCacheIfChanged(EndpointResponseDto before, EndpointResponseDto result) {
         boolean responseCacheKeyMayChange = !before.path().equals(result.path()) || before.method() != result.method();
+        // ResponseMapping doi -> noi dung response tra client doi (khong doi key cache
+        // nhung entry cu van mang response dung cau hinh cu) - phai don cung response-cache.
         if (before.responseCacheEnabled() != result.responseCacheEnabled()
-                || ((before.responseCacheEnabled() || result.responseCacheEnabled()) && responseCacheKeyMayChange)) {
+                || ((before.responseCacheEnabled() || result.responseCacheEnabled()) && responseCacheKeyMayChange)
+                || !java.util.Objects.equals(before.responseMapping(), result.responseMapping())) {
             cacheService.deleteByPattern("gwm:response-cache:" + result.id() + ":*");
         }
 
@@ -358,6 +363,120 @@ public class EndpointService {
         validateParallelGroups(dto);
         validateCompensationConfig(dto);
         validateResponseCache(dto);
+        validateFlagRules(dto, orders);
+        validateResponseMappings(dto, orders);
+    }
+
+    /**
+     * Kiem tra cau hinh ResponseMapping (ghép field tu bat ky step nao vao response
+     * cuoi) - mirror cac validate* ben tren:
+     * (1) mode phai la MERGE hoac REPLACE (den day spec chac chan khong rong - rong
+     *     da duoc coi nhu "khong dung" va bo qua);
+     * (2) moi mapping: sourceStepOrder PHAI ton tai trong steps (chan - khac voi
+     *     validateFlagRules bo qua step khong chay: o day la loi cau hinh CHAC CHAN,
+     *     vi mapping doc ctx.stepResults cua step do);
+     * (3) sourceField/targetField bat buoc non-blank.
+     * targetField TRUNG nhau giua cac mapping KHONG chan - mapping co mappingOrder
+     * lon hon ghi sau (de len), la hanh vi chu dong khi can ghi de.
+     * Package-private de EndpointTryService.tryAdhoc() dung chung qua validate().
+     */
+    void validateResponseMappings(com.bccs.gatewaymanager.dto.EndpointRequestDto dto, List<Integer> orders) {
+        var spec = dto.responseMapping();
+        if (com.bccs.gatewaymanager.dto.ResponseMappingSpecDto.isEmpty(spec)) {
+            return;
+        }
+        if (!com.bccs.gatewaymanager.dto.ResponseMappingSpecDto.MODE_MERGE.equals(spec.mode())
+                && !com.bccs.gatewaymanager.dto.ResponseMappingSpecDto.MODE_REPLACE.equals(spec.mode())) {
+            throw new BusinessException("GW-003",
+                    "ResponseMapping: mode phai la MERGE hoac REPLACE (gia tri hien tai: '" + spec.mode() + "').");
+        }
+        var orderSet = new java.util.HashSet<>(orders);
+        for (var m : spec.mappings()) {
+            if (m.sourceField() == null || m.sourceField().isBlank()
+                    || m.targetField() == null || m.targetField().isBlank()) {
+                throw new BusinessException("GW-003",
+                        "ResponseMapping (step " + m.sourceStepOrder() + "): sourceField va targetField bat buoc khong de trong.");
+            }
+            if (!orderSet.contains(m.sourceStepOrder())) {
+                throw new BusinessException("GW-003",
+                        "ResponseMapping: sourceStepOrder=" + m.sourceStepOrder() + " khong ton tai trong steps cua endpoint.");
+            }
+        }
+    }
+
+    /**
+     * Kiem tra mang RULE CỜ (V5) - mirror cac validateBranching/validateParallelGroups:
+     * (1) chi dung khi sequential=true (Rule chon step bat dau cua 1 chuoi tuan tu;
+     *     endpoint non-sequential khong co "step bat dau" co y nghia);
+     * (2) actionType hop le + all-or-nothing (START_STEP phai co startStepOrder ton
+     *     tai trong steps; BLOCK phai co blockErrorCode);
+     * (3) priority duy nhat (thu tu danh gia nghiem ngat, 2 rule cung priority khong
+     *     xac dinh ai khop truoc);
+     * (4) khong nhom dieu kien nao rong (nhom AND rong luon "dung" -> rule khop vo
+     *     dieu kien, de lay nham traffic cua ca endpoint);
+     * (5) flagCode trong 1 nhom KHONG trung (2 dieu kien cho cung 1 cờ trong 1 nhom
+     *     la mau thuan hoac du thua - A=T ∧ A=F khong bao gio khop, A=T ∧ A=T thua);
+     * (6) flagCode PHAI ton tai thuoc doi hien tai (GWM_FLAG) - tham chieu cheo-doi
+     *     tuong tu findUpstreamOrThrow.
+     * Package-private de EndpointTryService.tryAdhoc() dung chung qua validate().
+     */
+    void validateFlagRules(com.bccs.gatewaymanager.dto.EndpointRequestDto dto, List<Integer> orders) {
+        if (dto.flagRules() == null || dto.flagRules().isEmpty()) {
+            return;
+        }
+        if (!dto.sequential()) {
+            throw new BusinessException("GW-003",
+                    "Rule cờ chỉ áp dụng được khi sequential=true (chọn step bắt đầu của 1 chuỗi tuân tự) - "
+                            + "endpoint sequential=false mỗi step độc lập, không có khái niệm 'bắt đầu từ step nào'.");
+        }
+        var orderSet = new java.util.HashSet<>(orders);
+        var priorities = new java.util.HashSet<Integer>();
+        for (var rule : dto.flagRules()) {
+            if (rule.actionType() == null || rule.actionType().isBlank()) {
+                throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                        + "': thiếu actionType (START_STEP hoặc BLOCK).");
+            }
+            if (rule.conditions() == null || rule.conditions().isEmpty()
+                    || rule.conditions().stream().anyMatch(List::isEmpty)) {
+                throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                        + "': mỗi nhóm điều kiện phải có ít nhất 1 điều kiện (nhóm rỗng luôn khớp - vô nghĩa).");
+            }
+            if (!priorities.add(rule.priority())) {
+                throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                        + "': priority " + rule.priority() + " bị trùng với Rule khác - thứ tự đánh giá không xác định.");
+            }
+            boolean block = com.bccs.gatewaymanager.dto.FlagRuleDto.ACTION_BLOCK.equals(rule.actionType());
+            boolean startStep = com.bccs.gatewaymanager.dto.FlagRuleDto.ACTION_START_STEP.equals(rule.actionType());
+            if (!block && !startStep) {
+                throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                        + "': actionType phải là START_STEP hoặc BLOCK (đang là '" + rule.actionType() + "').");
+            }
+            if (startStep && (rule.startStepOrder() == null || !orderSet.contains(rule.startStepOrder()))) {
+                throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                        + "': startStepOrder trỏ tới step không tồn tại.");
+            }
+            if (block && (rule.blockErrorCode() == null || rule.blockErrorCode().isBlank())) {
+                throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                        + "': actionType=BLOCK phải khai blockErrorCode (mã lỗi trả về client).");
+            }
+            for (List<com.bccs.gatewaymanager.dto.FlagRuleDto.FlagConditionDto> group : rule.conditions()) {
+                var codesInGroup = new java.util.HashSet<String>();
+                for (var cond : group) {
+                    if (cond.flagCode() == null || cond.flagCode().isBlank()) {
+                        throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                                + "': có điều kiện thiếu flagCode.");
+                    }
+                    if (!codesInGroup.add(cond.flagCode())) {
+                        throw new BusinessException("GW-003", "Rule cờ '" + rule.name()
+                                + "': flagCode '" + cond.flagCode() + "' khai 2 lần trong 1 nhóm (AND) - mau thuan hoặc dư thừa.");
+                    }
+                    if (!flagRepository.existsByTeamCodeAndFlagCodeIgnoreCase(CurrentTeamContext.require(), cond.flagCode())) {
+                        throw new BusinessException("GW-FLAG-404", "Rule cờ '" + rule.name()
+                                + "': cờ '" + cond.flagCode() + "' chưa được khai báo trong trang Cờ nghiệp vụ của đội này.");
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -464,7 +583,7 @@ public class EndpointService {
                             + "endpoint sequential=false da co co rieng parallelExecution cho toan bo step.");
         }
         for (var s : dto.steps()) {
-            if (s.parallelGroup() != null && (s.conditionOperator() != null || s.onErrorStepOrder() != null)) {
+            if (s.parallelGroup() != null && (s.conditionOperator() != null || s.onErrorStepOrder() != null || hasSwitch(s))) {
                 throw new BusinessException("GW-003", "Step '" + s.name()
                         + "': step trong 1 nhom song song (parallelGroup) khong duoc khai bao "
                         + "conditionOperator/onErrorStepOrder rieng (chua ho tro o V1).");
@@ -478,6 +597,8 @@ public class EndpointService {
         for (var s : dto.steps()) {
             boolean jumpsIntoGroup = (s.nextStepOrderIfTrue() != null && groupedStepOrders.contains(s.nextStepOrderIfTrue()))
                     || (s.nextStepOrderIfFalse() != null && groupedStepOrders.contains(s.nextStepOrderIfFalse()))
+                    || (hasSwitch(s) && s.switchBranches().stream().anyMatch(b -> b.nextStepOrder() != null
+                            && groupedStepOrders.contains(b.nextStepOrder())))
                     || (s.onErrorStepOrder() != null && groupedStepOrders.contains(s.onErrorStepOrder()));
             if (jumpsIntoGroup) {
                 throw new BusinessException("GW-003", "Step '" + s.name()
@@ -506,7 +627,7 @@ public class EndpointService {
 
     /** true neu endpoint dung BAT KY co che "nhay" nao lam thu tu thuc thi khong con dam bao tang dan theo stepOrder - re nhanh (conditionOperator) HOAC fallback loi (onErrorStepOrder). */
     private boolean usesBranching(EndpointRequestDto dto) {
-        return dto.steps().stream().anyMatch(s -> s.conditionOperator() != null || s.onErrorStepOrder() != null);
+        return dto.steps().stream().anyMatch(s -> s.conditionOperator() != null || s.onErrorStepOrder() != null || hasSwitch(s));
     }
 
     /** Kiem tra field re nhanh (P1-5) tham chieu dung step co that + khong tao vong lap. */
@@ -525,22 +646,136 @@ public class EndpointService {
                 throw new BusinessException("GW-003", "Step '" + s.name() + "': onErrorStepOrder tro toi step "
                         + s.onErrorStepOrder() + " khong ton tai.");
             }
+            boolean hasFalseError = s.falseErrorCode() != null && !s.falseErrorCode().isBlank();
+            if (!hasFalseError && s.falseErrorMessage() != null && !s.falseErrorMessage().isBlank()) {
+                throw new BusinessException("GW-003", "Step '" + s.name() + "': co thong diep bao loi nhung thieu ma loi.");
+            }
+            if (hasFalseError) {
+                if (s.conditionOperator() == null && !hasSwitch(s)) {
+                    throw new BusinessException("GW-003", "Step '" + s.name()
+                            + "': chi bao loi duoc cho nhanh SAI cua rẽ nhánh (can dieu kien hoac switch).");
+                }
+                if (s.nextStepOrderIfFalse() != null) {
+                    throw new BusinessException("GW-003", "Step '" + s.name()
+                            + "': nhanh SAI chi duoc chon MOT trong hai: chuyen sang step khac HOAC bao loi.");
+                }
+                if (s.falseErrorMessage() == null || s.falseErrorMessage().isBlank()) {
+                    throw new BusinessException("GW-003", "Step '" + s.name() + "': bao loi nhanh SAI can co thong diep.");
+                }
+                if (s.falseErrorCode().length() > 60 || s.falseErrorMessage().length() > 500) {
+                    throw new BusinessException("GW-003", "Step '" + s.name()
+                            + "': ma loi toi da 60 ky tu, thong diep toi da 500 ky tu.");
+                }
+            }
             if (s.conditionOperator() != null
                     && s.conditionSourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
                     && (s.conditionSourceStepOrder() == null || !orderSet.contains(s.conditionSourceStepOrder()))) {
                 throw new BusinessException("GW-003", "Step '" + s.name()
                         + "': dieu kien re nhanh (sourceType=STEP_RESPONSE) thieu conditionSourceStepOrder hop le.");
             }
+            // V6 - conditionGroups: dieu kien NHIEU NGUON (REQUEST_BODY/STEP_RESPONSE)
+            // NHIEU NHOM, tong quat hoa conditionFlagGroups (V5b) sang cho du lieu
+            // request/response thuc. Khac null/rong -> engine UU TIEN danh gia NHOM
+            // nay (bo qua HOAN TOAN dieu kien 1 co don le VA nhanh SYSTEM_FLAG, xem
+            // CompositeOrchestratorEngine.evaluateCondition()) nen validate CHINH noi
+            // dung nhom nay, moi dieu kien LA phai co du nguon/field/toan tu hop le.
+            boolean hasConditionGroups = s.conditionOperator() != null
+                    && s.conditionGroups() != null && !s.conditionGroups().isEmpty();
+            if (hasConditionGroups) {
+                for (int gi = 0; gi < s.conditionGroups().size(); gi++) {
+                    var group = s.conditionGroups().get(gi);
+                    if (group == null || group.isEmpty()) {
+                        throw new BusinessException("GW-003", "Step '" + s.name()
+                                + "': nhom dieu kien thu " + (gi + 1) + " dang rong - hay them dieu kien hoac xoa nhom rong.");
+                    }
+                    for (int ci = 0; ci < group.size(); ci++) {
+                        validateConditionNode("Step '" + s.name() + "' (nhom #" + (gi + 1) + ", dieu kien #" + (ci + 1) + ")",
+                                group.get(ci), orderSet, 1);
+                    }
+                }
+            }
+            if (hasSwitch(s)) {
+                for (int bi = 0; bi < s.switchBranches().size(); bi++) {
+                    var branch = s.switchBranches().get(bi);
+                    String branchLabel = "Step '" + s.name() + "' (nhanh #" + (bi + 1) + ")";
+                    if (branch == null || branch.groups() == null || branch.groups().isEmpty()) {
+                        throw new BusinessException("GW-003", branchLabel + ": nhanh chua co dieu kien.");
+                    }
+                    if (branch.nextStepOrder() == null || !orderSet.contains(branch.nextStepOrder())) {
+                        throw new BusinessException("GW-003", branchLabel + ": nextStepOrder tro toi step khong ton tai.");
+                    }
+                    for (int gi = 0; gi < branch.groups().size(); gi++) {
+                        var group = branch.groups().get(gi);
+                        if (group == null || group.isEmpty()) {
+                            throw new BusinessException("GW-003", branchLabel + ": nhom dieu kien thu " + (gi + 1) + " dang rong.");
+                        }
+                        for (int ci = 0; ci < group.size(); ci++) {
+                            validateConditionNode(branchLabel + " (nhom #" + (gi + 1) + ", dieu kien #" + (ci + 1) + ")",
+                                    group.get(ci), orderSet, 1);
+                        }
+                    }
+                }
+            }
+            // SYSTEM_FLAG (V5): conditionSourceField = MA CỜ (khong phai dot-path),
+            // khong dung conditionSourceStepOrder. Cờ phai ton tai thuoc team +
+            // conditionExpectedValue phai la "true"/"false" (engine so sanh boolean).
+            // V5b (theo "vande"): conditionFlagGroups = dieu kien NHIEU co NHIEU NHOM
+            // (AND trong nhom, OR giua nhom) - khi co groups thi KHONG bat buoc dieu
+            // kien 1 co don le nua; engine uu tien danh gia groups.
             if (s.conditionOperator() != null
-                    && s.conditionOperator() != com.bccs.gatewaymanager.entity.ConditionOperator.EXISTS
-                    && s.conditionOperator() != com.bccs.gatewaymanager.entity.ConditionOperator.NOT_EXISTS
-                    && (s.conditionExpectedValue() == null || s.conditionExpectedValue().isBlank())) {
-                throw new BusinessException("GW-003", "Step '" + s.name()
-                        + "': dieu kien re nhanh (" + s.conditionOperator() + ") thieu conditionExpectedValue.");
+                    && s.conditionSourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.SYSTEM_FLAG) {
+                boolean hasGroups = s.conditionFlagGroups() != null && !s.conditionFlagGroups().isEmpty();
+                if (hasGroups) {
+                    // Nhom: moi dieu kien phai tham chieu cờ ton tai thuoc team.
+                    for (int gi = 0; gi < s.conditionFlagGroups().size(); gi++) {
+                        var group = s.conditionFlagGroups().get(gi);
+                        if (group == null || group.isEmpty()) {
+                            throw new BusinessException("GW-003", "Step '" + s.name()
+                                    + "': nhom dieu kien cờ thứ " + (gi + 1) + " trong (sourceType=SYSTEM_FLAG) đang rỗng - hay thêm điều kiện hoặc xóa nhóm trống.");
+                        }
+                        for (var cond : group) {
+                            if (cond.flagCode() == null || cond.flagCode().isBlank()) {
+                                throw new BusinessException("GW-003", "Step '" + s.name()
+                                        + "': dieu kien cờ trong nhóm thứ " + (gi + 1) + " thieu ma cờ.");
+                            }
+                            if (!flagRepository.existsByTeamCodeAndFlagCodeIgnoreCase(CurrentTeamContext.require(), cond.flagCode())) {
+                                throw new BusinessException("GW-FLAG-404", "Step '" + s.name()
+                                        + "': cờ '" + cond.flagCode()
+                                        + "' chưa được khai báo trong trang Cờ nghiệp vụ của đội này.");
+                            }
+                        }
+                    }
+                } else {
+                    if (s.conditionSourceField() == null || s.conditionSourceField().isBlank()) {
+                        throw new BusinessException("GW-003", "Step '" + s.name()
+                                + "': dieu kien re nhanh (sourceType=SYSTEM_FLAG) thieu conditionSourceField (ma cờ).");
+                    }
+                    if (!flagRepository.existsByTeamCodeAndFlagCodeIgnoreCase(CurrentTeamContext.require(), s.conditionSourceField())) {
+                        throw new BusinessException("GW-FLAG-404", "Step '" + s.name()
+                                + "': cờ '" + s.conditionSourceField()
+                                + "' chưa được khai báo trong trang Cờ nghiệp vụ của đội này.");
+                    }
+                    String expected = s.conditionExpectedValue();
+                    if (expected == null || (!"true".equalsIgnoreCase(expected.trim()) && !"false".equalsIgnoreCase(expected))) {
+                        throw new BusinessException("GW-003", "Step '" + s.name()
+                                + "': dieu kien re nhanh (sourceType=SYSTEM_FLAG) can conditionExpectedValue la 'true' hoac 'false' (dang la '"
+                                + expected + "').");
+                    }
+                }
+            }
+            // V5b: khi SYSTEM_FLAG co conditionFlagGroups (nhieu nhom), dieu kien 1 co
+            // don le khong con duoc doc boi engine nen khong bat buoc expected nua.
+            boolean systemFlagWithGroups = s.conditionOperator() != null
+                    && s.conditionSourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.SYSTEM_FLAG
+                    && s.conditionFlagGroups() != null && !s.conditionFlagGroups().isEmpty();
+            // V6: conditionGroups cung lam dieu kien 1 co don le khong con duoc doc -
+            // xem hasConditionGroups da tinh o tren, mirror dung ly do systemFlagWithGroups.
+            if (!systemFlagWithGroups && !hasConditionGroups && s.conditionOperator() != null) {
+                checkOperatorValue("Step '" + s.name() + "'", s.conditionOperator(), s.conditionExpectedValue());
             }
             // 4 toan tu so sanh SO (>,>=,<,<=): conditionExpectedValue BAT BUOC parse
             // duoc thanh so - khac EQUALS/NOT_EQUALS chap nhan bat ky chuoi nao.
-            if (isNumericConditionOperator(s.conditionOperator())
+            if (!hasConditionGroups && isNumericConditionOperator(s.conditionOperator())
                     && s.conditionExpectedValue() != null && !s.conditionExpectedValue().isBlank()
                     && !isParsableAsNumber(s.conditionExpectedValue())) {
                 throw new BusinessException("GW-003", "Step '" + s.name()
@@ -551,11 +786,183 @@ public class EndpointService {
         detectBranchCycle(dto);
     }
 
+    private static final tools.jackson.databind.ObjectMapper CONDITION_JSON =
+            tools.jackson.databind.json.JsonMapper.builder().build();
+    private static final int MAX_REGEX_LENGTH = 200;
+
+    private static void checkOperatorValue(String label, com.bccs.gatewaymanager.entity.ConditionOperator op, String expected) {
+        if (op.needsExpectedValue() && (expected == null || expected.isBlank())) {
+            throw new BusinessException("GW-003", label + ": toan tu (" + op + ") thieu expectedValue.");
+        }
+        if (op == com.bccs.gatewaymanager.entity.ConditionOperator.IN
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.NOT_IN) {
+            tools.jackson.databind.JsonNode list;
+            try {
+                list = CONDITION_JSON.readTree(expected);
+            } catch (RuntimeException e) {
+                list = null;
+            }
+            if (list == null || !list.isArray()) {
+                throw new BusinessException("GW-003", label + ": toan tu (" + op
+                        + ") can expectedValue la mang JSON, vd [\"A\",\"B\"] (dang la '" + expected + "').");
+            }
+        }
+        if (op == com.bccs.gatewaymanager.entity.ConditionOperator.MATCHES_REGEX) {
+            if (expected.length() > MAX_REGEX_LENGTH) {
+                throw new BusinessException("GW-003", label + ": regex dai qua " + MAX_REGEX_LENGTH + " ky tu.");
+            }
+            try {
+                java.util.regex.Pattern.compile(expected);
+            } catch (java.util.regex.PatternSyntaxException e) {
+                throw new BusinessException("GW-003", label + ": regex khong hop le (" + e.getDescription() + ").");
+            }
+        }
+    }
+
+    private static final int MAX_CONDITION_DEPTH = 5;
+    private static final java.util.Set<com.bccs.gatewaymanager.entity.FieldMappingSourceType> VALUE_SOURCES = java.util.Set.of(
+            com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY,
+            com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE,
+            com.bccs.gatewaymanager.entity.FieldMappingSourceType.QUERY_PARAM,
+            com.bccs.gatewaymanager.entity.FieldMappingSourceType.HEADER);
+
+    /** Kiem tra 1 nut cua cay dieu kien (de quy): nhom (AND/OR, long nhau <= MAX_CONDITION_DEPTH) hoac la (nguon, field, toan tu, gia tri/vế phải). */
+    private void validateConditionNode(String label, com.bccs.gatewaymanager.dto.ConditionRuleDto node,
+                                       java.util.Set<Integer> orderSet, int depth) {
+        if (node == null) {
+            throw new BusinessException("GW-003", label + ": dieu kien rong.");
+        }
+        if (depth > MAX_CONDITION_DEPTH) {
+            throw new BusinessException("GW-003", label + ": cay dieu kien long nhau qua " + MAX_CONDITION_DEPTH + " cap.");
+        }
+        if (node.hasQuantifier()) {
+            validateQuantifierNode(label, node, orderSet, depth);
+            return;
+        }
+        if (node.isGroup()) {
+            if (node.children().isEmpty()) {
+                throw new BusinessException("GW-003", label + ": nhom dieu kien dang rong.");
+            }
+            if (node.logic() != null && !"AND".equalsIgnoreCase(node.logic()) && !"OR".equalsIgnoreCase(node.logic())) {
+                throw new BusinessException("GW-003", label + ": logic nhom phai la AND hoac OR (dang la '" + node.logic() + "').");
+            }
+            for (int i = 0; i < node.children().size(); i++) {
+                validateConditionNode(label + " > nhom con #" + (i + 1), node.children().get(i), orderSet, depth + 1);
+            }
+            return;
+        }
+        if (node.operator() == null) {
+            throw new BusinessException("GW-003", label + ": thieu toan tu (operator).");
+        }
+        if (node.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.SYSTEM_FLAG) {
+            if (node.sourceField() == null || node.sourceField().isBlank()) {
+                throw new BusinessException("GW-003", label + ": thieu ma co (sourceField).");
+            }
+            if (node.operator() != com.bccs.gatewaymanager.entity.ConditionOperator.EQUALS
+                    && node.operator() != com.bccs.gatewaymanager.entity.ConditionOperator.NOT_EQUALS) {
+                throw new BusinessException("GW-003", label + ": cờ chi dung toan tu EQUALS/NOT_EQUALS (dang la " + node.operator() + ").");
+            }
+            String expected = node.expectedValue();
+            if (expected == null || (!"true".equalsIgnoreCase(expected.trim()) && !"false".equalsIgnoreCase(expected.trim()))) {
+                throw new BusinessException("GW-003", label + ": cờ can expectedValue la 'true' hoac 'false'.");
+            }
+            if (!flagRepository.existsByTeamCodeAndFlagCodeIgnoreCase(CurrentTeamContext.require(), node.sourceField())) {
+                throw new BusinessException("GW-FLAG-404", label + ": cờ '" + node.sourceField()
+                        + "' chưa được khai báo trong trang Cờ nghiệp vụ của đội này.");
+            }
+            return;
+        }
+        if (!VALUE_SOURCES.contains(node.sourceType())) {
+            throw new BusinessException("GW-003", label + ": nguon khong ho tro (" + node.sourceType() + ").");
+        }
+        if (node.sourceField() == null || node.sourceField().isBlank()) {
+            throw new BusinessException("GW-003", label + ": thieu sourceField.");
+        }
+        if (node.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
+                && (node.sourceStepOrder() == null || !orderSet.contains(node.sourceStepOrder()))) {
+            throw new BusinessException("GW-003", label + ": sourceType=STEP_RESPONSE thieu sourceStepOrder hop le.");
+        }
+        if (node.compareSourceField() != null) {
+            if (node.compareSourceField().isBlank()) {
+                throw new BusinessException("GW-003", label + ": thieu field ve phai (compareSourceField).");
+            }
+            if (node.expectedValue() != null && !node.expectedValue().isBlank()) {
+                throw new BusinessException("GW-003", label + ": chi duoc chon MOT trong 2: expectedValue hoac vế phải (field khac).");
+            }
+            if (!VALUE_SOURCES.contains(node.compareSourceType())) {
+                throw new BusinessException("GW-003", label + ": nguon ve phai khong hop le (" + node.compareSourceType() + ").");
+            }
+            if (node.compareSourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
+                    && (node.compareSourceStepOrder() == null || !orderSet.contains(node.compareSourceStepOrder()))) {
+                throw new BusinessException("GW-003", label + ": vế phải sourceType=STEP_RESPONSE thieu sourceStepOrder hop le.");
+            }
+            return;
+        }
+        checkOperatorValue(label, node.operator(), node.expectedValue());
+        if (isNumericConditionOperator(node.operator()) && node.expectedValue() != null
+                && !isParsableAsNumber(node.expectedValue())) {
+            throw new BusinessException("GW-003", label + ": toan tu (" + node.operator()
+                    + ") can expectedValue la SO, nhung dang la '" + node.expectedValue() + "'.");
+        }
+    }
+
     private static boolean isNumericConditionOperator(com.bccs.gatewaymanager.entity.ConditionOperator op) {
         return op == com.bccs.gatewaymanager.entity.ConditionOperator.GREATER_THAN
                 || op == com.bccs.gatewaymanager.entity.ConditionOperator.GREATER_THAN_OR_EQUAL
                 || op == com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN
-                || op == com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN_OR_EQUAL;
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN_OR_EQUAL
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.SIZE_EQUALS
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.SIZE_GREATER_THAN
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.SIZE_GREATER_THAN_OR_EQUAL
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.SIZE_LESS_THAN
+                || op == com.bccs.gatewaymanager.entity.ConditionOperator.SIZE_LESS_THAN_OR_EQUAL;
+    }
+
+    /** Lap mang: mang phai lay tu nguon gia tri hop le; ANY/ALL/COUNT; COUNT can toan tu so sanh + nguong so. */
+    private void validateQuantifierNode(String label, com.bccs.gatewaymanager.dto.ConditionRuleDto node,
+                                        java.util.Set<Integer> orderSet, int depth) {
+        if (node.children().isEmpty()) {
+            throw new BusinessException("GW-003", label + ": lap mang dang rong - hay them dieu kien cho tung phan tu.");
+        }
+        if (!VALUE_SOURCES.contains(node.sourceType())) {
+            throw new BusinessException("GW-003", label + ": mang can lap phai lay tu nguon REQUEST_BODY/STEP_RESPONSE/QUERY_PARAM/HEADER.");
+        }
+        if (node.sourceField() == null || node.sourceField().isBlank()) {
+            throw new BusinessException("GW-003", label + ": thieu field mang can lap (sourceField).");
+        }
+        if (node.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE
+                && (node.sourceStepOrder() == null || !orderSet.contains(node.sourceStepOrder()))) {
+            throw new BusinessException("GW-003", label + ": mang STEP_RESPONSE thieu sourceStepOrder hop le.");
+        }
+        String q = node.quantifier();
+        if (!com.bccs.gatewaymanager.dto.ConditionRuleDto.QUANTIFIER_ANY.equals(q)
+                && !com.bccs.gatewaymanager.dto.ConditionRuleDto.QUANTIFIER_ALL.equals(q)
+                && !com.bccs.gatewaymanager.dto.ConditionRuleDto.QUANTIFIER_COUNT.equals(q)) {
+            throw new BusinessException("GW-003", label + ": quantifier phai la ANY, ALL hoac COUNT (dang la '" + q + "').");
+        }
+        if (node.logic() != null && !"AND".equalsIgnoreCase(node.logic()) && !"OR".equalsIgnoreCase(node.logic())) {
+            throw new BusinessException("GW-003", label + ": logic phai la AND hoac OR (dang la '" + node.logic() + "').");
+        }
+        if (com.bccs.gatewaymanager.dto.ConditionRuleDto.QUANTIFIER_COUNT.equals(q)) {
+            var op = node.countOperator();
+            if (op != com.bccs.gatewaymanager.entity.ConditionOperator.EQUALS
+                    && op != com.bccs.gatewaymanager.entity.ConditionOperator.GREATER_THAN
+                    && op != com.bccs.gatewaymanager.entity.ConditionOperator.GREATER_THAN_OR_EQUAL
+                    && op != com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN
+                    && op != com.bccs.gatewaymanager.entity.ConditionOperator.LESS_THAN_OR_EQUAL) {
+                throw new BusinessException("GW-003", label + ": COUNT can toan tu so sanh (EQUALS/GT/GTE/LT/LTE).");
+            }
+            if (node.countValue() == null || !isParsableAsNumber(node.countValue())) {
+                throw new BusinessException("GW-003", label + ": COUNT can nguong la SO (dang la '" + node.countValue() + "').");
+            }
+        }
+        for (int i = 0; i < node.children().size(); i++) {
+            validateConditionNode(label + " > phan tu, dieu kien #" + (i + 1), node.children().get(i), orderSet, depth + 1);
+        }
+    }
+
+    private static boolean hasSwitch(com.bccs.gatewaymanager.dto.BackendStepDto s) {
+        return s.switchBranches() != null && !s.switchBranches().isEmpty();
     }
 
     private static boolean isParsableAsNumber(String value) {
@@ -585,7 +992,12 @@ public class EndpointService {
         Map<Integer, List<Integer>> adjacency = new java.util.HashMap<>();
         for (var s : steps) {
             List<Integer> next = new ArrayList<>();
-            if (s.conditionOperator() != null) {
+            if (hasSwitch(s)) {
+                for (var branch : s.switchBranches()) {
+                    if (branch.nextStepOrder() != null) next.add(branch.nextStepOrder());
+                }
+                if (s.nextStepOrderIfFalse() != null) next.add(s.nextStepOrderIfFalse());
+            } else if (s.conditionOperator() != null) {
                 if (s.nextStepOrderIfTrue() != null) next.add(s.nextStepOrderIfTrue());
                 if (s.nextStepOrderIfFalse() != null) next.add(s.nextStepOrderIfFalse());
             } else {

@@ -114,7 +114,7 @@ public class EndpointController {
      */
     @PostMapping("/{id}/try")
     public ResponseEntity<TryResultDto> tryEndpoint(@PathVariable String id, @RequestBody EndpointTryRequestDto req) {
-        return ResponseEntity.ok(tryService.tryCall(id, req.pathVariables(), req.queryParams(), req.body()));
+        return ResponseEntity.ok(tryService.tryCall(id, req.pathVariables(), req.queryParams(), req.body(), req.flagOverrides()));
     }
 
     /**
@@ -124,7 +124,7 @@ public class EndpointController {
      */
     @PostMapping("/try-adhoc")
     public ResponseEntity<TryResultDto> tryAdhoc(@Valid @RequestBody EndpointAdhocTryRequestDto req) {
-        return ResponseEntity.ok(tryService.tryAdhoc(req.endpoint(), req.pathVariables(), req.queryParams(), req.body()));
+        return ResponseEntity.ok(tryService.tryAdhoc(req.endpoint(), req.pathVariables(), req.queryParams(), req.body(), req.flagOverrides()));
     }
 
     /** Tu sinh tai lieu OpenAPI 3.0.3 (JSON) cho endpoint nay - xem OpenApiGeneratorService cho gioi han "best-effort". */

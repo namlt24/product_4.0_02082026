@@ -70,4 +70,34 @@ public final class TraceCollector {
             list.add(entry);
         }
     }
+
+    /**
+     * V5 - ghi  dong dac biet "Rule cờ X khop -> ..." vao waterfall "Thu ngay"
+     * (matchedRule null = khong co rule khop / khong khai rule -> no-op). Dung
+     * cuoc tien trinh goi engine (khong phai worker thread) nen khong can lan
+     * truyen ThreadLocal nhu step song song. Chuyen la noi dung chuoi de DTO
+     * giu don gian, UI chi hien thi khong phai parse nguc.
+     */
+    public static void recordFlagRuleMatch(String endpointName, com.bccs.gatewaymanager.dto.FlagRuleDto matchedRule) {
+        if (matchedRule == null) {
+            return;
+        }
+        String info;
+        if (com.bccs.gatewaymanager.dto.FlagRuleDto.ACTION_BLOCK.equals(matchedRule.actionType())) {
+            info = "Rule '" + matchedRule.name() + "' khop -> CHAN request (" + matchedRule.blockErrorCode() + ")";
+        } else {
+            info = "Rule '" + matchedRule.name() + "' khop -> bat dau tu step " + matchedRule.startStepOrder();
+        }
+        record(new StepTraceDto(-1, "RULE", endpointName, "", "", null, false, null,
+                null, false, 0, false,
+                !com.bccs.gatewaymanager.dto.FlagRuleDto.ACTION_BLOCK.equals(matchedRule.actionType()),
+                com.bccs.gatewaymanager.dto.FlagRuleDto.ACTION_BLOCK.equals(matchedRule.actionType()) ? info : null,
+                info, null));
+    }
+
+    /** Ghi 1 dong "dieu kien" da danh gia vao waterfall - no-op ngoai che do "Thu nhanh". */
+    public static void recordCondition(int stepOrder, String detail) {
+        record(new StepTraceDto(stepOrder, "DIEU KIEN", "", "", "", null, false, null,
+                null, false, 0, false, true, null, null, detail));
+    }
 }

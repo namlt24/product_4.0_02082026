@@ -84,7 +84,7 @@ public class DataSeeder implements CommandLineRunner {
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
                 null, null,                    // maxConcurrentCallsOverride/maxWaitDurationMsOverride: khong tach Bulkhead rieng
-                null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
+                null, null, null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/nhom co/nhom du lieu/fallback loi/wave song song: khong dung trong endpoint demo nay
                 null, null, null, null // bu tru/rollback: khong dung trong endpoint demo nay
         );
 
@@ -103,7 +103,7 @@ public class DataSeeder implements CommandLineRunner {
                 null, null,                    // canvasX/Y: chua tung keo tha qua trang endpoint-canvas
                 null, null,                    // connectTimeoutMs/readTimeoutMs: khong override, dung mac dinh Upstream
                 null, null,                    // maxConcurrentCallsOverride/maxWaitDurationMsOverride: khong tach Bulkhead rieng
-                null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/fallback loi/wave song song: khong dung trong endpoint demo nay
+                null, null, null, null, null, null, null, null, null, null, null, // dieu kien re nhanh/nhom co/nhom du lieu/fallback loi/wave song song: khong dung trong endpoint demo nay
                 null, null, null, null // bu tru/rollback: khong dung trong endpoint demo nay
         );
 
@@ -128,7 +128,9 @@ public class DataSeeder implements CommandLineRunner {
                 null,
                 false,
                 false,
-                null
+                null,
+                List.of(), // flagRules: endpoint demo khong dung rule co nghiep vu
+                null       // responseMapping: endpoint demo khong dung
         );
 
         endpointService.create(request);

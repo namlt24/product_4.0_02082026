@@ -316,12 +316,31 @@
                     Sau khi Step {{ i + 1 }} chạy xong, kiểm tra 1 điều kiện rồi quyết định gọi Step nào tiếp theo
                     (thay vì luôn đi theo thứ tự Step kế tiếp).
                   </p>
+                  @if (!isSystemFlagCondition(i)) {
+                    <div class="field-row">
+                      <mat-slide-toggle [checked]="conditionGroupsEnabled(i)" (change)="toggleConditionGroups(i, $event.checked)">
+                        Dùng nhiều điều kiện (VÀ / HOẶC)
+                      </mat-slide-toggle>
+                    </div>
+                  }
+
+                  @if (conditionGroupsEnabled(i)) {
+                    <p class="condition-hint">
+                      Nhóm ngoài cùng nối bằng HOẶC, mỗi nhóm nối bằng VÀ. Mỗi điều kiện có thể là một nhóm con lồng nhau.
+                    </p>
+                    <app-condition-tree-editor
+                      [value]="conditionTreeOf(i)"
+                      (valueChange)="setConditionTree(i, $event)"
+                      [stepOrders]="availableStepOrders"
+                      [flags]="flags()"
+                      [operators]="conditionOperators" />
+                  } @else {
                   <div class="field-row">
                     <mat-form-field appearance="outline" class="small-field">
                       <mat-label>Nguồn dữ liệu</mat-label>
-                      <mat-select formControlName="conditionSourceType">
+                      <mat-select formControlName="conditionSourceType" (selectionChange)="onConditionSourceTypeChange(i, $event.value)">
                         @for (t of conditionSourceTypes; track t) {
-                          <mat-option [value]="t">{{ t === 'REQUEST_BODY' ? 'Body của client' : 'Response step trước' }}</mat-option>
+                          <mat-option [value]="t">{{ t === 'REQUEST_BODY' ? 'Body của client' : t === 'SYSTEM_FLAG' ? 'Cờ hệ thống' : 'Response step trước' }}</mat-option>
                         }
                       </mat-select>
                     </mat-form-field>
@@ -336,36 +355,81 @@
                         </mat-select>
                       </mat-form-field>
                     }
-
-                    <mat-form-field appearance="outline">
-                      <mat-label>Field</mat-label>
-                      <input matInput formControlName="conditionSourceField" placeholder="vd: status hoặc shop.channelTypeId" />
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline" class="small-field">
-                      <mat-label>Toán tử</mat-label>
-                      <mat-select formControlName="conditionOperator">
-                        @for (op of conditionOperators; track op) {
-                          <mat-option [value]="op">
-                            {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác'
-                              : op === 'EXISTS' ? 'Tồn tại' : op === 'NOT_EXISTS' ? 'Không tồn tại'
-                              : op === 'GREATER_THAN' ? 'Lớn hơn (>)' : op === 'GREATER_THAN_OR_EQUAL' ? 'Lớn hơn hoặc bằng (>=)'
-                              : op === 'LESS_THAN' ? 'Nhỏ hơn (<)' : 'Nhỏ hơn hoặc bằng (<=)' }}
-                          </mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-
-                    @if (stepConditionNeedsExpectedValue(i)) {
-                      <mat-form-field appearance="outline">
-                        <mat-label>Giá trị mong đợi</mat-label>
-                        <input matInput
-                               [type]="stepConditionExpectedValueIsNumeric(i) ? 'number' : 'text'"
-                               formControlName="conditionExpectedValue"
-                               [placeholder]="stepConditionExpectedValueIsNumeric(i) ? 'vd: 3' : 'vd: active'" />
-                      </mat-form-field>
-                    }
                   </div>
+
+                  @if (isSystemFlagCondition(i)) {
+                    <p class="condition-hint">
+                      Đọc giá trị <strong>cờ nghiệp vụ</strong> hiện tại (bật/tắt trên trang Cờ) — không phụ thuộc request hay step nào.
+                      Trong 1 nhóm tất cả điều kiện phải đúng (VÀ); thỏa ít nhất 1 nhóm là đi tiếp (HOẶC giữa nhóm).
+                    </p>
+                    @for (group of flagGroupsArray(i).controls; track $index; let gi = $index) {
+                      <div class="flag-group-box">
+                        <div class="flag-group-header">
+                          <span>Nhóm {{ gi + 1 }} — tất cả phải đúng</span>
+                          @if (flagGroupsArray(i).length > 1) {
+                            <button mat-icon-button type="button" color="warn" (click)="removeFlagGroup(i, gi)" matTooltip="Xóa nhóm này">
+                              <mat-icon>delete</mat-icon>
+                            </button>
+                          }
+                        </div>
+                        @for (cond of flagConditionsArray(i, gi).controls; track $index; let ci = $index) {
+                          <div class="flag-condition-row">
+                            <mat-form-field appearance="outline" style="flex: 1">
+                              <mat-label>Cờ hệ thống</mat-label>
+                              <mat-select formControlName="flagCode">
+                                <mat-option value="" disabled>— chọn cờ —</mat-option>
+                                @for (f of flags(); track f.id) {
+                                  <mat-option [value]="f.flagCode">{{ f.flagCode }}{{ f.displayName && f.displayName !== f.flagCode ? ' — ' + f.displayName : '' }}</mat-option>
+                                }
+                              </mat-select>
+                            </mat-form-field>
+                            <mat-slide-toggle formControlName="expected" style="flex: 0 0 auto">
+                              {{ cond.get('expected')!.value ? 'BẬT' : 'TẮT' }}
+                            </mat-slide-toggle>
+                            <button mat-icon-button type="button" color="warn" (click)="removeFlagCondition(i, gi, ci)" matTooltip="Xóa điều kiện">
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          </div>
+                        }
+                        @if (gi < flagGroupsArray(i).length - 1) {
+                          <p class="flag-group-or">— HOẶC —</p>
+                        }
+                        <button mat-button type="button" (click)="addFlagCondition(i, gi)">
+                          <mat-icon>add</mat-icon> Thêm điều kiện (AND)
+                        </button>
+                      </div>
+                    }
+                    <button mat-stroked-button type="button" (click)="addFlagGroup(i)" style="margin-top: 4px;">
+                      <mat-icon>add</mat-icon> Thêm nhóm HOẶC
+                    </button>
+                  } @else {
+                    <div class="field-row">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Field</mat-label>
+                        <input matInput formControlName="conditionSourceField" placeholder="vd: status hoặc shop.channelTypeId" />
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="small-field">
+                        <mat-label>Toán tử</mat-label>
+                        <mat-select formControlName="conditionOperator">
+                          @for (op of conditionOperators; track op) {
+                            <mat-option [value]="op">{{ operatorLabel(op) }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+
+                      @if (stepConditionNeedsExpectedValue(i)) {
+                        <mat-form-field appearance="outline">
+                          <mat-label>Giá trị mong đợi</mat-label>
+                          <input matInput
+                                 [type]="stepConditionExpectedValueIsNumeric(i) ? 'number' : 'text'"
+                                 formControlName="conditionExpectedValue"
+                                 [placeholder]="stepConditionExpectedValueIsNumeric(i) ? 'vd: 3' : 'vd: active'" />
+                        </mat-form-field>
+                      }
+                    </div>
+                  }
+                  }
 
                   <div class="field-row">
                     <mat-form-field appearance="outline" class="small-field">
@@ -381,12 +445,87 @@
                       <mat-label>Nếu SAI → chạy</mat-label>
                       <mat-select formControlName="nextStepOrderIfFalse">
                         <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                        <mat-option [value]="-1">Báo lỗi (dừng chuỗi)</mat-option>
                         @for (o of availableStepOrders; track o) {
                           <mat-option [value]="o">Step {{ o }}</mat-option>
                         }
                       </mat-select>
                     </mat-form-field>
+                      @if (isFalseError(i)) {
+                        <mat-form-field appearance="outline" class="small-field">
+                          <mat-label>Mã lỗi</mat-label>
+                          <input matInput formControlName="falseErrorCode" placeholder="vd: GW-TIER-SAI" />
+                        </mat-form-field>
+                        <mat-form-field appearance="outline" class="grow">
+                          <mat-label>Thông điệp lỗi trả về client</mat-label>
+                          <input matInput formControlName="falseErrorMessage" />
+                        </mat-form-field>
+                      }
+
                   </div>
+                }
+              </div>
+
+              <!-- Re nhieu nhanh (switch): nhanh dau tien khop duoc chon, khong khop -> "Mac dinh" -->
+              <div class="sub-section">
+                <div class="sub-section-header">
+                  <span>Rẽ nhiều nhánh (switch, tuỳ chọn)</span>
+                  <mat-slide-toggle [checked]="switchEnabled(i)" (change)="toggleSwitch(i, $event.checked)">
+                    Bật
+                  </mat-slide-toggle>
+                </div>
+                @if (switchEnabled(i)) {
+                  <p class="condition-hint">
+                    Các nhánh được kiểm tra theo thứ tự, nhánh đầu tiên khớp sẽ được chọn. Nếu không nhánh nào khớp thì chạy step mặc định bên dưới.
+                  </p>
+                  @for (branch of switchBranchesOf(i); track $index; let bi = $index) {
+                    <div class="flag-group-box">
+                      <div class="flag-group-header">
+                        <span>Nhánh {{ bi + 1 }}</span>
+                        <mat-form-field appearance="outline" class="small-field">
+                          <mat-label>Chạy step</mat-label>
+                          <mat-select [value]="branch.nextStepOrder" (selectionChange)="setSwitchBranchNext(i, bi, $event.value)">
+                            @for (o of availableStepOrders; track o) {
+                              <mat-option [value]="o">Step {{ o }}</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                        <button mat-icon-button type="button" color="warn" (click)="removeSwitchBranch(i, bi)" matTooltip="Xóa nhánh">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                      <app-condition-tree-editor
+                        [value]="branch.groups"
+                        (valueChange)="setSwitchBranchGroups(i, bi, $event)"
+                        [stepOrders]="availableStepOrders"
+                        [flags]="flags()"
+                        [operators]="conditionOperators" />
+                    </div>
+                  }
+                  <button mat-stroked-button type="button" (click)="addSwitchBranch(i)" style="margin-top: 4px;">
+                    <mat-icon>add</mat-icon> Thêm nhánh
+                  </button>
+                  <mat-form-field appearance="outline" class="small-field">
+                    <mat-label>Nếu không nhánh nào khớp → chạy</mat-label>
+                    <mat-select formControlName="nextStepOrderIfFalse">
+                      <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                        <mat-option [value]="-1">Báo lỗi (dừng chuỗi)</mat-option>
+                      @for (o of availableStepOrders; track o) {
+                        <mat-option [value]="o">Step {{ o }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                      @if (isFalseError(i)) {
+                        <mat-form-field appearance="outline" class="small-field">
+                          <mat-label>Mã lỗi</mat-label>
+                          <input matInput formControlName="falseErrorCode" placeholder="vd: GW-TIER-SAI" />
+                        </mat-form-field>
+                        <mat-form-field appearance="outline" class="grow">
+                          <mat-label>Thông điệp lỗi trả về client</mat-label>
+                          <input matInput formControlName="falseErrorMessage" />
+                        </mat-form-field>
+                      }
+
                 }
               </div>
 
@@ -603,6 +742,74 @@
 
         <button mat-stroked-button type="button" (click)="addMapping()">
           <mat-icon>add</mat-icon> Them Field Mapping
+        </button>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ============================== 4. Response Mapping (ghép field vào response cuối) ============================== -->
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><span class="step-badge">4</span>Ghép field vào response cuối</mat-card-title>
+        <mat-card-subtitle>
+          Chọn field từ <b>bất kỳ step nào</b> đưa vào response cuối trả client — khác Field Mapping ở trên
+          (nó bơm vào request của step khác). Field nguồn đọc theo giá trị <b>đã bóc "Bóc vỏ" (target)</b> của step —
+          muốn lấy field trong envelope BCCS (code/message/traceId...) thì để target của step đó trống.
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="mapping-row response-mode-row">
+          <mat-form-field appearance="outline" class="small-field">
+            <mat-label>Chế độ ghép</mat-label>
+            <mat-select formControlName="responseMappingMode">
+              @for (m of responseMappingModes; track m) {
+                <mat-option [value]="m">{{ m === 'MERGE' ? 'MERGE - bổ sung field' : 'REPLACE - chỉ các field khai báo' }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>
+              MERGE: giữ kết quả tổng hợp hiện tại, chỉ bổ sung field.
+              REPLACE: response cuối CHỈ gồm đúng các field khai báo dưới đây (dùng để lọc field trong envelope).
+            </mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div formArrayName="responseMappings">
+        @for (rmGroup of responseMappingsArray.controls; track rmGroup; let i = $index) {
+          <div class="mapping-row" [formGroupName]="i">
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Step nguồn</mat-label>
+              <mat-select formControlName="sourceStepOrder">
+                @for (o of availableStepOrders; track o) {
+                  <mat-option [value]="o">Step {{ o }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Field nguồn (trong response step)</mat-label>
+              <input matInput formControlName="sourceField" placeholder="vd: data.productOfferingId, code, hoặc data[0].name" />
+            </mat-form-field>
+
+            <mat-icon class="arrow-icon">trending_flat</mat-icon>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Field response cuối</mat-label>
+              <input matInput formControlName="targetField" placeholder="vd: productOfferingId, hoặc data.productOfferingId" />
+              <mat-hint>Trùng tên với dòng khác: dòng thứ tự lớn hơn ghi đè.</mat-hint>
+            </mat-form-field>
+
+            <button mat-icon-button type="button" color="warn" (click)="removeResponseMapping(i)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+        </div>
+
+        @if (responseMappingsArray.length === 0) {
+          <p class="empty-hint">Chưa ghép field nào - response cuối giữ nguyên như cơ chế hiện tại (step cuối, hoặc merge nhiều step).</p>
+        }
+
+        <button mat-stroked-button type="button" (click)="addResponseMapping()">
+          <mat-icon>add</mat-icon> Thêm dòng ghép field
         </button>
       </mat-card-content>
     </mat-card>

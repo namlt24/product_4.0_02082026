@@ -1,0 +1,362 @@
+.page-header {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+// ---------------------------------------------------------------------------
+// Tab chuyen giua danh sach canh bao va nguoi nhan email (tinh nang mail V4)
+// ---------------------------------------------------------------------------
+.alert-tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 4px;
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: 8px;
+}
+
+.alert-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gwm-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: var(--gwm-text);
+  }
+
+  &--active {
+    background: var(--gwm-surface);
+    color: var(--gwm-primary-dark);
+    box-shadow: var(--gwm-shadow-sm);
+  }
+}
+
+.recipients-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--gwm-text-secondary);
+}
+
+// ---------------------------------------------------------------------------
+// Summary chips (dau trang - khop dung so lieu voi badge toolbar)
+// ---------------------------------------------------------------------------
+.summary-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--gwm-bg);
+  color: var(--gwm-text-secondary);
+  border: 1px solid var(--gwm-border);
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  &--critical {
+    background: var(--gwm-danger-bg);
+    color: var(--gwm-danger);
+    border-color: var(--gwm-danger-border);
+  }
+
+  &--warning {
+    background: var(--gwm-warning-bg, #fef3c7);
+    color: var(--gwm-warning, #b45309);
+    border-color: var(--gwm-warning-border, #fcd34d);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bo loc (giong log-search)
+// ---------------------------------------------------------------------------
+.filter-card {
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.filter-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+
+  &--sm {
+    flex: 0 1 200px;
+    min-width: 170px;
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+// ---------------------------------------------------------------------------
+// Table - tai dung phong cach endpoint-list/log-search
+// ---------------------------------------------------------------------------
+.table-card {
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-lg);
+  box-shadow: var(--gwm-shadow-sm);
+  overflow: hidden;
+}
+
+.gwm-table {
+  width: 100%;
+
+  ::ng-deep .mat-mdc-header-row {
+    background: #fbfcfe;
+  }
+
+  ::ng-deep .mat-mdc-header-cell {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gwm-text-muted);
+    border-bottom-color: var(--gwm-border);
+  }
+
+  ::ng-deep .mat-mdc-cell {
+    border-bottom-color: var(--gwm-border);
+    font-size: 13.5px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  ::ng-deep .data-row {
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+
+    &:hover {
+      background: #fafbff;
+    }
+  }
+
+  ::ng-deep .detail-row {
+    height: 0;
+
+    td {
+      border-bottom-width: 0;
+      padding: 0 !important;
+    }
+
+    &--open td {
+      border-bottom-color: var(--gwm-border);
+    }
+  }
+}
+
+.severity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &[data-severity='CRITICAL'] {
+    background: var(--gwm-danger-bg);
+    color: var(--gwm-danger);
+  }
+
+  &[data-severity='WARNING'] {
+    background: var(--gwm-warning-bg, #fef3c7);
+    color: var(--gwm-warning, #b45309);
+  }
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+
+  &[data-status='ACTIVE'] {
+    background: var(--gwm-danger-bg);
+    color: var(--gwm-danger);
+  }
+
+  &[data-status='ACKNOWLEDGED'] {
+    background: var(--gwm-warning-bg, #fef3c7);
+    color: var(--gwm-warning, #b45309);
+  }
+
+  &[data-status='RESOLVED'] {
+    background: var(--gwm-success-bg);
+    color: var(--gwm-success);
+  }
+}
+
+.target-name {
+  font-weight: 600;
+}
+
+.path-code {
+  background: var(--gwm-bg);
+  border: 1px solid var(--gwm-border);
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 12.5px;
+  color: var(--gwm-primary-dark);
+}
+
+// ---------------------------------------------------------------------------
+// Chi tiet mo rong
+// ---------------------------------------------------------------------------
+.detail-panel {
+  padding: 6px 20px 20px 56px;
+  background: var(--gwm-bg);
+}
+
+.detail-block {
+  margin-top: 10px;
+}
+
+.detail-block-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gwm-text-muted);
+  margin-bottom: 4px;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.detail-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gwm-text);
+}
+
+.detail-pre {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-sm);
+  font-size: 12px;
+  font-family: var(--gwm-font-mono);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--gwm-text);
+}
+
+.detail-meta {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--gwm-text-secondary);
+}
+
+// ---------------------------------------------------------------------------
+// Loading / empty / trang
+// ---------------------------------------------------------------------------
+.loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 0;
+  color: var(--gwm-text-secondary);
+  font-size: 13.5px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+
+  .empty-icon {
+    font-size: 44px;
+    width: 44px;
+    height: 44px;
+    color: var(--gwm-text-muted);
+    margin-bottom: 12px;
+  }
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+  }
+
+  p {
+    color: var(--gwm-text-secondary);
+    font-size: 13.5px;
+    margin: 0;
+  }
+}
+
+.pagination-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--gwm-border);
+}
+
+.range-label {
+  font-size: 12.5px;
+  color: var(--gwm-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.page-size-field {
+  width: 110px;
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    height: 40px;
+  }
+}

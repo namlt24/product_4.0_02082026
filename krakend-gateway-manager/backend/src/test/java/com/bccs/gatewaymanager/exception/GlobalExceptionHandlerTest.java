@@ -50,6 +50,45 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().errorCode()).isEqualTo("GW-UPSTREAM-5XX");
     }
 
+    // ---- Tach truong tu body StandardResponse cua BE len top-level thay vi gom vao message ----
+
+    @Test
+    void handleUpstreamHttpError_bccsStandardResponseBody_tachTruongLenTopLevel() {
+        String body = """
+                {"code":"BCCS-GLOBAL-VALIDATION-0000","data":null,
+                 "message":"Trường productCode không được để trống","messageArgs":["productCode"],
+                 "requestId":"462e656b-0986-4f4c-9520-db9583d58aff","shortTraceId":"a8f1d45279e500ba",
+                 "timestamp":"2026-10-05T02:38:04Z","traceId":"15143be576ab4130a8f1d45279e500ba"}
+                """;
+        var ex = new UpstreamHttpExecutor.UpstreamHttpErrorException("product-catalog-offering", 400, body);
+
+        ResponseEntity<ErrorResponse> response = handler.handleUpstreamHttpError(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
+        ErrorResponse b = response.getBody();
+        assertThat(b.errorCode()).isEqualTo("GW-UPSTREAM-4XX");
+        assertThat(b.message())
+                .isEqualTo("Upstream 'product-catalog-offering' tra ve HTTP 400: Trường productCode không được để trống");
+        assertThat(b.code()).isEqualTo("BCCS-GLOBAL-VALIDATION-0000");
+        assertThat(b.requestId()).isEqualTo("462e656b-0986-4f4c-9520-db9583d58aff");
+        assertThat(b.shortTraceId()).isEqualTo("a8f1d45279e500ba");
+        assertThat(b.traceId()).isEqualTo("15143be576ab4130a8f1d45279e500ba");
+        assertThat(b.data()).isNull();
+    }
+
+    @Test
+    void handleUpstreamHttpError_bodyKhongPhaiJson_gomRawBodyVaoMessage() {
+        var ex = new UpstreamHttpExecutor.UpstreamHttpErrorException("svc", 503, "<html>Service Unavailable</html>");
+
+        ResponseEntity<ErrorResponse> response = handler.handleUpstreamHttpError(ex);
+
+        ErrorResponse b = response.getBody();
+        assertThat(b.errorCode()).isEqualTo("GW-UPSTREAM-5XX");
+        assertThat(b.message()).isEqualTo("Upstream 'svc' tra ve HTTP 503: <html>Service Unavailable</html>");
+        assertThat(b.code()).isNull();
+        assertThat(b.traceId()).isNull();
+    }
+
     @Test
     void handleUpstreamTimeout_returns504WithGwUpstreamTimeout() {
         var ex = new UpstreamHttpExecutor.UpstreamTimeoutException("svc", new RuntimeException("connection refused"));

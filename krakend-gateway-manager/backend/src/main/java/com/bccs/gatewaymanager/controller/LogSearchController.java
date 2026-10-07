@@ -5,7 +5,6 @@ import com.bccs.gatewaymanager.audit.LogSearchResultDto;
 import com.bccs.gatewaymanager.audit.LogSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -42,14 +40,10 @@ public class LogSearchController {
 
     @GetMapping("/requests")
     public ResponseEntity<LogSearchResultDto> searchRequests(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String endpointPath,
-            @RequestParam(required = false) String bodyContains,
+            @RequestParam String traceId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(service.searchRequests(from, to, status, endpointPath, bodyContains, page, size));
+        return ResponseEntity.ok(service.searchRequests(traceId, page, size));
     }
 
     @GetMapping("/requests/{requestId}/hops")

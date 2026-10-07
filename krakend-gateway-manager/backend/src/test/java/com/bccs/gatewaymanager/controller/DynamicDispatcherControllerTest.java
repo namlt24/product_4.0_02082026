@@ -56,7 +56,16 @@ class DynamicDispatcherControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new DynamicDispatcherController(registryCache, engine, auditLogService, cacheService, objectMapper);
+        controller = new DynamicDispatcherController(registryCache, engine, auditLogService, cacheService, objectMapper,
+                new com.bccs.gatewaymanager.service.AlertCallObserver() {
+                    @Override
+                    public void recordUpstreamCall(String upstreamName, boolean success) {
+                    }
+
+                    @Override
+                    public void recordEndpointRequest(String endpointId, String endpointPath, boolean success) {
+                    }
+                });
     }
 
     private EndpointResponseDto endpoint(boolean idempotencyEnabled) {
@@ -67,9 +76,9 @@ class DynamicDispatcherControllerTest {
         BackendStepDto step = new BackendStepDto(null, 1, "step1", GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         return new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step), List.of(), null, null, idempotencyEnabled, 86400, false, responseCacheEnabled, 60);
+                List.of(step), List.of(), null, null, idempotencyEnabled, 86400, false, responseCacheEnabled, 60, List.of(), null);
     }
 
     private MockHttpServletRequest request(String idempotencyKey) {
@@ -85,12 +94,12 @@ class DynamicDispatcherControllerTest {
     void idempotencyTat_luonGoiEngine_khongDungCacheDuKhachGuiHeader() throws Exception {
         EndpointResponseDto config = endpoint(false);
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
-        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
 
         ResponseEntity<?> response = controller.dispatch(request("abc-123"));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any(), any(), any());
         verify(cacheService, never()).get(any());
         verify(cacheService, never()).put(any(), any(), org.mockito.ArgumentMatchers.anyInt());
     }
@@ -99,12 +108,12 @@ class DynamicDispatcherControllerTest {
     void idempotencyBat_khongCoHeader_khongDungCache_vanGoiEngineBinhThuong() throws Exception {
         EndpointResponseDto config = endpoint(true);
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
-        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
 
         ResponseEntity<?> response = controller.dispatch(request(null));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any(), any(), any());
         verify(cacheService, never()).get(any());
     }
 
@@ -114,12 +123,12 @@ class DynamicDispatcherControllerTest {
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
         when(cacheService.get("gwm:idempotency:ep-1:abc-123")).thenReturn(Optional.empty());
         JsonNode result = objectMapper.readTree("{\"v\":1}");
-        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(result);
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any())).thenReturn(result);
 
         ResponseEntity<?> response = controller.dispatch(request("abc-123"));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any(), any(), any());
         verify(cacheService).put(eq("gwm:idempotency:ep-1:abc-123"), eq(result.toString()), eq(86400));
     }
 
@@ -134,7 +143,7 @@ class DynamicDispatcherControllerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(((JsonNode) response.getBody()).get("v").asInt()).isEqualTo(1);
         // Cache hit -> KHONG duoc goi lai engine.handle() (tranh side-effect lap).
-        verify(engine, never()).handle(any(), anyMap(), any(), any());
+        verify(engine, never()).handle(any(), anyMap(), any(), any(), any(), any());
     }
 
     @Test
@@ -142,7 +151,7 @@ class DynamicDispatcherControllerTest {
         EndpointResponseDto config = endpoint(true);
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
         when(cacheService.get("gwm:idempotency:ep-1:abc-123")).thenReturn(Optional.empty());
-        when(engine.handle(eq(config), anyMap(), any(), any()))
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("upstream loi"));
 
         try {
@@ -161,12 +170,12 @@ class DynamicDispatcherControllerTest {
     void responseCacheTat_luonGoiEngine_khongDungCache() throws Exception {
         EndpointResponseDto config = endpoint(false, false);
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
-        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any())).thenReturn(objectMapper.readTree("{\"v\":1}"));
 
         ResponseEntity<?> response = controller.dispatch(request(null));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any(), any(), any());
         verify(cacheService, never()).get(any());
     }
 
@@ -176,12 +185,12 @@ class DynamicDispatcherControllerTest {
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
         when(cacheService.get("gwm:response-cache:ep-1:/x?")).thenReturn(Optional.empty());
         JsonNode result = objectMapper.readTree("{\"v\":1}");
-        when(engine.handle(eq(config), anyMap(), any(), any())).thenReturn(result);
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any())).thenReturn(result);
 
         ResponseEntity<?> response = controller.dispatch(request(null));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any());
+        verify(engine, times(1)).handle(eq(config), anyMap(), any(), any(), any(), any());
         verify(cacheService).put(eq("gwm:response-cache:ep-1:/x?"), eq(result.toString()), eq(60));
     }
 
@@ -195,7 +204,7 @@ class DynamicDispatcherControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(((JsonNode) response.getBody()).get("v").asInt()).isEqualTo(1);
-        verify(engine, never()).handle(any(), anyMap(), any(), any());
+        verify(engine, never()).handle(any(), anyMap(), any(), any(), any(), any());
     }
 
     @Test
@@ -203,7 +212,7 @@ class DynamicDispatcherControllerTest {
         EndpointResponseDto config = endpoint(false, true);
         lenient().when(registryCache.findExact("GET", "/x")).thenReturn(config);
         when(cacheService.get("gwm:response-cache:ep-1:/x?")).thenReturn(Optional.empty());
-        when(engine.handle(eq(config), anyMap(), any(), any()))
+        when(engine.handle(eq(config), anyMap(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("upstream loi"));
 
         try {

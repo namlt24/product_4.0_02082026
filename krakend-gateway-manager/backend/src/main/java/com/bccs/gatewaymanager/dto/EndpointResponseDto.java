@@ -25,6 +25,12 @@ public record EndpointResponseDto(
         /** Cache TOAN BO response cho MOI client cung tham so - xem EndpointConfig.responseCacheEnabled. */
         boolean responseCacheEnabled,
 
-        int responseCacheTtlSeconds
+        int responseCacheTtlSeconds,
+
+        /** Mang RULE CỜ (V5) - "khop tổ hợp cờ -> bắt đầu từ step nào / chặn request". Rỗng = không dùng. */
+        List<FlagRuleDto> flagRules,
+
+        /** Cấu hình "ghép field từ bất kỳ step nào vào response cuối" - null = không dùng. Xem ResponseMappingSpecDto. */
+        ResponseMappingSpecDto responseMapping
 ) {
 }

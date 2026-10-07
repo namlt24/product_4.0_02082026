@@ -102,6 +102,78 @@ public final class JsonPathUtil {
         target.set(fieldName, value);
     }
 
+    /**
+     * GHI 1 gia tri vao ObjectNode theo duong dan dot-notation (co the xen
+     * index mang "[N]") - doi xung voi getByDotPath() o tren, dung cho tinh nang
+     * ResponseMapping (ghép field tu step nao do vao response cuoi, targetField
+     * co the long nhau vd "data.code").
+     *
+     * Segment TEN node trung gian THIEU duoc TU TAO (putObject) - neu phai bat
+     * buoc khai bao day du cac node trung gian thi cau hinh Mapping kha nhieu
+     * dong do du; segment tren node KHONG PHAI object, hoac index mang vuot
+     * size/mang thieu thi BO QUA (tra false) - caller log.warn, khong throw
+     * (du lieu upstream that khong chac chan dang nao cung ton tai).
+     *
+     * Tra ve true neu ghi thanh cong, false neu bo qua.
+     */
+    public static boolean setByDotPath(ObjectNode root, String dotPath, JsonNode value) {
+        if (root == null || dotPath == null || dotPath.isBlank() || value == null) {
+            return false;
+        }
+        Matcher matcher = PATH_TOKEN.matcher(dotPath);
+        List<Token> tokens = new ArrayList<>();
+        while (matcher.find()) {
+            if (matcher.group(1) != null) {
+                tokens.add(new Token(matcher.group(1), -1));
+            } else {
+                tokens.add(new Token(null, Integer.parseInt(matcher.group(2))));
+            }
+        }
+        if (tokens.isEmpty()) {
+            return false;
+        }
+        JsonNode current = root;
+        for (int t = 0; t < tokens.size(); t++) {
+            Token token = tokens.get(t);
+            boolean last = (t == tokens.size() - 1);
+            if (token.name != null) {
+                if (!(current instanceof ObjectNode on)) {
+                    return false;
+                }
+                if (last) {
+                    on.set(token.name, value);
+                    return true;
+                }
+                JsonNode next = on.get(token.name);
+                if (next == null || next.isNull() || (!next.isObject() && !next.isArray())) {
+                    // Node trung gian thieu (hoac bi scalar chan duong) - tao moi
+                    // dung KIEU cua token KE TIEP (object cho ten, array cho [N]).
+                    Token nextToken = tokens.get(t + 1);
+                    current = nextToken.name != null ? on.putObject(token.name) : on.putArray(token.name);
+                } else {
+                    current = next;
+                }
+            } else {
+                int index = token.index;
+                if (last) {
+                    if (!(current instanceof ArrayNode an) || index >= current.size()) {
+                        return false;
+                    }
+                    an.set(index, value);
+                    return true;
+                }
+                if (!(current instanceof ArrayNode an) || index >= current.size()) {
+                    return false;
+                }
+                current = an.get(index);
+            }
+        }
+        return false;
+    }
+
+    private record Token(String name, int index) {
+    }
+
     /** Chuyen 1 danh sach String thanh ArrayNode de gan vao body (dung cho ket qua aggregateArray). */
     public static ArrayNode toArrayNode(tools.jackson.databind.ObjectMapper mapper, List<String> values) {
         ArrayNode arrayNode = mapper.createArrayNode();

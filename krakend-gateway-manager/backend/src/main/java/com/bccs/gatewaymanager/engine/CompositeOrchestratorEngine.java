@@ -1,14 +1,19 @@
 package com.bccs.gatewaymanager.engine;
 
 import com.bccs.gatewaymanager.dto.BackendStepDto;
+import com.bccs.gatewaymanager.dto.SwitchBranchDto;
+import com.bccs.gatewaymanager.dto.ConditionRuleDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.dto.FlagRuleDto;
 import com.bccs.gatewaymanager.dto.StepTraceDto;
+import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.BusinessException;
+import com.bccs.gatewaymanager.service.FlagRegistryCache;
 import com.bccs.gatewaymanager.service.UpstreamRegistryCache;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -21,14 +26,20 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 /**
@@ -49,9 +60,31 @@ public class CompositeOrchestratorEngine {
     private final UpstreamRegistryCache upstreamRegistryCache;
     private final ObjectMapper objectMapper;
     private final ExecutorService parallelStepExecutor;
+    private final FlagRuleEvaluator flagRuleEvaluator;
+    private final FlagRegistryCache flagRegistryCache;
+
+    /**
+     * Thuc thi 1 EndpointConfig cho 1 request that - KHONG co override cờ
+     * (request that tu DynamicDispatcherController; cờ doc tu FlagRegistryCache).
+     */
+    public JsonNode handle(EndpointResponseDto config, Map<String, String> pathVariables,
+                            Map<String, String[]> queryParams, String rawRequestBody) {
+        return handle(config, pathVariables, queryParams, rawRequestBody, null);
+    }
 
     /**
      * Thuc thi 1 EndpointConfig cho 1 request that.
+     *
+     * V5 - RULE CỜ: DAU HAM, truoc khi bat dau bat ky step nao, danh gia
+     * flagRules cua endpoint (FlagRuleEvaluator - trong nhom AND, giua nhom OR,
+     * priority tang dan, khop dau tien la dung):
+     *  - START_STEP -> chuoi step chay TU startStepOrder thay vi tu step nho nhat;
+     *  - BLOCK -> FlagRuleEvaluator tu throw BusinessException (khong goi
+     *    upstream nao, loi di qua dung luong error/audit co san).
+     * Khong rule khop / flagRules rong / flagOverrides=null -> hanh vi cu
+     * 100% (chay tu step nho nhat) - an toan cho moi endpoint hien co.
+     * flagOverrides KHAC null chi xay ra o "Thu ngay/Thu nhanh" (EndpointTryService
+     * - mo phong theo cờ, KHONG anh huong cache cờ tren Data Plane).
      *
      * Non-sequential: moi step DOC LAP, LUON chay het (khong lien quan gi toi
      * re nhanh - xem executeSequentialChain()), roi gop ket qua qua
@@ -66,9 +99,26 @@ public class CompositeOrchestratorEngine {
      * "stepOrder ke tiep co dinh".
      */
     public JsonNode handle(EndpointResponseDto config, Map<String, String> pathVariables,
-                            Map<String, String[]> queryParams, String rawRequestBody) {
+                            Map<String, String[]> queryParams, String rawRequestBody,
+                            Map<String, Boolean> flagOverrides) {
+        return handle(config, pathVariables, queryParams, rawRequestBody, flagOverrides, Map.of());
+    }
+
+    /**
+     * {@code headers} = header cua CHINH client (key bat ky hoa thuong, se duoc ha chu) -
+     * chi dung cho dieu kien re nhanh nguon HEADER.
+     */
+    public JsonNode handle(EndpointResponseDto config, Map<String, String> pathVariables,
+                            Map<String, String[]> queryParams, String rawRequestBody,
+                            Map<String, Boolean> flagOverrides, Map<String, String> headers) {
+        // Rule cờ danh gia TRUOC TAT CA - ca non-sequential lam (khong dung rule
+        // - validate luc luu chi cho sequential=true - nhung BLOCK van an toan neu
+        // du lieu cu/import tay lot qua validate).
+        FlagRuleEvaluator.Result flagResult = flagRuleEvaluator.evaluate(config, flagOverrides);
+        TraceCollector.recordFlagRuleMatch(config.name(), flagResult.matchedRule());
+
         JsonNode requestBodyNode = parseBodyOrNull(rawRequestBody);
-        ExecutionContext ctx = new ExecutionContext(pathVariables, queryParams, requestBodyNode);
+        ExecutionContext ctx = new ExecutionContext(pathVariables, queryParams, requestBodyNode, lowerCaseKeys(headers));
 
         List<BackendStepDto> orderedSteps = config.steps().stream()
                 .sorted((a, b) -> Integer.compare(a.stepOrder(), b.stepOrder()))
@@ -83,7 +133,7 @@ public class CompositeOrchestratorEngine {
                     ctx.putStepResult(step.stepOrder(), transformed);
                 }
             }
-            return assembleFinalResponse(orderedSteps, ctx);
+            return applyResponseMappings(assembleFinalResponse(orderedSteps, ctx), config, ctx);
         }
 
         // Bu tru/rollback nghiep vu (saga best-effort, muc 6) - CHI ap dung nhanh
@@ -96,12 +146,74 @@ public class CompositeOrchestratorEngine {
         // - nghia la onErrorStepOrder (neu co) da co co hoi xu ly truoc do (fallback
         // thanh cong thi ham tra ve binh thuong, khong co exception nao de bat o
         // day, runCompensations() khong bao gio duoc goi).
+        // ResponseMapping ap NGOAI try/catch - loi cua chinh viec ghep field (cau
+        // hinh sai) KHONG duoc kich hoat bu tru/rollback nghiep vu (runCompensations
+        // chi danh cho loi goi upstream cua chuoi).
+        JsonNode chainResult;
         try {
-            return executeSequentialChain(config, orderedSteps, ctx);
+            chainResult = executeSequentialChain(config, orderedSteps, ctx, flagResult.initialStepOrder());
         } catch (RuntimeException e) {
             runCompensations(config, orderedSteps, ctx);
             throw e;
         }
+        return applyResponseMappings(chainResult, config, ctx);
+    }
+
+    /**
+     * Ap tinh nang ResponseMapping (ghép field tu bat ky step nao vao RESPONSE
+     * CUOI) - goi DUY NHAT o cuoi handle() cho CA 2 che do sequential/non-sequential,
+     * SAU khi assembleFinalResponse()/executeSequentialChain() da tra ket qua tong
+     * hop. Null/rong -> tra nguyen ket qua (100% endpoint cu khong doi gi).
+     *
+     * mode:
+     *  - MERGE (mac dinh): giu nguyen ket qua tong hop, chi BO SUNG cac field khai
+     *    bao (targetField trung ten bi mapping sau ghi de theo mappingOrder).
+     *  - REPLACE: BO ket qua tong hop - response cuoi = DUNG VA CHI cac field khai
+     *    bao (giai case "giu envelope BCCS + loc data": step target=null giu raw,
+     *    khai mapping code/message/... + data.xxx).
+     *
+     * Nguon doc: ctx.stepResults - gia tri DA boc step.target + DA transform
+     * (nhat quan voi FieldMapping STEP_RESPONSE). Field nguon thieu/step khong chay
+     * (re nhanh bo qua) -> log.warn + skip (fail-open, KHONG chặn request - khac
+     * validate luc luu chi chan sourceStepOrder khong ton tai voi bat ky step nao).
+     */
+    private JsonNode applyResponseMappings(JsonNode finalResult, EndpointResponseDto config, ExecutionContext ctx) {
+        com.bccs.gatewaymanager.dto.ResponseMappingSpecDto spec = config.responseMapping();
+        if (com.bccs.gatewaymanager.dto.ResponseMappingSpecDto.isEmpty(spec)) {
+            return finalResult;
+        }
+        boolean replace = com.bccs.gatewaymanager.dto.ResponseMappingSpecDto.MODE_REPLACE.equals(spec.mode());
+        // LUON lam ban sao (deep copy) truoc khi ghi - KHONG mutat thang finalResult:
+        // voi sequential, finalResult THUONG CHINH LA cung object JsonNode voi
+        // ctx.stepResults cua step cuoi (putStepResult khong copy) - ghi de mapping
+        // len object do se lam BIEU DIEN du lieu nguon cua CAC MAPPING SAU (duoc doc
+        // tu ctx.stepResults) bi doi theo, ket qua sai don le nhan.
+        ObjectNode out = replace ? objectMapper.createObjectNode()
+                : (finalResult instanceof ObjectNode obj ? obj.deepCopy() : objectMapper.createObjectNode());
+        if (!replace && !(finalResult instanceof ObjectNode)) {
+            // Ket qua tong hop khong phai object (hien khang dinh chi co the la
+            // ObjectNode/mang tu assembleFinalResponse) - REPLACE moi co y nghia,
+            // MERGE khong co nen "de len" object rong de gan field khai bao.
+            log.warn("Endpoint '{}': ResponseMapping mode=MERGE nhung ket qua tong hop khong phai JSON object - bo qua ket qua goc, tra cac field khai bao.", config.name());
+        }
+        List<com.bccs.gatewaymanager.dto.ResponseFieldMappingDto> ordered = spec.mappings().stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        com.bccs.gatewaymanager.dto.ResponseFieldMappingDto::mappingOrder))
+                .toList();
+        for (com.bccs.gatewaymanager.dto.ResponseFieldMappingDto m : ordered) {
+            JsonNode source = ctx.getStepResult(m.sourceStepOrder());
+            JsonNode value = JsonPathUtil.getByDotPath(source, m.sourceField());
+            if (value == null || value.isNull()) {
+                log.warn("Endpoint '{}': ResponseMapping (step {}, field '{}') bo qua - gia tri nguon khong ton tai (step chua chay do re nhanh, hoac field thuc te khong co).",
+                        config.name(), m.sourceStepOrder(), m.sourceField());
+                continue;
+            }
+            if (!JsonPathUtil.setByDotPath(out, m.targetField(), value)) {
+                log.warn("Endpoint '{}': ResponseMapping (target '{}') khong ghi duoc - node dich khong dung kieu (vd ghi index mang vuot gioi han).",
+                        config.name(), m.targetField());
+            }
+        }
+        return out;
     }
 
     /**
@@ -115,7 +227,8 @@ public class CompositeOrchestratorEngine {
 
     /**
      * Thuc thi chuoi step TUAN TU theo CON TRO (khong phai vong lap for co
-     * dinh) - bat dau tu step co stepOrder NHO NHAT, sau moi step tu hoi
+     * dinh) - bat dau tu initialStepOrder (V5: step bat dau do Rule cờ chon;
+     * null = step co stepOrder NHO NHAT - hanh vi cu), sau moi step tu hoi
      * "step tiep theo la gi" qua determineNextStepOrder(). Step KHONG khai
      * bao dieu kien (conditionOperator=null - dung cho 100% endpoint tu
      * TRUOC P1-5) tai tao DUNG hanh vi cu: van chay het tat ca step theo
@@ -125,7 +238,8 @@ public class CompositeOrchestratorEngine {
      * nay - KHAC voi truoc day (luon la step co stepOrder lon nhat), vi voi
      * re nhanh, chuoi co the ket thuc o BAT KY step nao tuy theo dieu kien.
      */
-    private JsonNode executeSequentialChain(EndpointResponseDto config, List<BackendStepDto> orderedSteps, ExecutionContext ctx) {
+    private JsonNode executeSequentialChain(EndpointResponseDto config, List<BackendStepDto> orderedSteps,
+                                            ExecutionContext ctx, Integer initialStepOrder) {
         Map<Integer, BackendStepDto> stepsByOrder = indexStepsByOrder(orderedSteps);
         List<Integer> allOrders = orderedSteps.stream().map(BackendStepDto::stepOrder).sorted().toList();
         // Tap hop stepOrder la DICH cua it nhat 1 "buoc nhay dac biet" - re nhanh
@@ -144,12 +258,27 @@ public class CompositeOrchestratorEngine {
                     branchTargetOrders.add(s.nextStepOrderIfFalse());
                 }
             }
+            if (s.switchBranches() != null && !s.switchBranches().isEmpty()) {
+                for (SwitchBranchDto branch : s.switchBranches()) {
+                    if (branch.nextStepOrder() != null) {
+                        branchTargetOrders.add(branch.nextStepOrder());
+                    }
+                }
+                if (s.nextStepOrderIfFalse() != null) {
+                    branchTargetOrders.add(s.nextStepOrderIfFalse());
+                }
+            }
             if (s.onErrorStepOrder() != null) {
                 branchTargetOrders.add(s.onErrorStepOrder());
             }
         }
 
-        Integer currentOrder = allOrders.isEmpty() ? null : allOrders.get(0);
+        // V5: step bat dau = step do Rule cờ chon (initialStepOrder); null = step
+        // nho nhat (hanh vi cu 100%). initialStepOrder da duoc validate ton tai luc
+        // luu, nhung du phong null-safe cho du lieu cu/import tay.
+        Integer currentOrder = initialStepOrder != null && allOrders.contains(initialStepOrder)
+                ? initialStepOrder
+                : (allOrders.isEmpty() ? null : allOrders.get(0));
         // Chong lap vo han: 1 step KHONG DUOC chay lai trong CUNG 1 request - neu
         // nextStepOrderIfTrue/False vo tinh (hoac co chu dich sai) tao thanh vong
         // lap, phai fail-fast tai day thay vi treo request/goi Upstream vo han lan.
@@ -312,6 +441,9 @@ public class CompositeOrchestratorEngine {
      * chay la response cuoi cung).
      */
     private Integer determineNextStepOrder(BackendStepDto step, ExecutionContext ctx, List<Integer> allOrders, Set<Integer> branchTargetOrders) {
+        if (step.switchBranches() != null && !step.switchBranches().isEmpty()) {
+            return evaluateSwitch(step, ctx);
+        }
         if (step.conditionOperator() == null) {
             if (branchTargetOrders.contains(step.stepOrder())) {
                 // Step nay LA DICH cua 1 nhanh re (co step khac tro toi qua
@@ -333,43 +465,472 @@ public class CompositeOrchestratorEngine {
             // cu (chay het moi step theo dung thu tu stepOrder tang dan).
             return allOrders.stream().filter(o -> o > step.stepOrder()).min(Integer::compareTo).orElse(null);
         }
-        return evaluateCondition(step, ctx) ? step.nextStepOrderIfTrue() : step.nextStepOrderIfFalse();
+        boolean matched = evaluateCondition(step, ctx);
+        if (!matched && hasFalseError(step)) {
+            throwFalseError(step);
+        }
+        return matched ? step.nextStepOrderIfTrue() : step.nextStepOrderIfFalse();
     }
 
     /**
-     * So sanh 1 field (STEP_RESPONSE/REQUEST_BODY) voi conditionExpectedValue.
+     * So sanh 1 field (STEP_RESPONSE/REQUEST_BODY/SYSTEM_FLAG) voi conditionExpectedValue.
      * Tham chieu toi 1 step CHUA TUNG chay (vi 1 nhanh re khac da di - hoan
      * toan hop le trong 1 do thi co dieu kien) tra ve null AN TOAN qua
      * JsonPathUtil.getByDotPath(null, ...) - KHONG throw, coi nhu "khong ton tai".
+     *
+     * SYSTEM_FLAG (V5): conditionSourceField = MA CỜ (khong phai dot-path);
+     * doc gia tri tu cờ he thong (FlagRegistryCache - sync tu CP), KHONG tu
+     * request/response nao. Toan tu hop le: EQUALS voi "true"/"false"
+     * (validate luc luu); de phong du lieu khac, so sanh theo boolean.
+     *
+     * SYSTEM_FLAG + conditionFlagGroups (V5b, theo "vande"): dieu kien NHIEU co
+     * NHIEU NHOM - AND trong nhom, OR giua nhom (mirror Rule FlagRuleDto):
+     * re nhanh DUNG neu CO IT NHAT 1 nhom thoa. Khi co groups, bo qua dieu
+     * kien 1 co don le. Cờ mat khoi cache = false (fail-safe giong get()).
+     *
+     * conditionGroups (V6): TONG QUAT HOA conditionFlagGroups sang cho du lieu
+     * REQUEST_BODY/STEP_RESPONSE thuc (khong chi SYSTEM_FLAG) - uu tien danh gia
+     * CAO NHAT, truoc ca SYSTEM_FLAG: khac null/rong -> bo qua HOAN TOAN dieu
+     * kien 1 co don le VA nhanh SYSTEM_FLAG/conditionFlagGroups rieng, du step
+     * khai bao gi o do. Xem evaluateRuleGroups()/evaluateSingleRule().
      */
     private boolean evaluateCondition(BackendStepDto step, ExecutionContext ctx) {
-        JsonNode source;
-        if (step.conditionSourceType() == FieldMappingSourceType.REQUEST_BODY) {
-            source = ctx.requestBody();
-        } else {
-            // sourceStepOrder la Integer (nullable) - KHONG duoc goi thang
-            // ctx.getStepResult(int) o day vi auto-unbox null se NPE ngay tai
-            // call site; step chua khai bao du dieu kien (thieu sourceStepOrder)
-            // coi nhu khong co gia tri, khong crash.
-            source = step.conditionSourceStepOrder() == null ? null : ctx.getStepResult(step.conditionSourceStepOrder());
+        if (step.conditionGroups() != null && !step.conditionGroups().isEmpty()) {
+            return evaluateRuleGroups(step, step.conditionGroups(), ctx);
         }
-        JsonNode value = JsonPathUtil.getByDotPath(source, step.conditionSourceField());
+        if (step.conditionSourceType() == FieldMappingSourceType.SYSTEM_FLAG) {
+            if (step.conditionFlagGroups() != null && !step.conditionFlagGroups().isEmpty()) {
+                for (List<FlagRuleDto.FlagConditionDto> group : step.conditionFlagGroups()) {
+                    if (group == null || group.isEmpty()) {
+                        continue;
+                    }
+                    boolean allTrue = true;
+                    for (FlagRuleDto.FlagConditionDto cond : group) {
+                        boolean currentValue = flagRegistryCache.get(cond.flagCode());
+                        if (currentValue != cond.expected()) {
+                            allTrue = false;
+                            break;
+                        }
+                    }
+                    if (allTrue) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            boolean currentValue = flagRegistryCache.get(step.conditionSourceField());
+            boolean expected = !"false".equalsIgnoreCase(step.conditionExpectedValue());
+            return currentValue == expected;
+        }
+        String label = "Step '" + step.name() + "'";
+        return evaluateSingleRule(label, step.stepOrder(), step.conditionSourceType(), step.conditionSourceField(),
+                step.conditionSourceStepOrder(), step.conditionOperator(), step.conditionExpectedValue(), ctx, null);
+    }
+
+    /**
+     * V6 - Dieu kien NHIEU NGUON (REQUEST_BODY/STEP_RESPONSE) NHIEU NHOM - AND
+     * trong nhom, OR giua nhom (mirror dung ngu nghia SYSTEM_FLAG+conditionFlagGroups
+     * o evaluateCondition(), chi khac moi la MOI dieu kien la 1 {@link ConditionRuleDto}
+     * DAY DU nguon rieng thay vi flagCode+expected - nen 1 nhom co the tron
+     * REQUEST_BODY va STEP_RESPONSE). Nhom rong/null bi bo qua (khong co gi de
+     * danh gia, khong tinh la thoa/khong thoa).
+     */
+    /** Rẽ nhiều nhánh: nhanh DAU TIEN khop duoc chon, khong nhanh nao khop -> nextStepOrderIfFalse. */
+    private Integer evaluateSwitch(BackendStepDto step, ExecutionContext ctx) {
+        List<SwitchBranchDto> branches = step.switchBranches();
+        for (int i = 0; i < branches.size(); i++) {
+            SwitchBranchDto branch = branches.get(i);
+            if (evaluateRuleGroups(step, branch.groups(), ctx)) {
+                TraceCollector.recordCondition(step.stepOrder(), "Step '" + step.name() + "': nhanh #" + (i + 1)
+                        + " khop -> step " + branch.nextStepOrder());
+                return branch.nextStepOrder();
+            }
+        }
+        if (hasFalseError(step)) {
+            throwFalseError(step);
+        }
+        TraceCollector.recordCondition(step.stepOrder(), "Step '" + step.name() + "': khong nhanh nao khop -> step "
+                + step.nextStepOrderIfFalse());
+        return step.nextStepOrderIfFalse();
+    }
+
+    private static boolean hasFalseError(BackendStepDto step) {
+        return step.falseErrorCode() != null && !step.falseErrorCode().isBlank();
+    }
+
+    /** Nhanh SAI duoc cau hinh la BAO LOI: dung endpoint va tra ve ma/thong diep da khai bao. */
+    private void throwFalseError(BackendStepDto step) {
+        TraceCollector.recordCondition(step.stepOrder(), "Step '" + step.name() + "': khong khop -> BAO LOI "
+                + step.falseErrorCode());
+        throw new BusinessException(step.falseErrorCode(), step.falseErrorMessage());
+    }
+
+    private boolean evaluateRuleGroups(BackendStepDto step, List<List<ConditionRuleDto>> groups, ExecutionContext ctx) {
+        for (int gi = 0; gi < groups.size(); gi++) {
+            List<ConditionRuleDto> group = groups.get(gi);
+            if (group == null || group.isEmpty()) {
+                continue;
+            }
+            boolean allTrue = true;
+            for (int ci = 0; ci < group.size(); ci++) {
+                ConditionRuleDto rule = group.get(ci);
+                String label = "Step '" + step.name() + "' (nhom dieu kien #" + (gi + 1) + ", dieu kien #" + (ci + 1) + ")";
+                if (!evaluateNode(label, step.stepOrder(), rule, ctx, null)) {
+                    allTrue = false;
+                    break;
+                }
+            }
+            if (allTrue) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Danh gia DUNG 1 dieu kien (resolve field tu REQUEST_BODY/STEP_RESPONSE roi so
+     * toan tu) - trich tu evaluateCondition() de DUNG LAI cho ca dieu kien 1 co don
+     * le hien co VA moi dieu kien LA trong conditionGroups (V6, xem evaluateRuleGroups()),
+     * tranh chep lai logic so toan tu 2 lan. {@code label} chi de dung trong thong bao
+     * loi (GW-CONDITION-NOT-NUMERIC) - phan biet duoc dieu kien don le ("Step 'X'") voi
+     * dieu kien trong 1 nhom cu the ("Step 'X' (nhom #N, dieu kien #M)") khi bao loi.
+     */
+    /**
+     * Danh gia 1 nut cua cay dieu kien: LA -> evaluateSingleRule (hoac cờ he thong),
+     * NHOM -> AND/OR cac nut con (de quy, cho phep long nhau).
+     */
+    private boolean evaluateNode(String label, int stepOrder, ConditionRuleDto node, ExecutionContext ctx, JsonNode scope) {
+        if (node.hasQuantifier()) {
+            return evaluateQuantifier(label, stepOrder, node, ctx, scope);
+        }
+        if (node.isGroup()) {
+            return evaluateChildren(label, stepOrder, node.children(), node.logic(), ctx, scope);
+        }
+        if (node.sourceType() == FieldMappingSourceType.SYSTEM_FLAG) {
+            return evaluateFlagLeaf(label, stepOrder, node);
+        }
+        // Ve phai lay tu field khac (so sanh 2 field) thay cho expectedValue hang so.
+        String expected = node.compareSourceField() != null
+                ? referenceAsText(resolveConditionValue(node.compareSourceType(), node.compareSourceField(),
+                        node.compareSourceStepOrder(), ctx, scope))
+                : node.expectedValue();
+        return evaluateSingleRule(label, stepOrder, node.sourceType(), node.sourceField(), node.sourceStepOrder(),
+                node.operator(), expected, ctx, scope);
+    }
+
+    /** AND/OR cac nut con. Trong pham vi phan tu (scope != null) cung dung logic nay. */
+    private boolean evaluateChildren(String label, int stepOrder, List<ConditionRuleDto> children, String logic,
+                                     ExecutionContext ctx, JsonNode scope) {
+        boolean or = "OR".equalsIgnoreCase(logic);
+        for (ConditionRuleDto child : children) {
+            boolean childResult = evaluateNode(label, stepOrder, child, ctx, scope);
+            if (or && childResult) {
+                return true;
+            }
+            if (!or && !childResult) {
+                return false;
+            }
+        }
+        return !or;
+    }
+
+    /**
+     * Lap mang: ANY = co it nhat 1 phan tu khop; ALL = moi phan tu khop (mang rong = KHONG khop,
+     * fail-safe); COUNT = so phan tu khop so sanh countOperator/countValue. Gia tri khong phai mang
+     * = KHONG khop. Dieu kien con doc field TU PHAN TU (xem ConditionRuleDto).
+     */
+    private boolean evaluateQuantifier(String label, int stepOrder, ConditionRuleDto node, ExecutionContext ctx, JsonNode scope) {
+        JsonNode array = resolveConditionValue(node.sourceType(), node.sourceField(), node.sourceStepOrder(), ctx, scope);
+        String quantifier = node.quantifier();
+        boolean result;
+        int matched = 0;
+        int total = 0;
+        if (array == null || !array.isArray()) {
+            result = false;
+        } else {
+            total = array.size();
+            for (JsonNode element : array) {
+                boolean ok = evaluateChildren(label, stepOrder, node.children(), node.logic(), ctx, element);
+                if (ok) {
+                    matched++;
+                }
+                if (ConditionRuleDto.QUANTIFIER_ANY.equals(quantifier) && ok) {
+                    break;
+                }
+                if (ConditionRuleDto.QUANTIFIER_ALL.equals(quantifier) && !ok) {
+                    break;
+                }
+            }
+            if (ConditionRuleDto.QUANTIFIER_ANY.equals(quantifier)) {
+                result = matched > 0;
+            } else if (ConditionRuleDto.QUANTIFIER_ALL.equals(quantifier)) {
+                result = total > 0 && matched == total;
+            } else {
+                String countLabel = label;
+                result = compareNumbers(node.countOperator(), matched,
+                        expectedValueAsDouble(countLabel, node.countOperator(), node.countValue()));
+            }
+        }
+        if (scope == null) {
+            String text = label + ": " + quantifier + "(" + node.sourceField() + ")"
+                    + (array != null && array.isArray() ? " = " + matched + "/" + total + " phan tu khop" : " = KHONG PHAI MANG")
+                    + (ConditionRuleDto.QUANTIFIER_COUNT.equals(quantifier) ? " | " + node.countOperator() + " " + node.countValue() : "")
+                    + " -> " + (result ? "DUNG" : "SAI");
+            TraceCollector.recordCondition(stepOrder, text);
+        }
+        return result;
+    }
+
+    private static boolean compareNumbers(ConditionOperator op, double left, double right) {
+        return switch (op) {
+            case EQUALS -> left == right;
+            case GREATER_THAN -> left > right;
+            case GREATER_THAN_OR_EQUAL -> left >= right;
+            case LESS_THAN -> left < right;
+            case LESS_THAN_OR_EQUAL -> left <= right;
+            default -> false;
+        };
+    }
+
+    private String referenceAsText(JsonNode value) {
+        return value == null || value.isNull() ? null : conditionValueAsString(value);
+    }
+
+    /** Co cờ he thong (FlagRegistryCache, mat khoi cache = false - fail-safe). expectedValue "true"/"false". */
+    private boolean evaluateFlagLeaf(String label, int stepOrder, ConditionRuleDto node) {
+        boolean current = flagRegistryCache.get(node.sourceField());
+        boolean expected = !"false".equalsIgnoreCase(node.expectedValue());
+        boolean result = node.operator() == ConditionOperator.NOT_EQUALS ? current != expected : current == expected;
+        TraceCollector.recordCondition(stepOrder, describeCondition(label, FieldMappingSourceType.SYSTEM_FLAG,
+                node.sourceField(), null, objectMapper.getNodeFactory().booleanNode(current),
+                node.operator(), node.expectedValue(), result));
+        return result;
+    }
+
+    private boolean evaluateSingleRule(String label, int stepOrder, FieldMappingSourceType sourceType, String sourceField,
+                                        Integer sourceStepOrder, ConditionOperator operator, String expectedValue,
+                                        ExecutionContext ctx, JsonNode scope) {
+        JsonNode value = resolveConditionValue(sourceType, sourceField, sourceStepOrder, ctx, scope);
         boolean exists = value != null && !value.isNull();
 
-        return switch (step.conditionOperator()) {
+        boolean result = expectedValue == null && operator.needsExpectedValue() ? false : switch (operator) {
             case EXISTS -> exists;
             case NOT_EXISTS -> !exists;
-            case EQUALS -> exists && conditionValueAsString(value).equals(step.conditionExpectedValue());
-            case NOT_EQUALS -> !exists || !conditionValueAsString(value).equals(step.conditionExpectedValue());
+            case EQUALS -> exists && conditionValueAsString(value).equals(expectedValue);
+            case NOT_EQUALS -> !exists || !conditionValueAsString(value).equals(expectedValue);
             // So sanh SO: gia tri response khong ton tai (!exists) coi la false, GIONG HET
             // cach EQUALS dang xu ly - khong throw chi vi step truoc chua chay (nhanh re
             // khac trong cung do thi dieu kien).
-            case GREATER_THAN -> exists && conditionValueAsDouble(step, value) > expectedValueAsDouble(step);
-            case GREATER_THAN_OR_EQUAL -> exists && conditionValueAsDouble(step, value) >= expectedValueAsDouble(step);
-            case LESS_THAN -> exists && conditionValueAsDouble(step, value) < expectedValueAsDouble(step);
-            case LESS_THAN_OR_EQUAL -> exists && conditionValueAsDouble(step, value) <= expectedValueAsDouble(step);
+            case GREATER_THAN -> exists && conditionValueAsDouble(label, sourceField, operator, value) > expectedValueAsDouble(label, operator, expectedValue);
+            case GREATER_THAN_OR_EQUAL -> exists && conditionValueAsDouble(label, sourceField, operator, value) >= expectedValueAsDouble(label, operator, expectedValue);
+            case LESS_THAN -> exists && conditionValueAsDouble(label, sourceField, operator, value) < expectedValueAsDouble(label, operator, expectedValue);
+            case LESS_THAN_OR_EQUAL -> exists && conditionValueAsDouble(label, sourceField, operator, value) <= expectedValueAsDouble(label, operator, expectedValue);
+            // Gia tri da resolve la 1 MANG - kiem tra co PHAN TU nao khop expectedValue
+            // (dang text) hay khong. KHONG phai mang (vd 1 chuoi/so don) -> coi la
+            // KHONG khop (fail-safe, mirror triet ly "graceful null" cua JsonPathUtil) -
+            // xem javadoc ConditionOperator.CONTAINS.
+            case CONTAINS -> exists && arrayContainsValue(value, expectedValue);
+            case NOT_CONTAINS -> !exists || !arrayContainsValue(value, expectedValue);
+            case IN -> exists && inExpectedList(label, operator, expectedValue).contains(conditionValueAsString(value));
+            case NOT_IN -> !exists || !inExpectedList(label, operator, expectedValue).contains(conditionValueAsString(value));
+            case STARTS_WITH -> exists && conditionValueAsString(value).startsWith(expectedValue);
+            case ENDS_WITH -> exists && conditionValueAsString(value).endsWith(expectedValue);
+            case STRING_CONTAINS -> exists && conditionValueAsString(value).contains(expectedValue);
+            case IS_EMPTY -> isEmptyValue(value);
+            case IS_NOT_EMPTY -> !isEmptyValue(value);
+            case MATCHES_REGEX -> exists && matchesRegex(label, expectedValue, conditionValueAsString(value));
+            case SIZE_EQUALS -> exists && isSizable(value) && sizeOf(value) == expectedValueAsDouble(label, operator, expectedValue);
+            case SIZE_GREATER_THAN -> exists && isSizable(value) && sizeOf(value) > expectedValueAsDouble(label, operator, expectedValue);
+            case SIZE_GREATER_THAN_OR_EQUAL -> exists && isSizable(value) && sizeOf(value) >= expectedValueAsDouble(label, operator, expectedValue);
+            case SIZE_LESS_THAN -> exists && isSizable(value) && sizeOf(value) < expectedValueAsDouble(label, operator, expectedValue);
+            case SIZE_LESS_THAN_OR_EQUAL -> exists && isSizable(value) && sizeOf(value) <= expectedValueAsDouble(label, operator, expectedValue);
         };
+
+        if (scope == null) {
+            TraceCollector.recordCondition(stepOrder,
+                    describeCondition(label, sourceType, sourceField, sourceStepOrder, value, operator, expectedValue, result));
+        }
+        return result;
     }
+
+    /** Gia tri co kich thuoc: mang (so phan tu), object (so key), chuoi (so ky tu code point). */
+    private static boolean isSizable(JsonNode value) {
+        return value.isArray() || value.isObject() || value.isTextual();
+    }
+
+    private static double sizeOf(JsonNode value) {
+        if (value.isTextual()) {
+            String text = value.asText();
+            return text.codePointCount(0, text.length());
+        }
+        return value.size();
+    }
+
+    /**
+     * Nguon REQUEST_BODY: trong pham vi phan tu (scope != null) doc tu PHAN TU, nguoc lai doc
+     * tu body goc cua client. Cac nguon khac khong bi anh huong boi pham vi.
+     */
+    private JsonNode resolveConditionValue(FieldMappingSourceType sourceType, String sourceField,
+                                           Integer sourceStepOrder, ExecutionContext ctx, JsonNode scope) {
+        if (sourceType == FieldMappingSourceType.REQUEST_BODY) {
+            return JsonPathUtil.getByDotPath(scope != null ? scope : ctx.requestBody(), sourceField);
+        }
+        if (sourceType == FieldMappingSourceType.QUERY_PARAM) {
+            String value = firstQueryParamValue(ctx, sourceField);
+            return value == null ? null : objectMapper.getNodeFactory().stringNode(value);
+        }
+        if (sourceType == FieldMappingSourceType.HEADER) {
+            String value = ctx.headers().get(sourceField.toLowerCase(Locale.ROOT));
+            return value == null ? null : objectMapper.getNodeFactory().stringNode(value);
+        }
+        // sourceStepOrder la Integer (nullable) - KHONG duoc goi thang
+        // ctx.getStepResult(int) o day vi auto-unbox null se NPE ngay tai
+        // call site; step chua khai bao du dieu kien (thieu sourceStepOrder)
+        // coi nhu khong co gia tri, khong crash.
+        JsonNode source = sourceStepOrder == null ? null : ctx.getStepResult(sourceStepOrder);
+        return JsonPathUtil.getByDotPath(source, sourceField);
+    }
+
+    /** Dong mo ta 1 dieu kien da danh gia, hien trong "Thu nhanh" - ghi ro field thieu (KHONG CO) de khoi phai doan. */
+    private String describeCondition(String label, FieldMappingSourceType sourceType, String sourceField,
+                                     Integer sourceStepOrder, JsonNode value, ConditionOperator operator,
+                                     String expectedValue, boolean result) {
+        String source;
+        if (sourceType == FieldMappingSourceType.REQUEST_BODY) {
+            source = "body." + sourceField;
+        } else if (sourceType == FieldMappingSourceType.QUERY_PARAM) {
+            source = "query." + sourceField;
+        } else if (sourceType == FieldMappingSourceType.HEADER) {
+            source = "header." + sourceField;
+        } else if (sourceType == FieldMappingSourceType.SYSTEM_FLAG) {
+            source = "flag." + sourceField;
+        } else {
+            source = "response step " + sourceStepOrder + "." + sourceField;
+        }
+        boolean exists = value != null && !value.isNull();
+        String actual = exists ? truncate(conditionValueAsString(value), 200) : "KHONG CO";
+        String expected = expectedValue == null ? "" : " '" + truncate(expectedValue, 200) + "'";
+        return label + ": " + source + " = " + actual + " | " + operator + expected + " -> " + (result ? "DUNG" : "SAI");
+    }
+
+    private static String truncate(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max) + "...";
+    }
+
+    private boolean isEmptyValue(JsonNode value) {
+        if (value == null || value.isNull()) {
+            return true;
+        }
+        if (value.isTextual()) {
+            return value.asText().isEmpty();
+        }
+        if (value.isArray() || value.isObject()) {
+            return value.size() == 0;
+        }
+        return false;
+    }
+
+    /** conditionExpectedValue phai la MANG JSON (vd ["A","B"]) - validate luc luu, kiem tra lai o day cho du lieu cu. */
+    private Set<String> inExpectedList(String label, ConditionOperator operator, String expectedValue) {
+        JsonNode list = null;
+        if (expectedValue != null) {
+            try {
+                list = objectMapper.readTree(expectedValue);
+            } catch (RuntimeException e) {
+                list = null;
+            }
+        }
+        if (list == null || !list.isArray()) {
+            throw new BusinessException("GW-CONDITION-INVALID-VALUE", label + ": toan tu " + operator
+                    + " can conditionExpectedValue la mang JSON (vd [\"A\",\"B\"]), nhung dang la '" + expectedValue + "'.");
+        }
+        Set<String> values = new HashSet<>();
+        for (JsonNode element : list) {
+            values.add(conditionValueAsString(element));
+        }
+        return values;
+    }
+
+    /**
+     * Khop TOAN BO chuoi theo regex. Co gioi han thoi gian (REGEX_TIME_BUDGET) de bieu
+     * thuc catastrophic-backtracking khong treo worker thread - kiem tra deadline moi
+     * lan doc 1 ky tu.
+     */
+    private boolean matchesRegex(String label, String expectedValue, String actual) {
+        if (expectedValue == null) {
+            throw new BusinessException("GW-CONDITION-INVALID-VALUE", label + ": toan tu MATCHES_REGEX thieu regex.");
+        }
+        Pattern pattern;
+        try {
+            pattern = regexCache.computeIfAbsent(expectedValue, Pattern::compile);
+        } catch (PatternSyntaxException e) {
+            throw new BusinessException("GW-CONDITION-INVALID-VALUE", label + ": regex khong hop le '"
+                    + expectedValue + "' (" + e.getDescription() + ").");
+        }
+        long deadline = System.nanoTime() + REGEX_TIME_BUDGET.toNanos();
+        return pattern.matcher(new DeadlineCharSequence(actual, deadline, label)).matches();
+    }
+
+    private static Map<String, String> lowerCaseKeys(Map<String, String> headers) {
+        if (headers == null || headers.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> lowered = new HashMap<>();
+        headers.forEach((k, v) -> lowered.put(k.toLowerCase(Locale.ROOT), v));
+        return lowered;
+    }
+
+    private static final class DeadlineCharSequence implements CharSequence {
+        private final CharSequence delegate;
+        private final long deadlineNanos;
+        private final String label;
+
+        DeadlineCharSequence(CharSequence delegate, long deadlineNanos, String label) {
+            this.delegate = delegate;
+            this.deadlineNanos = deadlineNanos;
+            this.label = label;
+        }
+
+        @Override
+        public int length() {
+            return delegate.length();
+        }
+
+        @Override
+        public char charAt(int index) {
+            if (System.nanoTime() > deadlineNanos) {
+                throw new BusinessException("GW-CONDITION-REGEX-TIMEOUT", label
+                        + ": regex chay qua lau (vuot " + REGEX_TIME_BUDGET.toMillis() + "ms) - kiem tra lai bieu thuc.");
+            }
+            return delegate.charAt(index);
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return new DeadlineCharSequence(delegate.subSequence(start, end), deadlineNanos, label);
+        }
+
+        @Override
+        public String toString() {
+            return delegate.toString();
+        }
+    }
+
+    /** true neu value la 1 ArrayNode VA co it nhat 1 phan tu khop expectedValue (dang text). */
+    private boolean arrayContainsValue(JsonNode value, String expectedValue) {
+        if (!value.isArray()) {
+            return false;
+        }
+        for (JsonNode element : value) {
+            if (conditionValueAsString(element).equals(expectedValue)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final Duration REGEX_TIME_BUDGET = Duration.ofMillis(50);
+    private final Map<String, Pattern> regexCache = new ConcurrentHashMap<>();
 
     private String conditionValueAsString(JsonNode value) {
         return value.isTextual() ? value.asText() : value.toString();
@@ -381,27 +942,26 @@ public class CompositeOrchestratorEngine {
      * Throw ro rang neu KHONG phai so - tranh am tham re nhanh sai huong thay
      * vi bao loi (khac han so sanh EQUALS/NOT_EQUALS chap nhan bat ky chuoi nao).
      */
-    private double conditionValueAsDouble(BackendStepDto step, JsonNode value) {
+    private double conditionValueAsDouble(String label, String sourceField, ConditionOperator operator, JsonNode value) {
         if (value.isNumber()) {
             return value.asDouble();
         }
         try {
             return Double.parseDouble(value.asText());
         } catch (NumberFormatException e) {
-            throw new BusinessException("GW-CONDITION-NOT-NUMERIC", "Step '" + step.name()
-                    + "': dieu kien re nhanh (" + step.conditionOperator() + ") can gia tri SO tu field '"
-                    + step.conditionSourceField() + "' nhung response thuc te la '" + conditionValueAsString(value) + "'.");
+            throw new BusinessException("GW-CONDITION-NOT-NUMERIC", label
+                    + ": dieu kien re nhanh (" + operator + ") can gia tri SO tu field '"
+                    + sourceField + "' nhung response thuc te la '" + conditionValueAsString(value) + "'.");
         }
     }
 
     /** conditionExpectedValue da duoc validate la so hop le luc luu (xem EndpointService.validateBranching()) - parse lai o day de phong du lieu cu/import tay khong qua validate. */
-    private double expectedValueAsDouble(BackendStepDto step) {
+    private double expectedValueAsDouble(String label, ConditionOperator operator, String expectedValue) {
         try {
-            return Double.parseDouble(step.conditionExpectedValue());
+            return Double.parseDouble(expectedValue);
         } catch (NumberFormatException | NullPointerException e) {
-            throw new BusinessException("GW-CONDITION-NOT-NUMERIC", "Step '" + step.name()
-                    + "': conditionExpectedValue ('" + step.conditionExpectedValue() + "') khong phai so hop le cho toan tu "
-                    + step.conditionOperator() + ".");
+            throw new BusinessException("GW-CONDITION-NOT-NUMERIC", label
+                    + ": conditionExpectedValue ('" + expectedValue + "') khong phai so hop le cho toan tu " + operator + ".");
         }
     }
 
@@ -644,6 +1204,13 @@ public class CompositeOrchestratorEngine {
                     JsonPathUtil.aggregateArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(), m.sourceElementField()));
             case CONSTANT -> constantValueAsJson(m.constantValue());
             case STEP_RESPONSE_ARRAY_MERGE -> mergeArrayIntoObject(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField());
+            // SYSTEM_FLAG CHI dung cho dieu kien re nhanh (conditionSourceType) -
+            // validate luc luu da chan khoi xuat hien trong FieldMapping thuong;
+            // neu du lieu cu/sua tay lot qua thi bao loi ro rang, khong am tham.
+            case SYSTEM_FLAG -> throw new BusinessException("GW-003",
+                    "FieldMapping sourceType=SYSTEM_FLAG khong hop le - cờ chi dung cho dieu kien re nhanh tai step.");
+            case HEADER -> throw new BusinessException("GW-003",
+                    "FieldMapping sourceType=HEADER khong hop le - header chi dung cho dieu kien re nhanh tai step.");
         };
     }
 

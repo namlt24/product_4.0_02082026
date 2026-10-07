@@ -189,6 +189,14 @@
 }
 
 .path-code {
+  // giới hạn width de cot Path khong no lan, ép cot Actions (chua 6 nút icon)
+  // xiẹp nhỏ - nut "Xoá" se bi cat boi .table-card (xem .row-actions).
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
   background: var(--gwm-bg);
   border: 1px solid var(--gwm-border);
   border-radius: 5px;
@@ -198,6 +206,10 @@
 }
 
 .ep-name {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
   color: var(--gwm-text);
 }
@@ -306,7 +318,11 @@
 }
 
 .row-actions {
+  // wrap de khi cua so hẹp + path/name dài, cot Actions bi ép thi nut (nút
+  // "Xoá" cuoi hang) chui xuóng dòng thay vì bò `overflow:hidden` cua .table-card
+  // cat mat ngoai man hinh (bi bug 2026-09-28: nut Xoa k thấy trên UI).
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 2px;
 }

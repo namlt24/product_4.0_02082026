@@ -6,6 +6,7 @@ import com.bccs.gatewaymanager.audit.RequestAuditEvent;
 import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.engine.CompositeOrchestratorEngine;
+import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.exception.BusinessException;
 import com.bccs.gatewaymanager.service.EndpointRegistryCache;
 import tools.jackson.databind.JsonNode;
@@ -26,6 +27,8 @@ import org.springframework.web.util.pattern.PathPatternParser;
 
 import java.io.BufferedReader;
 import java.time.Instant;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,12 +58,21 @@ public class DynamicDispatcherController {
     private final AuditLogService auditLogService;
     private final GatewayCacheService cacheService;
     private final ObjectMapper objectMapper;
+    /** Gom so lieu canh bao per-endpoint (AlertDetector o DP, no-op o CP). */
+    private final com.bccs.gatewaymanager.service.AlertCallObserver alertCallObserver;
 
     private final Map<String, PathPattern> patternCache = new ConcurrentHashMap<>();
     private final PathPatternParser pathPatternParser = new PathPatternParser();
 
     /** Header client gui de danh dau 1 request idempotent - xem EndpointConfig.idempotencyEnabled. */
     private static final String IDEMPOTENCY_HEADER = "Idempotency-Key";
+
+    /**
+     * Header traceId do gateway phia truoc (Gravitee) truyen xuong - bat de
+     * luu vao audit log va tra cuu lai toan bo lo trinh 1 request theo traceId
+     * (xem LogSearchService.searchRequests). getHeader() khong phan biet hoa/thuong.
+     */
+    private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     @RequestMapping("/**")
     public ResponseEntity<?> dispatch(HttpServletRequest request) throws Exception {
@@ -70,6 +82,14 @@ public class DynamicDispatcherController {
         // tham so nay xuyen suot.
         String requestId = UUID.randomUUID().toString();
         MDC.put("requestId", requestId);
+        // traceId tu Gravitee (X-Trace-Id) - uu tien hon traceId cua APM agent
+        // (thuong null khi khong gan agent); dat vao MDC de log line nao trong
+        // luc xu ly cung in duoc traceId ke ca khi co worker thread (MDC context
+        // duoc CompositeOrchestratorEngine copy sang worker).
+        String traceId = resolveTraceId(request);
+        if (traceId != null) {
+            MDC.put("traceId", traceId);
+        }
         long startNanos = System.nanoTime();
         String requestPath = request.getRequestURI();
         HttpMethod method = HttpMethod.valueOf(request.getMethod());
@@ -83,7 +103,7 @@ public class DynamicDispatcherController {
             // toi hang nghin. Khong can PathContainer.parsePath() o nhanh nay.
             EndpointResponseDto exact = registryCache.findExact(method.name(), requestPath);
             if (exact != null) {
-                return execute(exact, Map.of(), request, requestId, method, requestPath, startNanos);
+                return execute(exact, Map.of(), request, requestId, traceId, method, requestPath, startNanos);
             }
 
             // Buoc 2: fallback quet tuan tu, nhung CHI tren nhom co {param} trong
@@ -99,7 +119,7 @@ public class DynamicDispatcherController {
                     continue;
                 }
                 Map<String, String> pathVariables = pattern.matchAndExtract(pathContainer).getUriVariables();
-                return execute(config, pathVariables, request, requestId, method, requestPath, startNanos);
+                return execute(config, pathVariables, request, requestId, traceId, method, requestPath, startNanos);
             }
 
             log.debug("Khong tim thay EndpointConfig khop voi {} {}", method, requestPath);
@@ -107,6 +127,7 @@ public class DynamicDispatcherController {
                     .body(Map.of("error", "GW-NOT-FOUND", "message", "Khong co endpoint nao khop voi " + method + " " + requestPath));
         } finally {
             MDC.remove("requestId");
+            MDC.remove("traceId");
         }
     }
 
@@ -131,7 +152,7 @@ public class DynamicDispatcherController {
      * response cua nhau.
      */
     private ResponseEntity<?> execute(EndpointResponseDto config, Map<String, String> pathVariables, HttpServletRequest request,
-                                       String requestId, HttpMethod method, String requestPath, long startNanos) throws Exception {
+                                       String requestId, String traceId, HttpMethod method, String requestPath, long startNanos) throws Exception {
         String rawBody = readBody(request);
         String idempotencyCacheKey = resolveIdempotencyCacheKey(config, request);
         String responseCacheKey = idempotencyCacheKey == null ? resolveResponseCacheKey(config, requestPath, request, rawBody) : null;
@@ -139,31 +160,31 @@ public class DynamicDispatcherController {
         if (idempotencyCacheKey != null) {
             Optional<String> cached = cacheService.get(idempotencyCacheKey);
             if (cached.isPresent()) {
-                recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
+                recordAudit(requestId, traceId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null, null);
                 return ResponseEntity.ok(objectMapper.readTree(cached.get()));
             }
         }
         if (responseCacheKey != null) {
             Optional<String> cached = cacheService.get(responseCacheKey);
             if (cached.isPresent()) {
-                recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
+                recordAudit(requestId, traceId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null, null);
                 return ResponseEntity.ok(objectMapper.readTree(cached.get()));
             }
         }
 
         try {
-            JsonNode result = engine.handle(config, pathVariables, request.getParameterMap(), rawBody);
+            JsonNode result = engine.handle(config, pathVariables, request.getParameterMap(), rawBody, null, requestHeaders(request));
             if (idempotencyCacheKey != null) {
                 cacheService.put(idempotencyCacheKey, result.toString(), config.idempotencyTtlSeconds());
             }
             if (responseCacheKey != null) {
                 cacheService.put(responseCacheKey, result.toString(), config.responseCacheTtlSeconds());
             }
-            recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null);
+            recordAudit(requestId, traceId, config, method, requestPath, rawBody, startNanos, "SUCCESS", 200, null, null, null);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
-            recordAudit(requestId, config, method, requestPath, rawBody, startNanos, "ERROR",
-                    resolveHttpStatus(e), resolveErrorCode(e), e.getMessage());
+            recordAudit(requestId, traceId, config, method, requestPath, rawBody, startNanos, "ERROR",
+                    resolveHttpStatus(e), resolveErrorCode(e), e.getMessage(), e);
             throw e;
         }
     }
@@ -202,6 +223,16 @@ public class DynamicDispatcherController {
         return key;
     }
 
+    private static Map<String, String> requestHeaders(HttpServletRequest request) {
+        Map<String, String> headers = new HashMap<>();
+        Enumeration<String> names = request.getHeaderNames();
+        while (names != null && names.hasMoreElements()) {
+            String name = names.nextElement();
+            headers.putIfAbsent(name, request.getHeader(name));
+        }
+        return headers;
+    }
+
     private String readBody(HttpServletRequest request) throws Exception {
         try (BufferedReader reader = request.getReader()) {
             return reader.lines().collect(Collectors.joining(System.lineSeparator()));
@@ -215,16 +246,37 @@ public class DynamicDispatcherController {
      * GlobalExceptionHandler - do van la nguon su that duy nhat cho response
      * THAT tra ve client, audit log chi la 1 duong doc lap phuc vu tra cuu).
      */
-    private void recordAudit(String requestId, EndpointResponseDto config, HttpMethod method, String requestPath,
+    private void recordAudit(String requestId, String traceId, EndpointResponseDto config, HttpMethod method, String requestPath,
                               String rawBody, long startNanos, String status, Integer httpStatus,
-                              String errorCode, String errorMessage) {
+                              String errorCode, String errorMessage, RuntimeException error) {
         long durationMs = (System.nanoTime() - startNanos) / 1_000_000;
         BodyTruncator.Result bodyResult = BodyTruncator.truncate(rawBody);
         RequestAuditEvent event = new RequestAuditEvent(
                 requestId, Instant.now(), config.id(), config.name(), method.name(), requestPath,
                 status, httpStatus, errorCode, errorMessage, durationMs,
-                bodyResult.body(), bodyResult.truncated(), currentApmTraceIdOrNull());
+                bodyResult.body(), bodyResult.truncated(), traceId);
         auditLogService.recordRequest(event);
+
+        // Gom so lieu canh bao per-endpoint (passive, implementation tu nuot exception).
+        // Loi nghiep vu 4xx tu upstream (UpstreamHttpErrorException <500) KHONG tinh la
+        // failure — endpoint van tra dung nghiep vu cho client, khong phai endpoint hong
+        // (dong bo voi ignoreException cua CB trong UpstreamHttpExecutor).
+        alertCallObserver.recordEndpointRequest(config.id(), requestPath,
+                "SUCCESS".equals(status) || UpstreamHttpExecutor.isBusinessError(error));
+    }
+
+    /**
+     * traceId cua request: UU TIEN header X-Trace-Id do gateway phia truoc
+     * (Gravitee) truyen xuong - day la ma tra cuu giua cac he thong trong toan
+     * tuyen; chi khi khong co header moi dung trace.id cua Elastic APM agent
+     * (thuong null neu agent chua gan). Header moi hoac rong = khong trace.
+     */
+    private String resolveTraceId(HttpServletRequest request) {
+        String traceId = request.getHeader(TRACE_ID_HEADER);
+        if (traceId != null && !traceId.isBlank()) {
+            return traceId.trim();
+        }
+        return currentApmTraceIdOrNull();
     }
 
     private Integer resolveHttpStatus(RuntimeException e) {

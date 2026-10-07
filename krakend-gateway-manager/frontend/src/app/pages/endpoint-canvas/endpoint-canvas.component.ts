@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { ConditionTreeEditorComponent } from '../../components/condition-tree-editor/condition-tree-editor.component';
+import { FlowDiagramComponent, FlowSource } from '../../components/flow-diagram/flow-diagram.component';
 import { CdkDragEnd, CdkDragMove, DragDropModule } from '@angular/cdk/drag-drop';
 import { Component, ElementRef, HostListener, OnInit, ViewChild, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +19,15 @@ import {
   BackendStep,
   CONDITION_OPERATORS,
   ConditionOperator,
+  ConditionRule,
+  conditionOperatorLabel,
   emptyStep,
+  newConditionLeaf,
+  newSwitchBranch,
+  normalizeConditionTree,
+  normalizeSwitchBranches,
+  SwitchBranch,
+  operatorNeedsExpectedValue,
   EndpointConfig,
   FieldMapping,
   FieldMappingSourceType,
@@ -27,11 +37,17 @@ import {
   HTTP_METHODS,
   MAPPING_TARGET_CONTEXTS,
   MAPPING_TARGET_TYPES,
+  ResponseFieldMapping,
+  ResponseMappingMode,
+  ResponseMappingSpec,
   TryResult,
   UpstreamService,
+  extractFlagCodes,
   extractQueryParamNames,
 } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
+import { FlagApiService } from '../../services/flag-api.service';
+import { FlagRule } from '../../models/flag.model';
 import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try-panel.component';
 
 const NODE_W = 220;
@@ -40,6 +56,11 @@ const CLIENT_X = 40;
 const CLIENT_Y = 48;
 const COL_GAP = 90;
 const ROW_Y = 48;
+const RULE_X = 40;
+const RULE_Y = 208;
+const RULE_W = 220;
+const RULE_H = 84;
+const RESPONSE_H = 72;
 
 /** Form nhap 1 Step trong panel truot ben phai - bien doi qua/lai voi BackendStep khi mo/luu. */
 interface StepEditModel {
@@ -62,13 +83,22 @@ interface StepEditModel {
   denyFieldsText: string;
   renameEntries: { source: string; target: string }[];
   // Re nhanh (P1-5) - conditionOperator=null la mac dinh/tat, giu nguyen hanh vi step binh thuong.
-  conditionSourceType: FieldMappingSourceType;
+  conditionSourceType: FieldMappingSourceType | null;
   conditionSourceStepOrder: number | null;
   conditionSourceField: string;
   conditionOperator: ConditionOperator | null;
   conditionExpectedValue: string;
+  /** V5b - nhom dieu kien co khi SYSTEM_FLAG (AND trong nhom, OR giua nhom). */
+  conditionFlagGroups: { conditions: { flagCode: string; expected: boolean }[] }[];
+  /** V6 - nhom dieu kien nhieu nguon (REQUEST_BODY/STEP_RESPONSE), AND trong nhom, OR giua nhom. */
+  conditionGroups: ConditionRule[][];
+  /** Switch (nhieu nhanh): giu nguyen khi luu; canvas chua ve canh cho nhanh nay. */
+  switchBranches: SwitchBranch[];
   nextStepOrderIfTrue: number | null;
   nextStepOrderIfFalse: number | null;
+  /** Nhanh SAI: -1 = bao loi (dung falseErrorCode/falseErrorMessage). */
+  falseErrorCode: string;
+  falseErrorMessage: string;
   // Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi conditionOperator o tren.
   onErrorStepOrder: number | null;
   // Wave song song trong chuoi sequential - DOC LAP voi conditionOperator/onErrorStepOrder
@@ -78,6 +108,22 @@ interface StepEditModel {
   compensationUpstreamServiceId: string | null;
   compensationMethod: HttpMethodType | null;
   compensationUrlPattern: string;
+}
+
+/**
+ * Form nhap 1 Rule cờ (V5) trong panel truot - bien doi qua/lai voi FlagRule.
+ * conditions = danh sach NHOM (OR giua nhom, AND trong nhom) - UI vẽ ô vuông
+ * trong khung nhom, giữa các khung ghi "HOẶC" (chốt với user 2026-10-01).
+ */
+interface RuleEditModel {
+  name: string;
+  priority: number;
+  /** Moi nhom la danh sach {flagCode, expected} - cap so 2 = index nhom. */
+  groups: { conditions: { flagCode: string; expected: boolean }[] }[];
+  actionType: 'START_STEP' | 'BLOCK';
+  startStepOrder: number | null;
+  blockErrorCode: string;
+  blockMessage: string;
 }
 
 interface HeaderModel {
@@ -113,10 +159,30 @@ interface PositionedMapping {
 /** 1 mui ten re nhanh (P1-5) tren canvas - KHAC FieldMapping: khong chuyen du lieu, chi bieu dien luong dieu khien (dung/sai) tu step co dieu kien sang step ke tiep. */
 interface PositionedBranch {
   fromStepIndex: number;
-  outcome: 'true' | 'false' | 'error';
+  outcome: 'true' | 'false' | 'error' | 'switch' | 'default';
+  /** Nhan hien tren canh: Đúng/Sai/Lỗi, hoac "Nhánh n" / "Mặc định" cho switch. */
+  label: string;
   path: string;
   labelX: number;
   labelY: number;
+}
+
+/**
+ * 1 node Rule cờ (V5) treo DUOI day "Client Request" tren canvas - mirror
+ * PositionedBranch/PositionedMapping: moi Rule co 1 duong noi TU canh phai node
+ * Rule DEN canh trai step dich (START_STEP) hoac CHI co label hanh dong (BLOCK -
+ * khong tro toi step nao). Rules khong keo duoc (vi tri tinh tu dong theo index).
+ */
+interface PositionedRule {
+  rule: FlagRule;
+  index: number;
+  x: number;
+  y: number;
+  path: string;
+  labelX: number;
+  labelY: number;
+  /** Mo ta hanh dong ngan: "→ Step 3" hoac "CHẶN GW-XXX". */
+  actionLabel: string;
 }
 
 /**
@@ -151,6 +217,19 @@ interface PositionedCompensation {
 }
 
 /**
+ * 1 duong noi "ghép field vào response cuối" (ResponseMapping) - tu canh phai step
+ * nguon DEN node "Response cuối" (co dinh góc phải dưới, không keo duoc). Nhom
+ * mapping tu CUNG step fan ra nhieu duong song song (fan spread nhu FieldMapping).
+ */
+interface PositionedResponseEdge {
+  rm: ResponseFieldMapping;
+  index: number;
+  path: string;
+  labelX: number;
+  labelY: number;
+}
+
+/**
  * "Canvas mới" - kéo thả trực quan để khai báo 1 Endpoint (Step + Field Mapping),
  * năng lực tương đương form "Endpoint mới" nhưng xem/thao tác trực quan qua node-graph
  * thay vì form dài. Trang RIÊNG, KHÔNG đụng endpoint-form.component.* - dùng chung
@@ -172,6 +251,8 @@ interface PositionedCompensation {
   standalone: true,
   imports: [
     CommonModule,
+    ConditionTreeEditorComponent,
+    FlowDiagramComponent,
     FormsModule,
     DragDropModule,
     RouterLink,
@@ -196,10 +277,16 @@ export class EndpointCanvasComponent implements OnInit {
   readonly mappingTargetContexts = MAPPING_TARGET_CONTEXTS;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
   /** Query param cua client / hang so co dinh KHONG dung cho re nhanh (so sanh 1 hang so co dinh voi
-   * chinh no vo nghia) - ngoai pham vi, chi dung cho FieldMapping thuong. */
+   * chinh no vo nghia) - ngoai pham vi, chi dung cho FieldMapping thuong.
+   * V5: THEM 'SYSTEM_FLAG' - dieu kien doc CỜ hệ thống (conditionSourceField = mã cờ). */
   readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
-    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT',
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT' && t !== 'STEP_RESPONSE_ARRAY_MERGE',
   );
+
+  /** V5 - Nguồn điều kiện là CỜ hệ thống: Field = select mã cờ (không phải dot-path), bỏ Step nguồn. */
+  isSystemFlagCondition(): boolean {
+    return this.editingStep?.conditionSourceType === 'SYSTEM_FLAG';
+  }
   readonly conditionOperators = CONDITION_OPERATORS;
 
   readonly nodeWidth = NODE_W;
@@ -217,6 +304,12 @@ export class EndpointCanvasComponent implements OnInit {
 
   readonly steps = signal<BackendStep[]>([]);
   readonly mappings = signal<FieldMapping[]>([]);
+  /** ResponseMapping (ghép field vào response cuối) - null = không dùng. Lưu cùng endpoint. */
+  readonly responseMappingSpec = signal<ResponseMappingSpec | null>(null);
+  /** V5 - Rule cờ gắn vào endpoint - lưu cùng endpoint (endpoint_config.flag_rules). */
+  readonly flagRules = signal<FlagRule[]>([]);
+  /** Danh sách cờ của team (trang "Cờ nghiệp vụ") - chọn khi thêm điều kiện vào Rule. */
+  readonly flags = signal<import('../../models/flag.model').GwmFlag[]>([]);
 
   /** Do lech dang keo (chua tha) cua 1 node - dung de duong noi SVG "chay theo" luc keo. */
   private readonly dragOffset = signal<{ index: number; dx: number; dy: number } | null>(null);
@@ -227,6 +320,12 @@ export class EndpointCanvasComponent implements OnInit {
   editingStepIndex: number | null = null;
   editingMapping: FieldMapping | null = null;
   editingMappingIndex: number | null = null;
+  /** V5 - Rule cờ dang sua trong panel (null = mo "Rule moi"). */
+  editingRule: RuleEditModel | null = null;
+  editingRuleIndex: number | null = null;
+  /** ResponseMapping - 1 dong ghép field dang sua trong panel (null = dong/tat). */
+  editingResponseMapping: ResponseFieldMapping | null = null;
+  editingResponseMappingIndex: number | null = null;
 
   // "Thu nhanh" (xem toolbar) - dung CHUNG panel truot ben phai voi editingStep/
   // editingMapping (loai trừ lan nhau, xem panelOpen()/closePanel()) - khong tach
@@ -333,13 +432,30 @@ export class EndpointCanvasComponent implements OnInit {
    * (khac kieu Bezier ngang cua FieldMapping) de khong lan lon voi duong FieldMapping
    * giua CUNG 2 node do.
    */
+  branchColor(outcome: PositionedBranch['outcome']): string {
+    switch (outcome) {
+      case 'true': return '#16a34a';
+      case 'false': return '#dc2626';
+      case 'switch': return '#7c3aed';
+      case 'default': return '#64748b';
+      default: return '#d97706';
+    }
+  }
+
+  branchMarker(outcome: PositionedBranch['outcome']): string {
+    return 'branch-arrow-' + (outcome === 'true' || outcome === 'false' || outcome === 'switch' || outcome === 'default' ? outcome : 'error');
+  }
+
   readonly positionedBranches = computed<PositionedBranch[]>(() => {
     const positions = this.liveNodePositions();
     const byOrder = new Map(positions.map((p) => [p.step.stepOrder, p]));
     const branches: PositionedBranch[] = [];
     const DIP = 70;
 
-    const addBranch = (p: NodePos, fromStepIndex: number, outcome: 'true' | 'false' | 'error', targetOrder: number | null | undefined) => {
+    // Moi canh cua cung 1 node xuat phat xep o do cao khac nhau (DIP + lane*LANE_GAP) de nhan khong de chong len nhau.
+    const LANE_GAP = 22;
+    const addBranch = (p: NodePos, fromStepIndex: number, outcome: PositionedBranch['outcome'], label: string,
+                       targetOrder: number | null | undefined, lane: number) => {
       if (targetOrder == null) {
         return;
       }
@@ -347,6 +463,7 @@ export class EndpointCanvasComponent implements OnInit {
       if (!target) {
         return;
       }
+      const dip = DIP + lane * LANE_GAP;
       const x1 = p.x + this.nodeWidth / 2;
       const y1 = p.y + this.nodeHeight;
       const x2 = target.x + this.nodeWidth / 2;
@@ -354,19 +471,28 @@ export class EndpointCanvasComponent implements OnInit {
       branches.push({
         fromStepIndex,
         outcome,
-        path: `M ${x1} ${y1} C ${x1} ${y1 + DIP}, ${x2} ${y2 + DIP}, ${x2} ${y2}`,
+        label,
+        path: `M ${x1} ${y1} C ${x1} ${y1 + dip}, ${x2} ${y2 + dip}, ${x2} ${y2}`,
         labelX: (x1 + x2) / 2,
-        labelY: Math.max(y1, y2) + DIP + 4,
+        labelY: Math.max(y1, y2) + dip + 4,
       });
     };
 
     positions.forEach((p, fromStepIndex) => {
+      let lane = 0;
       if (p.step.conditionOperator) {
-        addBranch(p, fromStepIndex, 'true', p.step.nextStepOrderIfTrue);
-        addBranch(p, fromStepIndex, 'false', p.step.nextStepOrderIfFalse);
+        addBranch(p, fromStepIndex, 'true', 'Đúng', p.step.nextStepOrderIfTrue, lane++);
+        addBranch(p, fromStepIndex, 'false', 'Sai', p.step.nextStepOrderIfFalse, lane++);
+      }
+      // Switch (nhieu nhanh): moi nhanh 1 canh rieng; nextStepOrderIfFalse la canh "Mac dinh".
+      (p.step.switchBranches ?? []).forEach((branch, bi) => {
+        addBranch(p, fromStepIndex, 'switch', `Nhánh ${bi + 1}`, branch.nextStepOrder, lane++);
+      });
+      if (p.step.switchBranches?.length) {
+        addBranch(p, fromStepIndex, 'default', 'Mặc định', p.step.nextStepOrderIfFalse, lane++);
       }
       // onErrorStepOrder DOC LAP voi conditionOperator - ve rieng du step co dieu kien hay khong.
-      addBranch(p, fromStepIndex, 'error', p.step.onErrorStepOrder);
+      addBranch(p, fromStepIndex, 'error', 'Lỗi', p.step.onErrorStepOrder, lane++);
     });
     return branches;
   });
@@ -426,6 +552,110 @@ export class EndpointCanvasComponent implements OnInit {
       });
   });
 
+  /**
+   * Node Rule cờ (V5) - xep DOC KOI tren 1 cot ben TRAI day node step (canh
+   * Client Request), duong noi tu node Rule den step dich (START_STEP).
+   * BLOCK khong co duong noi (chi label hanh dong tren node).
+   */
+  readonly positionedRules = computed<PositionedRule[]>(() => {
+    const positions = this.liveNodePositions();
+    const byOrder = new Map(positions.map((p) => [p.step.stepOrder, p]));
+    return this.flagRules()
+      .map((rule, index) => {
+        const x = RULE_X;
+        const y = RULE_Y + index * (RULE_H + 24);
+        let path = '';
+        let labelX = x + RULE_W;
+        let labelY = y + RULE_H / 2 - 6;
+        let actionLabel = '';
+        if (rule.actionType === 'START_STEP' && rule.startStepOrder != null) {
+          const target = byOrder.get(rule.startStepOrder);
+          if (target) {
+            const x1 = x + RULE_W;
+            const y1 = y + RULE_H / 2;
+            const x2 = target.x;
+            const y2 = target.y + this.nodeHeight / 2;
+            const midX = (x1 + x2) / 2;
+            path = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+            labelX = midX;
+            labelY = (y1 + y2) / 2 - 6;
+          }
+          actionLabel = `→ Step ${rule.startStepOrder}`;
+        } else if (rule.actionType === 'BLOCK') {
+          actionLabel = `CHẶN ${rule.blockErrorCode ?? ''}`;
+        }
+        return { rule, index, x, y, path, labelX, labelY, actionLabel };
+      });
+  });
+
+  /**
+   * Node "Response cuối" (ResponseMapping) - co dinh nam DUOI day step cuoi cung
+   * (trung tam ngang theo day node), xep duoi khoang cach co dinh. KHONG keo duoc -
+   * vi tri tinh tu dong theo day node step (vi tri drag cua step co the lam node
+   * nay doi cho, trung muc tieu "response cuoi do engine tong hop tu cac step").
+   */
+  readonly responseNodePos = computed(() => {
+    const positions = this.nodeBasePositions();
+    let lastX = this.clientNodeX;
+    let lastY = this.clientNodeY;
+    if (positions.length > 0) {
+      const last = positions[positions.length - 1];
+      lastX = last.x;
+      lastY = last.y;
+    }
+    // Nam duoi day node step 1 khoang 2 hang - tranh chong voi duong branch (DIP 70px).
+    const x = lastX;
+    const y = lastY + this.nodeHeight + 170;
+    return { x, y };
+  });
+
+  /** Vi tri THAT cua node Response cuoi (chay theo drag cua step cuoi qua liveNodePositions). */
+  private readonly liveResponseNodePos = computed(() => {
+    const positions = this.liveNodePositions();
+    if (positions.length === 0) {
+      return this.responseNodePos();
+    }
+    const last = positions[positions.length - 1];
+    return { x: last.x, y: last.y + this.nodeHeight + 170 };
+  });
+
+  /**
+   * Duong noi ResponseMapping: tu canh phai step nguon -> canh trai node "Response cuối".
+   * Nhom mapping tu cung step fan ra nhieu duong song song (20px nhu FieldMapping).
+   */
+  readonly positionedResponseEdges = computed<PositionedResponseEdge[]>(() => {
+    const spec = this.responseMappingSpec();
+    if (!spec || spec.mappings.length === 0) {
+      return [];
+    }
+    const byOrder = new Map(this.liveNodePositions().map((p) => [p.step.stepOrder, p]));
+    const groupIndex = new Map<number, number>();
+    const groupSize = new Map<number, number>();
+    for (const rm of spec.mappings) {
+      groupSize.set(rm.sourceStepOrder, (groupSize.get(rm.sourceStepOrder) ?? 0) + 1);
+    }
+    const FAN_SPREAD = 20;
+    return spec.mappings.map((rm, index) => {
+      const posInGroup = groupIndex.get(rm.sourceStepOrder) ?? 0;
+      groupIndex.set(rm.sourceStepOrder, posInGroup + 1);
+      const total = groupSize.get(rm.sourceStepOrder) ?? 1;
+      const fanOffset = (posInGroup - (total - 1) / 2) * FAN_SPREAD;
+      const source = byOrder.get(rm.sourceStepOrder);
+      const x1 = source ? source.x + this.nodeWidth : this.clientNodeX + this.nodeWidth;
+      const y1 = (source ? source.y + this.nodeHeight / 2 : this.clientNodeY + this.nodeHeight / 2) + fanOffset;
+      const x2 = this.liveResponseNodePos().x;
+      const y2 = this.liveResponseNodePos().y + RESPONSE_H / 2 + fanOffset;
+      const midX = (x1 + x2) / 2;
+      return {
+        rm,
+        index,
+        path: `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`,
+        labelX: midX,
+        labelY: (y1 + y2) / 2 - 6,
+      };
+    });
+  });
+
   readonly canvasSize = computed(() => {
     let maxX = this.clientNodeX + this.nodeWidth + 260;
     let maxY = this.clientNodeY + this.nodeHeight + 160;
@@ -433,6 +663,13 @@ export class EndpointCanvasComponent implements OnInit {
       maxX = Math.max(maxX, p.x + this.nodeWidth + 100);
       maxY = Math.max(maxY, p.y + this.nodeHeight + 160);
     }
+    // Rule cờ (V5) nam doc koi cot trai - keo dai canvas theo so Rule dang co.
+    for (const r of this.positionedRules()) {
+      maxY = Math.max(maxY, r.y + RULE_H + 60);
+    }
+    // Node "Response cuối" (ResponseMapping) nam duoi day step - keo dai canvas cho du.
+    const resp = this.responseNodePos();
+    maxY = Math.max(maxY, resp.y + RESPONSE_H + 80);
     return { width: maxX, height: maxY };
   });
 
@@ -449,7 +686,13 @@ export class EndpointCanvasComponent implements OnInit {
    * khong dung OnPush) tu goi lai moi lan CD chay, luon tra ve gia tri dung hien tai.
    */
   panelOpen(): boolean {
-    return this.editingStep !== null || this.editingMapping !== null || this.tryPanelOpen;
+    return (
+      this.editingStep !== null ||
+      this.editingMapping !== null ||
+      this.editingRule !== null ||
+      this.editingResponseMapping !== null ||
+      this.tryPanelOpen
+    );
   }
 
   /**
@@ -476,6 +719,7 @@ export class EndpointCanvasComponent implements OnInit {
 
   constructor(
     private readonly api: EndpointApiService,
+    private readonly flagApi: FlagApiService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly snackBar: MatSnackBar,
@@ -484,6 +728,11 @@ export class EndpointCanvasComponent implements OnInit {
   ngOnInit(): void {
     this.api.getGatewayInfo().subscribe({ next: (info) => this.gatewayInfo.set(info) });
     this.api.listUpstreams().subscribe({ next: (list) => this.upstreams.set(list) });
+    // V5 - danh sach cờ cua team (chọn khi them dieu kien vao Rule cờ).
+    this.flagApi.list().subscribe({
+      next: (list) => this.flags.set(list),
+      error: () => this.flags.set([]),
+    });
 
     this.endpointId = this.route.snapshot.paramMap.get('id');
     this.loadOtherEndpoints();
@@ -508,6 +757,8 @@ export class EndpointCanvasComponent implements OnInit {
           };
           this.steps.set([...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder));
           this.mappings.set([...ep.mappings]);
+          this.responseMappingSpec.set(ep.responseMapping ?? null);
+          this.flagRules.set([...(ep.flagRules ?? [])].sort((a, b) => a.priority - b.priority));
           this.loading.set(false);
         },
         error: () => {
@@ -588,8 +839,15 @@ export class EndpointCanvasComponent implements OnInit {
       conditionSourceField: s.conditionSourceField ?? '',
       conditionOperator: s.conditionOperator ?? null,
       conditionExpectedValue: s.conditionExpectedValue ?? '',
+      conditionFlagGroups: (s.conditionFlagGroups ?? []).map((g) => ({
+        conditions: (g ?? []).map((c) => ({ flagCode: c.flagCode, expected: c.expected })),
+      })),
+      conditionGroups: structuredClone(s.conditionGroups ?? []),
+      switchBranches: structuredClone(s.switchBranches ?? []),
       nextStepOrderIfTrue: s.nextStepOrderIfTrue ?? null,
-      nextStepOrderIfFalse: s.nextStepOrderIfFalse ?? null,
+      nextStepOrderIfFalse: s.falseErrorCode ? -1 : s.nextStepOrderIfFalse ?? null,
+      falseErrorCode: s.falseErrorCode ?? 'GW-CONDITION-FALSE',
+      falseErrorMessage: s.falseErrorMessage ?? '',
       onErrorStepOrder: s.onErrorStepOrder ?? null,
       parallelGroup: s.parallelGroup ?? null,
       compensationUpstreamServiceId: s.compensationUpstreamServiceId ?? null,
@@ -614,23 +872,106 @@ export class EndpointCanvasComponent implements OnInit {
       this.editingStep.conditionSourceType = 'STEP_RESPONSE';
       this.editingStep.conditionOperator = 'EXISTS';
     } else {
-      this.editingStep.conditionSourceType = 'STEP_RESPONSE';
+      this.editingStep.conditionSourceType = null;
       this.editingStep.conditionSourceStepOrder = null;
       this.editingStep.conditionSourceField = '';
       this.editingStep.conditionOperator = null;
       this.editingStep.conditionExpectedValue = '';
+      this.editingStep.conditionFlagGroups = [];
+      this.editingStep.conditionGroups = [];
       this.editingStep.nextStepOrderIfTrue = null;
       this.editingStep.nextStepOrderIfFalse = null;
     }
   }
 
+  /** V5 - Đổi nguồn điều kiện: chọn Cờ hệ thống thì bỏ Step nguồn (validate backend không dùng),
+   * operator mặc định EQUALS và giá trị mong đợi "true" cho đúng ngữ nghĩa boolean,
+   * khởi tạo sẵn 1 nhóm 1 điều kiện cờ (editor nhóm V5b). */
+  onConditionSourceTypeChange(type: string): void {
+    if (!this.editingStep) return;
+    if (type === 'SYSTEM_FLAG') {
+      this.editingStep.conditionSourceStepOrder = null;
+      this.editingStep.conditionOperator = 'EQUALS';
+      this.editingStep.conditionExpectedValue = 'true';
+      if (!this.editingStep.conditionFlagGroups.length) {
+        this.editingStep.conditionFlagGroups = [{ conditions: [{ flagCode: '', expected: true }] }];
+      }
+    } else if (type === 'REQUEST_BODY') {
+      this.editingStep.conditionSourceStepOrder = null;
+    } else if (!this.editingStep.conditionOperator) {
+      this.editingStep.conditionOperator = 'EXISTS';
+    }
+  }
+
+  // ------------------------------------------------------------------ //
+  // V5b - Nhom dieu kien cờ tại step (AND trong nhom, OR giua nhom),
+  // mirror RuleEditModel groups của Rule cờ.
+  // ------------------------------------------------------------------ //
+
+  addFlagCondition(groupIndex: number): void {
+    this.editingStep?.conditionFlagGroups[groupIndex]?.conditions.push({ flagCode: '', expected: true });
+  }
+
+  removeFlagCondition(groupIndex: number, condIndex: number): void {
+    const group = this.editingStep?.conditionFlagGroups[groupIndex];
+    if (!group) return;
+    group.conditions.splice(condIndex, 1);
+    if (!group.conditions.length) {
+      this.editingStep!.conditionFlagGroups.splice(groupIndex, 1);
+    }
+  }
+
+  addFlagGroup(): void {
+    this.editingStep?.conditionFlagGroups.push({ conditions: [{ flagCode: '', expected: true }] });
+  }
+
+  removeFlagGroup(groupIndex: number): void {
+    this.editingStep?.conditionFlagGroups.splice(groupIndex, 1);
+  }
+
+  // ------------------------------------------------------------------ //
+  // V6 - Nhom dieu kien nhieu nguon (REQUEST_BODY/STEP_RESPONSE), AND trong
+  // nhom, OR giua nhom. Mirror endpoint-form.component.ts (xem conditionGroupsEnabled).
+  // ------------------------------------------------------------------ //
+
+  /** Switch (nhieu nhanh) tren panel canvas - cung hanh vi voi form (xem endpoint-form). */
+  switchEnabled(): boolean {
+    return (this.editingStep?.switchBranches.length ?? 0) > 0;
+  }
+
+  toggleSwitch(enabled: boolean): void {
+    if (!this.editingStep) return;
+    this.editingStep.switchBranches = enabled ? [newSwitchBranch()] : [];
+  }
+
+  addSwitchBranch(): void {
+    this.editingStep?.switchBranches.push(newSwitchBranch());
+  }
+
+  removeSwitchBranch(branchIndex: number): void {
+    this.editingStep?.switchBranches.splice(branchIndex, 1);
+  }
+
+  conditionGroupsEnabled(): boolean {
+    return (this.editingStep?.conditionGroups.length ?? 0) > 0;
+  }
+
+  toggleConditionGroups(enabled: boolean): void {
+    if (!this.editingStep) return;
+    this.editingStep.conditionGroups = enabled ? [[newConditionLeaf()]] : [];
+  }
+
+  operatorLabel(op: string): string {
+    return conditionOperatorLabel(op);
+  }
+
   stepConditionNeedsSourceStep(): boolean {
-    return this.editingStep?.conditionSourceType !== 'REQUEST_BODY';
+    const t = this.editingStep?.conditionSourceType;
+    return t !== 'REQUEST_BODY' && t !== 'SYSTEM_FLAG';
   }
 
   stepConditionNeedsExpectedValue(): boolean {
-    const op = this.editingStep?.conditionOperator;
-    return op !== 'EXISTS' && op !== 'NOT_EXISTS';
+    return operatorNeedsExpectedValue(this.editingStep?.conditionOperator);
   }
 
   /** 4 toan tu so sanh SO (>,>=,<,<=) - doi input sang type="number" cho de nhap, validate chac chan van o backend. */
@@ -754,8 +1095,21 @@ export class EndpointCanvasComponent implements OnInit {
       conditionSourceField: edit.conditionOperator ? edit.conditionSourceField || null : null,
       conditionOperator: edit.conditionOperator,
       conditionExpectedValue: edit.conditionOperator ? edit.conditionExpectedValue || null : null,
+      // V5b - chi gui nhom khi nguon la SYSTEM_FLAG va co nhom hop le (co it nhat
+      // 1 dieu kien da chon cờ); rong -> null (endpoint cu khong doi hanh vi).
+      conditionFlagGroups:
+        edit.conditionOperator && edit.conditionSourceType === 'SYSTEM_FLAG'
+          ? edit.conditionFlagGroups
+              .map((g) => g.conditions.filter((c) => c.flagCode))
+              .filter((g) => g.length > 0)
+          : null,
+      // V6 - chi gui khi dang bat re nhanh. Khong loc dieu kien thieu field (backend bao loi ro rang).
+      conditionGroups: edit.conditionOperator ? normalizeConditionTree(edit.conditionGroups) : null,
+      switchBranches: normalizeSwitchBranches(edit.switchBranches),
       nextStepOrderIfTrue: edit.conditionOperator ? edit.nextStepOrderIfTrue : null,
-      nextStepOrderIfFalse: edit.conditionOperator ? edit.nextStepOrderIfFalse : null,
+      nextStepOrderIfFalse: (edit.conditionOperator || edit.switchBranches.length) && edit.nextStepOrderIfFalse !== -1 ? edit.nextStepOrderIfFalse : null,
+      falseErrorCode: edit.nextStepOrderIfFalse === -1 ? edit.falseErrorCode || null : null,
+      falseErrorMessage: edit.nextStepOrderIfFalse === -1 ? edit.falseErrorMessage || null : null,
       // onErrorStepOrder DOC LAP voi conditionOperator - khong gate theo dieu kien re nhanh.
       onErrorStepOrder: edit.onErrorStepOrder,
       // parallelGroup cung DOC LAP - khong tham chieu stepOrder, khong gate theo dieu kien.
@@ -806,6 +1160,20 @@ export class EndpointCanvasComponent implements OnInit {
         targetStepOrder: m.targetStepOrder > removedOrder ? m.targetStepOrder - 1 : m.targetStepOrder,
       }));
     this.mappings.set(remainingMappings);
+
+    // V5 - Rule cờ tham chieu stepOrder (startStepOrder): tro toi step vua xoa ->
+    // xoa rule luon (khong con nghia gi); tro toi step con lai -> dich stepOrder xuong 1.
+    this.flagRules.set(
+      this.flagRules()
+        .filter((r) => !(r.actionType === 'START_STEP' && r.startStepOrder === removedOrder))
+        .map((r) => ({
+          ...r,
+          startStepOrder:
+            r.actionType === 'START_STEP' && r.startStepOrder != null && r.startStepOrder > removedOrder
+              ? r.startStepOrder - 1
+              : r.startStepOrder,
+        })),
+    );
     this.closePanel();
   }
 
@@ -903,11 +1271,94 @@ export class EndpointCanvasComponent implements OnInit {
     this.closePanel();
   }
 
+  // ------------------------------------------------------------------ //
+  // Panel ResponseMapping (ghép field vào response cuối)
+  // ------------------------------------------------------------------ //
+
+  readonly responseMappingModes: ResponseMappingMode[] = ['MERGE', 'REPLACE'];
+
+  /** Them 1 dong moi vao responseMappingSpec (tao spec MERGE neu chua co). */
+  addResponseMapping(): void {
+    const orders = this.availableStepOrders;
+    const lastOrder = orders.length > 0 ? orders[orders.length - 1] : 1;
+    const spec = this.responseMappingSpec() ?? { mode: 'MERGE' as ResponseMappingMode, mappings: [] };
+    const mappings = [...spec.mappings];
+    this.editingResponseMappingIndex = mappings.length;
+    this.editingResponseMapping = {
+      sourceStepOrder: lastOrder,
+      sourceField: '',
+      targetField: '',
+      mappingOrder: mappings.length,
+    };
+    spec.mappings = mappings;
+    this.responseMappingSpec.set(spec);
+  }
+
+  openResponseMappingPanel(index: number): void {
+    this.closePanel();
+    const spec = this.responseMappingSpec();
+    if (!spec || !spec.mappings[index]) {
+      return;
+    }
+    this.editingResponseMappingIndex = index;
+    this.editingResponseMapping = { ...spec.mappings[index] };
+  }
+
+  applyResponseMappingPanel(): void {
+    const rm = this.editingResponseMapping;
+    const idx = this.editingResponseMappingIndex;
+    if (!rm || idx === null) {
+      return;
+    }
+    if (!rm.sourceField.trim() || !rm.targetField.trim()) {
+      this.snackBar.open('Nhập đủ field nguồn và field response cuối.', 'Đóng', { duration: 2500 });
+      return;
+    }
+    rm.sourceField = rm.sourceField.trim();
+    rm.targetField = rm.targetField.trim();
+    const spec = this.responseMappingSpec();
+    if (!spec) {
+      return;
+    }
+    const mappings = [...spec.mappings];
+    mappings[idx] = rm;
+    this.responseMappingSpec.set({ ...spec, mappings });
+    this.closePanel();
+  }
+
+  removeResponseMappingAt(index: number): void {
+    const spec = this.responseMappingSpec();
+    if (!spec) {
+      return;
+    }
+    const mappings = spec.mappings.filter((_, i) => i !== index);
+    this.responseMappingSpec.set({ ...spec, mappings: mappings.length > 0 ? mappings : [] });
+    this.closePanel();
+  }
+
+  /** Doi mode MERGE/REPLACE - giu nguyen danh sach mapping. */
+  setResponseMappingMode(mode: ResponseMappingMode): void {
+    const spec = this.responseMappingSpec();
+    if (spec) {
+      this.responseMappingSpec.set({ ...spec, mode });
+    }
+  }
+
+  /** Tat hoan toan ResponseMapping (xoa spec) - endpoint quay ve hanh vi khong ghép field. */
+  disableResponseMapping(): void {
+    this.responseMappingSpec.set(null);
+    this.closePanel();
+  }
+
   closePanel(): void {
     this.editingStep = null;
     this.editingStepIndex = null;
     this.editingMapping = null;
     this.editingMappingIndex = null;
+    this.editingRule = null;
+    this.editingRuleIndex = null;
+    this.editingResponseMapping = null;
+    this.editingResponseMappingIndex = null;
     this.tryPanelOpen = false;
   }
 
@@ -922,6 +1373,11 @@ export class EndpointCanvasComponent implements OnInit {
     return extractQueryParamNames(this.mappings());
   }
 
+  /** V5 - Ma cờ endpoint đang dựng dùng (Rule + SYSTEM_FLAG) - sinh toggle ghi đe cho "Thu nhanh". */
+  tryFlagCodes(): string[] {
+    return extractFlagCodes(this.toPayload());
+  }
+
   /**
    * Goi thang API "Thu nhanh" (khong luu DB) voi dung toPayload() hien tai -
    * tai dung 100% logic build payload da co, khong viet lai. Loi o day chi con
@@ -933,7 +1389,13 @@ export class EndpointCanvasComponent implements OnInit {
     this.tryOutcome.set(null);
     const payload = this.toPayload();
     this.api
-      .tryAdhoc({ endpoint: payload, pathVariables: req.pathVariables, queryParams: req.queryParams, body: req.body })
+      .tryAdhoc({
+        endpoint: payload,
+        pathVariables: req.pathVariables,
+        queryParams: req.queryParams,
+        body: req.body,
+        flagOverrides: req.flagOverrides,
+      })
       .subscribe({
         next: (result) => {
           this.tryRunning.set(false);
@@ -953,8 +1415,144 @@ export class EndpointCanvasComponent implements OnInit {
   }
 
   // ------------------------------------------------------------------ //
+  // Rule cờ (V5) - panel sua Rule + dieu kien ô vuông theo nhóm AND/OR
+  // ------------------------------------------------------------------ //
+
+  openNewRulePanel(): void {
+    this.closePanel();
+    const usedPriorities = new Set(this.flagRules().map((r) => r.priority));
+    let nextPriority = 1;
+    while (usedPriorities.has(nextPriority)) nextPriority++;
+    this.editingRuleIndex = null;
+    this.editingRule = {
+      name: '',
+      priority: nextPriority,
+      groups: [{ conditions: [{ flagCode: '', expected: true }] }],
+      actionType: 'START_STEP',
+      startStepOrder: this.availableStepOrders[0] ?? 1,
+      blockErrorCode: '',
+      blockMessage: '',
+    };
+  }
+
+  openRulePanel(index: number): void {
+    this.closePanel();
+    const r = this.flagRules()[index];
+    this.editingRuleIndex = index;
+    this.editingRule = {
+      name: r.name,
+      priority: r.priority,
+      groups: (r.conditions ?? []).map((group) => ({
+        conditions: group.map((c) => ({ flagCode: c.flagCode, expected: c.expected })),
+      })),
+      actionType: r.actionType,
+      startStepOrder: r.startStepOrder ?? null,
+      blockErrorCode: r.blockErrorCode ?? '',
+      blockMessage: r.blockMessage ?? '',
+    };
+  }
+
+  addRuleGroup(): void {
+    this.editingRule?.groups.push({ conditions: [{ flagCode: '', expected: true }] });
+  }
+
+  removeRuleGroup(groupIndex: number): void {
+    this.editingRule?.groups.splice(groupIndex, 1);
+  }
+
+  addRuleCondition(groupIndex: number): void {
+    const group = this.editingRule?.groups[groupIndex];
+    if (group) group.conditions.push({ flagCode: '', expected: true });
+  }
+
+  removeRuleCondition(groupIndex: number, condIndex: number): void {
+    const group = this.editingRule?.groups[groupIndex];
+    if (group) group.conditions.splice(condIndex, 1);
+  }
+
+  /** Các flagCode ĐANG chọn ở nhóm khác - không cho chọn trùng trong cùng 1 nhóm (backend chặn GW-003). */
+  duplicateInGroup(groupIndex: number, flagCode: string, exceptIndex: number): boolean {
+    const group = this.editingRule?.groups[groupIndex];
+    if (!group) return false;
+    return group.conditions.some((c, i) => i !== exceptIndex && c.flagCode && c.flagCode === flagCode);
+  }
+
+  applyRulePanel(): void {
+    const edit = this.editingRule;
+    if (!edit) return;
+    if (!edit.name.trim()) {
+      this.snackBar.open('Vui lòng nhập tên Rule.', 'Đóng', { duration: 2500 });
+      return;
+    }
+    if (edit.groups.length === 0 || edit.groups.some((g) => g.conditions.length === 0)) {
+      this.snackBar.open('Mỗi nhóm phải có ít nhất 1 điều kiện (nhóm rỗng luôn khớp - vô nghĩa).', 'Đóng', { duration: 3000 });
+      return;
+    }
+    if (edit.groups.some((g) => g.conditions.some((c) => !c.flagCode))) {
+      this.snackBar.open('Vui lòng chọn cờ cho mọi điều kiện.', 'Đóng', { duration: 2500 });
+      return;
+    }
+    if (edit.actionType === 'START_STEP' && edit.startStepOrder == null) {
+      this.snackBar.open('Rule START_STEP phải chọn step bắt đầu.', 'Đóng', { duration: 2500 });
+      return;
+    }
+    if (edit.actionType === 'BLOCK' && !edit.blockErrorCode.trim()) {
+      this.snackBar.open('Rule CHẶN phải có mã lỗi trả về client.', 'Đóng', { duration: 2500 });
+      return;
+    }
+    const rule: FlagRule = {
+      id: this.editingRuleIndex !== null ? this.flagRules()[this.editingRuleIndex].id : undefined,
+      name: edit.name.trim(),
+      priority: edit.priority,
+      conditions: edit.groups.map((g) => g.conditions.map((c) => ({ flagCode: c.flagCode, expected: c.expected }))),
+      actionType: edit.actionType,
+      startStepOrder: edit.actionType === 'START_STEP' ? edit.startStepOrder : null,
+      blockErrorCode: edit.actionType === 'BLOCK' ? edit.blockErrorCode.trim() : null,
+      blockMessage: edit.actionType === 'BLOCK' ? edit.blockMessage.trim() || null : null,
+    };
+    const list = [...this.flagRules()];
+    if (this.editingRuleIndex === null) {
+      list.push(rule);
+    } else {
+      list[this.editingRuleIndex] = rule;
+    }
+    list.sort((a, b) => a.priority - b.priority);
+    this.flagRules.set(list);
+    this.closePanel();
+    this.snackBar.open('Đã cập nhật Rule cờ.', 'Đóng', { duration: 2000 });
+  }
+
+  removeRuleFromPanel(): void {
+    if (this.editingRuleIndex !== null) {
+      this.flagRules.set(this.flagRules().filter((_, i) => i !== this.editingRuleIndex));
+    }
+    this.closePanel();
+  }
+
+  /** Tên hiển thị của cờ theo mã - gợi ý trong node Rule và dropdown chọn cờ. */
+  flagDisplayName(flagCode: string): string {
+    return this.flags().find((f) => f.flagCode === flagCode)?.displayName ?? flagCode;
+  }
+
+  // ------------------------------------------------------------------ //
   // Save
   // ------------------------------------------------------------------ //
+
+  /** Panel "Sơ đồ" trong canvas: anh chup ban nhap hien tai (chua luu); bam "Làm mới" de cap nhat. */
+  readonly showFlow = signal(false);
+  readonly flowSnapshot = signal<FlowSource | null>(null);
+
+  toggleFlow(): void {
+    const next = !this.showFlow();
+    this.showFlow.set(next);
+    if (next) {
+      this.refreshFlow();
+    }
+  }
+
+  refreshFlow(): void {
+    this.flowSnapshot.set({ steps: this.toPayload().steps });
+  }
 
   save(): void {
     if (!this.header.name.trim()) {
@@ -1009,6 +1607,8 @@ export class EndpointCanvasComponent implements OnInit {
       responseCacheTtlSeconds: this.header.responseCacheTtlSeconds || 300,
       steps: this.steps(),
       mappings: this.mappings(),
+      responseMapping: this.responseMappingSpec() ?? undefined,
+      flagRules: this.flagRules(),
     };
   }
 

@@ -1,6 +1,7 @@
 package com.bccs.gatewaymanager.config;
 
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
+import com.bccs.gatewaymanager.service.ResilienceAlertListener;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -9,6 +10,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * Lang nghe cac su kien resilience "dang chu y" cua TAT CA CircuitBreaker/Bulkhead duoc
@@ -30,15 +33,24 @@ public class ResilienceConfig {
     private final CircuitBreakerRegistry circuitBreakerRegistry;
     private final BulkheadRegistry bulkheadRegistry;
     private final UpstreamHttpExecutor upstreamHttpExecutor;
+    // List rong o Control Plane (khong co bean) - DP co ResilienceAlertListener.
+    // Optional/List injection: khong co bean thi Spring inject list rong, khong loi.
+    private final List<ResilienceAlertListener> resilienceAlertListeners;
 
     @PostConstruct
     public void registerEventListeners() {
         circuitBreakerRegistry.getEventPublisher().onEntryAdded(entryAddedEvent -> {
             CircuitBreaker cb = entryAddedEvent.getAddedEntry();
-            cb.getEventPublisher().onStateTransition(event ->
-                    log.warn("[CircuitBreaker:{}] chuyen trang thai {} -> {}",
-                            cb.getName(), event.getStateTransition().getFromState(),
-                            event.getStateTransition().getToState()));
+            cb.getEventPublisher().onStateTransition(event -> {
+                log.warn("[CircuitBreaker:{}] chuyen trang thai {} -> {}",
+                        cb.getName(), event.getStateTransition().getFromState(),
+                        event.getStateTransition().getToState());
+                for (ResilienceAlertListener listener : resilienceAlertListeners) {
+                    listener.onStateTransition(cb.getName(),
+                            event.getStateTransition().getFromState().name(),
+                            event.getStateTransition().getToState().name());
+                }
+            });
         });
         bulkheadRegistry.getEventPublisher().onEntryAdded(entryAddedEvent -> {
             Bulkhead bh = entryAddedEvent.getAddedEntry();

@@ -119,4 +119,80 @@ class JsonPathUtilTest {
         assertThat(result.size()).isEqualTo(2);
         assertThat(result.get(0).asString()).isEqualTo("A");
     }
+
+    // ---- setByDotPath (tinh nang ResponseMapping - ghi gia tri vao response cuoi theo dot-path) ----
+
+    @Test
+    void setByDotPath_ghiFieldDon() {
+        ObjectNode root = mapper.createObjectNode();
+        assertThat(JsonPathUtil.setByDotPath(root, "code", mapper.getNodeFactory().stringNode("SUCCESS"))).isTrue();
+        assertThat(root.get("code").asString()).isEqualTo("SUCCESS");
+    }
+
+    @Test
+    void setByDotPath_taoNodeTrungGianThieu() {
+        ObjectNode root = mapper.createObjectNode();
+        assertThat(JsonPathUtil.setByDotPath(root, "data.productOfferingId", mapper.readTree("400005389"))).isTrue();
+        assertThat(root.get("data").get("productOfferingId").asLong()).isEqualTo(400005389L);
+    }
+
+    @Test
+    void setByDotPath_ghiDeGiaTriCu() {
+        ObjectNode root = (ObjectNode) mapper.readTree("{\"code\":\"OLD\"}");
+        JsonPathUtil.setByDotPath(root, "code", mapper.getNodeFactory().stringNode("NEW"));
+        assertThat(root.get("code").asString()).isEqualTo("NEW");
+    }
+
+    @Test
+    void setByDotPath_longVaoObjectDaCo_khongMatFieldKhac() {
+        ObjectNode root = (ObjectNode) mapper.readTree("{\"data\":{\"name\":\"Tomato\"},\"code\":\"S\"}");
+        JsonPathUtil.setByDotPath(root, "data.code", mapper.getNodeFactory().stringNode("TOM11"));
+        assertThat(root.get("data").get("name").asString()).isEqualTo("Tomato");
+        assertThat(root.get("data").get("code").asString()).isEqualTo("TOM11");
+    }
+
+    @Test
+    void setByDotPath_ghiPhanTuMangDaCo() {
+        ObjectNode root = (ObjectNode) mapper.readTree("{\"data\":[{\"code\":\"A\"},{\"code\":\"B\"}]}");
+        assertThat(JsonPathUtil.setByDotPath(root, "data[1].code", mapper.getNodeFactory().stringNode("X"))).isTrue();
+        assertThat(root.get("data").get(1).get("code").asString()).isEqualTo("X");
+        assertThat(root.get("data").get(0).get("code").asString()).isEqualTo("A");
+    }
+
+    @Test
+    void setByDotPath_ghiNguyenPhanTuMangTheoIndex() {
+        ObjectNode root = (ObjectNode) mapper.readTree("{\"data\":[1,2,3]}");
+        assertThat(JsonPathUtil.setByDotPath(root, "data[0]", mapper.getNodeFactory().stringNode("X"))).isTrue();
+        assertThat(root.get("data").get(0).asString()).isEqualTo("X");
+    }
+
+    @Test
+    void setByDotPath_taoMangTrungGianKhiTokenKeTiepLaIndex() {
+        ObjectNode root = mapper.createObjectNode();
+        assertThat(JsonPathUtil.setByDotPath(root, "rows[0].code", mapper.getNodeFactory().stringNode("A"))).isFalse();
+        // Mang trung gian khong duoc tu tao phan tu (chi ghi de phan tu co san) - an toan hon.
+        assertThat(root.has("rows")).isTrue();
+        assertThat(root.get("rows").isArray()).isTrue();
+    }
+
+    @Test
+    void setByDotPath_indexVuotQuaSize_BoQuaTraFalse() {
+        ObjectNode root = (ObjectNode) mapper.readTree("{\"data\":[{\"code\":\"A\"}]}");
+        assertThat(JsonPathUtil.setByDotPath(root, "data[5].code", mapper.getNodeFactory().stringNode("X"))).isFalse();
+    }
+
+    @Test
+    void setByDotPath_scalarChanDuong_deLenObjectMoi() {
+        ObjectNode root = (ObjectNode) mapper.readTree("{\"data\":\"scalar\"}");
+        assertThat(JsonPathUtil.setByDotPath(root, "data.code", mapper.getNodeFactory().stringNode("X"))).isTrue();
+        assertThat(root.get("data").get("code").asString()).isEqualTo("X");
+    }
+
+    @Test
+    void setByDotPath_pathRongHoacRoot_null_TraFalse() {
+        ObjectNode root = mapper.createObjectNode();
+        assertThat(JsonPathUtil.setByDotPath(root, null, mapper.nullNode())).isFalse();
+        assertThat(JsonPathUtil.setByDotPath(root, "  ", mapper.nullNode())).isFalse();
+        assertThat(JsonPathUtil.setByDotPath(null, "a", mapper.nullNode())).isFalse();
+    }
 }

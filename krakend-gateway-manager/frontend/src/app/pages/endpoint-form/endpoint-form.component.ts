@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { ConditionTreeEditorComponent } from '../../components/condition-tree-editor/condition-tree-editor.component';
 import { Component, OnInit, signal } from '@angular/core';
 import {
   FormArray,
@@ -23,7 +24,15 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   BackendStep,
   CONDITION_OPERATORS,
+  ConditionRule,
+  conditionOperatorLabel,
   emptyEndpoint,
+  newConditionLeaf,
+  newSwitchBranch,
+  normalizeConditionTree,
+  normalizeSwitchBranches,
+  SwitchBranch,
+  operatorNeedsExpectedValue,
   emptyStep,
   EndpointConfig,
   FieldMapping,
@@ -32,9 +41,12 @@ import {
   HTTP_METHODS,
   MAPPING_TARGET_CONTEXTS,
   MAPPING_TARGET_TYPES,
+  ResponseFieldMapping,
+  ResponseMappingMode,
   UpstreamService,
 } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
+import { FlagApiService } from '../../services/flag-api.service';
 
 /**
  * Man hinh tao/sua 1 Endpoint Gateway.
@@ -54,6 +66,7 @@ import { EndpointApiService } from '../../services/endpoint-api.service';
   standalone: true,
   imports: [
     CommonModule,
+    ConditionTreeEditorComponent,
     RouterLink,
     ReactiveFormsModule,
     MatCardModule,
@@ -77,12 +90,19 @@ export class EndpointFormComponent implements OnInit {
   readonly mappingTargetTypes = MAPPING_TARGET_TYPES;
   readonly mappingTargetContexts = MAPPING_TARGET_CONTEXTS;
   readonly sourceTypes = FIELD_MAPPING_SOURCE_TYPES;
-  /** Nguon dieu kien chi cho phep Step truoc/Body client - Gop mang khong co y nghia cho 1 dieu kien dung/sai,
+  readonly responseMappingModes: ResponseMappingMode[] = ['MERGE', 'REPLACE'];
+  /** Nguon dieu kien chi cho phep Step truoc/Body client/Cờ hệ thống (V5) - Gop mang khong co y nghia cho 1 dieu kien dung/sai,
    * Query param cua client / hang so co dinh KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
   readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
-    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT',
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT' && t !== 'STEP_RESPONSE_ARRAY_MERGE',
   );
+  /** V5 - Danh sách cờ của team cho điều kiện sourceType=SYSTEM_FLAG. */
+  readonly flags = signal<import('../../models/flag.model').GwmFlag[]>([]);
   readonly conditionOperators = CONDITION_OPERATORS;
+
+  operatorLabel(op: string): string {
+    return conditionOperatorLabel(op);
+  }
 
   readonly saving = signal(false);
   readonly isEditMode = signal(false);
@@ -100,6 +120,7 @@ export class EndpointFormComponent implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly api: EndpointApiService,
+    private readonly flagApi: FlagApiService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly snackBar: MatSnackBar,
@@ -110,6 +131,7 @@ export class EndpointFormComponent implements OnInit {
   ngOnInit(): void {
     this.api.getGatewayInfo().subscribe({ next: (info) => this.gatewayInfo.set(info) });
     this.api.listUpstreams().subscribe({ next: (list) => this.upstreams.set(list) });
+    this.flagApi.list().subscribe({ next: (list) => this.flags.set(list), error: () => this.flags.set([]) });
 
     this.endpointId = this.route.snapshot.paramMap.get('id');
     this.loadOtherEndpoints();
@@ -171,6 +193,10 @@ export class EndpointFormComponent implements OnInit {
         [...ep.steps].sort((a, b) => a.stepOrder - b.stepOrder).map((s) => this.buildStepGroup(s)),
       ),
       mappings: this.fb.array(ep.mappings.map((m) => this.buildMappingGroup(m))),
+      responseMappingMode: [ep.responseMapping?.mode ?? 'MERGE'],
+      responseMappings: this.fb.array(
+        (ep.responseMapping?.mappings ?? []).map((m) => this.buildResponseMappingGroup(m)),
+      ),
     });
   }
 
@@ -206,8 +232,17 @@ export class EndpointFormComponent implements OnInit {
       conditionSourceField: [step.conditionSourceField ?? ''],
       conditionOperator: [step.conditionOperator ?? null],
       conditionExpectedValue: [step.conditionExpectedValue ?? ''],
+      // V5b - nhom dieu kien cờ khi SYSTEM_FLAG (AND trong nhom, OR giua nhom).
+      conditionFlagGroups: this.fb.array(
+        (step.conditionFlagGroups ?? []).map((g) => this.buildFlagConditionGroup(g)),
+      ),
+      // V6 - nhom dieu kien NHIEU NGUON (REQUEST_BODY/STEP_RESPONSE), AND trong nhom, OR giua nhom.
+      conditionGroups: [step.conditionGroups ?? []],
+      switchBranches: [step.switchBranches ?? []],
+      falseErrorCode: [step.falseErrorCode ?? 'GW-CONDITION-FALSE'],
+      falseErrorMessage: [step.falseErrorMessage ?? ''],
       nextStepOrderIfTrue: [step.nextStepOrderIfTrue ?? null],
-      nextStepOrderIfFalse: [step.nextStepOrderIfFalse ?? null],
+      nextStepOrderIfFalse: [step.falseErrorCode ? -1 : step.nextStepOrderIfFalse ?? null],
       // Fallback khi step LOI (onErrorStepOrder) - DOC LAP voi conditionOperator o tren,
       // dung duoc ca cho step tuan tu thuong.
       onErrorStepOrder: [step.onErrorStepOrder ?? null],
@@ -225,6 +260,19 @@ export class EndpointFormComponent implements OnInit {
 
   private buildRenameEntry(source = '', target = ''): FormGroup {
     return this.fb.group({ source: [source, Validators.required], target: [target, Validators.required] });
+  }
+
+  /** V5b - 1 nhóm điều kiện cờ (AND trong nhóm) + 1 điều kiện đơn. */
+  private buildFlagConditionGroup(conditions?: { flagCode: string; expected: boolean }[]): FormGroup {
+    return this.fb.group({
+      conditions: this.fb.array(
+        (conditions ?? []).map((c) => this.buildFlagCondition(c.flagCode, c.expected)),
+      ),
+    });
+  }
+
+  private buildFlagCondition(flagCode = '', expected = true): FormGroup {
+    return this.fb.group({ flagCode: [flagCode], expected: [expected] });
   }
 
   private buildMappingGroup(m: FieldMapping): FormGroup {
@@ -247,6 +295,35 @@ export class EndpointFormComponent implements OnInit {
   }
 
   // ------------------------------------------------------------------ //
+  // ResponseMapping - ghép field tu bat ky step nao vao response cuoi
+  // ------------------------------------------------------------------ //
+
+  private buildResponseMappingGroup(m: ResponseFieldMapping): FormGroup {
+    return this.fb.group({
+      sourceStepOrder: [m.sourceStepOrder, Validators.required],
+      sourceField: [m.sourceField, Validators.required],
+      targetField: [m.targetField, Validators.required],
+      mappingOrder: [m.mappingOrder ?? 0],
+    });
+  }
+
+  addResponseMapping(): void {
+    const orders = this.availableStepOrders;
+    this.responseMappingsArray.push(
+      this.buildResponseMappingGroup({
+        sourceStepOrder: orders[0] ?? 1,
+        sourceField: '',
+        targetField: '',
+        mappingOrder: this.responseMappingsArray.length,
+      }),
+    );
+  }
+
+  removeResponseMapping(index: number): void {
+    this.responseMappingsArray.removeAt(index);
+  }
+
+  // ------------------------------------------------------------------ //
   // Getters cho template
   // ------------------------------------------------------------------ //
 
@@ -256,6 +333,14 @@ export class EndpointFormComponent implements OnInit {
 
   get mappingsArray(): FormArray {
     return this.form.get('mappings') as FormArray;
+  }
+
+  get responseMappingsArray(): FormArray {
+    return this.form.get('responseMappings') as FormArray;
+  }
+
+  responseMappingGroup(index: number): FormGroup {
+    return this.responseMappingsArray.at(index) as FormGroup;
   }
 
   /**
@@ -345,16 +430,127 @@ export class EndpointFormComponent implements OnInit {
         nextStepOrderIfTrue: null,
         nextStepOrderIfFalse: null,
       });
+      (group.get('conditionFlagGroups') as FormArray).clear();
+      group.get('conditionGroups')!.setValue([]);
+    }
+  }
+
+  /** V6 - cay dieu kien nhieu nguon cua step index (AND/OR long nhau, xem ConditionTreeEditorComponent). */
+  conditionTreeOf(stepIndex: number): ConditionRule[][] {
+    return this.stepsArray.at(stepIndex).get('conditionGroups')!.value;
+  }
+
+  setConditionTree(stepIndex: number, tree: ConditionRule[][]): void {
+    this.stepsArray.at(stepIndex).get('conditionGroups')!.setValue(tree);
+  }
+
+  conditionGroupsEnabled(stepIndex: number): boolean {
+    return this.conditionTreeOf(stepIndex).length > 0;
+  }
+
+  toggleConditionGroups(stepIndex: number, enabled: boolean): void {
+    this.setConditionTree(stepIndex, enabled ? [[newConditionLeaf()]] : []);
+  }
+
+  /** Nhanh SAI duoc chon "Bao loi" (gia tri select = -1). */
+  isFalseError(stepIndex: number): boolean {
+    return this.stepsArray.at(stepIndex).get('nextStepOrderIfFalse')!.value === -1;
+  }
+
+  /** Switch (nhieu nhanh): danh sach nhanh cua step index. */
+  switchBranchesOf(stepIndex: number): SwitchBranch[] {
+    return this.stepsArray.at(stepIndex).get('switchBranches')!.value;
+  }
+
+  switchEnabled(stepIndex: number): boolean {
+    return this.switchBranchesOf(stepIndex).length > 0;
+  }
+
+  private setSwitchBranches(stepIndex: number, branches: SwitchBranch[]): void {
+    this.stepsArray.at(stepIndex).get('switchBranches')!.setValue(branches);
+  }
+
+  toggleSwitch(stepIndex: number, enabled: boolean): void {
+    this.setSwitchBranches(stepIndex, enabled ? [newSwitchBranch()] : []);
+  }
+
+  addSwitchBranch(stepIndex: number): void {
+    this.setSwitchBranches(stepIndex, [...this.switchBranchesOf(stepIndex), newSwitchBranch()]);
+  }
+
+  removeSwitchBranch(stepIndex: number, branchIndex: number): void {
+    this.setSwitchBranches(stepIndex, this.switchBranchesOf(stepIndex).filter((_, i) => i !== branchIndex));
+  }
+
+  setSwitchBranchGroups(stepIndex: number, branchIndex: number, groups: ConditionRule[][]): void {
+    this.patchSwitchBranch(stepIndex, branchIndex, { groups });
+  }
+
+  setSwitchBranchNext(stepIndex: number, branchIndex: number, nextStepOrder: number | null): void {
+    this.patchSwitchBranch(stepIndex, branchIndex, { nextStepOrder });
+  }
+
+  private patchSwitchBranch(stepIndex: number, branchIndex: number, patch: Partial<SwitchBranch>): void {
+    const branches = this.switchBranchesOf(stepIndex).map((b, i) => (i === branchIndex ? { ...b, ...patch } : b));
+    this.setSwitchBranches(stepIndex, branches);
+  }
+
+  /** V5b - FormArray nhóm điều kiện cờ của step index. */
+  flagGroupsArray(stepIndex: number): FormArray {
+    return this.stepsArray.at(stepIndex).get('conditionFlagGroups') as FormArray;
+  }
+
+  flagConditionsArray(stepIndex: number, groupIndex: number): FormArray {
+    return this.flagGroupsArray(stepIndex).at(groupIndex).get('conditions') as FormArray;
+  }
+
+  onConditionSourceTypeChange(index: number, type: string): void {
+    const group = this.stepsArray.at(index);
+    if (type === 'SYSTEM_FLAG') {
+      group.patchValue({ conditionSourceStepOrder: null, conditionOperator: 'EQUALS', conditionExpectedValue: 'true' });
+      if (this.flagGroupsArray(index).length === 0) {
+        this.addFlagGroup(index);
+      }
+    } else if (type === 'REQUEST_BODY') {
+      group.patchValue({ conditionSourceStepOrder: null });
+    } else if (!group.get('conditionOperator')!.value) {
+      group.patchValue({ conditionOperator: 'EXISTS' });
+    }
+  }
+
+  addFlagGroup(stepIndex: number): void {
+    this.flagGroupsArray(stepIndex).push(this.buildFlagConditionGroup([{ flagCode: '', expected: true }]));
+  }
+
+  removeFlagGroup(stepIndex: number, groupIndex: number): void {
+    this.flagGroupsArray(stepIndex).removeAt(groupIndex);
+  }
+
+  addFlagCondition(stepIndex: number, groupIndex: number): void {
+    this.flagConditionsArray(stepIndex, groupIndex).push(this.buildFlagCondition());
+  }
+
+  removeFlagCondition(stepIndex: number, groupIndex: number, condIndex: number): void {
+    const conds = this.flagConditionsArray(stepIndex, groupIndex);
+    conds.removeAt(condIndex);
+    // Nhóm hết điều kiện → xóa luôn nhóm (giống canvas).
+    if (conds.length === 0) {
+      this.flagGroupsArray(stepIndex).removeAt(groupIndex);
     }
   }
 
   stepConditionNeedsSourceStep(index: number): boolean {
-    return this.stepsArray.at(index).get('conditionSourceType')!.value !== 'REQUEST_BODY';
+    const t = this.stepsArray.at(index).get('conditionSourceType')!.value;
+    return t !== 'REQUEST_BODY' && t !== 'SYSTEM_FLAG';
+  }
+
+  /** V5 - Nguồn điều kiện của step index là Cờ hệ thống: Field = select cờ + giá trị BẬT/TẮT. */
+  isSystemFlagCondition(index: number): boolean {
+    return this.stepsArray.at(index).get('conditionSourceType')!.value === 'SYSTEM_FLAG';
   }
 
   stepConditionNeedsExpectedValue(index: number): boolean {
-    const op = this.stepsArray.at(index).get('conditionOperator')!.value;
-    return op !== 'EXISTS' && op !== 'NOT_EXISTS';
+    return operatorNeedsExpectedValue(this.stepsArray.at(index).get('conditionOperator')!.value);
   }
 
   /** 4 toan tu so sanh SO (>,>=,<,<=) - doi input sang type="number" cho de nhap, validate chac chan van o backend. */
@@ -588,8 +784,22 @@ export class EndpointFormComponent implements OnInit {
       conditionSourceField: s.conditionOperator ? s.conditionSourceField || null : null,
       conditionOperator: s.conditionOperator || null,
       conditionExpectedValue: s.conditionOperator ? s.conditionExpectedValue || null : null,
+      // V5b - chi gui nhom khi nguon SYSTEM_FLAG va co it nhat 1 dieu kien da chon cờ.
+      conditionFlagGroups:
+        s.conditionOperator && s.conditionSourceType === 'SYSTEM_FLAG'
+          ? (s.conditionFlagGroups as Array<{ conditions: Array<{ flagCode: string; expected: boolean }> }>)
+              .map((g) => (g.conditions ?? []).filter((c) => c.flagCode))
+              .filter((g) => g.length > 0)
+          : null,
+      // V6 - chi gui khi dang bat re nhanh. Khong loc dieu kien thieu field: backend tu bao loi ro rang,
+      // loc im lang se thay doi logic AND cua nhom.
+      conditionGroups: s.conditionOperator ? normalizeConditionTree(s.conditionGroups as ConditionRule[][]) : null,
+      switchBranches: normalizeSwitchBranches(s.switchBranches as SwitchBranch[]),
+      falseErrorCode: falseOn(s) ? s.falseErrorCode || null : null,
+      falseErrorMessage: falseOn(s) ? s.falseErrorMessage || null : null,
       nextStepOrderIfTrue: s.conditionOperator ? s.nextStepOrderIfTrue || null : null,
-      nextStepOrderIfFalse: s.conditionOperator ? s.nextStepOrderIfFalse || null : null,
+      // Switch dung nextStepOrderIfFalse lam mac dinh - giu lai ca khi khong co dieu kien 2 nhanh.
+      nextStepOrderIfFalse: (s.conditionOperator || s.switchBranches?.length) && !falseOn(s) ? s.nextStepOrderIfFalse || null : null,
       // onErrorStepOrder DOC LAP voi conditionOperator - khong gate theo dieu kien re nhanh.
       onErrorStepOrder: s.onErrorStepOrder || null,
       // parallelGroup cung DOC LAP voi conditionOperator - chi co y nghia khi sequential=true
@@ -616,6 +826,21 @@ export class EndpointFormComponent implements OnInit {
       targetContext: m.targetContext || 'MAIN',
     }));
 
+    // ResponseMapping: lo bo dong chua khai du (UI chi cho them dong khong xoa) -
+    // rong -> undefined = "khong dung", backend giu nguyen hanh vi cu.
+    const responseMappingRows: ResponseFieldMapping[] = (v.responseMappings ?? [])
+      .filter((m: any) => m.sourceStepOrder != null && m.sourceField?.trim() && m.targetField?.trim())
+      .map((m: any, i: number) => ({
+        sourceStepOrder: m.sourceStepOrder,
+        sourceField: m.sourceField.trim(),
+        targetField: m.targetField.trim(),
+        mappingOrder: i,
+      }));
+    const responseMapping =
+      responseMappingRows.length > 0
+        ? { mode: (v.responseMappingMode ?? 'MERGE') as ResponseMappingMode, mappings: responseMappingRows }
+        : undefined;
+
     // Khong gui id trong body: PUT da mang id qua URL path (endpoint-api.service.ts
     // update(id, payload)), con EndpointRequestDto (Java record) khong co field id -
     // gui thua se bi Jackson tu choi (fail-on-unknown-properties mac dinh) va Sua
@@ -632,6 +857,7 @@ export class EndpointFormComponent implements OnInit {
       parallelExecution: v.parallelExecution ?? false,
       responseCacheEnabled: v.responseCacheEnabled ?? false,
       responseCacheTtlSeconds: v.responseCacheTtlSeconds || 300,
+      responseMapping: responseMapping ?? undefined,
       steps,
       mappings,
     };
@@ -644,4 +870,9 @@ function splitCsv(value: string | null | undefined): string[] {
     .split(',')
     .map((x) => x.trim())
     .filter((x) => x.length > 0);
+}
+
+/** Step co chon "Bao loi" cho nhanh SAI (gia tri select = -1). */
+function falseOn(s: { nextStepOrderIfFalse?: number | null }): boolean {
+  return s.nextStepOrderIfFalse === -1;
 }

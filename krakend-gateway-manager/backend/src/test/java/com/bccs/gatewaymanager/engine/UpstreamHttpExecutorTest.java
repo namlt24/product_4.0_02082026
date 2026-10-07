@@ -43,6 +43,15 @@ class UpstreamHttpExecutorTest {
     private final UpstreamHttpExecutor executor = new UpstreamHttpExecutor(
             circuitBreakerRegistry, retryRegistry, bulkheadRegistry,
             Mockito.mock(GatewayCacheService.class), new JsonMapper(), Mockito.mock(AuditLogService.class),
+            new com.bccs.gatewaymanager.service.AlertCallObserver() {
+                @Override
+                public void recordUpstreamCall(String upstreamName, boolean success) {
+                }
+
+                @Override
+                public void recordEndpointRequest(String endpointId, String endpointPath, boolean success) {
+                }
+            },
             600, 550, 15);
 
     private HttpServer server;
@@ -118,6 +127,129 @@ class UpstreamHttpExecutorTest {
                     assertThat(ex.httpStatus()).isEqualTo(404);
                     assertThat(ex.responseBody()).contains("not found");
                 });
+    }
+
+    // ---- Loi nghiep vu 4xx KHONG phai failure cua CircuitBreaker (gap that loadtest
+    // 2026-08-27: chuoi request quota BCCS-IM-COMMON-0019 cua cac client khong dang ky
+    // lam CB OPEN -> client hop le tiep theo bi fail-fast trong khi upstream khoe).
+    // CB chi OPEN khi ha tang that su chet: timeout/refused/5xx/loi khong ro. ----
+
+    @Test
+    void call_cbBat_chuoiDai4xx_khongLamCbOpen_clientHopLeVanGoiDuoc() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/quota", exchange -> { // API "dau noi" tra loi nghiep vu 4xx
+            hitCount.incrementAndGet();
+            byte[] body = "{\"code\":\"BCCS-IM-COMMON-0019\"}".getBytes();
+            exchange.sendResponseHeaders(400, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.createContext("/ok", exchange -> { // API khac cung Upstream - "client hop le"
+            byte[] body = "{\"ok\":true}".getBytes();
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        UpstreamService up = UpstreamService.builder()
+                .name("svc-cb-4xx").baseHost("http://localhost:" + port)
+                .connectTimeoutMs(500).readTimeoutMs(2000)
+                .circuitBreakerEnabled(true) // CB BAT - diem khac biet voi cac test tren
+                .retryEnabled(false).build();
+
+        // Vuot qua slidingWindowSize=20 va minimumNumberOfCalls=10 — neu 4xx van
+        // tinh failure thi tai day CB da OPEN (100% failure rate).
+        for (int i = 0; i < 25; i++) {
+            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET,
+                    "http://localhost:" + port + "/quota", new HttpHeaders(), null, false, 300, 1, "step-quota",
+                    null, null, null, null, null))
+                    .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
+        }
+
+        // Client "hop le" goi API khac cung Upstream — PHAI van cham duoc server that
+        // (CB chua OPEN). Neu CB OPEN thi o tren da bi CallNotPermittedException chan.
+        JsonNode ok = executor.call(up, HttpMethod.GET,
+                "http://localhost:" + port + "/ok", new HttpHeaders(), null, false, 300, 2, "step-ok",
+                null, null, null, null, null);
+        assertThat(ok.get("ok").asBoolean()).isTrue();
+        assertThat(hitCount.get()).isEqualTo(25); // moi 4xx deu cham server that (khong fail-fast)
+    }
+
+    @Test
+    void call_cbBat_chuoiDai5xx_cbMoVaFailFast_khongGoiThemToiServer() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> { // 5xx = ha tang that su co van de — VAN tinh failure
+            hitCount.incrementAndGet();
+            byte[] body = "boom".getBytes();
+            exchange.sendResponseHeaders(500, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+        UpstreamService up = UpstreamService.builder()
+                .name("svc-cb-5xx").baseHost("http://localhost:" + port)
+                .connectTimeoutMs(500).readTimeoutMs(2000)
+                .circuitBreakerEnabled(true)
+                .retryEnabled(false).build();
+
+        for (int i = 0; i < 25; i++) {
+            assertThatThrownBy(() -> executor.call(up, HttpMethod.GET,
+                    "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "step-x",
+                    null, null, null, null, null))
+                    .isInstanceOf(Exception.class); // 5xx ban dau hoac CallNotPermittedException khi CB OPEN
+        }
+
+        // CB OPEN khi sliding window day 5xx — cac lenh goi cuoi khong con cham server
+        // nua (fail-fast), nen tong so request that < 25.
+        assertThat(hitCount.get()).isLessThan(25);
+    }
+
+    // ---- Canh bao: 4xx KHONG tinh failure vao cua so AlertCallObserver (neu khong thi
+    // chuoi client goi sai -> ERROR_RATE_HIGH gia cho upstream van khoe — cung gap that
+    // ben tren). Mirror du logic isBusinessError ma CB dung. ----
+
+    @Test
+    void call_upstream4xx_alertObserverGhiLaThanhCong_khongTaoCanhBaoGia() throws IOException {
+        java.util.concurrent.atomic.AtomicInteger hitCount = new java.util.concurrent.atomic.AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/x", exchange -> {
+            hitCount.incrementAndGet();
+            byte[] body = "bad request".getBytes();
+            exchange.sendResponseHeaders(400, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        int port = server.getAddress().getPort();
+
+        java.util.List<Boolean> recorded = new java.util.concurrent.CopyOnWriteArrayList<>();
+        UpstreamHttpExecutor observingExecutor = new UpstreamHttpExecutor(
+                circuitBreakerRegistry, retryRegistry, bulkheadRegistry,
+                Mockito.mock(GatewayCacheService.class), new JsonMapper(), Mockito.mock(AuditLogService.class),
+                new com.bccs.gatewaymanager.service.AlertCallObserver() {
+                    @Override
+                    public void recordUpstreamCall(String upstreamName, boolean success) {
+                        recorded.add(success);
+                    }
+
+                    @Override
+                    public void recordEndpointRequest(String endpointId, String endpointPath, boolean success) {
+                    }
+                }, 600, 550, 15);
+
+        assertThatThrownBy(() -> observingExecutor.call(upstream("svc-alert-4xx", port), HttpMethod.GET,
+                "http://localhost:" + port + "/x", new HttpHeaders(), null, false, 300, 1, "test-step",
+                null, null, null, null, null))
+                .isInstanceOf(UpstreamHttpExecutor.UpstreamHttpErrorException.class);
+
+        assertThat(hitCount.get()).isEqualTo(1);
+        // 4xx nghiep vu: upstream van khoe — ghi LA THANH CONG vao cua so canh bao.
+        assertThat(recorded).hasSize(1);
+        assertThat(recorded.get(0)).isTrue();
     }
 
     // ---- Regression tim thay sau khi them UpstreamHttpErrorException: retryFor() truoc do
@@ -210,7 +342,15 @@ class UpstreamHttpExecutorTest {
         }).when(cacheService).put(Mockito.anyString(), Mockito.anyString(), Mockito.anyInt());
         UpstreamHttpExecutor cachingExecutor = new UpstreamHttpExecutor(
                 circuitBreakerRegistry, retryRegistry, bulkheadRegistry, cacheService, new JsonMapper(),
-                Mockito.mock(AuditLogService.class), 600, 550, 15);
+                Mockito.mock(AuditLogService.class), new com.bccs.gatewaymanager.service.AlertCallObserver() {
+                    @Override
+                    public void recordUpstreamCall(String upstreamName, boolean success) {
+                    }
+
+                    @Override
+                    public void recordEndpointRequest(String endpointId, String endpointPath, boolean success) {
+                    }
+                }, 600, 550, 15);
 
         UpstreamService up = upstream("svc-cache", port);
         String url = "http://localhost:" + port + "/x";

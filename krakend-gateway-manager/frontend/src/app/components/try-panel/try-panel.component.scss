@@ -26,6 +26,115 @@
 }
 
 // ---------------------------------------------------------------------------
+// V5 - Toggle ghi đe cờ cho lần chạy thử
+// ---------------------------------------------------------------------------
+.flag-override-block {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-md);
+  background: var(--gwm-bg);
+}
+
+.flag-override-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gwm-text-secondary);
+  margin-bottom: 8px;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: #9333ea;
+  }
+}
+
+.flag-override-hint {
+  font-weight: 500;
+  color: var(--gwm-text-muted);
+}
+
+.flag-override-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+// Toggle ô vuông giống hệt canvas Rule editor (ô vuông cờ ĐÚNG/SAI).
+.flag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--gwm-border);
+  border-radius: 8px;
+  background: var(--gwm-surface);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gwm-text-secondary);
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+
+  &--on {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #15803d;
+  }
+
+  &:hover {
+    border-color: var(--gwm-text-muted);
+  }
+}
+
+.flag-toggle-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--gwm-border);
+  flex-shrink: 0;
+
+  .flag-toggle--on & {
+    background: #16a34a;
+  }
+}
+
+.flag-toggle-label {
+  white-space: nowrap;
+}
+
+// ---------------------------------------------------------------------------
+// V5 - Banner "Rule cờ khớp" trên waterfall
+// ---------------------------------------------------------------------------
+.rule-match-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid #d8b4fe;
+  border-radius: var(--gwm-radius-md);
+  background: #faf5ff;
+  color: #7e22ce;
+  font-size: 12.5px;
+  font-weight: 700;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  & + .rule-match-banner {
+    margin-top: 8px;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Ket qua cuoi cung
 // ---------------------------------------------------------------------------
 .result-block {
@@ -249,4 +358,13 @@
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
   }
+}
+
+.condition-info {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  word-break: break-all;
+  white-space: pre-wrap;
+  opacity: 0.85;
 }

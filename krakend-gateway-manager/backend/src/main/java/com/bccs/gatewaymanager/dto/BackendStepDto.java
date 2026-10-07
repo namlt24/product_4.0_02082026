@@ -3,6 +3,7 @@ package com.bccs.gatewaymanager.dto;
 import com.bccs.gatewaymanager.entity.ConditionOperator;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.GatewayMethod;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -86,6 +87,22 @@ public record BackendStepDto(
         /** Chi dung khi conditionOperator=EQUALS/NOT_EQUALS. */
         String conditionExpectedValue,
 
+        /**
+         * V5b - Dieu kien cờ NHIEU NHOM khi conditionSourceType=SYSTEM_FLAG:
+         * AND trong nhom, OR giua nhom (mirror Rule). Khac null/rong -> engine
+         * danh gia nhom, bo qua dieu kien 1 co don le. Null = khong dung
+         * (endpoint cu - backward-compat).
+         */
+        List<List<FlagRuleDto.FlagConditionDto>> conditionFlagGroups,
+
+        /**
+         * V6 - Dieu kien NHIEU NGUON (REQUEST_BODY/STEP_RESPONSE) NHIEU NHOM - tong
+         * quat hoa conditionFlagGroups sang cho du lieu request/response thuc. Khac
+         * null/rong -> engine danh gia NHOM nay, bo qua HOAN TOAN dieu kien 1 co don
+         * le VA nhanh SYSTEM_FLAG/conditionFlagGroups. Xem BackendStep.conditionGroupsJson.
+         */
+        List<List<ConditionRuleDto>> conditionGroups,
+
         /** null = neu dieu kien DUNG thi ket thuc chuoi tai day (ket qua step nay la response cuoi cung). */
         Integer nextStepOrderIfTrue,
 
@@ -117,11 +134,73 @@ public record BackendStepDto(
 
         GatewayMethod compensationMethod,
 
-        String compensationUrlPattern
+        String compensationUrlPattern,
+
+        /**
+         * Rẽ NHIỀU nhánh (switch) - xem {@link SwitchBranchDto}. null/rong = dung 2 nhanh
+         * (nextStepOrderIfTrue/False) nhu cu. Dat CUOI record de constructor cu (36 tham so)
+         * van dung duoc qua constructor phu ben duoi.
+         */
+        List<SwitchBranchDto> switchBranches,
+
+        /**
+         * Nhanh SAI (2 nhanh) hoac KHONG nhanh nao khop (switch): thay vi ket thuc/chuyen step, BAO LOI
+         * voi ma + thong diep nay. null = dung nextStepOrderIfFalse nhu cu. Khi co, nextStepOrderIfFalse phai null.
+         */
+        String falseErrorCode,
+        String falseErrorMessage
 ) {
+    @JsonCreator
     public BackendStepDto {
         if (cacheTtlSeconds <= 0) {
             cacheTtlSeconds = 300;
         }
+    }
+
+    /** Giu tuong thich: cac cho goi/khoi tao cu (36 tham so, khong co switchBranches). */
+    public BackendStepDto(String id, int stepOrder, String name, GatewayMethod method, String urlPattern,
+                          String upstreamServiceId, String upstreamServiceName, boolean forwardOriginalBody,
+                          boolean cacheEnabled, int cacheTtlSeconds, String group, String target,
+                          List<String> allowFields, List<String> denyFields, Map<String, String> fieldRenameMapping,
+                          Integer canvasX, Integer canvasY, Integer connectTimeoutMs, Integer readTimeoutMs,
+                          Integer maxConcurrentCallsOverride, Integer maxWaitDurationMsOverride,
+                          FieldMappingSourceType conditionSourceType, Integer conditionSourceStepOrder,
+                          String conditionSourceField, ConditionOperator conditionOperator,
+                          String conditionExpectedValue, List<List<FlagRuleDto.FlagConditionDto>> conditionFlagGroups,
+                          List<List<ConditionRuleDto>> conditionGroups, Integer nextStepOrderIfTrue,
+                          Integer nextStepOrderIfFalse, Integer onErrorStepOrder, Integer parallelGroup,
+                          String compensationUpstreamServiceId, String compensationUpstreamServiceName,
+                          GatewayMethod compensationMethod, String compensationUrlPattern) {
+        this(id, stepOrder, name, method, urlPattern, upstreamServiceId, upstreamServiceName, forwardOriginalBody,
+                cacheEnabled, cacheTtlSeconds, group, target, allowFields, denyFields, fieldRenameMapping, canvasX,
+                canvasY, connectTimeoutMs, readTimeoutMs, maxConcurrentCallsOverride, maxWaitDurationMsOverride,
+                conditionSourceType, conditionSourceStepOrder, conditionSourceField, conditionOperator,
+                conditionExpectedValue, conditionFlagGroups, conditionGroups, nextStepOrderIfTrue, nextStepOrderIfFalse,
+                onErrorStepOrder, parallelGroup, compensationUpstreamServiceId, compensationUpstreamServiceName,
+                compensationMethod, compensationUrlPattern, null, null, null);
+    }
+
+    /** Giu tuong thich: cac cho goi 37 tham so (co switchBranches, chua co thong bao loi). */
+    public BackendStepDto(String id, int stepOrder, String name, GatewayMethod method, String urlPattern,
+                          String upstreamServiceId, String upstreamServiceName, boolean forwardOriginalBody,
+                          boolean cacheEnabled, int cacheTtlSeconds, String group, String target,
+                          List<String> allowFields, List<String> denyFields, Map<String, String> fieldRenameMapping,
+                          Integer canvasX, Integer canvasY, Integer connectTimeoutMs, Integer readTimeoutMs,
+                          Integer maxConcurrentCallsOverride, Integer maxWaitDurationMsOverride,
+                          FieldMappingSourceType conditionSourceType, Integer conditionSourceStepOrder,
+                          String conditionSourceField, ConditionOperator conditionOperator,
+                          String conditionExpectedValue, List<List<FlagRuleDto.FlagConditionDto>> conditionFlagGroups,
+                          List<List<ConditionRuleDto>> conditionGroups, Integer nextStepOrderIfTrue,
+                          Integer nextStepOrderIfFalse, Integer onErrorStepOrder, Integer parallelGroup,
+                          String compensationUpstreamServiceId, String compensationUpstreamServiceName,
+                          GatewayMethod compensationMethod, String compensationUrlPattern,
+                          List<SwitchBranchDto> switchBranches) {
+        this(id, stepOrder, name, method, urlPattern, upstreamServiceId, upstreamServiceName, forwardOriginalBody,
+                cacheEnabled, cacheTtlSeconds, group, target, allowFields, denyFields, fieldRenameMapping, canvasX,
+                canvasY, connectTimeoutMs, readTimeoutMs, maxConcurrentCallsOverride, maxWaitDurationMsOverride,
+                conditionSourceType, conditionSourceStepOrder, conditionSourceField, conditionOperator,
+                conditionExpectedValue, conditionFlagGroups, conditionGroups, nextStepOrderIfTrue, nextStepOrderIfFalse,
+                onErrorStepOrder, parallelGroup, compensationUpstreamServiceId, compensationUpstreamServiceName,
+                compensationMethod, compensationUrlPattern, switchBranches, null, null);
     }
 }

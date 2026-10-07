@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -40,7 +41,7 @@ class LogSearchServiceTest {
         when(client.search(any(Function.class), eq(RequestAuditEvent.class)))
                 .thenThrow(new RuntimeException("ES khong ket noi duoc"));
 
-        assertThatThrownBy(() -> service.searchRequests(null, null, null, null, null, 0, 20))
+        assertThatThrownBy(() -> service.searchRequests("trace-1", 0, 20))
                 .isInstanceOf(SystemException.class)
                 .hasMessageContaining("ES khong ket noi duoc");
     }
@@ -66,10 +67,21 @@ class LogSearchServiceTest {
                 .hits(h -> h.hits(List.of())));
         when(client.search(any(Function.class), eq(RequestAuditEvent.class))).thenReturn(emptyResponse);
 
-        var result = service.searchRequests(null, null, null, null, null, -5, 9999);
+        var result = service.searchRequests("trace-1", -5, 9999);
 
         assertThat(result.page()).isEqualTo(0);
         assertThat(result.size()).isEqualTo(200);
         assertThat(result.items()).isEmpty();
+    }
+
+    @Test
+    void searchRequests_traceIdRong_traVeRongKhongGoies() {
+        service = new LogSearchService(client);
+
+        var result = service.searchRequests("   ", 0, 20);
+
+        assertThat(result.total()).isZero();
+        assertThat(result.items()).isEmpty();
+        verifyNoInteractions(client);
     }
 }

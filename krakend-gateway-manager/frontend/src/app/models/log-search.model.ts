@@ -22,7 +22,7 @@ export interface RequestAuditEvent {
   durationMs: number;
   requestBody: string | null;
   requestBodyTruncated: boolean;
-  /** Trace APM tuong ung (Elastic APM) - null neu khong doc duoc (agent chua gan). */
+  /** Trace id cua Elastic APM, hoac X-Trace-Id do Gravitee truyen xuong (uu tien) - null neu khong co. */
   traceId: string | null;
 }
 
@@ -53,11 +53,7 @@ export interface LogSearchResult {
   size: number;
 }
 
-/** Bo loc tren thanh tim kiem - tat ca deu tuy chon (rong = khong loc theo tieu chi do). */
+/** Bo loc duy nhat tren thanh tim kiem: Trace ID (X-Trace-Id Gravitee truyen xuong). */
 export interface LogSearchFilter {
-  from: string | null;
-  to: string | null;
-  status: AuditStatus | '' | null;
-  endpointPath: string | null;
-  bodyContains: string | null;
+  traceId: string | null;
 }

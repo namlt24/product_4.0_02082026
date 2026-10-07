@@ -1,0 +1,104 @@
+Tôi có bài toán sau bạn khai báo lên hệ thống gw này để call thông luồng
+
+B1. Client/App truyền vào danh sách tham số sau:
+http://10.207.252.17:8051/v1/search-locked-isdn-by-user?staffCode=QUITT
+
+B2. Hệ thống xử lý gọi sang http://10.207.252.17:8884/stock-management/stock-number/search-locked-isdn-by-user
+curl -X 'GET' \
+'http://10.207.252.17:8884/stock-management/stock-number/search-locked-isdn-by-user?staffCode=QUITT' \
+-H 'accept: application/json'
+
+Response trả ra có dạng sau: đầu ra số (1)
+{
+"code": "SUCCESS",
+"message": "Success",
+"traceId": "d0f0b61b-dced-4998-8f4c-684738f5ef37",
+"requestId": "0d69e829-f5bb-4b4c-971c-b213f47893a8",
+"data": {
+"items": [
+{
+"ID": "51150099402",
+"ISDN": "1699106636",
+"OWNER_CODE": "CN_HNI",
+"OWNER_NAME": "Chi nhánh Hà Nội",
+"STOCK_MODEL_NAME": "Số thường Mobile",
+"STOCK_MODEL_ID": "1",
+"STATUS": "5",
+"SHOP_PATH": "72817282_24926",
+"CHANNEL_TYPE_ID": "1",
+"UPDATE_NUMBER": "20250924213426",
+"LOCK_BY_STAFF": "168",
+"OWNER_TYPE": 1,
+"timeLockRemain": "497d 13h 16m",
+"statusName": "Số bị khoá",
+"OWNER_ID": 24926
+},
+{
+"ID": "51150097368",
+"ISDN": "1699110030",
+"OWNER_CODE": "CN_HNI",
+"OWNER_NAME": "Chi nhánh Hà Nội",
+"STOCK_MODEL_NAME": "Số thường Mobile",
+"STOCK_MODEL_ID": "1",
+"STATUS": "5",
+"SHOP_PATH": "72817282_24926",
+"CHANNEL_TYPE_ID": "1",
+"UPDATE_NUMBER": "20250924213426",
+"LOCK_BY_STAFF": "168",
+"OWNER_TYPE": 1,
+"timeLockRemain": "497d 13h 16m",
+"statusName": "Số bị khoá",
+"OWNER_ID": 24926
+},
+{
+"ID": "51150110133",
+"ISDN": "169900361",
+"OWNER_CODE": "CN_HNI",
+"OWNER_NAME": "Chi nhánh Hà Nội",
+"STOCK_MODEL_NAME": "Số thường Mobile",
+"STOCK_MODEL_ID": "1",
+"STATUS": "5",
+"SHOP_PATH": "72817282_24926",
+"CHANNEL_TYPE_ID": "1",
+"UPDATE_NUMBER": "20250924213426",
+"LOCK_BY_STAFF": "168",
+"OWNER_TYPE": 1,
+"timeLockRemain": "497d 13h 16m",
+"statusName": "Số bị khoá",
+"OWNER_ID": 24926
+},
+{
+"ID": "51150091800",
+"ISDN": "963210357",
+"OWNER_CODE": "QUITT",
+"OWNER_NAME": "QUITT",
+"STOCK_MODEL_NAME": "Số thường Mobile",
+"STOCK_MODEL_ID": "1",
+"STATUS": "5",
+"SHOP_PATH": "72817282_24926",
+"CHANNEL_TYPE_ID": "14",
+"UPDATE_NUMBER": "20260820090352",
+"LOCK_BY_STAFF": "168",
+"OWNER_TYPE": 2,
+"statusName": "Số bị khoá",
+"OWNER_ID": 168,
+"subType":"1"
+
+}
+],
+"totalHits": 4,
+"page": 0,
+"size": 100
+},
+"timestamp": "2026-08-26T09:17:41.118297573Z"
+}
+
+->
+Sau đó gọi hàm :
+curl --location 'http://10.207.252.17:8045/product-catalog-service/v1/product/findByIds'
+với danh sách ids gom từ trường STOCK_MODEL_ID (lấy distinct)
+
+
+Trả ra dữ liệu có trường subType
+
+Đầu ra cuối cùng trả ra đầu ra số 1 ghép thêm trường subType

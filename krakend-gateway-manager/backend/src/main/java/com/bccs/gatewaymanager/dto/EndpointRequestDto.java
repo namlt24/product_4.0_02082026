@@ -50,7 +50,20 @@ public record EndpointRequestDto(
          */
         boolean responseCacheEnabled,
 
-        Integer responseCacheTtlSeconds
+        Integer responseCacheTtlSeconds,
+
+        /**
+         * Mang RULE CỜ (V5) - "khop tổ hợp cờ -> bắt đầu từ step nào / chặn request".
+         * null = không dùng Rule (100% endpoint cũ). Chỉ hợp lệ khi sequential=true
+         * (validate EndpointService.validateFlagRules()). Xem FlagRuleDto.
+         */
+        @Valid List<FlagRuleDto> flagRules,
+
+        /**
+         * Cấu hình "ghép field từ bất kỳ step nào vào response cuối" (ResponseMapping) -
+         * null = không dùng (100% endpoint cũ giữ hành vi cũ). Xem ResponseMappingSpecDto.
+         */
+        @Valid ResponseMappingSpecDto responseMapping
 ) {
     public EndpointRequestDto {
         if (outputEncoding == null || outputEncoding.isBlank()) {
@@ -64,6 +77,9 @@ public record EndpointRequestDto(
         }
         if (responseCacheTtlSeconds == null || responseCacheTtlSeconds <= 0) {
             responseCacheTtlSeconds = 300;
+        }
+        if (flagRules == null) {
+            flagRules = List.of();
         }
     }
 }

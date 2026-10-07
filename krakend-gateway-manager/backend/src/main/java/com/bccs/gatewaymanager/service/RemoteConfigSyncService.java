@@ -4,6 +4,7 @@ import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.ConfigExportDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
+import com.bccs.gatewaymanager.dto.FlagDto;
 import com.bccs.gatewaymanager.dto.UpstreamServiceDto;
 import com.bccs.gatewaymanager.engine.UpstreamHttpExecutor;
 import com.bccs.gatewaymanager.entity.UpstreamService;
@@ -61,6 +62,7 @@ public class RemoteConfigSyncService {
     private final UpstreamRegistryCache upstreamRegistryCache;
     private final UpstreamHttpExecutor upstreamHttpExecutor;
     private final GatewayCacheService cacheService;
+    private final FlagRegistryCache flagRegistryCache;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "gwm-config-sync");
@@ -110,7 +112,8 @@ public class RemoteConfigSyncService {
                                     EndpointRegistryCache endpointRegistryCache,
                                     UpstreamRegistryCache upstreamRegistryCache,
                                     UpstreamHttpExecutor upstreamHttpExecutor,
-                                    GatewayCacheService cacheService) {
+                                    GatewayCacheService cacheService,
+                                    FlagRegistryCache flagRegistryCache) {
         // Timeout rieng (khac RestTemplate cua UpstreamHttpExecutor, von phai cau
         // hinh dong theo tung Upstream) - 5s la du rong cho 1 lan goi noi bo toi
         // Control Plane (khac Upstream ben ngoai co the cham), nhung van chan
@@ -131,6 +134,7 @@ public class RemoteConfigSyncService {
         this.upstreamRegistryCache = upstreamRegistryCache;
         this.upstreamHttpExecutor = upstreamHttpExecutor;
         this.cacheService = cacheService;
+        this.flagRegistryCache = flagRegistryCache;
     }
 
     @PostConstruct
@@ -186,6 +190,11 @@ public class RemoteConfigSyncService {
             invalidateChangedStepBulkheads(bundle.endpoints());
             upstreamRegistryCache.reload(bundle.upstreams().stream().map(this::toEntity).toList());
             endpointRegistryCache.reload(bundle.endpoints());
+            // Cờ nghiệp vụ (V5): sync chung 1 chu ky - khong them kenh/polling moi
+            // (fingerprint ETag da gom COUNT+MAX GWM_FLAG, xem ConfigExportImportService).
+            // Bundle cu (schemaVersion 1.0 khong co flags) chua co cờ -> null-safe giu cache cu.
+            List<FlagDto> freshFlags = bundle.flags() == null ? List.of() : bundle.flags();
+            flagRegistryCache.reload(freshFlags);
 
             Map<String, UpstreamServiceDto> fresh = new HashMap<>();
             bundle.upstreams().forEach(u -> fresh.put(u.id(), u));
@@ -198,8 +207,8 @@ public class RemoteConfigSyncService {
             everSynced = true;
             // Luu ETag moi de chu ky ke tiep thanh conditional request (304 neu khong doi).
             this.lastEtag = response.getHeaders().getETag();
-            log.info("Da dong bo cau hinh tu Control Plane: {} upstream, {} endpoint.",
-                    bundle.upstreams().size(), bundle.endpoints().size());
+            log.info("Da dong bo cau hinh tu Control Plane: {} upstream, {} endpoint, {} cờ.",
+                    bundle.upstreams().size(), bundle.endpoints().size(), freshFlags.size());
         } catch (Exception e) {
             log.warn("Loi dong bo cau hinh tu Control Plane (giu nguyen cache cu, KHONG anh huong traffic dang chay, se thu lai sau {}s): {}: {}",
                     syncIntervalSeconds, e.getClass().getSimpleName(), e.getMessage());
@@ -247,8 +256,11 @@ public class RemoteConfigSyncService {
                 continue; // Endpoint moi - chua co gi duoc cache duoi id nay.
             }
             boolean responseCacheKeyMayChange = !old.path().equals(ep.path()) || old.method() != ep.method();
+            // Mirror EndpointService.purgeStaleCacheIfChanged(): ResponseMapping doi ->
+            // response tra client doi (entry cu mang cau hinh cu) - phai don response-cache.
             if (old.responseCacheEnabled() != ep.responseCacheEnabled()
-                    || ((old.responseCacheEnabled() || ep.responseCacheEnabled()) && responseCacheKeyMayChange)) {
+                    || ((old.responseCacheEnabled() || ep.responseCacheEnabled()) && responseCacheKeyMayChange)
+                    || !java.util.Objects.equals(old.responseMapping(), ep.responseMapping())) {
                 cacheService.deleteByPattern("gwm:response-cache:" + ep.id() + ":*");
             }
 

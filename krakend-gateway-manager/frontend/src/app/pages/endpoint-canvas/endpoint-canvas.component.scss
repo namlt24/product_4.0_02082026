@@ -233,6 +233,99 @@
 }
 
 // ---------------------------------------------------------------------------
+// Node "Response cuối" (ResponseMapping) - co dinh, khong keo duoc, cyan
+// ---------------------------------------------------------------------------
+.response-node {
+  position: absolute;
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 10px 13px;
+  background: #ecfeff;
+  border: 1.5px solid #0891b2;
+  border-radius: var(--gwm-radius-md);
+  font-family: var(--gwm-font-sans);
+  cursor: pointer;
+  user-select: none;
+
+  &--off {
+    border-style: dashed;
+    opacity: 0.75;
+  }
+}
+
+.response-node-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #0e7490;
+  margin-bottom: 6px;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.response-node-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #0e7490;
+}
+
+.response-mode-chip {
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #0891b2;
+  color: #fff;
+
+  &[data-mode='REPLACE'] {
+    background: #dc2626;
+  }
+}
+
+.edge-label--response {
+  fill: #0891b2;
+}
+
+.rm-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover {
+    border-color: #0891b2;
+  }
+
+  .rm-row-step {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  code {
+    font-size: 11px;
+  }
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Node Step - keo duoc qua CDK (handle rieng, tranh nham voi click mo panel)
 // ---------------------------------------------------------------------------
 .step-node {
@@ -561,6 +654,41 @@
   margin: 0 0 10px;
 }
 
+// V5b - nhom dieu kien cờ tại step (editor theo img_2 của "vande")
+.flag-group-box {
+  border: 1px dashed #d8b4fe;
+  border-radius: var(--gwm-radius-md);
+  padding: 10px 12px 6px;
+  margin-bottom: 8px;
+  background: #faf5ff;
+}
+
+.flag-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6b21a8;
+  margin-bottom: 6px;
+}
+
+.flag-condition-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.flag-group-or {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #9333ea;
+  text-align: center;
+  letter-spacing: 0.06em;
+  margin: 4px 0;
+}
+
 .arrow-icon {
   margin-top: 16px;
   color: var(--gwm-text-muted);
@@ -568,5 +696,216 @@
   &.center-arrow {
     align-self: center;
     margin: -4px 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule cờ (V5) - node tren canvas + editor trong panel
+// ---------------------------------------------------------------------------
+.rule-node {
+  position: absolute;
+  background: #faf5ff;
+  border: 1.5px solid #9333ea;
+  border-radius: var(--gwm-radius-md);
+  box-shadow: var(--gwm-shadow-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+  z-index: 2;
+
+  &:hover {
+    box-shadow: 0 3px 12px rgba(147, 51, 234, 0.25);
+  }
+}
+
+.rule-node-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: #9333ea;
+  }
+}
+
+.rule-node-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #6b21a8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rule-node-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.rule-or-divider {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #9333ea;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.rule-group-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border: 1px dashed #d8b4fe;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.rule-cond-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  font-family: var(--gwm-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+
+  &--false {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+}
+
+.rule-node-action {
+  font-size: 11px;
+  font-weight: 800;
+  color: #7e22ce;
+
+  &--block {
+    color: var(--gwm-danger);
+  }
+}
+
+.rule-edge-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  fill: #9333ea;
+  paint-order: stroke;
+  stroke: #faf5ff;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+// Editor Rule trong panel
+.rule-editor-group {
+  border: 1px dashed #d8b4fe;
+  border-radius: var(--gwm-radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--gwm-surface);
+}
+
+.rule-editor-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6b21a8;
+  margin-bottom: 8px;
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+}
+
+.rule-editor-cond {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  mat-form-field {
+    flex: 1;
+  }
+}
+
+.rule-dup-warn {
+  color: var(--gwm-warning);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.rule-editor-or {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #9333ea;
+  letter-spacing: 0.08em;
+  margin: 6px 0;
+}
+
+// Toggle BẬT/TẮT chung (mirror flag-list.component.scss)
+.flag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--gwm-border);
+  border-radius: 20px;
+  background: var(--gwm-bg);
+  padding: 3px 10px 3px 3px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  .flag-toggle-thumb {
+    width: 22px;
+    height: 14px;
+    border-radius: 7px;
+    background: #c9ced6;
+    position: relative;
+    transition: background-color 0.15s ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      transition: left 0.15s ease;
+    }
+  }
+
+  .flag-toggle-label {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: var(--gwm-text-secondary);
+    min-width: 24px;
+  }
+
+  &--on {
+    border-color: var(--gwm-success-bg);
+    background: var(--gwm-success-bg);
+
+    .flag-toggle-thumb {
+      background: var(--gwm-success);
+
+      &::after {
+        left: 9px;
+      }
+    }
+
+    .flag-toggle-label {
+      color: var(--gwm-success);
+    }
   }
 }

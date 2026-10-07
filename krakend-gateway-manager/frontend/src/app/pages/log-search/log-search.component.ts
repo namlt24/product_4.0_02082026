@@ -18,9 +18,11 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100];
 /**
  * "Tra cứu Log" - đọc index "gwm-requests-..." và "gwm-hops-..." trên Elasticsearch (xem
  * LogSearchController/LogSearchService ở backend). Chỉ ĐỌC, không sửa gì.
- * Mỗi dòng = 1 request client thật gọi vào gateway, bấm mở rộng để xem
- * waterfall từng hop (mỗi BackendStep gọi Upstream thật) - dữ liệu do
- * AuditLogService ghi ra tại request-time, KHÔNG phải giả lập lại.
+ * Tra cứu theo DUY NHẤT Trace ID (X-Trace-Id Gravitee truyền xuống) - use case
+ * chính: có traceId từ hệ thống trên (Gravitee/App), cần xem request đó đi qua
+ * gateway thế nào. Mỗi dòng = 1 request client thật gọi vào gateway, bấm mở
+ * rộng để xem waterfall từng hop (mỗi BackendStep gọi Upstream thật) - dữ liệu
+ * do AuditLogService ghi ra tại request-time, KHÔNG phải giả lập lại.
  */
 @Component({
   selector: 'app-log-search',
@@ -45,12 +47,8 @@ export class LogSearchComponent implements OnInit {
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   readonly displayedColumns = ['timestamp', 'endpoint', 'status', 'duration', 'expand'];
 
-  // ---- Bo loc (gia tri form - datetime-local dung gio DIA PHUONG, doi sang ISO/UTC khi goi API) ----
-  fromLocal = '';
-  toLocal = '';
-  status: '' | 'SUCCESS' | 'ERROR' = '';
-  endpointPath = '';
-  bodyContains = '';
+  // ---- Bo loc duy nhat: Trace ID ----
+  traceId = '';
 
   readonly loading = signal(false);
   readonly loadError = signal<string | null>(null);
@@ -69,39 +67,25 @@ export class LogSearchComponent implements OnInit {
   constructor(private readonly api: LogSearchApiService) {}
 
   ngOnInit(): void {
-    // Mac dinh: 24h gan nhat - du dung cho nhu cau "vua goi xong, tra cuu ngay"
-    // ma khong bat buoc nguoi dung phai tu chinh khoang thoi gian truoc.
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    this.fromLocal = toDatetimeLocalString(yesterday);
-    this.toLocal = toDatetimeLocalString(now);
-    this.runSearch();
+    // Khong tu tim khi lan dau - chua co Trace ID nao duoc nhap.
   }
 
   private currentFilter(): LogSearchFilter {
-    return {
-      from: this.fromLocal ? new Date(this.fromLocal).toISOString() : null,
-      to: this.toLocal ? new Date(this.toLocal).toISOString() : null,
-      status: this.status || null,
-      endpointPath: this.endpointPath.trim() || null,
-      bodyContains: this.bodyContains.trim() || null,
-    };
+    return { traceId: this.traceId.trim() || null };
   }
 
   runSearch(): void {
+    if (!this.traceId.trim()) return;
     this.page.set(0);
     this.fetch();
   }
 
   resetFilters(): void {
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    this.fromLocal = toDatetimeLocalString(yesterday);
-    this.toLocal = toDatetimeLocalString(now);
-    this.status = '';
-    this.endpointPath = '';
-    this.bodyContains = '';
-    this.runSearch();
+    this.traceId = '';
+    this.items.set([]);
+    this.total.set(0);
+    this.page.set(0);
+    this.expandedRequestId.set(null);
   }
 
   private fetch(): void {
@@ -173,10 +157,4 @@ export class LogSearchComponent implements OnInit {
   formatTimestamp(iso: string): string {
     return new Date(iso).toLocaleString('vi-VN');
   }
-}
-
-/** "2026-08-26T10:30" (gio dia phuong, khong co giay/timezone) - dung lam value cho input[type=datetime-local]. */
-function toDatetimeLocalString(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

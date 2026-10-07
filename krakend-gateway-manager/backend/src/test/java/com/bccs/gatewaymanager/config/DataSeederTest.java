@@ -54,7 +54,7 @@ class DataSeederTest {
         });
         when(endpointService.create(any())).thenReturn(
                 new EndpointResponseDto("ep-1", "n", null, "/v1/user-orders/{userId}", GatewayMethod.GET, true, "json",
-                        List.of(), List.of(), null, null, false, 86400, false, false, 300));
+                        List.of(), List.of(), null, null, false, 86400, false, false, 300, List.of(), null));
 
         DataSeeder seeder = new DataSeeder(repository, endpointService, upstreamServiceService);
 

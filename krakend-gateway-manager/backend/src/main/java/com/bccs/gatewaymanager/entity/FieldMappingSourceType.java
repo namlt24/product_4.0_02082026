@@ -48,5 +48,17 @@ public enum FieldMappingSourceType {
      * Phan tu KHONG phai object bi bo qua (khong throw). CHI dung duoc voi
      * targetType=BODY_FIELD (object gop khong flatten duoc thanh chuoi cho PATH/QUERY/HEADER).
      */
-    STEP_RESPONSE_ARRAY_MERGE
+    STEP_RESPONSE_ARRAY_MERGE,
+
+    /**
+     * CỜ NGHIỆP VỤ he thong (V5) - CHI dung cho conditionSourceType cua re nhanh
+     * P1-5 (khong dung lam nguon FieldMapping thuong): conditionSourceField = ma
+     * cờ (vd "VIP"), conditionExpectedValue = "true"/"false". Engine doc gia tri
+     * hien tai qua FlagRegistryCache (sync tu CP, khong phai tu request/response
+     * nao) - xem CompositeOrchestratorEngine.evaluateCondition().
+     */
+    SYSTEM_FLAG,
+
+    /** CHI dung cho dieu kien re nhanh: lay tu header cua client (key khong phan biet hoa/thuong). Khong dung cho FieldMapping. */
+    HEADER
 }

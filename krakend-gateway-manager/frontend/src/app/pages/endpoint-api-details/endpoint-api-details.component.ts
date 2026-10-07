@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EndpointConfig, extractQueryParamNames, TryResult } from '../../models/endpoint.model';
+import { EndpointConfig, extractFlagCodes, extractQueryParamNames, TryResult } from '../../models/endpoint.model';
 import { EndpointApiService } from '../../services/endpoint-api.service';
 import { TryPanelComponent, TryRunRequest } from '../../components/try-panel/try-panel.component';
 
@@ -97,6 +97,11 @@ export class EndpointApiDetailsComponent implements OnInit {
     return extractQueryParamNames(this.endpoint()?.mappings ?? []);
   }
 
+  /** V5 - Ma cờ endpoint dùng (Rule + SYSTEM_FLAG) - sinh toggle ghi đe cho "Thu ngay". */
+  flagCodes(): string[] {
+    return this.endpoint() ? extractFlagCodes(this.endpoint() as EndpointConfig) : [];
+  }
+
   /**
    * Backend gio LUON tra HTTP 200 (envelope TryResultDto - xem EndpointTryService)
    * ke ca khi orchestration that bai, nen nhanh `error:` o day chi con fire khi
@@ -105,7 +110,14 @@ export class EndpointApiDetailsComponent implements OnInit {
   onRun(req: TryRunRequest): void {
     this.trying.set(true);
     this.outcome.set(null);
-    this.api.tryEndpoint(this.endpointId, { pathVariables: req.pathVariables, queryParams: req.queryParams, body: req.body }).subscribe({
+    this.api
+      .tryEndpoint(this.endpointId, {
+        pathVariables: req.pathVariables,
+        queryParams: req.queryParams,
+        body: req.body,
+        flagOverrides: req.flagOverrides,
+      })
+      .subscribe({
       next: (result) => {
         this.trying.set(false);
         this.outcome.set(result);

@@ -31,6 +31,7 @@ class RemoteConfigSyncServiceTest {
     private final UpstreamRegistryCache upstreamRegistryCache = new UpstreamRegistryCache();
     private final UpstreamHttpExecutor upstreamHttpExecutor = Mockito.mock(UpstreamHttpExecutor.class);
     private final GatewayCacheService cacheService = Mockito.mock(GatewayCacheService.class);
+    private final FlagRegistryCache flagRegistryCache = new FlagRegistryCache();
 
     private HttpServer server;
     private final AtomicReference<String> nextResponseBody = new AtomicReference<>();
@@ -56,7 +57,7 @@ class RemoteConfigSyncServiceTest {
         server.start();
         int port = server.getAddress().getPort();
         return new RemoteConfigSyncService(new RestTemplateBuilder(), "http://localhost:" + port,
-                apiKey, 3600, endpointRegistryCache, upstreamRegistryCache, upstreamHttpExecutor, cacheService);
+                apiKey, 3600, endpointRegistryCache, upstreamRegistryCache, upstreamHttpExecutor, cacheService, flagRegistryCache);
     }
 
     private String bundleJson(String upstreamId, String name, int connectTimeoutMs) {
@@ -96,7 +97,7 @@ class RemoteConfigSyncServiceTest {
     void sync_ControlPlaneKhongKetNoiDuoc_khongThrow_khongDanhDauReady() throws IOException {
         // Khong start() server thuc su, tro toi 1 port CHAC CHAN khong ai lang nghe.
         RemoteConfigSyncService service = new RemoteConfigSyncService(new RestTemplateBuilder(),
-                "http://localhost:1", "key", 3600, endpointRegistryCache, upstreamRegistryCache, upstreamHttpExecutor, cacheService);
+                "http://localhost:1", "key", 3600, endpointRegistryCache, upstreamRegistryCache, upstreamHttpExecutor, cacheService, flagRegistryCache);
 
         // KHONG duoc throw - day la yeu cau quan trong nhat cua class nay (fail-open).
         service.sync();

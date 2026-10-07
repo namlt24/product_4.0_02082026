@@ -42,12 +42,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ErrorResponse.of(ex.getErrorCode(), ex.getMessage()));
     }
 
-    /** Upstream that su tra ve HTTP loi (4xx/5xx) - phan biet voi loi ha tang chung, tra 502 kem ma loi cu the. */
+    /**
+     * Upstream that su tra ve HTTP loi (4xx/5xx) - phan biet voi loi ha tang chung, tra 502 kem ma loi cu the.
+     *
+     * Neu body loi cua backend la JSON dang StandardResponse BCCS (co
+     * code/message/requestId/shortTraceId/traceId) thi tach cac truong do ra
+     * TOP-LEVEL cua response loi (thay vi gom chung vao message) - message chi
+     * con phan "Upstream 'x' tra ve HTTP 400: <message nghiep vu>". Body khong
+     * parse duoc JSON thi giu hanh vi cu: gom toan bo raw body vao message.
+     */
     @ExceptionHandler(UpstreamHttpErrorException.class)
     public ResponseEntity<ErrorResponse> handleUpstreamHttpError(UpstreamHttpErrorException ex) {
         log.warn("Upstream HTTP error: {}", ex.getMessage());
         String errorCode = ex.httpStatus() >= 500 ? "GW-UPSTREAM-5XX" : "GW-UPSTREAM-4XX";
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ErrorResponse.of(errorCode, ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(UpstreamErrorBodyParser.parse(errorCode, ex.upstreamName(), ex.httpStatus(), ex.responseBody()));
     }
 
     /** Upstream khong phan hoi kip (timeout/connection refused) - khac loi nghiep vu upstream tra ve. */

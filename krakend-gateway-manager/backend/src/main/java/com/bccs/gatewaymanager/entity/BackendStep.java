@@ -219,6 +219,49 @@ public class BackendStep {
     @Column(name = "condition_expected_value")
     private String conditionExpectedValue;
 
+    /**
+     * V5b - Dieu kien cờ NHIEU NHOM (theo "vande": chọn Cờ hệ thống có thể
+     * multiple cờ) khi conditionSourceType=SYSTEM_FLAG - JSON CLOB shape
+     * {"groups":[[{flagCode,expected},...],...]}: AND trong nhom, OR giua nhom
+     * (mirror ngu nghia Rule FlagRuleDto). Khac null/rong -> engine danh gia
+     * NHOM va bo qua dieu kien 1 co don le (conditionSourceField/
+     * conditionExpectedValue van giu nguyen trong DB de backward-compat).
+     * Nullable CLOB, KHONG @ColumnDefault - null = khong dung nhom (endpoint cu).
+     */
+    @Lob
+    @Column(name = "condition_flag_groups")
+    private String conditionFlagGroupsJson;
+
+    /**
+     * V6 - Dieu kien NHIEU NGUON (REQUEST_BODY/STEP_RESPONSE) NHIEU NHOM - tong
+     * quat hoa dung co che AND-trong-nhom/OR-giua-nhom cua conditionFlagGroups o
+     * tren sang cho du lieu request/response thuc (khong chi SYSTEM_FLAG). JSON
+     * CLOB shape {"groups":[[{sourceType,sourceField,sourceStepOrder,operator,
+     * expectedValue},...],...]} - xem StepConditionGroupsDto/ConditionRuleDto.
+     * Khac null/rong -> engine danh gia NHOM nay, bo qua HOAN TOAN dieu kien 1
+     * co don le VA nhanh SYSTEM_FLAG/conditionFlagGroups rieng (xem
+     * CompositeOrchestratorEngine.evaluateCondition()). Nullable CLOB, KHONG
+     * @ColumnDefault - null = khong dung nhom (step cu/don gian, hanh vi khong doi).
+     */
+    @Lob
+    @Column(name = "condition_groups")
+    private String conditionGroupsJson;
+
+    /**
+     * Rẽ NHIỀU nhánh (switch) - JSON {"branches":[{groups,nextStepOrder}...]}. Nullable CLOB,
+     * KHONG @ColumnDefault - null = dung 2 nhanh (nextStepOrderIfTrue/False) nhu cu.
+     */
+    @Lob
+    @Column(name = "switch_branches")
+    private String switchBranchesJson;
+
+    /** Nhanh SAI / khong nhanh nao khop: bao loi thay vi chuyen step (null = khong bao loi). */
+    @Column(name = "false_error_code", length = 60)
+    private String falseErrorCode;
+
+    @Column(name = "false_error_message", length = 500)
+    private String falseErrorMessage;
+
     /** null = neu dieu kien DUNG thi ket thuc chuoi tai day (ket qua step nay la response cuoi cung). */
     @Column(name = "next_step_order_if_true")
     private Integer nextStepOrderIfTrue;

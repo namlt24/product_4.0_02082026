@@ -30,6 +30,7 @@ public class ExecutionContext {
     private final Map<String, String> pathVariables;
     private final Map<String, String[]> queryParams;
     private final JsonNode requestBody;
+    private final Map<String, String> headers;
     private final Map<Integer, JsonNode> stepResults = Collections.synchronizedMap(new HashMap<>());
 
     /**
@@ -46,10 +47,17 @@ public class ExecutionContext {
      */
     private final List<Integer> completedStepOrders = Collections.synchronizedList(new ArrayList<>());
 
-    public ExecutionContext(Map<String, String> pathVariables, Map<String, String[]> queryParams, JsonNode requestBody) {
+    public ExecutionContext(Map<String, String> pathVariables, Map<String, String[]> queryParams, JsonNode requestBody,
+                            Map<String, String> headers) {
         this.pathVariables = pathVariables == null ? Map.of() : pathVariables;
         this.queryParams = queryParams == null ? Map.of() : queryParams;
         this.requestBody = requestBody;
+        this.headers = headers == null ? Map.of() : headers;
+    }
+
+    /** Header cua CHINH client, key da ha chu (xem CompositeOrchestratorEngine.handle()). */
+    public Map<String, String> headers() {
+        return headers;
     }
 
     public Map<String, String> pathVariables() {

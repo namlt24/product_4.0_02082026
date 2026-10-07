@@ -107,7 +107,8 @@ public class EndpointVersionService {
                 snapshot.steps().stream().map(this::stripStepId).toList(),
                 snapshot.mappings(),
                 snapshot.idempotencyEnabled(), snapshot.idempotencyTtlSeconds(), snapshot.parallelExecution(),
-                snapshot.responseCacheEnabled(), snapshot.responseCacheTtlSeconds());
+                snapshot.responseCacheEnabled(), snapshot.responseCacheTtlSeconds(),
+                snapshot.flagRules(), snapshot.responseMapping());
     }
 
     /**
@@ -126,10 +127,11 @@ public class EndpointVersionService {
                 s.connectTimeoutMs(), s.readTimeoutMs(),
                 s.maxConcurrentCallsOverride(), s.maxWaitDurationMsOverride(),
                 s.conditionSourceType(), s.conditionSourceStepOrder(), s.conditionSourceField(),
-                s.conditionOperator(), s.conditionExpectedValue(),
+                s.conditionOperator(), s.conditionExpectedValue(), s.conditionFlagGroups(), s.conditionGroups(),
                 s.nextStepOrderIfTrue(), s.nextStepOrderIfFalse(), s.onErrorStepOrder(), s.parallelGroup(),
                 s.compensationUpstreamServiceId(), s.compensationUpstreamServiceName(),
-                s.compensationMethod(), s.compensationUrlPattern());
+                s.compensationMethod(), s.compensationUrlPattern(), s.switchBranches(),
+                s.falseErrorCode(), s.falseErrorMessage());
     }
 
     /** Dung khi xoa han 1 endpoint - don toan bo lich su phien ban cua no (khong FK/cascade tu dong, xem EndpointConfigVersion). */

@@ -2,7 +2,7 @@
   <div>
     <h1 class="page-title">Tra cứu Log</h1>
     <p class="page-subtitle">
-      Log request/hop thật của Gateway (Elasticsearch) - lọc theo thời điểm, trạng thái, nội dung; bấm 1 dòng để xem waterfall từng hop.
+      Log request/hop thật của Gateway (Elasticsearch) - nhập Trace ID (X-Trace-Id Gravitee truyền xuống) để tra cứu; bấm 1 dòng để xem waterfall từng hop.
     </p>
   </div>
 </div>
@@ -11,43 +11,19 @@
   <mat-card-content>
     <div class="filter-row">
       <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Từ thời điểm</mat-label>
-        <input matInput type="datetime-local" [(ngModel)]="fromLocal" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Đến thời điểm</mat-label>
-        <input matInput type="datetime-local" [(ngModel)]="toLocal" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field filter-field--sm">
-        <mat-label>Trạng thái</mat-label>
-        <mat-select [(ngModel)]="status">
-          <mat-option value="">Tất cả</mat-option>
-          <mat-option value="SUCCESS">Thành công</mat-option>
-          <mat-option value="ERROR">Lỗi</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Endpoint path</mat-label>
-        <input matInput [(ngModel)]="endpointPath" placeholder="vd: /v1/staff/full-info" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Tìm trong nội dung request</mat-label>
-        <input matInput [(ngModel)]="bodyContains" placeholder="vd: staffId hoặc 1 giá trị cụ thể" />
+        <mat-label>Trace ID</mat-label>
+        <input matInput [(ngModel)]="traceId" placeholder="X-Trace-Id Gravitee truyền xuống" (keyup.enter)="runSearch()" />
       </mat-form-field>
     </div>
 
     <div class="filter-actions">
-      <button mat-flat-button color="primary" type="button" [disabled]="loading()" (click)="runSearch()">
+      <button mat-flat-button color="primary" type="button" [disabled]="loading() || !traceId.trim()" (click)="runSearch()">
         <mat-icon>search</mat-icon>
         Tìm kiếm
       </button>
       <button mat-stroked-button type="button" [disabled]="loading()" (click)="resetFilters()">
         <mat-icon>restart_alt</mat-icon>
-        Đặt lại (24h gần nhất)
+        Đặt lại
       </button>
     </div>
   </mat-card-content>
@@ -69,8 +45,8 @@
   } @else if (items().length === 0) {
     <div class="empty-state">
       <mat-icon class="empty-icon">search_off</mat-icon>
-      <h3>Không có log nào khớp bộ lọc</h3>
-      <p>Thử mở rộng khoảng thời gian hoặc bỏ bớt điều kiện lọc.</p>
+      <h3>Không có log nào khớp Trace ID</h3>
+      <p>Kiểm tra lại Trace ID (chỉ request gọi sau khi bật tính năng mới có log), hoặc request có thể bị drop khi Elasticsearch chậm.</p>
     </div>
   } @else {
     <table mat-table [dataSource]="items()" multiTemplateDataRows class="full-width gwm-table">
@@ -139,7 +115,7 @@
               @if (row.traceId) {
                 <div class="trace-hint">
                   <mat-icon inline="true">timeline</mat-icon>
-                  APM trace: <code>{{ row.traceId }}</code>
+                  Trace ID: <code>{{ row.traceId }}</code>
                 </div>
               }
 

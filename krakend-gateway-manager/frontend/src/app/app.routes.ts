@@ -44,6 +44,12 @@ export const routes: Routes = [
       import('./pages/endpoint-canvas/endpoint-canvas.component').then((m) => m.EndpointCanvasComponent),
   },
   {
+    path: 'endpoints/:id/flow',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/endpoint-flow/endpoint-flow.component').then((m) => m.EndpointFlowComponent),
+  },
+  {
     path: 'endpoints/:id/versions',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -54,6 +60,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/endpoint-api-details/endpoint-api-details.component').then((m) => m.EndpointApiDetailsComponent),
+  },
+  {
+    path: 'flags',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/flag-list/flag-list.component').then((m) => m.FlagListComponent),
   },
   {
     path: 'upstreams',
@@ -72,6 +84,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/log-search/log-search.component').then((m) => m.LogSearchComponent),
+  },
+  {
+    path: 'alerts',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/alert-list/alert-list.component').then((m) => m.AlertListComponent),
   },
   { path: '**', redirectTo: 'endpoints' },
 ];

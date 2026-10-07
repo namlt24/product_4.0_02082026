@@ -26,6 +26,30 @@
     <textarea matInput rows="5" [(ngModel)]="body" placeholder='{"staffId": 102137}'></textarea>
   </mat-form-field>
 
+  @if (flagOverrideRows.length > 0) {
+    <div class="flag-override-block">
+      <div class="flag-override-title">
+        <mat-icon inline="true">flag</mat-icon>
+        Giá trị cờ cho lần chạy thử
+        <span class="flag-override-hint">(chỉ ghi đè tạm thời, không đổi cờ thật)</span>
+      </div>
+      <div class="flag-override-row">
+        @for (row of flagOverrideRows; track row.code) {
+          <button
+            type="button"
+            class="flag-toggle"
+            [class.flag-toggle--on]="row.value"
+            (click)="row.value = !row.value"
+            [matTooltip]="'Cờ ' + row.code + ' = ' + (row.value ? 'BẬT' : 'TẮT')"
+          >
+            <span class="flag-toggle-thumb"></span>
+            <span class="flag-toggle-label">{{ row.code }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  }
+
   <button mat-flat-button color="primary" type="button" [disabled]="running" (click)="submit()">
     @if (running) {
       <mat-spinner diameter="18" class="btn-spinner" />
@@ -55,13 +79,21 @@
     }
 
     @if (o.hops.length > 0) {
+      @for (info of ruleInfoHops(); track $index) {
+        <div class="rule-match-banner">
+          <mat-icon inline="true">flag</mat-icon>
+          <span>{{ info }}</span>
+        </div>
+      }
       <div class="hop-waterfall">
         @for (hop of o.hops; track hop.stepOrder) {
           <div class="hop-item" [class.hop-item--error]="!hop.success">
             <div class="hop-header">
               <span class="hop-order">#{{ hop.stepOrder }}</span>
               <span class="hop-name">{{ hop.stepName }}</span>
-              <span class="method-chip" [attr.data-method]="hop.method">{{ hop.method }}</span>
+              @if (hop.method) {
+                <span class="method-chip" [attr.data-method]="hop.method">{{ hop.method }}</span>
+              }
               @if (hop.cacheHit) {
                 <span class="cache-hit-chip" matTooltip="Trả từ cache Redis - không gọi Upstream thật lần này">
                   <mat-icon inline="true">bolt</mat-icon>cache hit
@@ -73,7 +105,12 @@
               }
               <span class="hop-duration">{{ hop.durationMs }} ms</span>
             </div>
-            <code class="resolved-url">{{ hop.resolvedUrl }}</code>
+            @if (hop.resolvedUrl) {
+              <code class="resolved-url">{{ hop.resolvedUrl }}</code>
+            }
+            @if (hop.conditionInfo) {
+              <code class="condition-info">{{ hop.conditionInfo }}</code>
+            }
             @if (hop.errorMessage) {
               <div class="hop-error">{{ hop.errorMessage }}</div>
             }

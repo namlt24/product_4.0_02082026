@@ -7,8 +7,10 @@ import com.bccs.gatewaymanager.cache.GatewayCacheService;
 import com.bccs.gatewaymanager.dto.StepTraceDto;
 import com.bccs.gatewaymanager.entity.UpstreamService;
 import com.bccs.gatewaymanager.exception.SystemException;
+import com.bccs.gatewaymanager.service.AlertCallObserver;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
@@ -94,6 +96,8 @@ public class UpstreamHttpExecutor {
     private final GatewayCacheService cacheService;
     private final ObjectMapper objectMapper;
     private final AuditLogService auditLogService;
+    /** Gom so lieu cho canh bao (AlertDetector o DP, no-op o CP) - xem AlertCallObserver. */
+    private final AlertCallObserver alertCallObserver;
 
     /**
      * Kich thuoc connection pool (SIZING 1000 RPS, 2026-09-14) - KHONG hardcode
@@ -134,6 +138,7 @@ public class UpstreamHttpExecutor {
             GatewayCacheService cacheService,
             ObjectMapper objectMapper,
             AuditLogService auditLogService,
+            AlertCallObserver alertCallObserver,
             @Value("${gatewaymanager.upstream-http.pool-max-total:600}") int poolMaxTotal,
             @Value("${gatewaymanager.upstream-http.pool-max-per-route:550}") int poolMaxPerRoute,
             @Value("${gatewaymanager.upstream-http.idle-eviction-minutes:15}") int idleEvictionMinutes) {
@@ -143,6 +148,7 @@ public class UpstreamHttpExecutor {
         this.cacheService = cacheService;
         this.objectMapper = objectMapper;
         this.auditLogService = auditLogService;
+        this.alertCallObserver = alertCallObserver;
         this.poolMaxTotal = poolMaxTotal;
         this.poolMaxPerRoute = poolMaxPerRoute;
         this.idleEvictionMinutes = idleEvictionMinutes;
@@ -295,7 +301,12 @@ public class UpstreamHttpExecutor {
         // (nguoi bat cacheEnabled cho tung BackendStep) tu chiu trach nhiem - he thong KHONG
         // con chan cung theo method nhu truoc, chi con chan PUT/PATCH/DELETE.
         boolean cacheable = cacheEnabled && (method == HttpMethod.GET || method == HttpMethod.POST);
+        // traceId phai BOM VAO SAU khi tinh cacheKey (va khong ap dung tren nhanh
+        // cache-hit) - traceId la du lieu QUAN SAT (moi request khac traceId),
+        // khong phai dau vao nghiep vu: neu vao key cache thi 2 request cung tham
+        // so khac traceId ra 2 key khac nhau, cache per-step tro nen vo nghia.
         String cacheKey = cacheable ? GatewayCacheService.buildKey(upstream.getName(), method.name(), resolvedUrl, body) : null;
+        String traceId = MDC.get(TRACE_ID_MDC_KEY);
 
         // Bien tam de xay HopAuditEvent trong finally, du di theo nhanh nao (cache-hit/
         // that-cong/loi) - JAVA khong cho bien local final duoc gan lai trong try/catch,
@@ -305,6 +316,9 @@ public class UpstreamHttpExecutor {
         String responseBodyForAudit = null;
         String errorMessage = null;
         boolean success = true;
+        // Set trong catch: loi nghiep vu 4xx (isBusinessError) KHONG tinh la failure cho
+        // canh bao — upstream van khoe, chi client goi sai (dong bo voi CB ignoreException).
+        boolean businessError = false;
 
         try {
             if (cacheable) {
@@ -324,8 +338,12 @@ public class UpstreamHttpExecutor {
                 }
             }
 
+            // Chi toi day (cache miss, se goi HTTP that) moi bom traceId vao body/
+            // header - tren nhanh cache-hit khong goi upstream nen khong co "xuong
+            // backend step" de mang traceId theo.
+            JsonNode outboundBody = injectTraceId(body, traceId);
             Supplier<HttpCallResult> callSupplier = () ->
-                    doHttpCall(upstream, method, resolvedUrl, headers, body, stepConnectTimeoutMs, stepReadTimeoutMs);
+                    doHttpCall(upstream, method, resolvedUrl, headers, outboundBody, traceId, stepConnectTimeoutMs, stepReadTimeoutMs);
             Supplier<HttpCallResult> decorated = Bulkhead.decorateSupplier(
                     bulkheadFor(upstream, stepId, stepMaxConcurrentCallsOverride, stepMaxWaitDurationMsOverride), callSupplier);
             if (upstream.isCircuitBreakerEnabled()) {
@@ -349,6 +367,9 @@ public class UpstreamHttpExecutor {
             if (e instanceof UpstreamHttpErrorException httpError) {
                 responseStatus = httpError.httpStatus();
                 responseBodyForAudit = httpError.responseBody();
+                if (isBusinessError(httpError)) {
+                    businessError = true;
+                }
             }
             throw e;
         } finally {
@@ -363,6 +384,13 @@ public class UpstreamHttpExecutor {
                     durationMs, cacheHit, success, errorMessage, Instant.now());
             auditLogService.recordHop(event);
 
+            // Gom so lieu canh bao (passive, implementation tu nuot exception) - giong
+            // recordHop o tren, KHONG bao gio anh huong traffic that.
+            // Loi nghiep vu 4xx khong tinh la failure (upstream van khoe — dung logic
+            // voi ignoreException cua CB, khong thi chuoi client khong dang ky ->
+            // ERROR_RATE_HIGH gia cho upstream khong loi gi).
+            alertCallObserver.recordUpstreamCall(upstream.getName(), success || businessError);
+
             // "Thu nhanh" (xem TraceCollector) - no-op ngoai che do do (Data Plane
             // that khong bao gio goi TraceCollector.start()), tai su dung dung cac
             // gia tri vua tinh o tren cho HopAuditEvent, khong tinh toan them.
@@ -375,13 +403,14 @@ public class UpstreamHttpExecutor {
     }
 
     private HttpCallResult doHttpCall(UpstreamService upstream, HttpMethod method, String resolvedUrl,
-                                       HttpHeaders headers, JsonNode body,
+                                       HttpHeaders headers, JsonNode body, String traceId,
                                        Integer stepConnectTimeoutMs, Integer stepReadTimeoutMs) {
         RestTemplate restTemplate = restTemplateFor(upstream, stepConnectTimeoutMs, stepReadTimeoutMs);
         try {
             String bodyString = body == null ? null : body.toString();
+            HttpHeaders callHeaders = withTraceIdHeader(headers, traceId);
             ResponseEntity<String> response = restTemplate.exchange(
-                    resolvedUrl, method, new HttpEntity<>(bodyString, headers), String.class);
+                    resolvedUrl, method, new HttpEntity<>(bodyString, callHeaders), String.class);
             String responseBody = response.getBody();
             JsonNode parsed = (responseBody == null || responseBody.isBlank())
                     ? objectMapper.createObjectNode()
@@ -402,6 +431,50 @@ public class UpstreamHttpExecutor {
             log.warn("Loi goi Upstream '{}' [{} {}]: {}", upstream.getName(), method, resolvedUrl, e.getMessage());
             throw new UpstreamCallException(upstream.getName(), e);
         }
+    }
+
+    /**
+     * Key MDC cua traceId do DynamicDispatcherController bat tu header X-Trace-Id
+     * (Gravitee truyen xuong) - MDC la ThreadLocal NHUNG CompositeOrchestratorEngine
+     * da copy MDC sang worker thread cua parallelStepExecutor (xem javadoc
+     * executeStepsInParallel) nen doc duoc an toan o day, giong dung pattern
+     * MDC.get("requestId") o finally cua call().
+     */
+    static final String TRACE_ID_MDC_KEY = "traceId";
+
+    /**
+     * Dong nhat traceId sang Upstream theo CA 2 kenh: (1) field "traceId" TRONG
+     * body JSON - cac backend BCCS doc traceId tu body (da xac nhan thuc te tren
+     * he thong chung); (2) header "X-Trace-Id" (xem withTraceIdHeader trong
+     * doHttpCall) cho he thong doc theo hop dong header. CHI bom vao body da ton
+     * tai la JSON object (vi du POST forwardOriginalBody) - KHONG tu tao body moi
+     * (GET khong body se bat ngo mang body, nhieu server tu choi) va KHONG ghi de
+     * field traceId client da forward san qua forwardOriginalBody. Body array/
+     * gia tri don khong bom duoc field - chi con kenh header. DEEP-COPY truoc khi
+     * them field: body co the la chinh step result dang luu trong ExecutionContext
+     * (mapping $body tu STEP_RESPONSE) - mutate thang se lan traceId vao ket qua
+     * step do, step khac (chay song song) doc cung node co the bi race/leak
+     * traceId vao response cuoi.
+     */
+    private JsonNode injectTraceId(JsonNode body, String traceId) {
+        if (traceId == null || traceId.isBlank() || body == null || !body.isObject()) {
+            return body;
+        }
+        ObjectNode obj = ((ObjectNode) body).deepCopy();
+        if (obj.get("traceId") == null) {
+            obj.put("traceId", traceId);
+        }
+        return obj;
+    }
+
+    private HttpHeaders withTraceIdHeader(HttpHeaders headers, String traceId) {
+        if (traceId == null || traceId.isBlank()) {
+            return headers;
+        }
+        HttpHeaders out = new HttpHeaders();
+        out.putAll(headers);
+        out.set("X-Trace-Id", traceId);
+        return out;
     }
 
     /**
@@ -522,7 +595,28 @@ public class UpstreamHttpExecutor {
                 .minimumNumberOfCalls(10)
                 .waitDurationInOpenState(Duration.ofSeconds(15))
                 .permittedNumberOfCallsInHalfOpenState(5)
+                // LOI NGHIEP VU 4xx KHONG la failure cua CB: upstream van khoe, tra
+                // loi dung nghiep vu (khong dang ky/quota het/input sai...). Neu khong
+                // ignore thi chuoi request sai cua cac client khac lam CB OPEN ->
+                // client HOP LE tiep theo bi fail-fast 503 trong khi upstream khong
+                // van de gi (gap that: loadtest 2026-08-27 quota stock-management
+                // tra loi lien tuc -> CB OPEN -> node het cho bi chan theo).
+                // Van tinh failure: UpstreamTimeoutException (timeout/refused),
+                // UpstreamCallException (loi khong ro), UpstreamHttpErrorException 5xx
+                // (isBusinessError chi chap nhan <500) — ha tang that su co van de.
+                .ignoreException(UpstreamHttpExecutor::isBusinessError)
                 .build());
+    }
+
+    /**
+     * True = loi NGHIEP VU do upstream chu dong tra ve (4xx) — KHONG tinh vao
+     * CircuitBreaker va KHONG tinh la failure cho canh bao (upstream khong van de
+     * ha tang). False (>=500 hoac loi khac) = van tinh failure de CB chuyen OPEN
+     * khi upstream/hang tang that su chet. Dung chung o DynamicDispatcherController
+     * cho canh bao per-endpoint (recordEndpointRequest) — 1 logic duy nhat.
+     */
+    public static boolean isBusinessError(Throwable e) {
+        return e instanceof UpstreamHttpErrorException httpError && httpError.httpStatus() < 500;
     }
 
     /**
@@ -610,13 +704,19 @@ public class UpstreamHttpExecutor {
 
     /** Upstream tra ve HTTP loi that su (4xx/5xx) - giu status + body goc de GlobalExceptionHandler map ra ma loi phan biet duoc. */
     public static class UpstreamHttpErrorException extends SystemException {
+        private final String upstreamName;
         private final int httpStatus;
         private final String responseBody;
 
         public UpstreamHttpErrorException(String upstreamName, int httpStatus, String responseBody) {
             super("Upstream '" + upstreamName + "' tra ve HTTP " + httpStatus + ": " + responseBody);
+            this.upstreamName = upstreamName;
             this.httpStatus = httpStatus;
             this.responseBody = responseBody;
+        }
+
+        public String upstreamName() {
+            return upstreamName;
         }
 
         public int httpStatus() {

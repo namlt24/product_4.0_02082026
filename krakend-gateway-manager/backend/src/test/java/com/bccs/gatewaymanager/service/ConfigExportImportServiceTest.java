@@ -48,6 +48,8 @@ class ConfigExportImportServiceTest {
     private EndpointMapper endpointMapper;
     @Mock
     private EndpointConfigVersionRepository versionRepository;
+    @Mock
+    private com.bccs.gatewaymanager.repository.GwmFlagRepository flagRepository;
 
     private static final String TEAM = "default";
 
@@ -55,7 +57,7 @@ class ConfigExportImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ConfigExportImportService(upstreamRepository, upstreamService, endpointRepository, endpointService, endpointMapper, versionRepository);
+        service = new ConfigExportImportService(upstreamRepository, upstreamService, endpointRepository, endpointService, endpointMapper, versionRepository, flagRepository);
         CurrentTeamContext.set(TEAM);
         // fingerprint cho ETag/304 (xem ConfigExportImportService.computeConfigHash()) - moi
         // query aggregate LUON tra dung 1 row, dung lenient() vi khong phai test nao cung
@@ -63,6 +65,7 @@ class ConfigExportImportServiceTest {
         lenient().when(upstreamRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
         lenient().when(endpointRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
         lenient().when(versionRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
+        lenient().when(flagRepository.fingerprintByTeamCode(TEAM)).thenReturn(List.<Object[]>of(new Object[]{0L, null}));
     }
 
     @AfterEach
@@ -79,12 +82,12 @@ class ConfigExportImportServiceTest {
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null,
                 null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EndpointResponseDto endpointDto(String path, String upstreamId, String upstreamName) {
         return new EndpointResponseDto("ep-old-id", "n", null, path, GatewayMethod.GET, true, "json",
-                List.of(step(upstreamId, upstreamName)), List.of(), null, null, false, 86400, false, false, 300);
+                List.of(step(upstreamId, upstreamName)), List.of(), null, null, false, 86400, false, false, 300, List.of(), null);
     }
 
     @Test
@@ -107,7 +110,7 @@ class ConfigExportImportServiceTest {
     void import_upstreamChuaTonTai_taoMoi() {
         lenient().when(upstreamService.list()).thenReturn(List.of());
         when(upstreamService.create(any())).thenReturn(upstreamDto("u-new", "svc-new"));
-        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(upstreamDto(null, "svc-new")), List.of());
+        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(upstreamDto(null, "svc-new")), List.of(), List.of());
 
         ConfigImportResultDto result = service.importConfig(bundle);
 
@@ -120,7 +123,7 @@ class ConfigExportImportServiceTest {
     @Test
     void import_upstreamDaTonTaiTheoTen_capNhat() {
         lenient().when(upstreamService.list()).thenReturn(List.of(upstreamDto("u-1", "svc")));
-        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(upstreamDto("u-other-env", "svc")), List.of());
+        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(upstreamDto("u-other-env", "svc")), List.of(), List.of());
 
         ConfigImportResultDto result = service.importConfig(bundle);
 
@@ -133,7 +136,7 @@ class ConfigExportImportServiceTest {
     void import_endpointChuaTonTaiTheoPath_taoMoi() {
         lenient().when(upstreamService.list()).thenReturn(List.of(upstreamDto("u-1", "svc")));
         when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/new")).thenReturn(Optional.empty());
-        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(endpointDto("/v1/new", "u-1", "svc")));
+        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(endpointDto("/v1/new", "u-1", "svc")), List.of());
 
         ConfigImportResultDto result = service.importConfig(bundle);
 
@@ -147,7 +150,7 @@ class ConfigExportImportServiceTest {
         lenient().when(upstreamService.list()).thenReturn(List.of(upstreamDto("u-1", "svc")));
         EndpointConfig existing = EndpointConfig.builder().id("ep-existing").build();
         when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/dup")).thenReturn(Optional.of(existing));
-        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(endpointDto("/v1/dup", "u-1", "svc")));
+        ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(endpointDto("/v1/dup", "u-1", "svc")), List.of());
 
         ConfigImportResultDto result = service.importConfig(bundle);
 
@@ -160,7 +163,7 @@ class ConfigExportImportServiceTest {
         lenient().when(upstreamService.list()).thenReturn(List.of()); // khong co upstream "svc-missing" nao ca
         when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/x")).thenReturn(Optional.empty());
         ConfigExportDto bundle = new ConfigExportDto("1.0", Instant.now(), List.of(),
-                List.of(endpointDto("/v1/x", "u-old-env-id", "svc-missing")));
+                List.of(endpointDto("/v1/x", "u-old-env-id", "svc-missing")), List.of());
 
         ConfigImportResultDto result = service.importConfig(bundle);
 
@@ -173,5 +176,66 @@ class ConfigExportImportServiceTest {
         // Fallback: giu nguyen upstreamServiceId cu (se rat co the loi khi EndpointService that su
         // luu - dung y, dam bao KHONG am tham gan bua 1 upstream khac) thay vi crash ngay tai day.
         assertThat(captor.getValue().steps().get(0).upstreamServiceId()).isEqualTo("u-old-env-id");
+    }
+
+    // ---- V5: export/import CỜ (GWM_FLAG) ----
+
+    private com.bccs.gatewaymanager.dto.FlagDto flagDto(String code, boolean enabled) {
+        return new com.bccs.gatewaymanager.dto.FlagDto(null, TEAM, code, "Cờ " + code, null,
+                enabled, Instant.now(), Instant.now());
+    }
+
+    @Test
+    void export_kemTheoDanhSachCoCuaDoi() {
+        when(upstreamService.list()).thenReturn(List.of());
+        when(endpointRepository.findAllByTeamCodeOrderByUpdatedAtDesc(TEAM)).thenReturn(List.of());
+        when(flagRepository.findByTeamCode(TEAM)).thenReturn(java.util.List.of(
+                com.bccs.gatewaymanager.entity.GwmFlag.builder()
+                        .id("f-1").teamCode(TEAM).flagCode("VIP").displayName("Khach VIP")
+                        .enabled(true).build()));
+
+        ResponseEntity<ConfigExportDto> response = service.export(null);
+        ConfigExportDto result = response.getBody();
+
+        assertThat(result.flags()).hasSize(1);
+        assertThat(result.flags().get(0).flagCode()).isEqualTo("VIP");
+        assertThat(result.flags().get(0).enabled()).isTrue();
+    }
+
+    @Test
+    void import_coChuaTonTai_taoMoiTruocKhiTaoEndpoint() {
+        when(flagRepository.findByTeamCodeAndFlagCodeIgnoreCase(TEAM, "VIP"))
+                .thenReturn(java.util.Optional.empty());
+        lenient().when(upstreamService.list()).thenReturn(List.of());
+        when(endpointRepository.findByTeamCodeAndPath(TEAM, "/v1/x")).thenReturn(Optional.empty());
+        var bundle = new ConfigExportDto("1.0", Instant.now(), List.of(),
+                List.of(endpointDto("/v1/x", "u-1", "svc")),
+                List.of(flagDto("VIP", true)));
+
+        var result = service.importConfig(bundle);
+
+        assertThat(result.endpointsCreated()).isEqualTo(1);
+        verify(flagRepository).save(org.mockito.ArgumentMatchers.argThat(
+                (com.bccs.gatewaymanager.entity.GwmFlag f) -> "VIP".equals(f.getFlagCode()) && f.isEnabled()));
+    }
+
+    @Test
+    void import_coDaTonTaiTheoFlagCode_capNhat_giuNguyenId() {
+        when(flagRepository.findByTeamCodeAndFlagCodeIgnoreCase(TEAM, "VIP"))
+                .thenReturn(java.util.Optional.of(com.bccs.gatewaymanager.entity.GwmFlag.builder()
+                        .id("f-existing").teamCode(TEAM).flagCode("VIP").displayName("Ten cu")
+                        .enabled(false).build()));
+        lenient().when(upstreamService.list()).thenReturn(List.of());
+        var bundle = new ConfigExportDto("1.0", Instant.now(), List.of(), List.of(),
+                List.of(flagDto("VIP", true)));
+
+        var result = service.importConfig(bundle);
+
+        assertThat(result.endpointsCreated()).isEqualTo(0);
+        ArgumentCaptor<com.bccs.gatewaymanager.entity.GwmFlag> captor =
+                ArgumentCaptor.forClass(com.bccs.gatewaymanager.entity.GwmFlag.class);
+        verify(flagRepository).save(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo("f-existing");
+        assertThat(captor.getValue().isEnabled()).isTrue();
     }
 }

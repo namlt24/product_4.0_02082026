@@ -130,6 +130,33 @@ public class EndpointConfig {
     @Column(name = "response_cache_ttl_seconds", nullable = false)
     private int responseCacheTtlSeconds = 300;
 
+    /**
+     * Mang RULE CỜ của endpoint (DDL V5) - lưu JSON String (shape {"rules":[...]},
+     * xem FlagRuleDto.toJson/fromJson) thay vì bảng con: Rule là cấu hình "một
+     * khối" đọc-ghi đồng bộ cùng endpoint (giống steps), snapshot version +
+     * export/import tự mang theo, không join bảng mới. NULL = không dùng Rule
+     * (100% endpoint cũ - không đổi hành vi). Mapper serialize/deserialize qua
+     * ObjectMapper; luu chuỗi ở entity để JSON KHÔNG bị Jackson serialize đúp
+     * khi trả DTO (DTO giữ dạng List<FlagRuleDto> đã parse).
+     */
+    @Lob
+    @Column(name = "flag_rules")
+    @Builder.Default
+    private String flagRulesJson = null;
+
+    /**
+     * Cấu hình "ghép field từ bất kỳ step nào vào response cuối" (ResponseMapping) -
+     * lưu JSON String (shape {"mode":"MERGE|REPLACE","mappings":[...]}, xem
+     * ResponseMappingSpecDto.toJson/fromJson) thay vì bảng con, cùng lý do với
+     * flagRulesJson ở trên: cấu hình "một khối" đọc-ghi đồng bộ cùng endpoint,
+     * snapshot version + export/import tự mang theo. NULL = không dùng (100%
+     * endpoint cũ - không đổi hành vi).
+     */
+    @Lob
+    @Column(name = "response_mappings")
+    @Builder.Default
+    private String responseMappingsJson = null;
+
     @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "endpointConfig", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

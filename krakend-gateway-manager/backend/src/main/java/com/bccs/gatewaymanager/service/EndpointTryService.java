@@ -49,11 +49,12 @@ public class EndpointTryService {
     private final UpstreamServiceRepository upstreamServiceRepository;
 
     public TryResultDto tryCall(String endpointId, Map<String, String> pathVariables,
-                                 Map<String, String> queryParams, String rawBody) {
+                                 Map<String, String> queryParams, String rawBody,
+                                 Map<String, Boolean> flagOverrides) {
         // endpointService.get() van throw GW-404 binh thuong (KHONG boc vao envelope) -
         // day la loi GOI SAI API (id sai), khong phai loi luc thuc thi.
         EndpointResponseDto config = endpointService.get(endpointId);
-        return runWithTrace(null, () -> engine.handle(config, pathVariables, toQueryParamsArr(queryParams), rawBody));
+        return runWithTrace(null, () -> engine.handle(config, pathVariables, toQueryParamsArr(queryParams), rawBody, flagOverrides));
     }
 
     /**
@@ -64,13 +65,14 @@ public class EndpointTryService {
      * nao ca neu draft khong hop le.
      */
     public TryResultDto tryAdhoc(EndpointRequestDto draft, Map<String, String> pathVariables,
-                                  Map<String, String> queryParams, String rawBody) {
+                                  Map<String, String> queryParams, String rawBody,
+                                  Map<String, Boolean> flagOverrides) {
         EndpointResponseDto config = toAdhocResponseDto(draft);
         return runWithTrace(() -> {
                     endpointService.validate(draft);
                     validateUpstreamOwnership(draft);
                 },
-                () -> engine.handle(config, pathVariables, toQueryParamsArr(queryParams), rawBody));
+                () -> engine.handle(config, pathVariables, toQueryParamsArr(queryParams), rawBody, flagOverrides));
     }
 
     /**
@@ -130,7 +132,8 @@ public class EndpointTryService {
         return new EndpointResponseDto("adhoc-try", dto.name(), dto.description(), dto.path(), dto.method(),
                 dto.sequential(), dto.outputEncoding(), dto.steps(), dto.mappings(), null, null,
                 dto.idempotencyEnabled(), dto.idempotencyTtlSeconds(), dto.parallelExecution(),
-                dto.responseCacheEnabled(), dto.responseCacheTtlSeconds());
+                dto.responseCacheEnabled(), dto.responseCacheTtlSeconds(), dto.flagRules(),
+                dto.responseMapping());
     }
 
     private Map<String, String[]> toQueryParamsArr(Map<String, String> queryParams) {

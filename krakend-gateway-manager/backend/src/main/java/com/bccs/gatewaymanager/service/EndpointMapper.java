@@ -5,6 +5,11 @@ import com.bccs.gatewaymanager.dto.BackendStepDto;
 import com.bccs.gatewaymanager.dto.EndpointRequestDto;
 import com.bccs.gatewaymanager.dto.EndpointResponseDto;
 import com.bccs.gatewaymanager.dto.FieldMappingDto;
+import com.bccs.gatewaymanager.dto.FlagRuleDto;
+import com.bccs.gatewaymanager.dto.ResponseMappingSpecDto;
+import com.bccs.gatewaymanager.dto.StepConditionGroupsDto;
+import com.bccs.gatewaymanager.dto.SwitchBranchDto;
+import com.bccs.gatewaymanager.dto.StepFlagGroupsDto;
 import com.bccs.gatewaymanager.entity.BackendStep;
 import com.bccs.gatewaymanager.entity.EndpointConfig;
 import com.bccs.gatewaymanager.entity.FieldMapping;
@@ -14,6 +19,7 @@ import com.bccs.gatewaymanager.repository.UpstreamServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +37,7 @@ import java.util.Objects;
 public class EndpointMapper {
 
     private final UpstreamServiceRepository upstreamServiceRepository;
+    private final ObjectMapper objectMapper;
 
     /** Dung khi tao moi - entity chua duoc gan id/timestamp. Tu stamp teamCode = doi dang goi request (CurrentTeamContext) - nguoi goi KHONG tu chon duoc doi cua endpoint minh tao. */
     public EndpointConfig toEntity(EndpointRequestDto dto) {
@@ -47,6 +54,8 @@ public class EndpointMapper {
                 .parallelExecution(dto.parallelExecution())
                 .responseCacheEnabled(dto.responseCacheEnabled())
                 .responseCacheTtlSeconds(dto.responseCacheTtlSeconds())
+                .flagRulesJson(FlagRuleDto.toJson(objectMapper, dto.flagRules()))
+                .responseMappingsJson(ResponseMappingSpecDto.toJson(objectMapper, dto.responseMapping()))
                 .build();
         applySteps(entity, dto.steps());
         applyMappings(entity, dto.mappings());
@@ -66,6 +75,8 @@ public class EndpointMapper {
         entity.setParallelExecution(dto.parallelExecution());
         entity.setResponseCacheEnabled(dto.responseCacheEnabled());
         entity.setResponseCacheTtlSeconds(dto.responseCacheTtlSeconds());
+        entity.setFlagRulesJson(FlagRuleDto.toJson(objectMapper, dto.flagRules()));
+        entity.setResponseMappingsJson(ResponseMappingSpecDto.toJson(objectMapper, dto.responseMapping()));
         applySteps(entity, dto.steps());
         applyMappings(entity, dto.mappings());
     }
@@ -96,6 +107,11 @@ public class EndpointMapper {
                 .conditionSourceField(s.conditionSourceField())
                 .conditionOperator(s.conditionOperator())
                 .conditionExpectedValue(s.conditionExpectedValue())
+                .conditionFlagGroupsJson(StepFlagGroupsDto.toJson(objectMapper, s.conditionFlagGroups()))
+                .conditionGroupsJson(StepConditionGroupsDto.toJson(objectMapper, s.conditionGroups()))
+                .switchBranchesJson(SwitchBranchDto.toJson(objectMapper, s.switchBranches()))
+                .falseErrorCode(s.falseErrorCode())
+                .falseErrorMessage(s.falseErrorMessage())
                 .nextStepOrderIfTrue(s.nextStepOrderIfTrue())
                 .nextStepOrderIfFalse(s.nextStepOrderIfFalse())
                 .onErrorStepOrder(s.onErrorStepOrder())
@@ -168,11 +184,17 @@ public class EndpointMapper {
                         s.getMaxConcurrentCallsOverride(), s.getMaxWaitDurationMsOverride(),
                         s.getConditionSourceType(), s.getConditionSourceStepOrder(), s.getConditionSourceField(),
                         s.getConditionOperator(), s.getConditionExpectedValue(),
+                        s.getConditionFlagGroupsJson() == null || s.getConditionFlagGroupsJson().isBlank()
+                                ? null : StepFlagGroupsDto.fromJson(objectMapper, s.getConditionFlagGroupsJson()),
+                        s.getConditionGroupsJson() == null || s.getConditionGroupsJson().isBlank()
+                                ? null : StepConditionGroupsDto.fromJson(objectMapper, s.getConditionGroupsJson()),
                         s.getNextStepOrderIfTrue(), s.getNextStepOrderIfFalse(), s.getOnErrorStepOrder(),
                         s.getParallelGroup(),
                         s.getCompensationUpstreamService() == null ? null : s.getCompensationUpstreamService().getId(),
                         s.getCompensationUpstreamService() == null ? null : s.getCompensationUpstreamService().getName(),
-                        s.getCompensationMethod(), s.getCompensationUrlPattern()))
+                        s.getCompensationMethod(), s.getCompensationUrlPattern(),
+                        SwitchBranchDto.fromJson(objectMapper, s.getSwitchBranchesJson()),
+                        s.getFalseErrorCode(), s.getFalseErrorMessage()))
                 .toList();
 
         List<FieldMappingDto> mappings = entity.getMappings().stream()
@@ -188,7 +210,9 @@ public class EndpointMapper {
                 entity.getMethod(), entity.isSequential(), entity.getOutputEncoding(),
                 steps, mappings, entity.getCreatedAt(), entity.getUpdatedAt(),
                 entity.isIdempotencyEnabled(), entity.getIdempotencyTtlSeconds(), entity.isParallelExecution(),
-                entity.isResponseCacheEnabled(), entity.getResponseCacheTtlSeconds());
+                entity.isResponseCacheEnabled(), entity.getResponseCacheTtlSeconds(),
+                FlagRuleDto.fromJson(objectMapper, entity.getFlagRulesJson()),
+                ResponseMappingSpecDto.fromJson(objectMapper, entity.getResponseMappingsJson()));
     }
 
     /** So sanh path co doi khong (dung khi update de kiem tra trung path voi endpoint khac). */

@@ -92,6 +92,13 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Gui email canh bao (xem AlertEmailService) - org.springframework.mail.*/
+             jakarta.mail.* khong co san tren classpath neu khong khai bao starter nay. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Dung chung Oracle instance + schema BCCS_PRODUCT voi cac service BCCS
              (khong con Postgres rieng nua). -->
         <dependency>

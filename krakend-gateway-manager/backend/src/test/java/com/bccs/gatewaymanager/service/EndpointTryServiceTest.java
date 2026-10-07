@@ -58,31 +58,31 @@ class EndpointTryServiceTest {
         return new BackendStepDto(null, order, "step" + order, GatewayMethod.GET, "/x", "up-1", "up",
                 false, false, 300, null, null, List.of(), List.of(), Map.of(), null, null,
                 null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private EndpointRequestDto draft() {
         return new EndpointRequestDto("n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(step(1)), List.of(), false, null, false, false, null);
+                List.of(step(1)), List.of(), false, null, false, false, null, List.of(), null);
     }
 
     @Test
     void tryCall_chuyenDungQueryParamsSangMangVaGoiEngineVoiDungConfig() {
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "n", null, "/x/{id}", GatewayMethod.GET, true, "json",
-                List.of(), List.of(), null, null, false, 86400, false, false, 300);
+                List.of(), List.of(), null, null, false, 86400, false, false, 300, List.of(), null);
         when(endpointService.get("ep-1")).thenReturn(config);
         var expected = JsonMapper.builder().build().createObjectNode().put("v", 1);
-        when(engine.handle(eq(config), any(), any(), any())).thenReturn(expected);
+        when(engine.handle(eq(config), any(), any(), any(), any())).thenReturn(expected);
 
         EndpointTryService svc = new EndpointTryService(endpointService, engine, upstreamServiceRepository);
-        TryResultDto result = svc.tryCall("ep-1", Map.of("id", "123"), Map.of("q", "v"), "{\"a\":1}");
+        TryResultDto result = svc.tryCall("ep-1", Map.of("id", "123"), Map.of("q", "v"), "{\"a\":1}", Map.of());
 
         assertThat(result.success()).isTrue();
         assertThat(result.result()).isEqualTo(expected);
         assertThat(result.hops()).isEmpty(); // engine.handle mocked - khong thuc su goi UpstreamHttpExecutor nen khong co hop nao
 
         ArgumentCaptor<Map<String, String[]>> queryCaptor = ArgumentCaptor.forClass(Map.class);
-        verify(engine).handle(eq(config), eq(Map.of("id", "123")), queryCaptor.capture(), eq("{\"a\":1}"));
+        verify(engine).handle(eq(config), eq(Map.of("id", "123")), queryCaptor.capture(), eq("{\"a\":1}"), any());
         assertThat(queryCaptor.getValue()).containsKey("q");
         assertThat(queryCaptor.getValue().get("q")).containsExactly("v");
     }
@@ -90,13 +90,13 @@ class EndpointTryServiceTest {
     @Test
     void tryCall_engineThatBai_traVeEnvelopeThatBaiKhongThrow() {
         EndpointResponseDto config = new EndpointResponseDto("ep-1", "n", null, "/x", GatewayMethod.GET, true, "json",
-                List.of(), List.of(), null, null, false, 86400, false, false, 300);
+                List.of(), List.of(), null, null, false, 86400, false, false, 300, List.of(), null);
         when(endpointService.get("ep-1")).thenReturn(config);
-        when(engine.handle(eq(config), any(), any(), any()))
+        when(engine.handle(eq(config), any(), any(), any(), any()))
                 .thenThrow(new BusinessException("GW-UPSTREAM-404", "upstream loi"));
 
         EndpointTryService svc = new EndpointTryService(endpointService, engine, upstreamServiceRepository);
-        TryResultDto result = svc.tryCall("ep-1", Map.of(), Map.of(), null);
+        TryResultDto result = svc.tryCall("ep-1", Map.of(), Map.of(), null, Map.of());
 
         assertThat(result.success()).isFalse();
         assertThat(result.errorCode()).isEqualTo("GW-UPSTREAM-404");
@@ -110,18 +110,18 @@ class EndpointTryServiceTest {
         when(upstreamServiceRepository.findByIdAndTeamCode("up-1", TEAM))
                 .thenReturn(Optional.of(UpstreamService.builder().id("up-1").teamCode(TEAM).name("up").build()));
         var expected = JsonMapper.builder().build().createObjectNode().put("v", 1);
-        when(engine.handle(argThat(cfg -> cfg != null && cfg.id().equals("adhoc-try")), any(), any(), any()))
+        when(engine.handle(argThat(cfg -> cfg != null && cfg.id().equals("adhoc-try")), any(), any(), any(), any()))
                 .thenReturn(expected);
 
         EndpointTryService svc = new EndpointTryService(endpointService, engine, upstreamServiceRepository);
-        TryResultDto result = svc.tryAdhoc(draft, Map.of(), Map.of(), null);
+        TryResultDto result = svc.tryAdhoc(draft, Map.of(), Map.of(), null, Map.of());
 
         assertThat(result.success()).isTrue();
         assertThat(result.result()).isEqualTo(expected);
         verify(endpointService).validate(draft);
         verify(engine).handle(argThat(cfg -> cfg.id().equals("adhoc-try")
                 && cfg.steps().equals(draft.steps())
-                && cfg.path().equals(draft.path())), any(), any(), any());
+                && cfg.path().equals(draft.path())), any(), any(), any(), any());
     }
 
     @Test
@@ -133,11 +133,11 @@ class EndpointTryServiceTest {
         when(upstreamServiceRepository.findByIdAndTeamCode("up-1", TEAM)).thenReturn(Optional.empty());
 
         EndpointTryService svc = new EndpointTryService(endpointService, engine, upstreamServiceRepository);
-        TryResultDto result = svc.tryAdhoc(draft, Map.of(), Map.of(), null);
+        TryResultDto result = svc.tryAdhoc(draft, Map.of(), Map.of(), null, Map.of());
 
         assertThat(result.success()).isFalse();
         assertThat(result.errorCode()).isEqualTo("GW-UP-404");
-        verify(engine, never()).handle(any(), any(), any(), any());
+        verify(engine, never()).handle(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -147,12 +147,12 @@ class EndpointTryServiceTest {
                 .when(endpointService).validate(draft);
 
         EndpointTryService svc = new EndpointTryService(endpointService, engine, upstreamServiceRepository);
-        TryResultDto result = svc.tryAdhoc(draft, Map.of(), Map.of(), null);
+        TryResultDto result = svc.tryAdhoc(draft, Map.of(), Map.of(), null, Map.of());
 
         assertThat(result.success()).isFalse();
         assertThat(result.errorCode()).isEqualTo("GW-003");
         assertThat(result.errorMessage()).isEqualTo("stepOrder trung lap");
         assertThat(result.hops()).isEmpty();
-        verify(engine, never()).handle(any(), any(), any(), any());
+        verify(engine, never()).handle(any(), any(), any(), any(), any());
     }
 }

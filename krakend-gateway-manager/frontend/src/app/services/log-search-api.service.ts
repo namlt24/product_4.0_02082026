@@ -17,11 +17,7 @@ export class LogSearchApiService {
 
   search(filter: LogSearchFilter, page: number, size: number): Observable<LogSearchResult> {
     let params = new HttpParams().set('page', page).set('size', size);
-    if (filter.from) params = params.set('from', filter.from);
-    if (filter.to) params = params.set('to', filter.to);
-    if (filter.status) params = params.set('status', filter.status);
-    if (filter.endpointPath) params = params.set('endpointPath', filter.endpointPath);
-    if (filter.bodyContains) params = params.set('bodyContains', filter.bodyContains);
+    if (filter.traceId) params = params.set('traceId', filter.traceId);
     return this.http.get<LogSearchResult>(this.baseUrl, { params });
   }
 

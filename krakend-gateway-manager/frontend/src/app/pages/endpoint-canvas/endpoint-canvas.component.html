@@ -110,6 +110,12 @@
     <button mat-stroked-button type="button" (click)="openNewMappingPanel()">
       <mat-icon>add_link</mat-icon> Thêm Field Mapping
     </button>
+    <button mat-stroked-button type="button" (click)="addResponseMapping()">
+      <mat-icon>call_received</mat-icon> Ghép field vào Response
+    </button>
+    <button mat-stroked-button type="button" (click)="toggleFlow()">
+      <mat-icon>account_tree</mat-icon> Sơ đồ
+    </button>
     <button mat-stroked-button type="button" (click)="openTryPanel()">
       <mat-icon>play_circle</mat-icon> Thử nhanh
     </button>
@@ -118,6 +124,16 @@
       Kéo node để sắp xếp · Bấm node/đường nối để sửa · Vị trí được lưu cùng endpoint
     </span>
   </div>
+
+  @if (showFlow()) {
+    <section class="flow-embed">
+      <div class="flow-embed-head">
+        <h3>Sơ đồ luồng <span class="hint">(theo nội dung đang chỉnh sửa, chưa cần lưu)</span></h3>
+        <button mat-stroked-button type="button" (click)="refreshFlow()"><mat-icon>refresh</mat-icon> Làm mới</button>
+      </div>
+      <app-flow-diagram [source]="flowSnapshot()" />
+    </section>
+  }
 
   <mat-card class="canvas-card">
     <div class="canvas-scroller">
@@ -136,8 +152,20 @@
             <marker id="branch-arrow-error" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
             </marker>
+            <marker id="branch-arrow-switch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed" />
+            </marker>
+            <marker id="branch-arrow-default" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+            </marker>
             <marker id="compensation-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb" />
+            </marker>
+            <marker id="rule-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#9333ea" />
+            </marker>
+            <marker id="response-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0891b2" />
             </marker>
           </defs>
 
@@ -158,10 +186,10 @@
             <path
               [attr.d]="pb.path"
               fill="none"
-              [attr.stroke]="pb.outcome === 'true' ? '#16a34a' : pb.outcome === 'false' ? '#dc2626' : '#d97706'"
+              [attr.stroke]="branchColor(pb.outcome)"
               stroke-width="2"
               stroke-dasharray="6 4"
-              [attr.marker-end]="pb.outcome === 'true' ? 'url(#branch-arrow-true)' : pb.outcome === 'false' ? 'url(#branch-arrow-false)' : 'url(#branch-arrow-error)'"
+              [attr.marker-end]="'url(#' + branchMarker(pb.outcome) + ')'"
               class="branch-edge"
             />
             <text
@@ -172,7 +200,7 @@
               [class.branch-edge-label--false]="pb.outcome === 'false'"
               [class.branch-edge-label--error]="pb.outcome === 'error'"
               text-anchor="middle"
-            >{{ pb.outcome === 'true' ? 'Đúng' : pb.outcome === 'false' ? 'Sai' : 'Lỗi' }}</text>
+            >{{ pb.label }}</text>
           }
 
           <!-- Vong lap bu tru/rollback (muc 6) - o CANH TRAI node (huong rieng, khong trung
@@ -184,10 +212,28 @@
             <text [attr.x]="pc.labelX" [attr.y]="pc.labelY" class="compensation-edge-label" text-anchor="end">↩ {{ pc.label }}</text>
           }
 
+          <!-- Duong noi Rule cờ -> step bat dau (V5, START_STEP) - mau tim, dash rong
+               phan biet voi FieldMapping (indigo, lien) va branch (xanh/do/cam). -->
+          @for (pr of positionedRules(); track pr.index) {
+            @if (pr.path) {
+              <path [attr.d]="pr.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openRulePanel(pr.index)" />
+              <path [attr.d]="pr.path" fill="none" stroke="#9333ea" stroke-width="2.25" stroke-dasharray="8 5" marker-end="url(#rule-arrow)" class="rule-edge" />
+              <text [attr.x]="pr.labelX" [attr.y]="pr.labelY" class="rule-edge-label" text-anchor="middle">{{ pr.actionLabel }}</text>
+            }
+          }
+
           @for (pe of positionedMappings(); track pe.index) {
             <path [attr.d]="pe.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openMappingPanel(pe.index)" />
             <path [attr.d]="pe.path" fill="none" stroke="#818cf8" stroke-width="2.25" marker-end="url(#canvas-arrow)" class="edge-visible" />
             <text [attr.x]="pe.labelX" [attr.y]="pe.labelY" class="edge-label" text-anchor="middle">{{ pe.mapping.targetParamName }}</text>
+          }
+
+          <!-- Duong noi "ghép field vào response cuối" (ResponseMapping) - màu cyan phân biệt
+               FieldMapping (indigo), bấm để sửa trong panel. -->
+          @for (re of positionedResponseEdges(); track re.index) {
+            <path [attr.d]="re.path" fill="none" stroke="transparent" stroke-width="16" class="edge-hit" (click)="openResponseMappingPanel(re.index)" />
+            <path [attr.d]="re.path" fill="none" stroke="#0891b2" stroke-width="2.25" stroke-dasharray="2 3" marker-end="url(#response-arrow)" class="edge-visible" />
+            <text [attr.x]="re.labelX" [attr.y]="re.labelY" class="edge-label edge-label--response" text-anchor="middle">{{ re.rm.sourceField }}</text>
           }
         </svg>
 
@@ -203,6 +249,63 @@
               <code>{{ header.path || '/' }}</code>
             </div>
           </div>
+
+          <!-- Node "Response cuối" (ResponseMapping) - co dinh nam duoi day step, khong keo duoc.
+               Bấm đẻ mở panel bật/tắt + sửa mode; các đường nối cyan từ step nguồn chỉ vẽ khi bật. -->
+          <div
+            class="response-node"
+            [class.response-node--off]="!responseMappingSpec()"
+            [style.left.px]="responseNodePos().x"
+            [style.top.px]="responseNodePos().y"
+            [style.width.px]="nodeWidth"
+            (click)="responseMappingSpec() ? openResponseMappingPanel(0) : addResponseMapping()"
+            matTooltip="{{ responseMappingSpec() ? 'Sửa ghép field vào response cuối' : 'Bật ghép field từ step vào response cuối' }}"
+          >
+            <div class="response-node-top">
+              <mat-icon inline="true">call_received</mat-icon>
+              <span>Response cuối</span>
+            </div>
+            <div class="response-node-body">
+              @if (responseMappingSpec(); as spec) {
+                <span class="response-mode-chip" [attr.data-mode]="spec.mode">{{ spec.mode }}</span>
+                <span>{{ spec.mappings.length }} field</span>
+              } @else {
+                <span>Bấm để bật ghép field</span>
+              }
+            </div>
+          </div>
+
+          <!-- Node Rule cờ (V5) - khung tím với ô vuông điều kiện theo nhóm, không kéo được,
+               bấm để sửa trong panel (chỉ có nghĩa khi sequential=true). -->
+          @for (pr of positionedRules(); track pr.index) {
+            <div
+              class="rule-node"
+              [style.left.px]="pr.x"
+              [style.top.px]="pr.y"
+              [style.width.px]="nodeWidth"
+              (click)="openRulePanel(pr.index)"
+            >
+              <div class="rule-node-top">
+                <mat-icon inline="true">flag</mat-icon>
+                <span class="rule-node-name">{{ pr.rule.name || ('Rule ' + (pr.index + 1)) }}</span>
+              </div>
+              <div class="rule-node-groups">
+                @for (group of pr.rule.conditions; track $index; let gi = $index) {
+                  @if (gi > 0) {
+                    <span class="rule-or-divider">HOẶC</span>
+                  }
+                  <div class="rule-group-box">
+                    @for (cond of group; track $index) {
+                      <span class="rule-cond-chip" [class.rule-cond-chip--false]="!cond.expected">
+                        {{ cond.flagCode }}={{ cond.expected ? 'BẬT' : 'TẮT' }}
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="rule-node-action" [class.rule-node-action--block]="pr.rule.actionType === 'BLOCK'">{{ pr.actionLabel }}</div>
+            </div>
+          }
 
           @for (p of nodeBasePositions(); track p.step.stepOrder; let i = $index) {
             <div
@@ -425,12 +528,30 @@
           <p class="condition-hint">
             Sau khi step này chạy xong, kiểm tra 1 điều kiện rồi quyết định gọi step nào tiếp theo.
           </p>
+          @if (!isSystemFlagCondition()) {
+            <div class="field-row">
+              <mat-slide-toggle [checked]="conditionGroupsEnabled()" (change)="toggleConditionGroups($event.checked)">
+                Dùng nhiều điều kiện (VÀ / HOẶC)
+              </mat-slide-toggle>
+            </div>
+          }
+          @if (conditionGroupsEnabled()) {
+            <p class="condition-hint">
+              Nhóm ngoài cùng nối bằng HOẶC, mỗi nhóm nối bằng VÀ. Mỗi điều kiện có thể là một nhóm con lồng nhau.
+            </p>
+            <app-condition-tree-editor
+              [value]="edit.conditionGroups"
+              (valueChange)="edit.conditionGroups = $event"
+              [stepOrders]="availableStepOrders"
+              [flags]="flags()"
+              [operators]="conditionOperators" />
+          } @else {
           <div class="field-row">
             <mat-form-field appearance="outline" style="flex: 1">
               <mat-label>Nguồn dữ liệu</mat-label>
-              <mat-select [(ngModel)]="edit.conditionSourceType">
+              <mat-select [(ngModel)]="edit.conditionSourceType" (selectionChange)="onConditionSourceTypeChange($event.value)">
                 @for (t of conditionSourceTypes; track t) {
-                  <mat-option [value]="t">{{ t === 'REQUEST_BODY' ? 'Body của client' : 'Response step trước' }}</mat-option>
+                  <mat-option [value]="t">{{ t === 'REQUEST_BODY' ? 'Body của client' : t === 'SYSTEM_FLAG' ? 'Cờ hệ thống' : 'Response step trước' }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
@@ -445,34 +566,79 @@
               </mat-form-field>
             }
           </div>
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Field</mat-label>
-            <input matInput [(ngModel)]="edit.conditionSourceField" placeholder="vd: status hoặc shop.channelTypeId" />
-          </mat-form-field>
-          <div class="field-row">
-            <mat-form-field appearance="outline" style="flex: 1">
-              <mat-label>Toán tử</mat-label>
-              <mat-select [(ngModel)]="edit.conditionOperator">
-                @for (op of conditionOperators; track op) {
-                  <mat-option [value]="op">
-                    {{ op === 'EQUALS' ? 'Bằng' : op === 'NOT_EQUALS' ? 'Khác'
-                      : op === 'EXISTS' ? 'Tồn tại' : op === 'NOT_EXISTS' ? 'Không tồn tại'
-                      : op === 'GREATER_THAN' ? 'Lớn hơn (>)' : op === 'GREATER_THAN_OR_EQUAL' ? 'Lớn hơn hoặc bằng (>=)'
-                      : op === 'LESS_THAN' ? 'Nhỏ hơn (<)' : 'Nhỏ hơn hoặc bằng (<=)' }}
-                  </mat-option>
+          @if (isSystemFlagCondition()) {
+            <p class="condition-hint">
+              Đọc giá trị <strong>cờ nghiệp vụ</strong> hiện tại (bật/tắt trên trang Cờ) — không phụ thuộc request hay step nào.
+              Trong 1 nhóm tất cả điều kiện phải đúng (VÀ); thỏa ít nhất 1 nhóm là đi tiếp (HOẶC giữa nhóm).
+            </p>
+            @for (group of edit.conditionFlagGroups; track $index; let gi = $index) {
+              <div class="flag-group-box">
+                <div class="flag-group-header">
+                  <span>Nhóm {{ gi + 1 }} — tất cả phải đúng</span>
+                  @if (edit.conditionFlagGroups.length > 1) {
+                    <button mat-icon-button type="button" color="warn" (click)="removeFlagGroup(gi)" matTooltip="Xóa nhóm này">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </div>
+                @for (cond of group.conditions; track $index; let ci = $index) {
+                  <div class="flag-condition-row">
+                    <mat-form-field appearance="outline" style="flex: 1">
+                      <mat-label>Cờ hệ thống</mat-label>
+                      <mat-select [(ngModel)]="cond.flagCode">
+                        <mat-option value="" disabled>— chọn cờ —</mat-option>
+                        @for (f of flags(); track f.id) {
+                          <mat-option [value]="f.flagCode">{{ f.flagCode }}{{ f.displayName && f.displayName !== f.flagCode ? ' — ' + f.displayName : '' }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                    <mat-slide-toggle [(ngModel)]="cond.expected" style="flex: 0 0 auto">
+                      {{ cond.expected ? 'BẬT' : 'TẮT' }}
+                    </mat-slide-toggle>
+                    <button mat-icon-button type="button" color="warn" (click)="removeFlagCondition(gi, ci)" matTooltip="Xóa điều kiện">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
                 }
-              </mat-select>
-            </mat-form-field>
-            @if (stepConditionNeedsExpectedValue()) {
-              <mat-form-field appearance="outline" style="flex: 1">
-                <mat-label>Giá trị mong đợi</mat-label>
-                <input matInput
-                       [type]="stepConditionExpectedValueIsNumeric() ? 'number' : 'text'"
-                       [(ngModel)]="edit.conditionExpectedValue"
-                       [placeholder]="stepConditionExpectedValueIsNumeric() ? 'vd: 3' : 'vd: active'" />
-              </mat-form-field>
+                @if (gi < edit.conditionFlagGroups.length - 1) {
+                  <p class="flag-group-or">— HOẶC —</p>
+                }
+                <button mat-button type="button" (click)="addFlagCondition(gi)">
+                  <mat-icon>add</mat-icon> Thêm điều kiện (AND)
+                </button>
+              </div>
             }
-          </div>
+            <button mat-stroked-button type="button" (click)="addFlagGroup()" class="full-width" style="margin-top: 4px;">
+              <mat-icon>add</mat-icon> Thêm nhóm HOẶC
+            </button>
+          } @else {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Field</mat-label>
+              <input matInput [(ngModel)]="edit.conditionSourceField" placeholder="vd: status hoặc shop.channelTypeId" />
+            </mat-form-field>
+          }
+          @if (!isSystemFlagCondition()) {
+            <div class="field-row">
+              <mat-form-field appearance="outline" style="flex: 1">
+                <mat-label>Toán tử</mat-label>
+                <mat-select [(ngModel)]="edit.conditionOperator">
+                  @for (op of conditionOperators; track op) {
+                    <mat-option [value]="op">{{ operatorLabel(op) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (stepConditionNeedsExpectedValue()) {
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Giá trị mong đợi</mat-label>
+                  <input matInput
+                         [type]="stepConditionExpectedValueIsNumeric() ? 'number' : 'text'"
+                         [(ngModel)]="edit.conditionExpectedValue"
+                         [placeholder]="stepConditionExpectedValueIsNumeric() ? 'vd: 3' : 'vd: active'" />
+                </mat-form-field>
+              }
+            </div>
+          }
+          }
           <div class="field-row">
             <mat-form-field appearance="outline" style="flex: 1">
               <mat-label>Nếu ĐÚNG → chạy</mat-label>
@@ -487,12 +653,85 @@
               <mat-label>Nếu SAI → chạy</mat-label>
               <mat-select [(ngModel)]="edit.nextStepOrderIfFalse">
                 <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                <mat-option [value]="-1">Báo lỗi (dừng chuỗi)</mat-option>
                 @for (o of availableStepOrders; track o) {
                   <mat-option [value]="o">Step {{ o }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
+              @if (edit.nextStepOrderIfFalse === -1) {
+                <mat-form-field appearance="outline" class="small-field">
+                  <mat-label>Mã lỗi</mat-label>
+                  <input matInput [(ngModel)]="edit.falseErrorCode" placeholder="vd: GW-TIER-SAI" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Thông điệp lỗi trả về client</mat-label>
+                  <input matInput [(ngModel)]="edit.falseErrorMessage" />
+                </mat-form-field>
+              }
+
           </div>
+        }
+      </div>
+
+      <!-- Re nhieu nhanh (switch): nhanh dau tien khop duoc chon, khong khop -> "Mac dinh" -->
+      <div class="sub-section">
+        <div class="sub-section-header">
+          <span>Rẽ nhiều nhánh (switch, tuỳ chọn)</span>
+          <mat-slide-toggle [checked]="switchEnabled()" (change)="toggleSwitch($event.checked)">Bật</mat-slide-toggle>
+        </div>
+        @if (switchEnabled()) {
+          <p class="condition-hint">
+            Các nhánh được kiểm tra theo thứ tự, nhánh đầu tiên khớp sẽ được chọn. Nếu không nhánh nào khớp thì chạy step mặc định bên dưới.
+          </p>
+          @for (branch of edit.switchBranches; track $index; let bi = $index) {
+            <div class="flag-group-box">
+              <div class="flag-group-header">
+                <span>Nhánh {{ bi + 1 }}</span>
+                <mat-form-field appearance="outline" class="small-field">
+                  <mat-label>Chạy step</mat-label>
+                  <mat-select [(ngModel)]="branch.nextStepOrder">
+                    @for (o of availableStepOrders; track o) {
+                      <mat-option [value]="o">Step {{ o }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button mat-icon-button type="button" color="warn" (click)="removeSwitchBranch(bi)" matTooltip="Xóa nhánh">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+              <app-condition-tree-editor
+                [value]="branch.groups"
+                (valueChange)="branch.groups = $event"
+                [stepOrders]="availableStepOrders"
+                [flags]="flags()"
+                [operators]="conditionOperators" />
+            </div>
+          }
+          <button mat-stroked-button type="button" (click)="addSwitchBranch()" style="margin-top: 4px;">
+            <mat-icon>add</mat-icon> Thêm nhánh
+          </button>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nếu không nhánh nào khớp → chạy</mat-label>
+            <mat-select [(ngModel)]="edit.nextStepOrderIfFalse">
+              <mat-option [value]="null">Kết thúc tại đây</mat-option>
+                <mat-option [value]="-1">Báo lỗi (dừng chuỗi)</mat-option>
+              @for (o of availableStepOrders; track o) {
+                <mat-option [value]="o">Step {{ o }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+              @if (edit.nextStepOrderIfFalse === -1) {
+                <mat-form-field appearance="outline" class="small-field">
+                  <mat-label>Mã lỗi</mat-label>
+                  <input matInput [(ngModel)]="edit.falseErrorCode" placeholder="vd: GW-TIER-SAI" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Thông điệp lỗi trả về client</mat-label>
+                  <input matInput [(ngModel)]="edit.falseErrorMessage" />
+                </mat-form-field>
+              }
+
         }
       </div>
 
@@ -700,6 +939,126 @@
     </div>
   }
 
+  @if (editingRule; as r) {
+    <div class="side-panel-header">
+      <h2>{{ editingRuleIndex === null ? 'Rule cờ mới' : 'Sửa Rule cờ' }}</h2>
+      <button mat-icon-button (click)="closePanel()"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="side-panel-body">
+      <div class="field-note field-note--warning" *ngIf="!header.sequential">
+        <mat-icon inline="true">warning</mat-icon>
+        <span>Rule cờ chỉ có hiệu lực khi endpoint <strong>Sequential = BẬT</strong> (bật ở header phía trên) - endpoint không tuần tự không có khái niệm "bắt đầu từ step nào".</span>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tên Rule</mat-label>
+        <input matInput [(ngModel)]="r.name" placeholder="vd: Luồng VIP" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="small-field">
+        <mat-label>Độ ưu tiên (số nhỏ đánh giá trước)</mat-label>
+        <input matInput type="number" [(ngModel)]="r.priority" />
+      </mat-form-field>
+      <div class="field-note">
+        <mat-icon inline="true">info</mat-icon>
+        <span>Rule khớp đầu tiên (priority nhỏ nhất) là quyết định - các Rule sau bị bỏ qua.</span>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-section-header">
+          <span>Nhóm điều kiện (trong nhóm = VÀ, giữa nhóm = HOẶC)</span>
+          <button mat-stroked-button type="button" (click)="addRuleGroup()">
+            <mat-icon>add</mat-icon> Thêm nhóm HOẶC
+          </button>
+        </div>
+        @for (group of r.groups; track $index; let gi = $index) {
+          <div class="rule-editor-group">
+            <div class="rule-editor-group-title">
+              Nhóm {{ gi + 1 }} — tất cả phải đúng
+              <span class="spacer"></span>
+              @if (r.groups.length > 1) {
+                <button mat-icon-button type="button" matTooltip="Xoá nhóm này" (click)="removeRuleGroup(gi)">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              }
+            </div>
+            @for (cond of group.conditions; track $index; let ci = $index) {
+              <div class="rule-editor-cond">
+                <mat-form-field appearance="outline" style="flex: 1">
+                  <mat-label>Cờ</mat-label>
+                  <mat-select [(ngModel)]="cond.flagCode">
+                    <mat-option value="" disabled>— chọn cờ —</mat-option>
+                    @for (f of flags(); track f.id) {
+                      <mat-option [value]="f.flagCode">{{ f.flagCode }} ({{ f.displayName }})</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button
+                  class="flag-toggle"
+                  type="button"
+                  [class.flag-toggle--on]="cond.expected"
+                  (click)="cond.expected = !cond.expected">
+                  <span class="flag-toggle-thumb"></span>
+                  <span class="flag-toggle-label">{{ cond.expected ? 'BẬT' : 'TẮT' }}</span>
+                </button>
+                @if (duplicateInGroup(gi, cond.flagCode, ci)) {
+                  <mat-icon class="rule-dup-warn" matTooltip="Cờ này đã chọn trong nhóm - trùng lặp vô nghĩa">warning_amber</mat-icon>
+                }
+                <button mat-icon-button type="button" color="warn" (click)="removeRuleCondition(gi, ci)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            }
+            <button mat-button type="button" (click)="addRuleCondition(gi)">
+              <mat-icon>add</mat-icon> Thêm điều kiện (AND)
+            </button>
+          </div>
+          @if (gi < r.groups.length - 1) {
+            <div class="rule-editor-or">— HOẶC —</div>
+          }
+        }
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Hành động khi Rule khớp</mat-label>
+        <mat-select [(ngModel)]="r.actionType">
+          <mat-option value="START_STEP">Bắt đầu chuỗi từ Step...</mat-option>
+          <mat-option value="BLOCK">Chặn request (trả lỗi)</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      @if (r.actionType === 'START_STEP') {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Chạy từ Step</mat-label>
+          <mat-select [(ngModel)]="r.startStepOrder">
+            @for (o of availableStepOrders; track o) {
+              <mat-option [value]="o">Step {{ o }} — {{ steps()[o - 1].name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      } @else {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Mã lỗi trả về client</mat-label>
+          <input matInput [(ngModel)]="r.blockErrorCode" placeholder="vd: GW-FEATURE-DISABLED" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Thông báo lỗi (tuỳ chọn)</mat-label>
+          <input matInput [(ngModel)]="r.blockMessage" placeholder="vd: Tính năng tạm dừng" />
+        </mat-form-field>
+      }
+    </div>
+    <div class="side-panel-footer">
+      @if (editingRuleIndex !== null) {
+        <button mat-button type="button" color="warn" (click)="removeRuleFromPanel()">
+          <mat-icon>delete</mat-icon> Xoá Rule
+        </button>
+      }
+      <span class="spacer"></span>
+      <button mat-button type="button" (click)="closePanel()">Đóng</button>
+      <button mat-flat-button color="primary" type="button" (click)="applyRulePanel()">Áp dụng</button>
+    </div>
+  }
+
   @if (tryPanelOpen) {
     <div class="side-panel-header">
       <h2>Thử nhanh (chưa cần lưu)</h2>
@@ -709,10 +1068,96 @@
       <app-try-panel
         [pathTemplate]="header.path"
         [queryParamNames]="tryQueryParamNames()"
+        [flagCodes]="tryFlagCodes()"
         [running]="tryRunning()"
         [outcome]="tryOutcome()"
         (run)="runAdhocTry($event)"
       />
+    </div>
+  }
+
+  @if (editingResponseMapping; as rm) {
+    <div class="side-panel-header">
+      <h2>Ghép field vào Response cuối</h2>
+      <button mat-icon-button type="button" (click)="closePanel()"><mat-icon>close</mat-icon></button>
+    </div>
+    <div class="side-panel-body">
+      @if (responseMappingSpec(); as spec) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Chế độ ghép</mat-label>
+          <mat-select [value]="spec.mode" (selectionChange)="setResponseMappingMode($event.value)">
+            <mat-option value="MERGE">MERGE — giữ kết quả engine, bổ sung field khai báo</mat-option>
+            <mat-option value="REPLACE">REPLACE — response cuối CHỈ gồm các field khai báo</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="field-note">
+          <mat-icon inline="true">info</mat-icon>
+          <span>Field nguồn đọc theo giá trị ĐÃ bóc <code>target</code> của step (nhất quán với Field Mapping). Muốn lấy field trong envelope BCCS (code/message/traceId...) thì để <code>target</code> của step đó rỗng. Field nguồn thiếu → bỏ qua, không lỗi.</span>
+        </div>
+        @if (spec.mode === 'REPLACE') {
+          <div class="field-note field-note--warning">
+            <mat-icon inline="true">warning</mat-icon>
+            <span>REPLACE: kết quả tổng hợp engine bị bỏ - response cuối gồm ĐÚNG VÀ CHỈ các field khai báo trong danh sách dưới.</span>
+          </div>
+        }
+
+        <div class="sub-section">
+          <div class="sub-section-header">
+            <span>Danh sách ghép field</span>
+          </div>
+          @for (m of spec.mappings; track $index; let mi = $index) {
+            <div class="rm-row" (click)="openResponseMappingPanel(mi)">
+              <span class="rm-row-step">Step {{ m.sourceStepOrder }}</span>
+              <code>{{ m.sourceField }}</code>
+              <mat-icon inline="true">arrow_forward</mat-icon>
+              <code>{{ m.targetField }}</code>
+            </div>
+          } @empty {
+            <p class="empty-hint">Chưa có dòng ghép nào — bấm "Thêm dòng ghép" bên dưới.</p>
+          }
+          <button mat-stroked-button type="button" (click)="addResponseMapping()">
+            <mat-icon>add</mat-icon> Thêm dòng ghép
+          </button>
+        </div>
+
+        <div class="sub-section">
+          <div class="sub-section-header"><span>Dòng đang sửa</span></div>
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Step nguồn</mat-label>
+              <mat-select [(ngModel)]="rm.sourceStepOrder">
+                @for (o of availableStepOrders; track o) {
+                  <mat-option [value]="o">Step {{ o }} — {{ steps()[o - 1].name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Field nguồn (dot-path, hỗ trợ [N])</mat-label>
+              <input matInput [(ngModel)]="rm.sourceField" placeholder="vd: data.isdn" />
+            </mat-form-field>
+          </div>
+          <div class="field-row">
+            <mat-form-field appearance="outline" style="flex: 1">
+              <mat-label>Field trong response cuối</mat-label>
+              <input matInput [(ngModel)]="rm.targetField" placeholder="vd: data.isdn — để có tiền tố data.* để ghi vào trong data" />
+            </mat-form-field>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="side-panel-footer">
+      @if (editingResponseMappingIndex !== null) {
+        <button mat-button type="button" color="warn" (click)="removeResponseMappingAt(editingResponseMappingIndex)">
+          <mat-icon>delete</mat-icon> Xoá dòng
+        </button>
+      }
+      <span class="spacer"></span>
+      <button mat-button type="button" color="warn" (click)="disableResponseMapping()">Tắt ghép field</button>
+      <button mat-button type="button" (click)="closePanel()">Đóng</button>
+      <button mat-flat-button color="primary" type="button" (click)="applyResponseMappingPanel()">Áp dụng</button>
     </div>
   }
 </aside>

@@ -39,7 +39,7 @@ class ResilienceConfigTest {
     private final CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults();
     private final BulkheadRegistry bulkheadRegistry = BulkheadRegistry.ofDefaults();
     private final UpstreamHttpExecutor upstreamHttpExecutor = Mockito.mock(UpstreamHttpExecutor.class);
-    private final ResilienceConfig config = new ResilienceConfig(circuitBreakerRegistry, bulkheadRegistry, upstreamHttpExecutor);
+    private final ResilienceConfig config = new ResilienceConfig(circuitBreakerRegistry, bulkheadRegistry, upstreamHttpExecutor, java.util.List.of());
 
     @Test
     void bulkheadTuChoiLenhGoi_goiRecordBulkheadRejectionDungTenBulkhead() throws Exception {

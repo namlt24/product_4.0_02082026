@@ -1,0 +1,25 @@
+-- ============================================================================
+-- Cho phep rẽ nhánh theo NHIỀU ĐIỀU KIỆN AND/OR tren du lieu REQUEST_BODY/
+-- STEP_RESPONSE thuc (V6) - tong quat hoa co che AND-trong-nhom/OR-giua-nhom
+-- da co san cho SYSTEM_FLAG (V5b, cot CONDITION_FLAG_GROUPS) sang cho du lieu
+-- request/response thuc, xem StepConditionGroupsDto/ConditionRuleDto +
+-- CompositeOrchestratorEngine.evaluateCondition()/evaluateRuleGroups().
+--
+-- LUU Y SO HIEU: luc viet file nay phat hien 2 bang moi (GWM_ALERT/
+-- GWM_ALERT_EMAIL) + cot BACKEND_STEP.CONDITION_FLAG_GROUPS (tinh nang canh
+-- bao qua email) da duoc them vao code nhung CHUA co file migration tuong
+-- ung (le ra la V4) - KHONG dung V4 o day de tranh dung so hieu, coi nhu V4
+-- da danh rieng cho phan do, nguoi so huu tinh nang alert tu viet V4__...sql
+-- bu lai rieng.
+--
+-- QUY TRINH BAN GIAO GIONG HET V1/V2/V3 (xem huong dan day du trong
+-- V1__baseline.sql) - gui file NAY cho DBA cua doi NEN TANG, DBA tu chay tren
+-- schema da co san (V1+V2+V3, VA V4 cua tinh nang alert neu da ban giao
+-- truoc), sau do cap lai quyen DML cho user RUNTIME (khong doi gi ve quyen han).
+--
+-- Nullable CLOB, KHONG DEFAULT - an toan them vao bang da co du lieu (moi step
+-- hien co tu dong = NULL = tiep tuc dung dieu kien 1 co don le/SYSTEM_FLAG
+-- nhu truoc, khong doi hanh vi).
+-- ============================================================================
+
+ALTER TABLE "BACKEND_STEP" ADD "CONDITION_GROUPS" CLOB;

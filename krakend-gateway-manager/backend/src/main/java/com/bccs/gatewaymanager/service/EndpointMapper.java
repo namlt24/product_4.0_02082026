@@ -131,6 +131,8 @@ public class EndpointMapper {
                 .sourceField(m.sourceField())
                 .sourceArrayField(m.sourceArrayField())
                 .sourceElementField(m.sourceElementField())
+                .filterField(m.filterField())
+                .filterValue(m.filterValue())
                 .constantValue(m.constantValue())
                 .targetStepOrder(m.targetStepOrder())
                 .targetType(m.targetType())
@@ -202,7 +204,7 @@ public class EndpointMapper {
                         m.getId(), m.getSourceType(), m.getSourceStepOrder(), m.getSourceField(),
                         m.getSourceArrayField(), m.getSourceElementField(), m.getConstantValue(),
                         m.getTargetStepOrder(), m.getTargetType(), m.getTargetParamName(),
-                        m.getMappingOrder(), m.getTargetContext()))
+                        m.getMappingOrder(), m.getTargetContext(), m.getFilterField(), m.getFilterValue()))
                 .toList();
 
         return new EndpointResponseDto(

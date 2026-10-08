@@ -235,7 +235,7 @@ public class ConfigExportImportService {
         List<FieldMappingDto> mappings = ep.mappings().stream()
                 .map(m -> new FieldMappingDto(null, m.sourceType(), m.sourceStepOrder(), m.sourceField(),
                         m.sourceArrayField(), m.sourceElementField(), m.constantValue(), m.targetStepOrder(), m.targetType(),
-                        m.targetParamName(), m.mappingOrder(), m.targetContext()))
+                        m.targetParamName(), m.mappingOrder(), m.targetContext(), m.filterField(), m.filterValue()))
                 .toList();
 
         return new EndpointRequestDto(ep.name(), ep.description(), ep.path(), ep.method(),

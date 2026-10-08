@@ -1204,6 +1204,8 @@ public class CompositeOrchestratorEngine {
                     JsonPathUtil.aggregateArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(), m.sourceElementField()));
             case CONSTANT -> constantValueAsJson(m.constantValue());
             case STEP_RESPONSE_ARRAY_MERGE -> mergeArrayIntoObject(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField());
+            case STEP_RESPONSE_ARRAY_FIND -> orDefault(JsonPathUtil.findInArray(ctx.getStepResult(m.sourceStepOrder()),
+                    m.sourceArrayField(), m.filterField(), m.filterValue(), m.sourceElementField()), objectMapper.nullNode());
             // SYSTEM_FLAG CHI dung cho dieu kien re nhanh (conditionSourceType) -
             // validate luc luu da chan khoi xuat hien trong FieldMapping thuong;
             // neu du lieu cu/sua tay lot qua thi bao loi ro rang, khong am tham.
@@ -1278,6 +1280,14 @@ public class CompositeOrchestratorEngine {
             // chi con du lieu cu/import tay lot qua validate, tra ve dang JSON string cua object
             // gop thay vi throw/tra null am tham.
             return mergeArrayIntoObject(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField()).toString();
+        }
+        if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND) {
+            JsonNode node = JsonPathUtil.findInArray(ctx.getStepResult(m.sourceStepOrder()), m.sourceArrayField(),
+                    m.filterField(), m.filterValue(), m.sourceElementField());
+            if (node == null || node.isNull()) {
+                return null;
+            }
+            return node.isTextual() ? node.asText() : node.toString();
         }
         JsonNode node = m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.REQUEST_BODY
                 ? JsonPathUtil.getByDotPath(ctx.requestBody(), m.sourceField())

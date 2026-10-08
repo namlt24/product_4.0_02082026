@@ -1086,6 +1086,83 @@ class CompositeOrchestratorEngineTest {
         assertThat(bodyCaptor.getValue().size()).isEqualTo(0);
     }
 
+    // ---- STEP_RESPONSE_ARRAY_FIND (nguon FieldMapping moi - tim PHAN TU khop 1 dieu kien
+    // loc trong mang, trich field khac tu DUNG phan tu do) - case that: mang characteristic
+    // co "code"/"value" rieng, can lay "value" cua phan tu co code dung muc tieu. ----
+
+    @Test
+    void arrayFindMapping_timThayPhanTuKhop_trichDungFieldCuaPhanTuDo() {
+        stubCall(up1, json("{\"data\":["
+                + "{\"productSpecCharDTO\":{\"code\":\"SUPPORT_STATIC_IP\"},\"productSpecCharValueDTO\":{\"value\":\"1\"}},"
+                + "{\"productSpecCharDTO\":{\"code\":\"GET_IP_BY_DOMAIN\"},\"productSpecCharValueDTO\":{\"value\":\"2029\"}}"
+                + "]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "productSpecCharValueDTO.value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null,
+                "productSpecCharDTO.code", "GET_IP_BY_DOMAIN");
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300, List.of(), null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<JsonNode> bodyCaptor = ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("domain").asText()).isEqualTo("2029");
+    }
+
+    @Test
+    void arrayFindMapping_khongPhanTuNaoKhop_traNullKhongThrow() {
+        stubCall(up1, json("{\"data\":[{\"productSpecCharDTO\":{\"code\":\"SUPPORT_STATIC_IP\"},\"productSpecCharValueDTO\":{\"value\":\"1\"}}]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "productSpecCharValueDTO.value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null,
+                "productSpecCharDTO.code", "GET_IP_BY_DOMAIN");
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300, List.of(), null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<JsonNode> bodyCaptor = ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("domain").isNull()).isTrue();
+    }
+
+    @Test
+    void arrayFindMapping_khongTimThayMang_traNullKhongThrow() {
+        stubCall(up1, json("{}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null, "code", "GET_IP_BY_DOMAIN");
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300, List.of(), null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<JsonNode> bodyCaptor = ArgumentCaptor.forClass(JsonNode.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), any(), any(), bodyCaptor.capture(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
+        assertThat(bodyCaptor.getValue().get("domain").isNull()).isTrue();
+    }
+
+    @Test
+    void arrayFindMapping_targetTypeQuery_traChuoiTextCuaPhanTuKhop() {
+        stubCall(up1, json("{\"data\":[{\"code\":\"A\",\"value\":\"x1\"},{\"code\":\"B\",\"value\":\"x2\"}]}"));
+        stubCall(up2, json("{\"ok\":true}"));
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "value", null, 2, MappingTargetType.QUERY, "v", 0, null, "code", "B");
+        EndpointResponseDto config = new EndpointResponseDto("ep-1", "test", null, "/x", GatewayMethod.GET, true, "json",
+                List.of(plainStep(1, "u1"), plainStep(2, "u2")), List.of(mapping), null, null, false, 86400, false, false, 300, List.of(), null);
+
+        engine.handle(config, Map.of(), Map.of(), null);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(upstreamHttpExecutor).call(eq(up2), any(), urlCaptor.capture(), any(), any(),
+                anyBoolean(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
+        assertThat(urlCaptor.getValue()).contains("v=x2");
+    }
+
     // ---- onErrorStepOrder (nang luc moi - fallback khi step LOI, doc lap voi conditionOperator) ----
 
     @Test

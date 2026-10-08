@@ -69,9 +69,20 @@ public class FieldMapping {
     @Column(name = "source_array_field")
     private String sourceArrayField;
 
-    /** sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: ten field lay tu MOI phan tu cua mang, vi du "code". */
+    /**
+     * sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: ten field lay tu MOI phan tu cua mang, vi du "code".
+     * sourceType=STEP_RESPONSE_ARRAY_FIND: ten field (dot-path) trich tu PHAN TU KHOP (vi du "productSpecCharValueDTO.value").
+     */
     @Column(name = "source_element_field")
     private String sourceElementField;
+
+    /** sourceType=STEP_RESPONSE_ARRAY_FIND: dot-path (TINH TU PHAN TU) can so sanh de tim phan tu khop, vi du "productSpecCharDTO.code". */
+    @Column(name = "filter_field")
+    private String filterField;
+
+    /** sourceType=STEP_RESPONSE_ARRAY_FIND: gia tri VAN BAN can khop voi filterField, vi du "GET_IP_BY_DOMAIN". */
+    @Column(name = "filter_value")
+    private String filterValue;
 
     /**
      * sourceType=CONSTANT: gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response

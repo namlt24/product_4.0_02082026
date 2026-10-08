@@ -25,6 +25,13 @@ export type FieldMappingSourceType =
   | 'STEP_RESPONSE_ARRAY_AGGREGATE'
   | 'CONSTANT'
   | 'STEP_RESPONSE_ARRAY_MERGE'
+  /**
+   * Tim PHAN TU DAU TIEN trong 1 mang co filterField khop VAN BAN voi filterValue,
+   * roi tra ve sourceElementField cua DUNG phan tu do (khac ARRAY_AGGREGATE lay cua
+   * TAT CA phan tu). Vi du: mang "data" co "code"/"value" rieng, can lay "value" cua
+   * phan tu co code="X" ma khong biet truoc vi tri trong mang.
+   */
+  | 'STEP_RESPONSE_ARRAY_FIND'
   /** V5 - CHI dung cho conditionSourceType cua re nhanh P1-5: dieu kien doc CỜ hệ thống. */
   | 'SYSTEM_FLAG'
   /** CHI dung cho dieu kien re nhanh: header cua client (khong phai FieldMapping). */
@@ -230,10 +237,17 @@ export interface FieldMapping {
   sourceField?: string | null;
   /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: duong dan toi mang, vi du "data". */
   sourceArrayField?: string | null;
-  /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: field lay tu MOI phan tu, vi du "code". */
+  /**
+   * Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_AGGREGATE: field lay tu MOI phan tu, vi du "code".
+   * Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_FIND: field lay tu PHAN TU KHOP, vi du "value".
+   */
   sourceElementField?: string | null;
   /** Bat buoc khi sourceType=CONSTANT: gia tri hang so co dinh, khong doc tu request/response. */
   constantValue?: string | null;
+  /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_FIND: field (tinh tu phan tu) can so sanh de tim phan tu khop, vi du "code". */
+  filterField?: string | null;
+  /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_FIND: gia tri can khop voi filterField, vi du "GET_IP_BY_DOMAIN". */
+  filterValue?: string | null;
   targetStepOrder: number;
   targetType: MappingTargetType;
   targetParamName: string;
@@ -531,6 +545,7 @@ export const FIELD_MAPPING_SOURCE_TYPES: FieldMappingSourceType[] = [
   'STEP_RESPONSE_ARRAY_AGGREGATE',
   'CONSTANT',
   'STEP_RESPONSE_ARRAY_MERGE',
+  'STEP_RESPONSE_ARRAY_FIND',
 ];
 
 /** Endpoint rong dung lam gia tri khoi tao cho form "tao moi". */
@@ -630,6 +645,8 @@ export function emptyMapping(sourceStepOrder: number, targetStepOrder: number): 
     sourceArrayField: '',
     sourceElementField: '',
     constantValue: '',
+    filterField: '',
+    filterValue: '',
     targetStepOrder,
     targetType: 'QUERY',
     targetParamName: '',

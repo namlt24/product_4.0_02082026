@@ -306,6 +306,59 @@ class EndpointServiceTest {
                 .isEqualTo("GW-003");
     }
 
+    // ---- STEP_RESPONSE_ARRAY_FIND (nguon FieldMapping moi - tim PHAN TU khop dieu kien loc
+    // trong mang, trich field khac tu DUNG phan tu do): can sourceStepOrder + sourceArrayField +
+    // filterField + filterValue + sourceElementField, ca 4 field deu bat buoc. ----
+
+    @Test
+    void create_arrayFindMapping_du4FieldBatBuoc_thanhCong() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "productSpecCharValueDTO.value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null,
+                "productSpecCharDTO.code", "GET_IP_BY_DOMAIN");
+        EndpointResponseDto result = service.create(requestWithMapping(mapping));
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void create_rejectsArrayFindMapping_thieuSourceArrayField() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "  ", "value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null, "code", "GET_IP_BY_DOMAIN");
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsArrayFindMapping_thieuFilterField() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null, null, "GET_IP_BY_DOMAIN");
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsArrayFindMapping_thieuFilterValue() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", "value", null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null, "code", "  ");
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
+    @Test
+    void create_rejectsArrayFindMapping_thieuSourceElementField() {
+        FieldMappingDto mapping = new FieldMappingDto(null, FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND, 1, null,
+                "data", null, null, 2, MappingTargetType.BODY_FIELD, "domain", 0, null, "code", "GET_IP_BY_DOMAIN");
+        assertThatThrownBy(() -> service.create(requestWithMapping(mapping)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo("GW-003");
+    }
+
     // ---- Finding #3: cycle-detection phai chan create()/update() TRUOC khi reload cache ----
 
     @Test

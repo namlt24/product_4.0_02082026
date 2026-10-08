@@ -128,8 +128,6 @@ export class EndpointVersionsComponent implements OnInit {
         return `Gộp mảng Step ${m.sourceStepOrder} · ${m.sourceArrayField}[].${m.sourceElementField}`;
       case 'STEP_RESPONSE_ARRAY_MERGE':
         return `Gộp N object Step ${m.sourceStepOrder} · ${m.sourceArrayField}[] → 1 object`;
-      case 'STEP_RESPONSE_ARRAY_FIND':
-        return `Tìm trong mảng Step ${m.sourceStepOrder} · ${m.sourceArrayField}[${m.filterField}=${m.filterValue}].${m.sourceElementField}`;
       case 'CONSTANT':
         return `Hằng số cố định · ${m.constantValue}`;
       default:

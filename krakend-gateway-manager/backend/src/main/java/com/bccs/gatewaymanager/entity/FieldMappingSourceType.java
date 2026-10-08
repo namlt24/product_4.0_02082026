@@ -51,22 +51,6 @@ public enum FieldMappingSourceType {
     STEP_RESPONSE_ARRAY_MERGE,
 
     /**
-     * Tim PHAN TU DAU TIEN trong 1 mang o response step {@code sourceStepOrder} co gia
-     * tri tai {@code filterField} (dot-path TINH TU PHAN TU) khop VAN BAN voi
-     * {@code filterValue}, roi tra ve gia tri tai {@code sourceElementField} (dot-path,
-     * cung TINH TU PHAN TU DO) - KHAC voi {@link #STEP_RESPONSE_ARRAY_AGGREGATE} (lay
-     * field cua TAT CA phan tu, khong loc) va {@link #STEP_RESPONSE_ARRAY_MERGE} (gop
-     * toan bo, khong tim theo dieu kien). Dung {@code sourceArrayField} (duong dan toi
-     * mang), {@code filterField}/{@code filterValue} (dieu kien loc) va
-     * {@code sourceElementField} (field trich tu phan tu khop). Khong tim thay mang,
-     * khong co phan tu khop, hoac field trich khong ton tai -> null (graceful, khong
-     * throw) - vi du dien hinh: mang "data" gom cac object co "productSpecCharDTO.code"/
-     * "productSpecCharValueDTO.value" rieng, can lay "value" cua DUNG phan tu co
-     * code="GET_IP_BY_DOMAIN" ma khong biet truoc vi tri trong mang.
-     */
-    STEP_RESPONSE_ARRAY_FIND,
-
-    /**
      * CỜ NGHIỆP VỤ he thong (V5) - CHI dung cho conditionSourceType cua re nhanh
      * P1-5 (khong dung lam nguon FieldMapping thuong): conditionSourceField = ma
      * cờ (vd "VIP"), conditionExpectedValue = "true"/"false". Engine doc gia tri

@@ -3,7 +3,6 @@ package com.bccs.gatewaymanager.dto;
 import com.bccs.gatewaymanager.entity.FieldMappingSourceType;
 import com.bccs.gatewaymanager.entity.MappingTargetContext;
 import com.bccs.gatewaymanager.entity.MappingTargetType;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -54,16 +53,8 @@ public record FieldMappingDto(
          * Payload cu (chua biet field nay) tu nhan MAIN qua compact constructor,
          * dung y het cach sourceType mac dinh STEP_RESPONSE.
          */
-        MappingTargetContext targetContext,
-
-        /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_FIND - xem FieldMapping.filterField. */
-        String filterField,
-
-        /** Bat buoc khi sourceType=STEP_RESPONSE_ARRAY_FIND - xem FieldMapping.filterValue. */
-        String filterValue
+        MappingTargetContext targetContext
 ) {
-    /** Canonical constructor (14 field) la constructor duy nhat Jackson duoc dung de doc JSON. */
-    @JsonCreator
     public FieldMappingDto {
         if (sourceType == null) {
             sourceType = FieldMappingSourceType.STEP_RESPONSE;
@@ -71,14 +62,5 @@ public record FieldMappingDto(
         if (targetContext == null) {
             targetContext = MappingTargetContext.MAIN;
         }
-    }
-
-    /** Dang 12 field (truoc khi co STEP_RESPONSE_ARRAY_FIND) - giu tuong thich cac cho goi cu. */
-    public FieldMappingDto(String id, FieldMappingSourceType sourceType, Integer sourceStepOrder, String sourceField,
-                            String sourceArrayField, String sourceElementField, String constantValue,
-                            int targetStepOrder, MappingTargetType targetType, String targetParamName,
-                            int mappingOrder, MappingTargetContext targetContext) {
-        this(id, sourceType, sourceStepOrder, sourceField, sourceArrayField, sourceElementField, constantValue,
-                targetStepOrder, targetType, targetParamName, mappingOrder, targetContext, null, null);
     }
 }

@@ -94,12 +94,7 @@ export class EndpointFormComponent implements OnInit {
   /** Nguon dieu kien chi cho phep Step truoc/Body client/Cờ hệ thống (V5) - Gop mang khong co y nghia cho 1 dieu kien dung/sai,
    * Query param cua client / hang so co dinh KHONG dung cho re nhanh (ngoai pham vi, chi dung cho FieldMapping thuong). */
   readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
-    (t) =>
-      t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' &&
-      t !== 'QUERY_PARAM' &&
-      t !== 'CONSTANT' &&
-      t !== 'STEP_RESPONSE_ARRAY_MERGE' &&
-      t !== 'STEP_RESPONSE_ARRAY_FIND',
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT' && t !== 'STEP_RESPONSE_ARRAY_MERGE',
   );
   /** V5 - Danh sách cờ của team cho điều kiện sourceType=SYSTEM_FLAG. */
   readonly flags = signal<import('../../models/flag.model').GwmFlag[]>([]);
@@ -288,8 +283,6 @@ export class EndpointFormComponent implements OnInit {
       sourceArrayField: [m.sourceArrayField ?? ''],
       sourceElementField: [m.sourceElementField ?? ''],
       constantValue: [m.constantValue ?? ''],
-      filterField: [m.filterField ?? ''],
-      filterValue: [m.filterValue ?? ''],
       targetStepOrder: [m.targetStepOrder, Validators.required],
       targetType: [m.targetType, Validators.required],
       targetParamName: [m.targetParamName, Validators.required],
@@ -383,15 +376,10 @@ export class EndpointFormComponent implements OnInit {
     return sourceType !== 'REQUEST_BODY' && sourceType !== 'QUERY_PARAM' && sourceType !== 'CONSTANT';
   }
 
-  /** true neu mapping nay dung sourceField don (STEP_RESPONSE/REQUEST_BODY), khong phai gop mang/hang so/tim mang. */
+  /** true neu mapping nay dung sourceField don (STEP_RESPONSE/REQUEST_BODY), khong phai gop mang/hang so. */
   mappingUsesSourceField(index: number): boolean {
     const sourceType = this.mappingGroup(index).get('sourceType')!.value;
-    return (
-      sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' &&
-      sourceType !== 'CONSTANT' &&
-      sourceType !== 'STEP_RESPONSE_ARRAY_MERGE' &&
-      sourceType !== 'STEP_RESPONSE_ARRAY_FIND'
-    );
+    return sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && sourceType !== 'CONSTANT' && sourceType !== 'STEP_RESPONSE_ARRAY_MERGE';
   }
 
   mappingUsesArrayAggregate(index: number): boolean {
@@ -405,15 +393,6 @@ export class EndpointFormComponent implements OnInit {
    */
   mappingUsesArrayMerge(index: number): boolean {
     return this.mappingGroup(index).get('sourceType')!.value === 'STEP_RESPONSE_ARRAY_MERGE';
-  }
-
-  /**
-   * sourceType=STEP_RESPONSE_ARRAY_FIND - tim PHAN TU khop filterField/filterValue trong 1
-   * mang (sourceArrayField, dung chung UI voi ARRAY_AGGREGATE/ARRAY_MERGE), roi trich
-   * sourceElementField tu DUNG phan tu do.
-   */
-  mappingUsesArrayFind(index: number): boolean {
-    return this.mappingGroup(index).get('sourceType')!.value === 'STEP_RESPONSE_ARRAY_FIND';
   }
 
   /** sourceType=CONSTANT - gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */
@@ -840,8 +819,6 @@ export class EndpointFormComponent implements OnInit {
       sourceArrayField: m.sourceArrayField || null,
       sourceElementField: m.sourceElementField || null,
       constantValue: m.constantValue || null,
-      filterField: m.filterField || null,
-      filterValue: m.filterValue || null,
       targetStepOrder: m.targetStepOrder,
       targetType: m.targetType,
       targetParamName: m.targetParamName,

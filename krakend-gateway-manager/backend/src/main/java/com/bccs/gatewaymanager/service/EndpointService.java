@@ -356,14 +356,6 @@ public class EndpointService {
                                 "FieldMapping (sourceType=STEP_RESPONSE_ARRAY_MERGE) chi dung duoc voi targetType=BODY_FIELD.");
                     }
                 }
-                if (m.sourceType() == com.bccs.gatewaymanager.entity.FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND
-                        && ((m.sourceArrayField() == null || m.sourceArrayField().isBlank())
-                            || (m.filterField() == null || m.filterField().isBlank())
-                            || (m.filterValue() == null || m.filterValue().isBlank())
-                            || (m.sourceElementField() == null || m.sourceElementField().isBlank()))) {
-                    throw new BusinessException("GW-003", "FieldMapping (sourceType=STEP_RESPONSE_ARRAY_FIND) thieu "
-                            + "sourceArrayField/filterField/filterValue/sourceElementField.");
-                }
             }
         }
 

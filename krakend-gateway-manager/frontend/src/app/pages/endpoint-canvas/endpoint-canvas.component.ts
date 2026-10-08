@@ -280,12 +280,7 @@ export class EndpointCanvasComponent implements OnInit {
    * chinh no vo nghia) - ngoai pham vi, chi dung cho FieldMapping thuong.
    * V5: THEM 'SYSTEM_FLAG' - dieu kien doc CỜ hệ thống (conditionSourceField = mã cờ). */
   readonly conditionSourceTypes = FIELD_MAPPING_SOURCE_TYPES.filter(
-    (t) =>
-      t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' &&
-      t !== 'QUERY_PARAM' &&
-      t !== 'CONSTANT' &&
-      t !== 'STEP_RESPONSE_ARRAY_MERGE' &&
-      t !== 'STEP_RESPONSE_ARRAY_FIND',
+    (t) => t !== 'STEP_RESPONSE_ARRAY_AGGREGATE' && t !== 'QUERY_PARAM' && t !== 'CONSTANT' && t !== 'STEP_RESPONSE_ARRAY_MERGE',
   );
 
   /** V5 - Nguồn điều kiện là CỜ hệ thống: Field = select mã cờ (không phải dot-path), bỏ Step nguồn. */
@@ -1209,8 +1204,6 @@ export class EndpointCanvasComponent implements OnInit {
       sourceArrayField: '',
       sourceElementField: '',
       constantValue: '',
-      filterField: '',
-      filterValue: '',
       targetStepOrder: target,
       targetType: 'QUERY',
       targetParamName: '',
@@ -1231,8 +1224,7 @@ export class EndpointCanvasComponent implements OnInit {
     return (
       this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_AGGREGATE' &&
       this.editingMapping?.sourceType !== 'CONSTANT' &&
-      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_MERGE' &&
-      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_FIND'
+      this.editingMapping?.sourceType !== 'STEP_RESPONSE_ARRAY_MERGE'
     );
   }
 
@@ -1248,15 +1240,6 @@ export class EndpointCanvasComponent implements OnInit {
    */
   mappingUsesArrayMerge(): boolean {
     return this.editingMapping?.sourceType === 'STEP_RESPONSE_ARRAY_MERGE';
-  }
-
-  /**
-   * sourceType=STEP_RESPONSE_ARRAY_FIND - tim PHAN TU khop filterField/filterValue trong 1
-   * mang (sourceArrayField, dung chung UI voi ARRAY_AGGREGATE/ARRAY_MERGE), roi trich
-   * sourceElementField tu DUNG phan tu do.
-   */
-  mappingUsesArrayFind(): boolean {
-    return this.editingMapping?.sourceType === 'STEP_RESPONSE_ARRAY_FIND';
   }
 
   /** sourceType=CONSTANT - gia tri hang so co dinh khai bao truc tiep, khong doc tu request/response nao. */

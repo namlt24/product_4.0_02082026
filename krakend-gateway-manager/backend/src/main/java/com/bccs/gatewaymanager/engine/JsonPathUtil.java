@@ -97,35 +97,6 @@ public final class JsonPathUtil {
         return result;
     }
 
-    /**
-     * Tim PHAN TU DAU TIEN trong mang tai arrayPath co gia tri tai filterField (dot-path
-     * TINH TU PHAN TU, khong phai goc) khop VAN BAN voi filterValue, roi tra ve gia tri
-     * tai extractField (dot-path, cung TINH TU PHAN TU DO). Khong tim thay mang, khong
-     * co phan tu khop, hoac extractField khong ton tai -> null (khong throw, cung triet
-     * ly graceful null voi getByDotPath()/aggregateArray()). Vi du: mang "data" gom cac
-     * object co "productSpecCharDTO.code"/"productSpecCharValueDTO.value" rieng -
-     * findInArray(root, "data", "productSpecCharDTO.code", "GET_IP_BY_DOMAIN",
-     * "productSpecCharValueDTO.value") lay dung "value" cua PHAN TU co code do - dung cho
-     * FieldMappingSourceType.STEP_RESPONSE_ARRAY_FIND.
-     */
-    public static JsonNode findInArray(JsonNode root, String arrayPath, String filterField, String filterValue, String extractField) {
-        JsonNode arrayNode = getByDotPath(root, arrayPath);
-        if (arrayNode == null || !arrayNode.isArray()) {
-            return null;
-        }
-        for (JsonNode element : arrayNode) {
-            JsonNode filterNode = getByDotPath(element, filterField);
-            if (filterNode == null || filterNode.isNull()) {
-                continue;
-            }
-            String text = filterNode.isTextual() ? filterNode.asText() : filterNode.toString();
-            if (text.equals(filterValue)) {
-                return getByDotPath(element, extractField);
-            }
-        }
-        return null;
-    }
-
     /** Set 1 field vao ObjectNode (dung khi dung body gui di step sau qua targetType=BODY_FIELD). */
     public static void setField(ObjectNode target, String fieldName, JsonNode value) {
         target.set(fieldName, value);

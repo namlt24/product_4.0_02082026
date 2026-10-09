@@ -1,0 +1,39 @@
+{
+  "name": "@mbccs/service-bccs",
+  "version": "1.0.0",
+  "description": "BCCS domain data layer",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./ekyc": {
+      "types": "./dist/ekyc/index.d.ts",
+      "import": "./dist/ekyc/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "pnpm clean && oxlint src && tsc --project tsconfig.build.json",
+    "dev": "tsc --project tsconfig.build.json --watch --preserveWatchOutput",
+    "test": "echo \"no tests yet\""
+  },
+  "dependencies": {
+    "@mbccs/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "oxlint": "^1.77.0",
+    "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

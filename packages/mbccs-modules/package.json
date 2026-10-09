@@ -1,0 +1,65 @@
+{
+  "name": "@mbccs/modules-bccs",
+  "version": "1.0.0",
+  "description": "BCCS reusable miniapp flows",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./otp": {
+      "types": "./dist/otp/index.d.ts",
+      "import": "./dist/otp/index.js"
+    },
+    "./address": {
+      "types": "./dist/address/index.d.ts",
+      "import": "./dist/address/index.js"
+    },
+    "./identity": {
+      "types": "./dist/identity/index.d.ts",
+      "import": "./dist/identity/index.js"
+    },
+    "./result": {
+      "types": "./dist/result/index.d.ts",
+      "import": "./dist/result/index.js"
+    },
+    "./detail": {
+      "types": "./dist/detail/index.d.ts",
+      "import": "./dist/detail/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "pnpm clean && oxlint src && tsc --project tsconfig.build.json",
+    "dev": "tsc --project tsconfig.build.json --watch --preserveWatchOutput"
+  },
+  "dependencies": {
+    "@mbccs/core": "^1.0.0",
+    "@mbccs/design-system": "^1.0.0",
+    "@mbccs/runtime": "^1.0.0",
+    "@mbccs/service-bccs": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0 <20.0.0",
+    "react-dom": ">=19.0.0 <20.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "oxlint": "^1.77.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

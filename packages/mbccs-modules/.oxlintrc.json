@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@mbccs/core",
+            "message": "Use subpaths only: @mbccs/core/common, @mbccs/core/jsapi, @mbccs/core/network, @mbccs/core/parse."
+          },
+          {
+            "name": "@mbccs/design-system",
+            "message": "Use subpaths only: @mbccs/design-system/components, @mbccs/design-system/foundation, @mbccs/design-system/interaction, …"
+          },
+          {
+            "name": "@mbccs/runtime",
+            "message": "Use subpaths only: @mbccs/runtime/chrome, @mbccs/runtime/feedback/*, …"
+          },
+          {
+            "name": "@mbccs/service-bccs",
+            "message": "Use subpaths only: @mbccs/service-bccs/ekyc."
+          }
+        ]
+      }
+    ]
+  },
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**"]
+}

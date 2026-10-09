@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@mbccs/core",
+            "message": "Use subpaths only: @mbccs/core/common, @mbccs/core/jsapi, @mbccs/core/network, @mbccs/core/parse."
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["@mbccs/design-system", "@mbccs/design-system/**", "@mbccs/runtime", "@mbccs/runtime/**", "@mbccs/modules-bccs", "@mbccs/modules-bccs/**"],
+            "message": "service-bccs depends on @mbccs/core only."
+          }
+        ]
+      }
+    ]
+  },
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**"]
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "warn"
+  },
+  "plugins": ["react", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@mbccs/core",
+            "message": "Use subpaths only: @mbccs/core/core, @mbccs/core/common, @mbccs/core/network, @mbccs/core/jsapi, @mbccs/core/jsapi/bindings, @mbccs/core/parse, @mbccs/core/context. See mbccs-core README."
+          },
+          {
+            "name": "@mbccs/design-system",
+            "message": "Use subpaths only: @mbccs/design-system/components, @mbccs/design-system/foundation, @mbccs/design-system/interaction, @mbccs/design-system/assets/icons, @mbccs/design-system/assets/images, @mbccs/design-system/styles.css. See mbccs-design-system README."
+          },
+          {
+            "name": "@mbccs/runtime",
+            "message": "Use subpaths only: @mbccs/runtime/chrome, @mbccs/runtime/feedback/*, @mbccs/runtime/bootstrap, @mbccs/runtime/i18n, …. See mbccs-runtime README."
+          }
+        ],
+        "patterns": [
+          {
+            "regex": "(\\.\\./)+.*packages(/|$)",
+            "message": "Do not import packages/* with relative paths. Use @mbccs/* subpaths."
+          },
+          {
+            "regex": "(\\.\\./)+.*(mbccs-core|mbccs-design-system|mbccs-runtime)(/|$)",
+            "message": "Do not reach into SDK folders via ../../. Use @mbccs/* subpaths."
+          },
+          {
+            "regex": "(\\.\\./)+\\.\\./miniapps/",
+            "message": "Do not import other miniapps. Share code only via @mbccs/* packages."
+          },
+          {
+            "group": ["@mbccs/*/src", "@mbccs/*/src/**"],
+            "message": "Import public package exports only — not '@mbccs/*/src/...'."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/**/*.{ts,tsx,js,jsx}"],
+      "excludeFiles": ["src/i18n/**", "src/mocks/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@mbccs/core",
+                "message": "Use subpaths only: @mbccs/core/core, @mbccs/core/common, @mbccs/core/network, @mbccs/core/jsapi, @mbccs/core/jsapi/bindings, @mbccs/core/parse, @mbccs/core/context. See mbccs-core README."
+              },
+              {
+                "name": "@mbccs/design-system",
+                "message": "Use subpaths only: @mbccs/design-system/components, @mbccs/design-system/foundation, @mbccs/design-system/interaction, @mbccs/design-system/assets/icons, @mbccs/design-system/assets/images, @mbccs/design-system/styles.css. See mbccs-design-system README."
+              },
+              {
+                "name": "@mbccs/runtime",
+                "message": "Use subpaths only: @mbccs/runtime/chrome, @mbccs/runtime/feedback/*, @mbccs/runtime/bootstrap, @mbccs/runtime/i18n, …. See mbccs-runtime README."
+              },
+              {
+                "name": "i18next",
+                "message": "Do not import i18next outside src/i18n. Use setAppLanguage, t, useTranslation from '@/i18n'."
+              },
+              {
+                "name": "react-i18next",
+                "message": "Do not import react-i18next outside src/i18n. Use useTranslation / t from '@/i18n'."
+              },
+              {
+                "name": "@/i18n",
+                "importNames": ["default"],
+                "message": "Do not import the i18n instance. Use setAppLanguage, getAppLanguage, t, useTranslation from '@/i18n'."
+              },
+              {
+                "name": "@i18n",
+                "importNames": ["default"],
+                "message": "Do not import the i18n instance. Use setAppLanguage, getAppLanguage, t, useTranslation from '@/i18n'."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "(\\.\\./)+.*packages(/|$)",
+                "message": "Do not import packages/* with relative paths. Use @mbccs/* subpaths."
+              },
+              {
+                "regex": "(\\.\\./)+.*(mbccs-core|mbccs-design-system|mbccs-runtime)(/|$)",
+                "message": "Do not reach into SDK folders via ../../. Use @mbccs/* subpaths."
+              },
+              {
+                "regex": "(\\.\\./)+\\.\\./miniapps/",
+                "message": "Do not import other miniapps. Share code only via @mbccs/* packages."
+              },
+              {
+                "group": ["@mbccs/*/src", "@mbccs/*/src/**"],
+                "message": "Import public package exports only — not '@mbccs/*/src/...'."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**", "**/*.css", "**/*.scss"]
+}

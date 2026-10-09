@@ -1,0 +1,71 @@
+@import 'tailwindcss';
+@import '@mbccs/design-system/styles.css';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+.page-frame {
+  --page-pad-x: 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin-inline: auto;
+  padding:
+    var(--page-pad-top, 0px)
+    max(var(--page-pad-x), env(safe-area-inset-right, 0px))
+    calc(var(--page-pad-bottom, 16px) + env(safe-area-inset-bottom, 0px))
+    max(var(--page-pad-x), env(safe-area-inset-left, 0px));
+}
+
+.page-frame[data-pad='regular'] {
+  --page-pad-x: 16px;
+}
+
+.order-search-input::placeholder {
+  color: inherit;
+  opacity: 1;
+}
+
+.order-chip-row {
+  scrollbar-width: none;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.order-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* iPad mini (744) through iPad Pro 11" portrait (834). */
+@media (min-width: 744px) {
+  .page-frame,
+  .page-frame[data-pad='regular'] {
+    --page-pad-x: 24px;
+    max-width: 834px;
+  }
+
+  .order-chip-row {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+/* iPad Air 13" / iPad Pro 12.9" portrait (1024) and tablet landscape. */
+@media (min-width: 1024px) {
+  .page-frame,
+  .page-frame[data-pad='regular'] {
+    --page-pad-x: 32px;
+    max-width: 960px;
+  }
+}

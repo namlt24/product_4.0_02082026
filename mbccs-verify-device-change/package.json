@@ -1,0 +1,35 @@
+{
+  "name": "mbccs-verify-device-change",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "oxlint . && tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mbccs/core": "^1.0.0",
+    "@mbccs/design-system": "^1.0.0",
+    "@mbccs/runtime": "^1.0.0",
+    "i18next": "^26.3.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^15.7.4",
+    "react-router-dom": "^7.18.2",
+    "zustand": "^5.0.15",
+    "@mbccs/service-bccs": "workspace:*",
+    "@mbccs/modules-bccs": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "oxlint": "^1.77.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.0"
+  }
+}

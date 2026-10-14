@@ -72,6 +72,194 @@
 }
 
 // ---------------------------------------------------------------------------
+// Thanh loc lop duong noi + che do tap trung (giam roi khi nhieu mapping).
+// ---------------------------------------------------------------------------
+.layer-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.layer-bar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gwm-text-secondary);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.layer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--gwm-text-muted);
+  background: transparent;
+  border: 1px dashed var(--gwm-border-strong);
+  border-radius: 999px;
+  text-decoration: line-through;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  b {
+    font-weight: 700;
+  }
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  // Lop dang TAT: cham mau nhat (cung vien net dut + gach ngang chu o tren) de nhin ra ngay la dang an.
+  .layer-dot {
+    opacity: 0.35;
+  }
+
+  &:hover {
+    border-color: var(--gwm-primary);
+  }
+
+  &--on {
+    text-decoration: none;
+    color: var(--gwm-text);
+    background: var(--gwm-surface);
+    border: 1px solid var(--gwm-border-strong);
+
+    .layer-dot {
+      opacity: 1;
+    }
+  }
+}
+
+.layer-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.layer-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--gwm-text-muted);
+}
+
+// Duong noi khong di qua node dang tap trung -> mo di (khong chan bam: .edge-hit tat de khong
+// "bam xuyen" vao duong dang mo). Duong dang noi giu nguyen mau/do dam.
+.edge-group {
+  transition: opacity 0.15s ease;
+
+  &--dim {
+    opacity: 0.1;
+
+    .edge-hit {
+      pointer-events: none;
+    }
+  }
+}
+
+// Nhan ten param (cap chi co 1 mapping) bam duoc - .edge-layer co pointer-events: none nen phai tu bat lai.
+.edge-label--link {
+  pointer-events: auto;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Nhan "×N" cua duong da gop nhieu FieldMapping (xem positionedMappings()) - bam de mo danh sach.
+// Ve o lop tren cung cua SVG (sau moi .edge-hit) va tu bat lai pointer-events (xem .edge-label--link).
+.bundle-pill {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &--dim {
+    opacity: 0.1;
+    pointer-events: none;
+  }
+
+  rect {
+    fill: #eef2ff;
+    stroke: #818cf8;
+    stroke-width: 1.5px;
+    transition: fill 0.15s;
+  }
+
+  text {
+    font-family: var(--gwm-font-mono);
+    font-size: 11.5px;
+    font-weight: 800;
+    fill: var(--gwm-primary-dark);
+    pointer-events: none;
+  }
+
+  &:hover rect {
+    fill: #c7d2fe;
+  }
+}
+
+// Panel danh sach mapping cua 1 cap (nguon -> dich).
+.bundle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 10px 14px;
+  background: var(--gwm-surface);
+  border: 1px solid var(--gwm-border);
+  border-radius: var(--gwm-radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--gwm-primary);
+    background: var(--gwm-accent-light);
+  }
+
+  .bundle-row-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    font-size: 12.5px;
+  }
+
+  .bundle-src,
+  .bundle-dst code {
+    font-family: var(--gwm-font-mono);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .bundle-dst {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: var(--gwm-text-muted);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Canvas: 2 layer tach biet (SVG duong noi duoi, HTML node keo tha tren) -
 // ca 2 dat trong 1 "sizer" cung kich thuoc de .canvas-scroller cuon dung.
 // ---------------------------------------------------------------------------
@@ -508,6 +696,88 @@
   // tung step + request/response body 2 cot - xem try-panel.component.scss).
   &--wide {
     width: 640px;
+  }
+
+  // Panel "Sua Step" co nhieu field nhat (dieu kien/switch/bulkhead/compensation...)
+  // nen rong hon panel sua mapping/rule cho de doc, van bi max-width: 92vw o tren
+  // chan tren man hinh nho.
+  &--step {
+    width: 960px;
+
+    // Khoang cach thoang hon CHI cho panel "Sua Step" (nhieu field/nhom nhat) -
+    // panel mapping/rule/thu nhanh van dung khoang cach goc o tren.
+    .side-panel-header {
+      padding: 20px 28px;
+    }
+
+    .side-panel-body {
+      padding: 24px 28px 32px;
+      gap: 20px;
+    }
+
+    .side-panel-footer {
+      padding: 16px 28px;
+    }
+
+    .field-row {
+      gap: 20px;
+    }
+
+    .block-toggle {
+      margin: 8px 0 12px;
+    }
+
+    .toggle-row {
+      gap: 28px;
+      margin-bottom: 8px;
+    }
+
+    // .sub-section mac dinh la block thuong nen "gap" khong co tac dung - phai bien
+    // thanh cot flex thi toggle/hint/field-row ben trong moi tu cach nhau (truoc day
+    // toggle "Dung nhieu dieu kien" dinh sat nhan noi cua o "Nguon du lieu" ngay duoi).
+    // Khoang cach do gap quyet dinh, nen margin rieng cua con ben trong dat ve 0.
+    .sub-section {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 12px;
+      padding: 20px 22px;
+    }
+
+    .sub-section-header {
+      margin-bottom: 0;
+      line-height: 1.6;
+    }
+
+    .condition-hint {
+      margin: 0;
+      line-height: 1.65;
+    }
+
+    .field-note {
+      margin: 0;
+      padding: 14px 16px;
+      gap: 12px;
+      line-height: 1.7;
+    }
+
+    .flag-group-box {
+      padding: 16px 18px 12px;
+      margin-bottom: 0;
+    }
+
+    .flag-group-header {
+      margin-bottom: 12px;
+    }
+
+    .flag-condition-row {
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .flag-group-or {
+      margin: 10px 0;
+    }
   }
 }
 

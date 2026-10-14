@@ -37,6 +37,7 @@ import {
   HTTP_METHODS,
   MAPPING_TARGET_CONTEXTS,
   MAPPING_TARGET_TYPES,
+  MappingTargetType,
   ResponseFieldMapping,
   ResponseMappingMode,
   ResponseMappingSpec,
@@ -148,17 +149,44 @@ interface NodePos {
   y: number;
 }
 
+/** Dau mut cua 1 duong noi tren canvas: stepOrder cua 1 step, hoac 'client' (node Client Request). */
+type EdgeEnd = number | 'client';
+
+/**
+ * 1 DUONG NOI tren canvas = 1 cap (nguon -> dich), gom MOI FieldMapping cung cap do (xem
+ * positionedMappings()). Cap chi co 1 mapping hien ten param dich; cap co >=2 hien nhan "×N".
+ */
 interface PositionedMapping {
-  mapping: FieldMapping;
-  index: number;
+  /** `${nguon}->${dich}` - dinh danh 1 cap. */
+  key: string;
+  /** Nguon/dich cua duong noi - dung de lam noi/lam mo duong theo node dang tap trung (xem focusKey()). */
+  fromKey: EdgeEnd;
+  toOrder: number;
+  /** Cac FieldMapping thuoc cap nay kem chi so trong mappings() (de sua/xoa theo chi so). */
+  items: { mapping: FieldMapping; index: number }[];
   path: string;
+  /** Vi tri + noi dung nhan ten param (cap 1 mapping, da rut gon) - nam o khe truoc node dich de khong bi node che. */
   labelX: number;
   labelY: number;
+  labelText: string;
+  /** Vi tri nhan "×N" (khi >=2 mapping) - cung nam o khe truoc node dich. */
+  pillX: number;
+  pillY: number;
+  /** Duong cang day khi cang nhieu mapping (toi da +2px) - gan nhu "do day" cua cap. */
+  strokeWidth: number;
+  /** Danh sach ten param dich, noi bang dau phay - hien khi re chuot vao nhan "×N". */
+  tooltip: string;
 }
+
+/** Cac lop duong noi co the bat/tat tren canvas (thanh loc lop - xem layers/toggleLayer()). */
+type CanvasLayer = 'mapping' | 'branch' | 'rule' | 'compensation' | 'response' | 'labels';
 
 /** 1 mui ten re nhanh (P1-5) tren canvas - KHAC FieldMapping: khong chuyen du lieu, chi bieu dien luong dieu khien (dung/sai) tu step co dieu kien sang step ke tiep. */
 interface PositionedBranch {
   fromStepIndex: number;
+  /** stepOrder nguon/dich cua canh - dung de lam noi/lam mo canh theo node dang tap trung. */
+  fromOrder: number;
+  toOrder: number;
   outcome: 'true' | 'false' | 'error' | 'switch' | 'default';
   /** Nhan hien tren canh: Đúng/Sai/Lỗi, hoac "Nhánh n" / "Mặc định" cho switch. */
   label: string;
@@ -176,6 +204,8 @@ interface PositionedBranch {
 interface PositionedRule {
   rule: FlagRule;
   index: number;
+  /** stepOrder dich cua duong noi (START_STEP); null neu rule BLOCK/khong co duong noi. */
+  targetOrder: number | null;
   x: number;
   y: number;
   path: string;
@@ -210,6 +240,7 @@ interface PositionedWaveGroup {
  */
 interface PositionedCompensation {
   stepIndex: number;
+  stepOrder: number;
   path: string;
   labelX: number;
   labelY: number;
@@ -320,6 +351,10 @@ export class EndpointCanvasComponent implements OnInit {
   editingStepIndex: number | null = null;
   editingMapping: FieldMapping | null = null;
   editingMappingIndex: number | null = null;
+  /** Panel danh sach mapping cua 1 cap (nguon -> dich) - mo khi bam nhan "×N" tren canvas (loai tru lan nhau nhu cac panel khac). */
+  editingBundle: { fromKey: EdgeEnd; toOrder: number } | null = null;
+  /** Nho cap de mo LAI panel danh sach sau khi Ap dung/Xoa/Dong 1 mapping vua mo tu danh sach do. */
+  private returnToBundle: { fromKey: EdgeEnd; toOrder: number } | null = null;
   /** V5 - Rule cờ dang sua trong panel (null = mo "Rule moi"). */
   editingRule: RuleEditModel | null = null;
   editingRuleIndex: number | null = null;
@@ -366,61 +401,126 @@ export class EndpointCanvasComponent implements OnInit {
     );
   });
 
+  /**
+   * Mapping xuat phat tu node Client (REQUEST_BODY/QUERY_PARAM/CONSTANT, hoac khong co
+   * sourceStepOrder) hay tu response cua 1 step - dung chung cho gom nhom, toa do duong
+   * noi va lam noi/lam mo theo node dang tap trung.
+   */
+  private mappingSourceKey(m: FieldMapping): EdgeEnd {
+    const fromClient =
+      m.sourceType === 'REQUEST_BODY' || m.sourceType === 'QUERY_PARAM' || m.sourceType === 'CONSTANT' || m.sourceStepOrder == null;
+    return fromClient ? 'client' : (m.sourceStepOrder as number);
+  }
+
+  /**
+   * Gop cac FieldMapping CUNG (nguon -> dich) thanh 1 duong noi duy nhat (xem
+   * PositionedMapping): so duong tren canvas chi phu thuoc so CAP (nguon -> dich), khong
+   * phu thuoc so mapping. Cap co >=2 mapping hien nhan "×N" bam duoc de mo panel danh
+   * sach; cap chi co 1 mapping giu hanh vi cu (nhan = ten param dich, bam la sua thang
+   * mapping do).
+   *
+   * Cac cap CUNG nguon (hoac CUNG dich) xuat phat/ket thuc tai cung 1 diem se de len nhau
+   * nen duoc gian deu doc canh node (FAN_SPREAD) - o muc CAP chu khong con o muc mapping
+   * (truoc day moi mapping 1 duong, 20 mapping = 20 duong chong len nhau).
+   */
   readonly positionedMappings = computed<PositionedMapping[]>(() => {
     const byOrder = new Map(this.liveNodePositions().map((p) => [p.step.stepOrder, p]));
-    const mappings = this.mappings();
 
-    // Nhieu FieldMapping CUNG nguon (vd 2+ mapping CONSTANT - khong co sourceStepOrder,
-    // hoac 2+ REQUEST_BODY/QUERY_PARAM deu xuat phat tu node Client) VA CUNG step dich se
-    // tinh ra x1/y1/x2/y2 GIONG HET NHAU -> duong cong SVG trung khop 100%, chi con 1
-    // duong nhin thay/bam duoc (duong ve SAU CUNG de len tren) - cac mapping khac VAN TON
-    // TAI trong du lieu (khong mat), chi khong bam duoc qua canvas. Fix: nhom theo (nguon,
-    // dich) giong het nhau, toa do BAT DAU/KET THUC cua tung duong trong 1 nhom duoc GIAN
-    // DEU doc theo canh node (khac nhau vai px) de tach thanh nhieu duong cong song song,
-    // duong nao cung bam duoc rieng.
-    const groupKeyOf = (m: FieldMapping): string =>
-      `${m.sourceType === 'REQUEST_BODY' || m.sourceType === 'QUERY_PARAM' || m.sourceType === 'CONSTANT' || m.sourceStepOrder == null ? 'client' : m.sourceStepOrder}->${m.targetStepOrder}`;
-    const groupIndex = new Map<string, number>();
-    const groupSize = new Map<string, number>();
-    for (const m of mappings) {
-      const key = groupKeyOf(m);
-      groupSize.set(key, (groupSize.get(key) ?? 0) + 1);
+    // Gom mapping theo (nguon -> dich), giu thu tu xuat hien dau tien de ket qua on dinh.
+    const groups = new Map<string, { fromKey: EdgeEnd; toOrder: number; items: { mapping: FieldMapping; index: number }[] }>();
+    this.mappings().forEach((mapping, index) => {
+      const fromKey = this.mappingSourceKey(mapping);
+      const key = `${fromKey}->${mapping.targetStepOrder}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = { fromKey, toOrder: mapping.targetStepOrder, items: [] };
+        groups.set(key, group);
+      }
+      group.items.push({ mapping, index });
+    });
+
+    // Lane (vi tri gian) cua tung cap tai dau nguon va dau dich.
+    const lanesBySource = new Map<EdgeEnd, string[]>();
+    const lanesByTarget = new Map<number, string[]>();
+    for (const [key, g] of groups) {
+      lanesBySource.set(g.fromKey, [...(lanesBySource.get(g.fromKey) ?? []), key]);
+      lanesByTarget.set(g.toOrder, [...(lanesByTarget.get(g.toOrder) ?? []), key]);
     }
-    // 20px - lon hon stroke-width=16 cua .edge-hit (vung bam an) de 2 duong ke nhau
-    // trong 1 nhom KHONG con de vung bam trung nhau (16px de len 16px se giao nhau
-    // giua tam neu spread <16px, kho bam trung dung 1 duong khi 2 duong sat nhau).
-    const FAN_SPREAD = 20;
+    // Khoang cach giua 2 duong ke nhau tai cung 1 dau: toi da 34px (> chieu cao nhan "×N" 20px va
+    // > stroke-width=16 cua .edge-hit nen nhan/vung bam cua 2 duong khong de len nhau), tu co lai
+    // khi nhieu duong de cac duong van nam trong chieu cao node (nodeHeight - 24).
+    const FAN_MAX = 34;
+    const fanOf = (lanes: string[], key: string): number => {
+      const spread = lanes.length <= 1 ? 0 : Math.min(FAN_MAX, (this.nodeHeight - 24) / (lanes.length - 1));
+      return (lanes.indexOf(key) - (lanes.length - 1) / 2) * spread;
+    };
 
-    return mappings.map((mapping, index) => {
-      const key = groupKeyOf(mapping);
-      const posInGroup = groupIndex.get(key) ?? 0;
-      groupIndex.set(key, posInGroup + 1);
-      const total = groupSize.get(key) ?? 1;
-      const fanOffset = (posInGroup - (total - 1) / 2) * FAN_SPREAD;
-
+    return [...groups.entries()].map(([key, g]) => {
+      const fanSource = fanOf(lanesBySource.get(g.fromKey) ?? [key], key);
+      const fanTarget = fanOf(lanesByTarget.get(g.toOrder) ?? [key], key);
       let x1: number;
       let y1: number;
-      if (mapping.sourceType === 'REQUEST_BODY' || mapping.sourceType === 'QUERY_PARAM' || mapping.sourceType === 'CONSTANT' || mapping.sourceStepOrder == null) {
+      if (g.fromKey === 'client') {
         x1 = this.clientNodeX + this.nodeWidth;
-        y1 = this.clientNodeY + this.nodeHeight / 2 + fanOffset;
+        y1 = this.clientNodeY + this.nodeHeight / 2 + fanSource;
       } else {
-        const source = byOrder.get(mapping.sourceStepOrder);
+        const source = byOrder.get(g.fromKey);
         x1 = source ? source.x + this.nodeWidth : this.clientNodeX + this.nodeWidth;
-        y1 = (source ? source.y + this.nodeHeight / 2 : this.clientNodeY + this.nodeHeight / 2) + fanOffset;
+        y1 = (source ? source.y + this.nodeHeight / 2 : this.clientNodeY + this.nodeHeight / 2) + fanSource;
       }
-      const target = byOrder.get(mapping.targetStepOrder);
+      const target = byOrder.get(g.toOrder);
       const x2 = target ? target.x : x1;
-      const y2 = (target ? target.y + this.nodeHeight / 2 : y1) + fanOffset;
+      const y2 = (target ? target.y + this.nodeHeight / 2 : y1) + fanTarget;
       const midX = (x1 + x2) / 2;
+
+      // Nhan "×N" nam o khe giua cac node NGAY TRUOC node dich (x2 - COL_GAP/2): voi 2 node ke
+      // nhau do chinh la giua duong cong, con duong noi xa (di sau node o giua) khong bi node che mat.
+      const pill = this.pointOnCurveNearX(x1, y1, x2, y2, x2 - COL_GAP / 2);
+      // Do cao nhan keo ~70% ve do cao DIEM DEN (y2, da gian deu theo lane): gan cuoi duong cong y gan nhu
+      // = y2 nen nhan van nam tren duong, nhung khoang cach giua cac nhan cung dich = dung khoang gian
+      // lane (khong bi dau nguon khac nhau "keo" lai gan nhau - truoc day 2 nhan chi cach nhau ~19px).
+      const pillY = pill.y * 0.3 + y2 * 0.7;
+      // Cap chi co 1 mapping: nhan ten param cung dat o khe truoc node dich (khong o giua duong cong - giua
+      // duong noi xa thuong nam SAU 1 node o giua nen bi node che, bam khong duoc). Ten dai rut gon de vua
+      // khe (COL_GAP=90px ~ 12 ky tu mono 10.5px), ten day du trong tooltip.
+      const paramName = g.items[0].mapping.targetParamName ?? '';
+      const labelText = paramName.length > 12 ? paramName.slice(0, 11) + '…' : paramName;
+
       return {
-        mapping,
-        index,
+        key,
+        fromKey: g.fromKey,
+        toOrder: g.toOrder,
+        items: g.items,
         path: `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`,
-        labelX: midX,
-        labelY: (y1 + y2) / 2 - 6,
+        labelX: pill.x,
+        labelY: pillY - 8,
+        labelText,
+        pillX: pill.x,
+        pillY,
+        strokeWidth: 2.25 + Math.min(g.items.length - 1, 4) * 0.5,
+        tooltip: g.items.map((it) => it.mapping.targetParamName).join(', '),
       };
     });
   });
+
+  /** Diem tren duong cong Bezier (x1,y1)->(x2,y2) (2 diem dieu khien o midX) co x gan targetX nhat. */
+  private pointOnCurveNearX(x1: number, y1: number, x2: number, y2: number, targetX: number): { x: number; y: number } {
+    const midX = (x1 + x2) / 2;
+    let best = { x: midX, y: (y1 + y2) / 2 };
+    let bestDist = Infinity;
+    for (let i = 0; i <= 50; i++) {
+      const t = i / 50;
+      const u = 1 - t;
+      const x = u * u * u * x1 + 3 * u * u * t * midX + 3 * u * t * t * midX + t * t * t * x2;
+      const y = u * u * u * y1 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y2;
+      const dist = Math.abs(x - targetX);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { x, y };
+      }
+    }
+    return best;
+  }
 
   /**
    * Mui ten re nhanh (P1-5) + fallback loi (P-3, onErrorStepOrder) - RIENG voi
@@ -470,6 +570,8 @@ export class EndpointCanvasComponent implements OnInit {
       const y2 = target.y + this.nodeHeight;
       branches.push({
         fromStepIndex,
+        fromOrder: p.step.stepOrder,
+        toOrder: target.step.stepOrder,
         outcome,
         label,
         path: `M ${x1} ${y1} C ${x1} ${y1 + dip}, ${x2} ${y2 + dip}, ${x2} ${y2}`,
@@ -544,6 +646,7 @@ export class EndpointCanvasComponent implements OnInit {
         const y2 = p.y + this.nodeHeight * 0.68;
         return {
           stepIndex: p.index,
+          stepOrder: p.step.stepOrder,
           path: `M ${x} ${y1} C ${x - LOOP} ${y1}, ${x - LOOP} ${y2}, ${x} ${y2}`,
           labelX: x - LOOP - 6,
           labelY: (y1 + y2) / 2 + 3,
@@ -584,7 +687,8 @@ export class EndpointCanvasComponent implements OnInit {
         } else if (rule.actionType === 'BLOCK') {
           actionLabel = `CHẶN ${rule.blockErrorCode ?? ''}`;
         }
-        return { rule, index, x, y, path, labelX, labelY, actionLabel };
+        const targetOrder = path && rule.startStepOrder != null ? rule.startStepOrder : null;
+        return { rule, index, targetOrder, x, y, path, labelX, labelY, actionLabel };
       });
   });
 
@@ -673,6 +777,85 @@ export class EndpointCanvasComponent implements OnInit {
     return { width: maxX, height: maxY };
   });
 
+  // ------------------------------------------------------------------ //
+  // Giam roi canvas: lam noi duong noi theo node dang tap trung + bo loc lop
+  // ------------------------------------------------------------------ //
+
+  /** Node dang duoc re chuot vao (step -> stepOrder, node Client -> 'client'); null = khong co. */
+  hoverFocus: EdgeEnd | null = null;
+
+  /** Lop nao dang hien. 'labels' tat -> chi hien nhan cua cac duong dang noi (khi co node tap trung). */
+  readonly layers = signal<Record<CanvasLayer, boolean>>({
+    mapping: true,
+    branch: true,
+    rule: true,
+    compensation: true,
+    response: true,
+    labels: true,
+  });
+
+  /** So duong tung lop dang co - thanh loc chi hien chip cho lop co du lieu. */
+  readonly layerCounts = computed(() => ({
+    // Dem MAPPING (khong phai so duong da gop) - con so nguoi dung that su quan tam.
+    mapping: this.mappings().length,
+    branch: this.positionedBranches().length,
+    rule: this.positionedRules().filter((r) => r.path).length,
+    compensation: this.positionedCompensations().length,
+    response: this.positionedResponseEdges().length,
+  }));
+
+  toggleLayer(layer: CanvasLayer): void {
+    this.layers.update((l) => ({ ...l, [layer]: !l[layer] }));
+  }
+
+  /**
+   * Node dang tap trung: node dang re chuot, neu khong co thi step dang mo trong panel
+   * sua. Method thuong (KHONG computed) vi doc field thuong editingStepIndex - cung ly
+   * do voi panelOpen() ben duoi.
+   */
+  focusKey(): EdgeEnd | null {
+    if (this.hoverFocus !== null) {
+      return this.hoverFocus;
+    }
+    if (this.editingStepIndex !== null) {
+      return this.steps()[this.editingStepIndex]?.stepOrder ?? null;
+    }
+    return null;
+  }
+
+  /** true = co node dang tap trung VA duong noi nay khong di qua node do -> ve mo. */
+  isEdgeDim(from: EdgeEnd | null, to: EdgeEnd | null): boolean {
+    const focus = this.focusKey();
+    return focus !== null && focus !== from && focus !== to;
+  }
+
+  /**
+   * Nhu isEdgeDim, them: khi KHONG co node tap trung ma dang sua 1 mapping hoac dang mo
+   * danh sach 1 cap -> chi duong chua mapping/cap do noi, cac duong khac mo.
+   */
+  isMappingDim(pe: PositionedMapping): boolean {
+    if (this.focusKey() === null) {
+      if (this.editingMapping !== null && this.editingMappingIndex !== null) {
+        const editing = this.editingMappingIndex;
+        return !pe.items.some((it) => it.index === editing);
+      }
+      if (this.editingBundle !== null) {
+        return pe.fromKey !== this.editingBundle.fromKey || pe.toOrder !== this.editingBundle.toOrder;
+      }
+    }
+    return this.isEdgeDim(pe.fromKey, pe.toOrder);
+  }
+
+  /** Lop "Nhan" dang hien: bat, hoac tat nhung dang co node tap trung (khi do chi duong dang noi moi hien nhan). */
+  labelsShown(): boolean {
+    return this.layers().labels || this.focusKey() !== null;
+  }
+
+  /** Nhan chu cua 1 duong noi: luon an khi duong dang mo; tat lop "Nhan" thi chi hien khi co node tap trung. */
+  labelVisible(dim: boolean): boolean {
+    return !dim && this.labelsShown();
+  }
+
   /**
    * QUAN TRONG: KHONG duoc dung computed() o day - editingStep/editingMapping la
    * field thuong (khong phai signal), computed() chi re-evaluate khi 1 SIGNAL no
@@ -689,6 +872,7 @@ export class EndpointCanvasComponent implements OnInit {
     return (
       this.editingStep !== null ||
       this.editingMapping !== null ||
+      this.editingBundle !== null ||
       this.editingRule !== null ||
       this.editingResponseMapping !== null ||
       this.tryPanelOpen
@@ -1185,10 +1369,108 @@ export class EndpointCanvasComponent implements OnInit {
     return this.steps().map((s) => s.stepOrder);
   }
 
-  openMappingPanel(index: number): void {
+  /** fromBundle=true: mo tu panel danh sach 1 cap -> Ap dung/Xoa/Dong xong quay lai danh sach do. */
+  openMappingPanel(index: number, fromBundle = false): void {
+    const back = fromBundle ? this.editingBundle : null;
     this.closePanel();
+    this.returnToBundle = back;
     this.editingMappingIndex = index;
     this.editingMapping = { ...this.mappings()[index] };
+  }
+
+  /** Bam vao 1 duong noi mapping: cap chi co 1 mapping -> sua thang; cap da gop nhieu mapping -> mo danh sach. */
+  onMappingEdgeClick(pe: PositionedMapping): void {
+    if (pe.items.length === 1) {
+      this.openMappingPanel(pe.items[0].index);
+    } else {
+      this.openBundlePanel(pe);
+    }
+  }
+
+  openBundlePanel(pe: PositionedMapping): void {
+    this.closePanel();
+    this.editingBundle = { fromKey: pe.fromKey, toOrder: pe.toOrder };
+  }
+
+  /** Cac mapping cua cap dang mo (tinh lai moi lan CD - chi so trong mappings() doi khi them/xoa mapping). */
+  bundleRows(): { mapping: FieldMapping; index: number }[] {
+    const b = this.editingBundle;
+    if (!b) {
+      return [];
+    }
+    return this.mappings()
+      .map((mapping, index) => ({ mapping, index }))
+      .filter((r) => this.mappingSourceKey(r.mapping) === b.fromKey && r.mapping.targetStepOrder === b.toOrder);
+  }
+
+  bundleEndLabel(end: EdgeEnd): string {
+    return end === 'client' ? 'Client Request' : `Step ${end}`;
+  }
+
+  /** Mo ta ngan nguon du lieu cua 1 mapping - hien trong dong cua panel danh sach. */
+  mappingSourceText(m: FieldMapping): string {
+    switch (m.sourceType) {
+      case 'REQUEST_BODY':
+        return `body.${m.sourceField}`;
+      case 'QUERY_PARAM':
+        return `query.${m.sourceField}`;
+      case 'CONSTANT':
+        return `"${m.constantValue ?? ''}"`;
+      case 'STEP_RESPONSE_ARRAY_AGGREGATE':
+        return `Step ${m.sourceStepOrder}.${m.sourceArrayField}[].${m.sourceElementField}`;
+      case 'STEP_RESPONSE_ARRAY_MERGE':
+        return `Step ${m.sourceStepOrder}.${m.sourceArrayField}[] (gộp)`;
+      default:
+        return `Step ${m.sourceStepOrder}.${m.sourceField}`;
+    }
+  }
+
+  /** Xoa 1 mapping ngay tu danh sach; cap het mapping thi dong panel (duong noi cung bien mat). */
+  removeBundleRow(index: number): void {
+    this.mappings.set(this.mappings().filter((_, i) => i !== index));
+    if (this.bundleRows().length === 0) {
+      this.closePanel();
+    }
+  }
+
+  /** Them 1 mapping moi, dien san nguon/dich cua cap dang mo; Ap dung xong tu quay lai danh sach. */
+  addMappingToBundle(): void {
+    const b = this.editingBundle;
+    if (!b) {
+      return;
+    }
+    // Loai dich PHO BIEN NHAT trong cap (vd cap Client -> Step 2 chu yeu BODY_FIELD) lam mac dinh cho mapping moi.
+    const typeCounts = new Map<MappingTargetType, number>();
+    for (const row of this.bundleRows()) {
+      typeCounts.set(row.mapping.targetType, (typeCounts.get(row.mapping.targetType) ?? 0) + 1);
+    }
+    const commonTargetType = [...typeCounts.entries()].sort((a, c) => c[1] - a[1])[0]?.[0];
+    this.openNewMappingPanel();
+    this.returnToBundle = b;
+    const m = this.editingMapping;
+    if (!m) {
+      return;
+    }
+    if (b.fromKey === 'client') {
+      m.sourceType = 'REQUEST_BODY';
+      m.sourceStepOrder = null;
+    } else {
+      m.sourceType = 'STEP_RESPONSE';
+      m.sourceStepOrder = b.fromKey;
+    }
+    m.targetStepOrder = b.toOrder;
+    if (commonTargetType) {
+      m.targetType = commonTargetType;
+    }
+  }
+
+  /** Dong panel sua mapping; neu vua mo tu danh sach 1 cap (va cap do con mapping) thi mo lai danh sach do. */
+  closeMappingPanel(): void {
+    const back = this.returnToBundle;
+    this.closePanel();
+    if (back && this.mappings().some((m) => this.mappingSourceKey(m) === back.fromKey && m.targetStepOrder === back.toOrder)) {
+      this.editingBundle = back;
+    }
   }
 
   openNewMappingPanel(): void {
@@ -1261,14 +1543,14 @@ export class EndpointCanvasComponent implements OnInit {
       list[this.editingMappingIndex] = m;
     }
     this.mappings.set(list);
-    this.closePanel();
+    this.closeMappingPanel();
   }
 
   removeMappingFromPanel(): void {
     if (this.editingMappingIndex !== null) {
       this.mappings.set(this.mappings().filter((_, i) => i !== this.editingMappingIndex));
     }
-    this.closePanel();
+    this.closeMappingPanel();
   }
 
   // ------------------------------------------------------------------ //
@@ -1355,6 +1637,8 @@ export class EndpointCanvasComponent implements OnInit {
     this.editingStepIndex = null;
     this.editingMapping = null;
     this.editingMappingIndex = null;
+    this.editingBundle = null;
+    this.returnToBundle = null;
     this.editingRule = null;
     this.editingRuleIndex = null;
     this.editingResponseMapping = null;
